@@ -44,10 +44,12 @@ _pool: psycopg2.pool.ThreadedConnectionPool | None = None
 def _init_pool() -> None:
     """Erzeugt den ThreadedConnectionPool aus DATABASE_URL."""
     global _pool
+    # sslmode=require für Supabase Transaction Pooler (falls nicht bereits in der URL)
+    dsn = DATABASE_URL if "sslmode=" in DATABASE_URL else DATABASE_URL + "?sslmode=require"
     _pool = psycopg2.pool.ThreadedConnectionPool(
-        minconn=2,
+        minconn=1,
         maxconn=10,
-        dsn=DATABASE_URL,
+        dsn=dsn,
         cursor_factory=psycopg2.extras.RealDictCursor,
     )
 

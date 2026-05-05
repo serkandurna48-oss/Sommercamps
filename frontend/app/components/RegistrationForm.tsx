@@ -56,9 +56,48 @@ function Group({ title }: { title: string }) {
   )
 }
 
+/** Gibt alle Fehler auf einmal zurück (leeres Array = alles ok). */
+function validate(form: FormState): string[] {
+  const errors: string[] = []
+
+  if (!form.child_first_name.trim()) errors.push('Vorname des Kindes fehlt.')
+  if (!form.child_last_name.trim()) errors.push('Nachname des Kindes fehlt.')
+
+  if (!form.birth_date) {
+    errors.push('Geburtsdatum fehlt.')
+  } else {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const birth = new Date(form.birth_date)
+    const minDate = new Date(today)
+    minDate.setFullYear(today.getFullYear() - 18)
+    const maxDate = new Date(today)
+    maxDate.setFullYear(today.getFullYear() - 5)
+    if (birth < minDate || birth > maxDate) {
+      errors.push('Das Kind muss zwischen 5 und 18 Jahren alt sein.')
+    }
+  }
+
+  if (!form.parent_name.trim()) errors.push('Name des Elternteils fehlt.')
+
+  if (!form.email.trim()) {
+    errors.push('E-Mail-Adresse fehlt.')
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    errors.push('Bitte eine gültige E-Mail-Adresse angeben.')
+  }
+
+  if (!form.phone.trim()) errors.push('Telefonnummer fehlt.')
+
+  if (!form.selected_camp_week) errors.push('Bitte einen Camptermin auswählen.')
+
+  if (!form.consent_privacy) errors.push('Datenschutzerklärung muss akzeptiert werden.')
+
+  return errors
+}
+
 export default function RegistrationForm() {
   const [form, setForm] = useState<FormState>(EMPTY)
-  const [error, setError] = useState<string | null>(null)
+  const [errors, setErrors] = useState<string[]>([])
   const [success, setSuccess] = useState(false)
   const [isPending, startTransition] = useTransition()
 
@@ -70,11 +109,20 @@ export default function RegistrationForm() {
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
     }))
+    // Fehler beim Tippen ausblenden, damit die Liste nicht nervt
+    if (errors.length > 0) setErrors([])
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
+
+    const clientErrors = validate(form)
+    if (clientErrors.length > 0) {
+      setErrors(clientErrors)
+      return
+    }
+
+    setErrors([])
 
     startTransition(async () => {
       try {
@@ -96,14 +144,14 @@ export default function RegistrationForm() {
           const msg = Array.isArray(detail)
             ? detail.map((d: { msg: string }) => d.msg).join(' · ')
             : detail ? String(detail) : `Serverfehler (${res.status})`
-          setError(msg)
+          setErrors([msg])
           return
         }
 
         setSuccess(true)
         setForm(EMPTY)
       } catch {
-        setError('Verbindung zum Server fehlgeschlagen. Bitte später erneut versuchen.')
+        setErrors(['Verbindung zum Server fehlgeschlagen. Bitte später erneut versuchen.'])
       }
     })
   }
@@ -232,7 +280,8 @@ export default function RegistrationForm() {
         />
         <label htmlFor="consent_privacy" className="text-sm text-gray-600 leading-relaxed">
           Ich stimme der Verarbeitung meiner Daten gemäß der{' '}
-          <a href="#datenschutz" className="text-gray-900 underline underline-offset-2 hover:opacity-70">
+          <a href="/datenschutz" target="_blank" rel="noopener noreferrer"
+             className="text-gray-900 underline underline-offset-2 hover:opacity-70">
             Datenschutzerklärung
           </a>{' '}
           zu. *
@@ -240,12 +289,16 @@ export default function RegistrationForm() {
       </div>
 
       {/* ── Fehler ────────────────────────────────────────────── */}
-      {error && (
-        <div role="alert" className="rounded-xl bg-red-50 border border-red-200 px-4 py-3.5 text-sm text-red-700 flex items-start gap-2.5">
-          <svg className="w-4 h-4 mt-0.5 shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>
-          {error}
+      {errors.length > 0 && (
+        <div role="alert" className="rounded-xl bg-red-50 border border-red-200 px-4 py-3.5 text-sm text-red-700">
+          <div className="flex items-start gap-2.5">
+            <svg className="w-4 h-4 mt-0.5 shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <ul className={errors.length === 1 ? '' : 'list-disc list-inside space-y-1'}>
+              {errors.map((e, i) => <li key={i}>{e}</li>)}
+            </ul>
+          </div>
         </div>
       )}
 

@@ -1,20 +1,25 @@
 from __future__ import annotations
 
+import csv
+import io
 import os
+import secrets
 import uuid
 from contextlib import asynccontextmanager, contextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Generator, Optional
 from uuid import UUID
 
+import jwt
 import psycopg2
 import psycopg2.extras
 import psycopg2.pool
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, field_validator
 
 load_dotenv()
@@ -23,8 +28,10 @@ load_dotenv()
 # Config
 # ---------------------------------------------------------------------------
 
-DATABASE_URL: str = os.environ["DATABASE_URL"]
-ADMIN_API_KEY: str = os.environ["ADMIN_API_KEY"]
+DATABASE_URL: str    = os.environ["DATABASE_URL"]
+ADMIN_PASSWORD: str  = os.environ["ADMIN_PASSWORD"]
+JWT_SECRET: str      = os.environ["JWT_SECRET"]
+TOKEN_EXPIRE_HOURS: int = int(os.getenv("TOKEN_EXPIRE_HOURS", "24"))
 
 ALLOWED_JERSEY_SIZES = {"116", "128", "140", "152", "164", "176", "XS", "S", "M", "L", "XL", "XXL"}
 ALLOWED_CAMP_WEEKS = {
@@ -161,6 +168,10 @@ app.add_middleware(
 # Pydantic Models
 # ---------------------------------------------------------------------------
 
+class AdminLoginIn(BaseModel):
+    password: str
+
+
 class RegistrationIn(BaseModel):
     child_first_name: str
     child_last_name: str
@@ -240,13 +251,63 @@ CONSTRAINT_MESSAGES: dict[str, str] = {
 # Auth
 # ---------------------------------------------------------------------------
 
-def require_admin(x_api_key: str = Header(...)) -> None:
-    if x_api_key != ADMIN_API_KEY:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Ungültiger API-Key.")
+_bearer = HTTPBearer(auto_error=False)
+
+
+def verify_session_token(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> None:
+    """Prüft das JWT-Session-Token aus dem Authorization-Header."""
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Nicht authentifiziert.",
+        )
+    try:
+        jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Sitzung abgelaufen. Bitte neu anmelden.",
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Ungültige Sitzung.",
+        )
 
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
+@app.post(
+    "/admin/login",
+    tags=["Admin"],
+    summary="Admin-Login – gibt ein zeitlich begrenztes Session-Token zurück",
+)
+def admin_login(payload: AdminLoginIn) -> dict:
+    """
+    Prüft das Admin-Passwort mit timing-sicherem Vergleich.
+    Gibt bei Erfolg ein signiertes JWT zurück, das TOKEN_EXPIRE_HOURS gültig ist.
+    Fehlermeldungen geben keine Hinweise auf gültige Passwörter.
+    """
+    if not secrets.compare_digest(payload.password.encode(), ADMIN_PASSWORD.encode()):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Anmeldung fehlgeschlagen.",
+        )
+    now = datetime.now(timezone.utc)
+    token = jwt.encode(
+        {
+            "sub": "admin",
+            "iat": now,
+            "exp": now + timedelta(hours=TOKEN_EXPIRE_HOURS),
+        },
+        JWT_SECRET,
+        algorithm="HS256",
+    )
+    return {"token": token, "expires_in_hours": TOKEN_EXPIRE_HOURS}
+
 
 @app.get("/health", tags=["System"])
 def health() -> dict:
@@ -318,7 +379,7 @@ def create_registration(payload: RegistrationIn) -> dict:
 @app.get(
     "/registrations",
     response_model=list[RegistrationOut],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(verify_session_token)],
     tags=["Registrations"],
     summary="Alle Anmeldungen abrufen (Admin)",
 )
@@ -333,9 +394,66 @@ def list_registrations() -> list[dict]:
 
 
 @app.get(
+    "/registrations/export/csv",
+    dependencies=[Depends(verify_session_token)],
+    tags=["Registrations"],
+    summary="Alle Anmeldungen als CSV exportieren (Admin)",
+)
+def export_registrations_csv() -> StreamingResponse:
+    """
+    Gibt alle Anmeldungen als UTF-8-CSV mit BOM zurück
+    (BOM sorgt dafür, dass Excel Umlaute korrekt anzeigt).
+    Nur für Admins zugänglich.
+    """
+    CSV_COLUMNS = [
+        "id", "created_at",
+        "child_first_name", "child_last_name", "birth_date",
+        "parent_name", "email", "phone",
+        "selected_camp_week", "jersey_size",
+        "allergies", "notes",
+        "consent_privacy", "status", "payment_status",
+    ]
+    CSV_HEADERS = [
+        "ID", "Anmeldedatum",
+        "Vorname Kind", "Nachname Kind", "Geburtsdatum",
+        "Elternteil", "E-Mail", "Telefon",
+        "Termin", "Trikotnummer",
+        "Allergien", "Notizen",
+        "Datenschutz", "Status", "Zahlungsstatus",
+    ]
+
+    try:
+        with db_cursor() as cur:
+            cur.execute("SELECT * FROM camp_registrations ORDER BY created_at DESC")
+            rows = cur.fetchall()
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Datenbankfehler: {exc}")
+
+    output = io.StringIO()
+    output.write("\ufeff")  # UTF-8 BOM für Excel-Kompatibilität
+    writer = csv.DictWriter(
+        output,
+        fieldnames=CSV_COLUMNS,
+        extrasaction="ignore",
+        delimiter=";",  # Semikolon ist Standard in deutschen Excel-Versionen
+    )
+    # Eigene Kopfzeile mit deutschen Labels
+    writer.writerow(dict(zip(CSV_COLUMNS, CSV_HEADERS)))
+    for row in rows:
+        writer.writerow(serialize(dict(row)))
+
+    filename = f"anmeldungen-{__import__('datetime').date.today().isoformat()}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get(
     "/registrations/{registration_id}",
     response_model=RegistrationOut,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(verify_session_token)],
     tags=["Registrations"],
     summary="Einzelne Anmeldung abrufen (Admin)",
 )
@@ -361,7 +479,7 @@ def get_registration(registration_id: str) -> dict:
 @app.delete(
     "/registrations/{registration_id}",
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(verify_session_token)],
     tags=["Registrations"],
     summary="Anmeldung löschen (Admin)",
 )

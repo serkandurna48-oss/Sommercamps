@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import ClubLogo from './components/ClubLogo'
 import RegistrationForm from './components/RegistrationForm'
 
@@ -214,6 +215,12 @@ export default function Page() {
                 Deine Daten werden ausschließlich zur Abwicklung der Camp-Anmeldung genutzt.
                 Rechtsgrundlage: Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;b DSGVO.
               </p>
+              <Link
+                href="/datenschutz"
+                className="inline-block mt-3 text-sm text-gray-400 underline underline-offset-2 hover:text-gray-200 transition-colors"
+              >
+                Vollständige Datenschutzerklärung →
+              </Link>
             </div>
           </div>
           <div className="border-t border-gray-800 pt-6 text-xs text-gray-600 text-center">

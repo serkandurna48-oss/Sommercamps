@@ -205,8 +205,9 @@ export default function Page() {
               <p className="text-white font-semibold mb-3 text-sm">Kontakt</p>
               <ul className="space-y-1.5 text-sm">
                 <li>KSV Baunatal e.V.</li>
-                <li>Baunatal, Hessen</li>
-                <li>info@ksv-baunatal.de</li>
+                <li>Ansprechpartner: Ergün Ünal</li>
+                <li>Erguen.uenal@fussball.ksv-baunatal.de</li>
+                <li>0170 9927281</li>
               </ul>
             </div>
             <div>

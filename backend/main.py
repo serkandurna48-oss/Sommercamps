@@ -44,7 +44,7 @@ CONTACT_EMAIL:   str = os.getenv("CONTACT_EMAIL", "info@ksv-baunatal.de")
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_JERSEY_SIZES = {"116", "128", "140", "152", "164", "176", "XS", "S", "M", "L", "XL", "XXL"}
+ALLOWED_JERSEY_SIZES = {"6XS–5XS (104–116)", "4XS–3XS (128–140)", "2XS (152)", "XS (164)", "S", "M"}
 ALLOWED_CAMP_WEEKS = {
     "29.06.–02.07.2026",
     "03.08.–06.08.2026",

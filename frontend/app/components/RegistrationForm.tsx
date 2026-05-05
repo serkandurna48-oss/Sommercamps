@@ -20,7 +20,7 @@ const CAMP_WEEKS = [
   '05.10.–08.10.2026',
 ]
 
-const JERSEY_SIZES = ['116', '128', '140', '152', '164', '176', 'XS', 'S', 'M', 'L', 'XL', 'XXL']
+const JERSEY_SIZES = ['6XS–5XS (104–116)', '4XS–3XS (128–140)', '2XS (152)', 'XS (164)', 'S', 'M']
 
 interface FormState {
   child_first_name: string

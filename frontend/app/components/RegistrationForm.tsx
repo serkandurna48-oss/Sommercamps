@@ -2,6 +2,18 @@
 
 import { useState, useTransition } from 'react'
 
+/** Felder aus der Backend-Antwort, die wir in der Bestätigungsansicht brauchen. */
+interface ConfirmedRegistration {
+  id: string
+  registration_token: string
+  child_first_name: string
+  child_last_name: string
+  selected_camp_week: string
+  email: string
+  status: string
+  payment_status: string
+}
+
 const CAMP_WEEKS = [
   '29.06.–02.07.2026',
   '03.08.–06.08.2026',
@@ -98,7 +110,7 @@ function validate(form: FormState): string[] {
 export default function RegistrationForm() {
   const [form, setForm] = useState<FormState>(EMPTY)
   const [errors, setErrors] = useState<string[]>([])
-  const [success, setSuccess] = useState(false)
+  const [confirmed, setConfirmed] = useState<ConfirmedRegistration | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function handleChange(
@@ -148,7 +160,8 @@ export default function RegistrationForm() {
           return
         }
 
-        setSuccess(true)
+        const data: ConfirmedRegistration = await res.json()
+        setConfirmed(data)
         setForm(EMPTY)
       } catch {
         setErrors(['Verbindung zum Server fehlgeschlagen. Bitte später erneut versuchen.'])
@@ -156,24 +169,77 @@ export default function RegistrationForm() {
     })
   }
 
-  if (success) {
+  if (confirmed) {
     return (
-      <div className="py-10 text-center">
-        <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mx-auto mb-5">
-          <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
+      <div className="py-2 space-y-5">
+
+        {/* Erfolgs-Header */}
+        <div className="text-center pb-1">
+          <div className="w-14 h-14 bg-green-50 border-2 border-green-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-1.5">Anmeldung eingegangen!</h3>
+          <p className="text-gray-500 text-sm leading-relaxed">
+            Eine Bestätigungs-E-Mail geht in Kürze an{' '}
+            <span className="font-medium text-gray-700">{confirmed.email}</span>.
+          </p>
         </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Anmeldung erfolgreich!</h3>
-        <p className="text-gray-500 text-sm leading-relaxed max-w-xs mx-auto">
-          Wir haben deine Anmeldung erhalten und melden uns in Kürze mit allen weiteren Infos.
-        </p>
+
+        {/* Zusammenfassung */}
+        <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+          <div className="px-4 py-3 flex justify-between items-center text-sm">
+            <span className="text-gray-500">Teilnehmer</span>
+            <span className="font-semibold text-gray-900">
+              {confirmed.child_first_name} {confirmed.child_last_name}
+            </span>
+          </div>
+          <div className="px-4 py-3 flex justify-between items-center text-sm">
+            <span className="text-gray-500">Termin</span>
+            <span className="font-medium text-gray-900">{confirmed.selected_camp_week}</span>
+          </div>
+          <div className="px-4 py-3 flex justify-between items-center text-sm">
+            <span className="text-gray-500">Anmeldestatus</span>
+            <span className="inline-flex items-center gap-1.5 font-medium text-yellow-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block" />
+              Angemeldet
+            </span>
+          </div>
+          <div className="px-4 py-3 flex justify-between items-center text-sm">
+            <span className="text-gray-500">Zahlung</span>
+            <span className="inline-flex items-center gap-1.5 font-medium text-orange-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" />
+              Ausstehend
+            </span>
+          </div>
+        </div>
+
+        {/* Nächste Schritte */}
+        <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3.5 text-sm text-blue-800">
+          <p className="font-semibold mb-1.5">Nächste Schritte</p>
+          <ul className="space-y-1 text-blue-700">
+            <li>→ Du erhältst in Kürze eine Bestätigungs-E-Mail von uns.</li>
+            <li>→ Wir melden uns mit allen Details zu Kosten, Zeiten und Treffpunkt.</li>
+          </ul>
+        </div>
+
+        {/* Zahlung – Platzhalter für Phase 3 */}
         <button
-          onClick={() => setSuccess(false)}
-          className="mt-6 text-sm text-gray-500 underline underline-offset-2 hover:text-gray-800 transition-colors"
+          disabled
+          title="Online-Zahlung wird in Kürze freigeschaltet"
+          className="w-full bg-gray-100 text-gray-400 font-semibold py-3.5 rounded-xl text-sm cursor-not-allowed select-none"
+        >
+          Online bezahlen – folgt in Kürze
+        </button>
+
+        <button
+          onClick={() => setConfirmed(null)}
+          className="w-full text-sm text-gray-500 underline underline-offset-2 hover:text-gray-800 transition-colors"
         >
           Weitere Anmeldung einreichen
         </button>
+
       </div>
     )
   }

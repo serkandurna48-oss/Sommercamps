@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+import logging
 import os
 import secrets
 import uuid
@@ -13,6 +14,7 @@ from uuid import UUID
 
 import jwt
 import psycopg2
+import requests as http_client
 import psycopg2.extras
 import psycopg2.pool
 from dotenv import load_dotenv
@@ -32,6 +34,15 @@ DATABASE_URL: str    = os.environ["DATABASE_URL"]
 ADMIN_PASSWORD: str  = os.environ["ADMIN_PASSWORD"]
 JWT_SECRET: str      = os.environ["JWT_SECRET"]
 TOKEN_EXPIRE_HOURS: int = int(os.getenv("TOKEN_EXPIRE_HOURS", "24"))
+
+# E-Mail (Phase 2) — optional; Backend läuft auch ohne diese Vars.
+# Wenn BREVO_API_KEY oder EMAIL_FROM fehlen, wird Mailversand übersprungen.
+BREVO_API_KEY:   str = os.getenv("BREVO_API_KEY", "")
+EMAIL_FROM:      str = os.getenv("EMAIL_FROM", "")
+EMAIL_FROM_NAME: str = os.getenv("EMAIL_FROM_NAME", "Fußballschule KSV Baunatal")
+CONTACT_EMAIL:   str = os.getenv("CONTACT_EMAIL", "info@ksv-baunatal.de")
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_JERSEY_SIZES = {"116", "128", "140", "152", "164", "176", "XS", "S", "M", "L", "XL", "XXL"}
 ALLOWED_CAMP_WEEKS = {
@@ -217,6 +228,7 @@ class RegistrationIn(BaseModel):
 class RegistrationOut(BaseModel):
     id: str
     created_at: str
+    registration_token: str       # öffentliches Token für Payment-Links (Phase 3)
     child_first_name: str
     child_last_name: str
     birth_date: str
@@ -230,6 +242,8 @@ class RegistrationOut(BaseModel):
     consent_privacy: bool
     status: str
     payment_status: str
+    email_sent_at: Optional[str]      # gesetzt nach Mailversand (Phase 2)
+    stripe_session_id: Optional[str]  # gesetzt beim Checkout (Phase 3)
 
 # ---------------------------------------------------------------------------
 # DB Constraint → lesbare Fehlermeldung
@@ -246,6 +260,182 @@ CONSTRAINT_MESSAGES: dict[str, str] = {
     "chk_jersey_size_allowed":        "Ungültige Trikotnummer.",
     "chk_consent_given":              "Datenschutzerklärung muss akzeptiert werden.",
 }
+
+# ---------------------------------------------------------------------------
+# E-Mail (Phase 2)
+# ---------------------------------------------------------------------------
+
+def _build_confirmation_html(row: dict) -> str:
+    """Gibt den HTML-Body der Bestätigungsmail zurück."""
+    return (
+        """<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0"
+             style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:#111111;padding:24px 32px;">
+            <p style="margin:0;color:#ffffff;font-size:18px;font-weight:700;">KSV Baunatal</p>
+            <p style="margin:4px 0 0;color:#9ca3af;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Fußballschule</p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:32px;">
+            <p style="margin:0 0 6px;font-size:22px;font-weight:700;color:#111111;">Anmeldung eingegangen ✓</p>
+            <p style="margin:0 0 24px;font-size:15px;color:#6b7280;">Hallo PARENT_NAME,</p>
+            <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">
+              wir haben die Anmeldung für <strong>CHILD_NAME</strong> erhalten und
+              freuen uns, euch beim Sommercamp 2026 dabei zu haben!
+            </p>
+
+            <!-- Zusammenfassung -->
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="border:1px solid #e5e7eb;border-radius:8px;margin-bottom:24px;">
+              <tr>
+                <td style="padding:13px 16px;border-bottom:1px solid #f3f4f6;">
+                  <span style="color:#6b7280;font-size:12px;display:block;margin-bottom:2px;">Teilnehmer</span>
+                  <span style="color:#111111;font-weight:600;font-size:15px;">CHILD_NAME</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:13px 16px;border-bottom:1px solid #f3f4f6;">
+                  <span style="color:#6b7280;font-size:12px;display:block;margin-bottom:2px;">Termin</span>
+                  <span style="color:#111111;font-weight:600;font-size:15px;">CAMP_WEEK</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:13px 16px;border-bottom:1px solid #f3f4f6;">
+                  <span style="color:#6b7280;font-size:12px;display:block;margin-bottom:2px;">Anmeldestatus</span>
+                  <span style="color:#b45309;font-weight:600;font-size:15px;">Angemeldet</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:13px 16px;">
+                  <span style="color:#6b7280;font-size:12px;display:block;margin-bottom:2px;">Zahlung</span>
+                  <span style="color:#c2410c;font-weight:600;font-size:15px;">Ausstehend</span>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Nächste Schritte -->
+            <div style="background:#eff6ff;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+              <p style="margin:0 0 6px;font-weight:700;color:#1e40af;font-size:13px;">Nächste Schritte</p>
+              <p style="margin:0;color:#1d4ed8;font-size:14px;line-height:1.6;">
+                Wir prüfen deine Anmeldung und melden uns in Kürze mit allen
+                Informationen zu Kosten, Zeiten und Treffpunkt.
+              </p>
+            </div>
+
+            <p style="margin:0;font-size:14px;color:#6b7280;">
+              Bei Fragen erreichst du uns unter:
+              <a href="mailto:CONTACT_EMAIL" style="color:#111111;font-weight:500;">CONTACT_EMAIL</a>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;">
+            <p style="margin:0;font-size:11px;color:#9ca3af;text-align:center;">
+              © 2026 KSV Baunatal e.V. · Diese E-Mail wurde automatisch erstellt.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+        .replace("PARENT_NAME", str(row.get("parent_name", "")))
+        .replace("CHILD_NAME",  f"{row.get('child_first_name', '')} {row.get('child_last_name', '')}".strip())
+        .replace("CAMP_WEEK",   str(row.get("selected_camp_week", "")))
+        .replace("CONTACT_EMAIL", CONTACT_EMAIL)
+    )
+
+
+def _build_confirmation_text(row: dict) -> str:
+    """Gibt den Plain-Text-Fallback der Bestätigungsmail zurück."""
+    child_name = f"{row.get('child_first_name', '')} {row.get('child_last_name', '')}".strip()
+    return (
+        f"Anmeldung eingegangen!\n\n"
+        f"Hallo {row.get('parent_name', '')},\n\n"
+        f"wir haben die Anmeldung für {child_name} erhalten.\n\n"
+        f"Termin:          {row.get('selected_camp_week', '')}\n"
+        f"Anmeldestatus:   Angemeldet\n"
+        f"Zahlung:         Ausstehend\n\n"
+        f"Wir prüfen die Anmeldung und melden uns in Kürze mit allen Informationen\n"
+        f"zu Kosten, Zeiten und Treffpunkt.\n\n"
+        f"Bei Fragen: {CONTACT_EMAIL}\n\n"
+        f"Herzliche Grüße,\n"
+        f"Die Fußballschule KSV Baunatal"
+    )
+
+
+def _try_send_confirmation_email(row: dict) -> None:
+    """
+    Versucht eine Bestätigungsmail via Brevo zu senden.
+
+    - Überspringt, wenn BREVO_API_KEY oder EMAIL_FROM nicht gesetzt sind.
+    - Überspringt, wenn email_sent_at bereits gesetzt ist (Idempotenz).
+    - Setzt email_sent_at in der DB und im row-dict bei Erfolg.
+    - Loggt bei Fehler nur eine Warnung — die Registrierung bleibt immer erhalten.
+    """
+    if not BREVO_API_KEY or not EMAIL_FROM:
+        logger.info("E-Mail-Versand übersprungen: BREVO_API_KEY oder EMAIL_FROM nicht konfiguriert.")
+        return
+
+    if row.get("email_sent_at"):
+        logger.info("E-Mail für %s bereits gesendet — übersprungen.", row.get("email"))
+        return
+
+    try:
+        resp = http_client.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={
+                "api-key": BREVO_API_KEY,
+                "Content-Type": "application/json",
+            },
+            json={
+                "sender": {"name": EMAIL_FROM_NAME, "email": EMAIL_FROM},
+                "to": [{"email": row["email"], "name": row.get("parent_name", "")}],
+                "subject": "Deine Anmeldung für das Sommercamp 2026 – KSV Baunatal",
+                "htmlContent": _build_confirmation_html(row),
+                "textContent": _build_confirmation_text(row),
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+
+        # email_sent_at in DB setzen
+        with db_cursor() as cur:
+            cur.execute(
+                "UPDATE camp_registrations SET email_sent_at = now() WHERE id = %s RETURNING email_sent_at",
+                (str(row["id"]),),
+            )
+            updated = cur.fetchone()
+
+        if updated and updated.get("email_sent_at"):
+            row["email_sent_at"] = updated["email_sent_at"]
+            logger.info("Bestätigungsmail gesendet und email_sent_at gesetzt für %s.", row.get("email"))
+
+    except Exception as exc:
+        logger.warning(
+            "E-Mail-Versand fehlgeschlagen für %s: %s — Registrierung bleibt gespeichert.",
+            row.get("email"),
+            exc,
+        )
+
 
 # ---------------------------------------------------------------------------
 # Auth
@@ -373,7 +563,12 @@ def create_registration(payload: RegistrationIn) -> dict:
             detail=f"Anmeldung konnte nicht gespeichert werden: {exc}",
         )
 
-    return serialize(dict(row))
+    # Registrierung ist committed. Jetzt best-effort Mailversand.
+    # Fehler beim Mailversand dürfen die Anmeldung nicht abbrechen.
+    row = dict(row)
+    _try_send_confirmation_email(row)
+
+    return serialize(row)
 
 
 @app.get(
@@ -406,20 +601,22 @@ def export_registrations_csv() -> StreamingResponse:
     Nur für Admins zugänglich.
     """
     CSV_COLUMNS = [
-        "id", "created_at",
+        "id", "created_at", "registration_token",
         "child_first_name", "child_last_name", "birth_date",
         "parent_name", "email", "phone",
         "selected_camp_week", "jersey_size",
         "allergies", "notes",
         "consent_privacy", "status", "payment_status",
+        "email_sent_at",
     ]
     CSV_HEADERS = [
-        "ID", "Anmeldedatum",
+        "ID", "Anmeldedatum", "Anmelde-Token",
         "Vorname Kind", "Nachname Kind", "Geburtsdatum",
         "Elternteil", "E-Mail", "Telefon",
         "Termin", "Trikotnummer",
         "Allergien", "Notizen",
         "Datenschutz", "Status", "Zahlungsstatus",
+        "Mail gesendet am",
     ]
 
     try:

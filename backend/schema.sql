@@ -75,7 +75,20 @@ create table if not exists camp_registrations (
 
     payment_status text not null default 'open'
         constraint chk_payment_status_allowed
-            check (payment_status in ('open', 'paid', 'refunded', 'waived'))
+            check (payment_status in ('open', 'paid', 'refunded', 'waived')),
+
+    -- -----------------------------------------------------------
+    -- Öffentliches Token (Phase 1)
+    -- Für Payment-Links und E-Mail-Bestätigungen.
+    -- Trennt interne id von extern genutzten Identifikatoren.
+    -- -----------------------------------------------------------
+    registration_token uuid not null default gen_random_uuid(),
+
+    -- -----------------------------------------------------------
+    -- Mail + Payment Tracking (Phase 2 / 3)
+    -- -----------------------------------------------------------
+    email_sent_at    timestamptz,      -- NULL = noch nicht gesendet
+    stripe_session_id text unique      -- Stripe Checkout Session ID
 
 );
 
@@ -94,6 +107,15 @@ create index if not exists idx_camp_reg_email
 -- Sortierung nach Erstellungsdatum (Standard-Reihenfolge Admin-Liste)
 create index if not exists idx_camp_reg_created_at
     on camp_registrations (created_at desc);
+
+-- Lookup über registration_token (Payment-Links, E-Mail-Bestätigung)
+create unique index if not exists idx_camp_reg_registration_token
+    on camp_registrations (registration_token);
+
+-- Lookup über stripe_session_id (Webhook-Abgleich in Phase 3)
+create unique index if not exists idx_camp_reg_stripe_session_id
+    on camp_registrations (stripe_session_id)
+    where stripe_session_id is not null;
 
 -- -----------------------------------------------------------
 -- Row Level Security

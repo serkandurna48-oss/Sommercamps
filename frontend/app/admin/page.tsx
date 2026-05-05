@@ -18,6 +18,7 @@ interface Registration {
   consent_privacy: boolean
   status: string
   payment_status: string
+  email_sent_at: string | null
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -93,6 +94,7 @@ export default function AdminPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [campFilter, setCampFilter] = useState('')
+  const [paymentFilter, setPaymentFilter] = useState('')
 
   const passwordRef = useRef<HTMLInputElement>(null)
 
@@ -233,9 +235,11 @@ export default function AdminPage() {
   }
 
   const campWeeks = Array.from(new Set(registrations.map(r => r.selected_camp_week))).sort()
-  const filtered = campFilter
-    ? registrations.filter(r => r.selected_camp_week === campFilter)
-    : registrations
+  const filtered = registrations.filter(r => {
+    if (campFilter && r.selected_camp_week !== campFilter) return false
+    if (paymentFilter && r.payment_status !== paymentFilter) return false
+    return true
+  })
 
   // ── Login-Screen ─────────────────────────────────────────────────────────────
 
@@ -352,6 +356,18 @@ export default function AdminPage() {
                 <option key={w} value={w}>{w}</option>
               ))}
             </select>
+            <select
+              value={paymentFilter}
+              onChange={e => setPaymentFilter(e.target.value)}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700
+                         focus:outline-none focus:ring-2 focus:ring-black"
+            >
+              <option value="">Alle Zahlungsstatus</option>
+              <option value="open">Offen</option>
+              <option value="paid">Bezahlt</option>
+              <option value="refunded">Erstattet</option>
+              <option value="waived">Erlassen</option>
+            </select>
             <span className="text-sm text-gray-500">
               {filtered.length} Anmeldung{filtered.length !== 1 ? 'en' : ''}
             </span>
@@ -376,7 +392,7 @@ export default function AdminPage() {
               <table className="w-full text-sm text-left">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['Datum', 'Kind', 'Geburtsdatum', 'Elternteil', 'E-Mail', 'Telefon', 'Termin', 'Größe', 'Status', 'Zahlung', ''].map(h => (
+                    {['Datum', 'Kind', 'Geburtsdatum', 'Elternteil', 'E-Mail', 'Telefon', 'Termin', 'Größe', 'Status', 'Zahlung', 'Mail', ''].map(h => (
                       <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -405,6 +421,18 @@ export default function AdminPage() {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <Badge label={PAYMENT_LABELS[r.payment_status] ?? r.payment_status} color={PAYMENT_COLORS[r.payment_status] ?? 'bg-gray-100 text-gray-700'} />
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-center">
+                        {r.email_sent_at ? (
+                          <span
+                            title={`Gesendet: ${new Date(r.email_sent_at).toLocaleString('de-DE')}`}
+                            className="text-green-600 font-semibold text-sm cursor-default"
+                          >
+                            ✓
+                          </span>
+                        ) : (
+                          <span className="text-gray-300 text-sm">–</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <button

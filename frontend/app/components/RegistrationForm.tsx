@@ -2,9 +2,8 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { BANK_CONFIG, bankPurpose } from '../lib/config'
 
-/** Felder aus der Backend-Antwort, die wir in der Bestätigungsansicht brauchen. */
+/** Felder aus der Backend-Antwort (POST /registrations), die wir in der Bestätigungsansicht brauchen. */
 interface ConfirmedRegistration {
   id: string
   registration_token: string
@@ -15,6 +14,12 @@ interface ConfirmedRegistration {
   status: string
   payment_status: string
   photo_permission: boolean
+  // Bankdaten – vom Backend aus Env-Vars befüllt, nie im Frontend hardcodiert
+  bank_account_holder: string | null
+  bank_iban: string | null
+  bank_bic: string | null
+  bank_name: string | null
+  bank_purpose: string | null
 }
 
 const CAMP_WEEKS = [
@@ -190,100 +195,96 @@ export default function RegistrationForm() {
   }
 
   if (confirmed) {
+    const bankRows: [string, string | null, boolean][] = [
+      ['Kontoinhaber',    confirmed.bank_account_holder, false],
+      ['IBAN',            confirmed.bank_iban,           true],
+      ['BIC',             confirmed.bank_bic,            false],
+      ['Bank',            confirmed.bank_name,           false],
+    ]
+
     return (
-      <div className="py-2 space-y-5">
+      <div className="py-2 space-y-6">
 
         {/* Erfolgs-Header */}
-        <div className="text-center pb-1">
-          <div className="w-14 h-14 bg-green-50 border-2 border-green-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-7 h-7 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <div className="text-center">
+          <div className="w-16 h-16 bg-green-50 border-2 border-green-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-1.5">Anmeldung eingegangen!</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Anmeldung eingegangen!</h3>
           <p className="text-gray-500 text-sm leading-relaxed">
-            Eine Bestätigungs-E-Mail geht in Kürze an{' '}
-            <span className="font-medium text-gray-700">{confirmed.email}</span>.
+            Eine Bestätigungs-E-Mail mit allen Zahlungsinformationen
+            geht in Kürze an <span className="font-semibold text-gray-700">{confirmed.email}</span>.
           </p>
         </div>
 
-        {/* Zusammenfassung */}
-        <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-          <div className="px-4 py-3 flex justify-between items-center text-sm">
-            <span className="text-gray-500">Teilnehmer</span>
-            <span className="font-semibold text-gray-900">
-              {confirmed.child_first_name} {confirmed.child_last_name}
-            </span>
+        {/* Anmeldedaten */}
+        <div className="rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Anmeldedaten</p>
           </div>
-          <div className="px-4 py-3 flex justify-between items-center text-sm">
-            <span className="text-gray-500">Termin</span>
-            <span className="font-medium text-gray-900">{confirmed.selected_camp_week}</span>
-          </div>
-          <div className="px-4 py-3 flex justify-between items-center text-sm">
-            <span className="text-gray-500">Anmeldestatus</span>
-            <span className="inline-flex items-center gap-1.5 font-medium text-yellow-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block" />
-              Angemeldet
-            </span>
-          </div>
-          <div className="px-4 py-3 flex justify-between items-center text-sm">
-            <span className="text-gray-500">Zahlung</span>
-            <span className="inline-flex items-center gap-1.5 font-medium text-orange-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" />
-              Ausstehend
-            </span>
-          </div>
-          <div className="px-4 py-3 flex justify-between items-center text-sm">
-            <span className="text-gray-500">Foto-/Videoerlaubnis</span>
-            <span className="font-medium text-gray-900">
-              {confirmed.photo_permission ? 'Ja, erteilt' : 'Nein, nicht erteilt'}
-            </span>
+          <div className="divide-y divide-gray-100">
+            <div className="px-4 py-3 flex justify-between items-center text-sm">
+              <span className="text-gray-500">Teilnehmer</span>
+              <span className="font-semibold text-gray-900">{confirmed.child_first_name} {confirmed.child_last_name}</span>
+            </div>
+            <div className="px-4 py-3 flex justify-between items-center text-sm">
+              <span className="text-gray-500">Termin</span>
+              <span className="font-semibold text-gray-900">{confirmed.selected_camp_week}</span>
+            </div>
+            <div className="px-4 py-3 flex justify-between items-center text-sm">
+              <span className="text-gray-500">Status</span>
+              <span className="inline-flex items-center gap-1.5 font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-0.5 text-xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                Angemeldet – Zahlung ausstehend
+              </span>
+            </div>
+            <div className="px-4 py-3 flex justify-between items-center text-sm">
+              <span className="text-gray-500">Foto-/Videoerlaubnis</span>
+              <span className="font-medium text-gray-700">
+                {confirmed.photo_permission ? 'Ja, erteilt' : 'Nein'}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Bankverbindung */}
-        <div className="rounded-xl border border-green-200 bg-green-50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-green-200">
-            <p className="text-sm font-semibold text-green-900">Zahlung per Banküberweisung</p>
+        <div className="rounded-xl border border-green-200 overflow-hidden">
+          <div className="bg-green-700 px-4 py-3">
+            <p className="text-sm font-bold text-white">Bitte jetzt überweisen</p>
+            <p className="text-green-200 text-xs mt-0.5">Deine Anmeldung ist bestätigt, sobald deine Zahlung eingegangen ist.</p>
           </div>
-          <div className="divide-y divide-green-100">
-            {[
-              ['Kontoinhaber', BANK_CONFIG.accountHolder],
-              ['IBAN',         BANK_CONFIG.iban],
-              ['BIC',          BANK_CONFIG.bic],
-              ['Bank',         BANK_CONFIG.bank],
-              ['Verwendungszweck', bankPurpose(confirmed.child_first_name, confirmed.child_last_name)],
-            ].map(([label, value]) => (
-              <div key={label} className="px-4 py-2.5 flex justify-between items-center text-sm gap-4">
+          <div className="divide-y divide-gray-100 bg-white">
+            {bankRows.map(([label, value, isMono]) => (
+              <div key={label} className="px-4 py-3 flex justify-between items-center text-sm gap-4">
                 <span className="text-gray-500 shrink-0">{label}</span>
-                <span className={`font-medium text-gray-900 text-right ${label === 'IBAN' ? 'font-mono' : ''}`}>{value}</span>
+                <span className={`font-semibold text-gray-900 text-right ${isMono ? 'font-mono tracking-wide' : ''}`}>
+                  {value ?? '–'}
+                </span>
               </div>
             ))}
+            {/* Verwendungszweck hervorgehoben */}
+            <div className="px-4 py-3 bg-amber-50">
+              <p className="text-xs text-amber-700 font-semibold uppercase tracking-wider mb-1">Verwendungszweck (wichtig!)</p>
+              <p className="font-bold text-gray-900 text-sm">{confirmed.bank_purpose ?? `Sommercamp ${confirmed.child_first_name} ${confirmed.child_last_name}`}</p>
+            </div>
           </div>
         </div>
 
-        {/* Nächste Schritte */}
-        <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3.5 text-sm text-blue-800">
-          <p className="font-semibold mb-1.5">Nächste Schritte</p>
-          <ul className="space-y-1 text-blue-700">
-            <li>→ Du erhältst in Kürze eine Bestätigungs-E-Mail mit allen Bankdaten.</li>
-            <li>→ Bitte überweise den Beitrag mit dem Verwendungszweck oben.</li>
-            <li>→ Wir melden uns mit Details zu Zeiten und Treffpunkt.</li>
-          </ul>
+        {/* Hinweis */}
+        <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3.5 text-sm">
+          <p className="font-semibold text-blue-900 mb-1.5">So geht es weiter</p>
+          <ol className="space-y-1 text-blue-700 list-decimal list-inside">
+            <li>Überweisung mit dem Verwendungszweck oben durchführen.</li>
+            <li>Nach Zahlungseingang erhaltet ihr eine Bestätigung von uns.</li>
+            <li>Wir melden uns mit Details zu Uhrzeit und Treffpunkt.</li>
+          </ol>
         </div>
-
-        {/* Zahlung – Platzhalter für Phase 3 */}
-        <button
-          disabled
-          title="Online-Zahlung wird in Kürze freigeschaltet"
-          className="w-full bg-gray-100 text-gray-400 font-semibold py-3.5 rounded-xl text-sm cursor-not-allowed select-none"
-        >
-          Online bezahlen – folgt in Kürze
-        </button>
 
         <button
           onClick={() => setConfirmed(null)}
-          className="w-full text-sm text-gray-500 underline underline-offset-2 hover:text-gray-800 transition-colors"
+          className="w-full text-sm text-gray-500 underline underline-offset-2 hover:text-gray-800 transition-colors py-1"
         >
           Weitere Anmeldung einreichen
         </button>

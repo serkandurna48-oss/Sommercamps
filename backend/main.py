@@ -261,6 +261,12 @@ class RegistrationOut(BaseModel):
     paid_at: Optional[str]             # gesetzt, wenn payment_status = 'paid'
     email_sent_at: Optional[str]       # gesetzt nach Mailversand (Phase 2)
     stripe_session_id: Optional[str]   # gesetzt beim Checkout (Phase 3)
+    # Bankdaten: nur beim POST /registrations befüllt (für Bestätigungsseite)
+    bank_account_holder: Optional[str] = None
+    bank_iban:           Optional[str] = None
+    bank_bic:            Optional[str] = None
+    bank_name:           Optional[str] = None
+    bank_purpose:        Optional[str] = None
 
 class PaymentStatusIn(BaseModel):
     payment_status: Literal["open", "paid", "cancelled"]
@@ -388,10 +394,15 @@ def _build_confirmation_html(row: dict) -> str:
 
             <!-- Nächste Schritte -->
             <div style="background:#eff6ff;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
-              <p style="margin:0 0 6px;font-weight:700;color:#1e40af;font-size:13px;">Nächste Schritte</p>
+              <p style="margin:0 0 8px;font-weight:700;color:#1e40af;font-size:13px;">So geht es weiter</p>
+              <p style="margin:0 0 6px;color:#1d4ed8;font-size:14px;line-height:1.6;">
+                1. Bitte überweise den Campbeitrag mit dem <strong>Verwendungszweck oben</strong>.
+              </p>
+              <p style="margin:0 0 6px;color:#1d4ed8;font-size:14px;line-height:1.6;">
+                2. Deine Anmeldung ist vollständig bestätigt, sobald deine Zahlung bei uns eingegangen ist.
+              </p>
               <p style="margin:0;color:#1d4ed8;font-size:14px;line-height:1.6;">
-                Wir prüfen deine Anmeldung und melden uns in Kürze mit allen
-                Informationen zu Kosten, Zeiten und Treffpunkt.
+                3. Wir melden uns anschließend mit allen Details zu Uhrzeit und Treffpunkt.
               </p>
             </div>
 
@@ -448,11 +459,13 @@ def _build_confirmation_text(row: dict) -> str:
         f"BIC:              {BANK_CONFIG['bic']}\n"
         f"Bank:             {BANK_CONFIG['bank']}\n"
         f"Verwendungszweck: {purpose}\n\n"
-        f"Bitte überweise den Betrag mit dem oben angegebenen Verwendungszweck.\n"
-        f"Wir melden uns in Kürze mit allen Informationen zu Zeiten und Treffpunkt.\n\n"
-        f"Bei Fragen: {CONTACT_EMAIL}\n\n"
+        f"So geht es weiter:\n"
+        f"1. Bitte überweise den Campbeitrag mit dem Verwendungszweck oben.\n"
+        f"2. Deine Anmeldung gilt als bestätigt, sobald deine Zahlung bei uns eingegangen ist.\n"
+        f"3. Wir melden uns dann mit allen Details zu Uhrzeit und Treffpunkt.\n\n"
+        f"Bei Fragen erreichst du uns unter: {CONTACT_EMAIL}\n\n"
         f"Herzliche Grüße,\n"
-        f"Die Fußballschule KSV Baunatal"
+        f"Dein Team der Fußballschule KSV Baunatal"
     )
 
 
@@ -642,7 +655,16 @@ def create_registration(payload: RegistrationIn) -> dict:
     row = dict(row)
     _try_send_confirmation_email(row)
 
-    return serialize(row)
+    result = serialize(row)
+    # Bankdaten aus Backend-Config anfügen – Frontend hat keinen Zugriff auf Render-Env-Vars
+    result["bank_account_holder"] = BANK_CONFIG["account_holder"]
+    result["bank_iban"]           = BANK_CONFIG["iban"]
+    result["bank_bic"]            = BANK_CONFIG["bic"]
+    result["bank_name"]           = BANK_CONFIG["bank"]
+    result["bank_purpose"]        = bank_purpose(
+        row.get("child_first_name", ""), row.get("child_last_name", "")
+    )
+    return result
 
 
 @app.get(

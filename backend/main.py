@@ -1033,7 +1033,13 @@ async def stripe_webhook(request: Request) -> JSONResponse:
 
     session_obj = event["data"]["object"]
     stripe_session_id = getattr(session_obj, "id", None)
-    metadata = dict(session_obj.metadata or {})
+
+    metadata_obj = session_obj.metadata or {}
+    try:
+        metadata = metadata_obj.to_dict()
+    except AttributeError:
+        metadata = metadata_obj if isinstance(metadata_obj, dict) else {}
+
     registration_id = metadata.get("registration_id")
     registration_token = metadata.get("registration_token")
 

@@ -138,6 +138,41 @@ export default function Page() {
           </div>
         </section>
 
+        {/* ── Ablauf ──────────────────────────────────────────────────── */}
+        <section className="py-20 px-6 bg-gray-950 text-white">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-14">
+              <p className="text-[#CC0000] text-sm font-semibold tracking-widest uppercase mb-2">Einfach & unkompliziert</p>
+              <h2 className="text-3xl font-bold">So läuft die Anmeldung ab</h2>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-10">
+              {[
+                {
+                  step: '01',
+                  title: 'Termin wählen',
+                  text: 'Wähle einen der verfügbaren Camp-Termine und klicke auf "Anmelden" – der Termin wird im Formular automatisch vorausgewählt.',
+                },
+                {
+                  step: '02',
+                  title: 'Anmeldung absenden',
+                  text: 'Trage die Daten deines Kindes ein und sende das Formular ab. Die Anmeldung dauert nur wenige Minuten.',
+                },
+                {
+                  step: '03',
+                  title: 'Bestätigung & Zahlung',
+                  text: 'Du erhältst sofort eine Bestätigungs-E-Mail mit den Bankdaten. Nach Zahlungseingang ist der Platz gesichert.',
+                },
+              ].map(s => (
+                <div key={s.step} className="flex flex-col">
+                  <p className="text-6xl font-black text-white/10 leading-none mb-4 tabular-nums">{s.step}</p>
+                  <p className="text-base font-bold text-white mb-2">{s.title}</p>
+                  <p className="text-sm text-gray-400 leading-relaxed">{s.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ── Termine ─────────────────────────────────────────────────── */}
         <section id="termine" className="py-20 px-6 bg-gray-50">
           <div className="max-w-5xl mx-auto">
@@ -167,6 +202,7 @@ export default function Page() {
                     </span>
                     <p className="font-bold text-gray-900 text-lg mb-1">{c.label}</p>
                     <p className="text-[#CC0000] font-semibold text-sm">{c.date}</p>
+                    <p className="text-gray-400 text-xs mt-2">4 Tage · Kinder 5–12 Jahre</p>
                   </div>
                   <a
                     href={`/?week=${encodeURIComponent(c.value)}#anmeldung`}
@@ -187,7 +223,7 @@ export default function Page() {
               <p className="text-[#CC0000] text-sm font-semibold tracking-widest uppercase mb-2">Online-Anmeldung</p>
               <h2 className="text-3xl font-bold text-gray-900 mb-3">Platz sichern</h2>
               <p className="text-gray-500 text-base">
-                Nach der Anmeldung melden wir uns mit allen Details zu Kosten, Zeiten und Treffpunkt.
+                Du erhältst direkt nach der Anmeldung eine Bestätigungs-E-Mail mit den Zahlungsinformationen.
               </p>
             </div>
             <div className="rounded-2xl border border-gray-200 shadow-sm p-8 sm:p-10">
@@ -199,6 +235,49 @@ export default function Page() {
         </section>
 
       </main>
+
+      {/* ── FAQ ──────────────────────────────────────────────────────── */}
+      <section className="py-20 px-6 bg-gray-50">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-[#CC0000] text-sm font-semibold tracking-widest uppercase mb-2">Häufige Fragen</p>
+            <h2 className="text-3xl font-bold text-gray-900">FAQ für Eltern</h2>
+          </div>
+          <div className="space-y-3">
+            {[
+              {
+                q: 'Für welches Alter ist das Camp geeignet?',
+                a: 'Das Camp richtet sich an Kinder im Alter von 5 bis 12 Jahren.',
+              },
+              {
+                q: 'Was ist im Beitrag enthalten?',
+                a: 'Verpflegung (Mahlzeiten & Getränke), ein offizielles KSV-Trikot sowie ein Teilnehmerpokal sind im Beitrag inklusive.',
+              },
+              {
+                q: 'Wie bezahle ich?',
+                a: 'Die Zahlung erfolgt per Überweisung. Die Bankdaten sowie den Verwendungszweck erhältst du direkt nach der Anmeldung per E-Mail.',
+              },
+              {
+                q: 'Wann gilt die Anmeldung als abgeschlossen?',
+                a: 'Die Anmeldung ist vollständig bestätigt, sobald der Campbeitrag auf unserem Konto eingegangen ist.',
+              },
+              {
+                q: 'Können Kinder mit Allergien teilnehmen?',
+                a: 'Ja. Bitte trage alle relevanten Allergien und Unverträglichkeiten im Anmeldeformular ein, damit wir entsprechend planen können.',
+              },
+              {
+                q: 'An wen wende ich mich bei Fragen?',
+                a: 'Für alle Fragen steht dir Ergün Ünal zur Verfügung: Erguen.uenal@fussball.ksv-baunatal.de · 0170 9927281',
+              },
+            ].map(faq => (
+              <div key={faq.q} className="rounded-xl border border-gray-200 bg-white px-5 py-4">
+                <p className="font-semibold text-gray-900 text-sm mb-1.5">{faq.q}</p>
+                <p className="text-sm text-gray-500 leading-relaxed">{faq.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ── Footer ────────────────────────────────────────────────────── */}
       <footer className="bg-gray-950 text-gray-400 py-14 px-6">

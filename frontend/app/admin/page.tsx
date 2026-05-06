@@ -406,8 +406,8 @@ export default function AdminPage() {
             </span>
             <button
               onClick={handleCsvExport}
-              className="ml-auto text-sm font-medium text-gray-600 underline underline-offset-2
-                         hover:text-gray-900 transition-colors"
+              className="ml-auto text-sm font-semibold text-gray-700 border border-gray-200 bg-white
+                         px-4 py-2 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors"
             >
               CSV exportieren
             </button>

@@ -70,13 +70,20 @@ function Label({ children }: { children: React.ReactNode }) {
   return <label className="block text-sm font-medium text-gray-700 mb-1.5">{children}</label>
 }
 
-function Group({ title }: { title: string }) {
+function Group({ title, step }: { title: string; step: number }) {
   return (
     <div className="flex items-center gap-3 mb-5">
+      <div className="w-6 h-6 rounded-full bg-gray-900 text-white text-xs font-bold flex items-center justify-center shrink-0">
+        {step}
+      </div>
       <p className="text-sm font-semibold text-gray-900 whitespace-nowrap">{title}</p>
-      <div className="h-px bg-gray-200 flex-1" />
+      <div className="h-px bg-gray-100 flex-1" />
     </div>
   )
+}
+
+function HelpText({ children }: { children: React.ReactNode }) {
+  return <p className="mt-1.5 text-xs text-gray-400 leading-relaxed">{children}</p>
 }
 
 /** Gibt alle Fehler auf einmal zurück (leeres Array = alles ok). */
@@ -89,15 +96,23 @@ function validate(form: FormState): string[] {
   if (!form.birth_date) {
     errors.push('Geburtsdatum fehlt.')
   } else {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const birth = new Date(form.birth_date)
-    const minDate = new Date(today)
-    minDate.setFullYear(today.getFullYear() - 18)
-    const maxDate = new Date(today)
-    maxDate.setFullYear(today.getFullYear() - 5)
-    if (birth < minDate || birth > maxDate) {
-      errors.push('Das Kind muss zwischen 5 und 18 Jahren alt sein.')
+    const match = form.birth_date.match(/^(\d{2})\.(\d{2})\.(\d{4})$/)
+    if (!match) {
+      errors.push('Geburtsdatum ungültig. Format: TT.MM.JJJJ')
+    } else {
+      const [, d, m, y] = match
+      const birth = new Date(parseInt(y), parseInt(m) - 1, parseInt(d))
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const minAge = new Date(today)
+      minAge.setFullYear(today.getFullYear() - 12)
+      const maxAge = new Date(today)
+      maxAge.setFullYear(today.getFullYear() - 5)
+      if (birth > maxAge) {
+        errors.push('Das Kind muss mindestens 5 Jahre alt sein.')
+      } else if (birth < minAge) {
+        errors.push('Das Kind darf höchstens 12 Jahre alt sein.')
+      }
     }
   }
 
@@ -172,6 +187,16 @@ export default function RegistrationForm() {
       newValue = (e.target as HTMLInputElement).checked
     } else if (type === 'radio' && name === 'photo_permission') {
       newValue = value === 'ja'
+    } else if (name === 'birth_date') {
+      // Nur Ziffern behalten, dann automatisch Punkte einfügen: TT.MM.JJJJ
+      const digits = value.replace(/\D/g, '').slice(0, 8)
+      if (digits.length <= 2) {
+        newValue = digits
+      } else if (digits.length <= 4) {
+        newValue = digits.slice(0, 2) + '.' + digits.slice(2)
+      } else {
+        newValue = digits.slice(0, 2) + '.' + digits.slice(2, 4) + '.' + digits.slice(4)
+      }
     } else {
       newValue = value
     }
@@ -198,6 +223,10 @@ export default function RegistrationForm() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...form,
+            birth_date: (() => {
+              const [d, m, y] = form.birth_date.split('.')
+              return `${y}-${m}-${d}`
+            })(),
             jersey_size: form.jersey_size || null,
             allergies: form.allergies || null,
             notes: form.notes || null,
@@ -236,16 +265,16 @@ export default function RegistrationForm() {
       <div className="py-2 space-y-6">
 
         {/* Erfolgs-Header */}
-        <div className="text-center">
-          <div className="w-16 h-16 bg-green-50 border-2 border-green-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <div className="text-center pb-2">
+          <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-sm">
+            <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Anmeldung eingegangen!</h3>
-          <p className="text-gray-500 text-sm leading-relaxed">
-            Eine Bestätigungs-E-Mail mit allen Zahlungsinformationen
-            geht in Kürze an <span className="font-semibold text-gray-700">{confirmed.email}</span>.
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">Anmeldung eingegangen</h3>
+          <p className="text-gray-500 text-sm leading-relaxed max-w-sm mx-auto">
+            Eine Bestätigungs-E-Mail mit den Zahlungsdaten geht in Kürze an{' '}
+            <span className="font-semibold text-gray-800">{confirmed.email}</span>.
           </p>
         </div>
 
@@ -320,19 +349,26 @@ export default function RegistrationForm() {
           <p className="text-xs text-gray-400 text-center">Alternativ können Sie auch per Überweisung bezahlen (siehe unten).</p>
         </div>
 
-        {/* Überweisungshinweis */}
-        <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3.5 text-sm">
-          <p className="font-semibold text-blue-900 mb-1.5">So geht es weiter</p>
-          <ol className="space-y-1 text-blue-700 list-decimal list-inside">
-            <li>Überweisung mit dem Verwendungszweck oben durchführen.</li>
-            <li>Nach Zahlungseingang erhaltet ihr eine Bestätigung von uns.</li>
-            <li>Wir melden uns mit Details zu Uhrzeit und Treffpunkt.</li>
+        {/* Nächste Schritte */}
+        <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm space-y-3">
+          <p className="font-semibold text-gray-900">Nächste Schritte</p>
+          <ol className="space-y-2 text-gray-600">
+            {[
+              'Überweisung mit dem Verwendungszweck oben durchführen.',
+              'Nach Zahlungseingang gilt die Anmeldung als vollständig bestätigt.',
+              'Wir melden uns mit allen Details zu Uhrzeit und Treffpunkt.',
+            ].map((step, i) => (
+              <li key={i} className="flex items-start gap-3">
+                <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                <span>{step}</span>
+              </li>
+            ))}
           </ol>
         </div>
 
         <button
           onClick={() => setConfirmed(null)}
-          className="w-full text-sm text-gray-500 underline underline-offset-2 hover:text-gray-800 transition-colors py-1"
+          className="w-full text-sm text-gray-400 hover:text-gray-700 transition-colors py-1"
         >
           Weitere Anmeldung einreichen
         </button>
@@ -353,7 +389,7 @@ export default function RegistrationForm() {
 
       {/* ── Kind ──────────────────────────────────────────────── */}
       <div>
-        <Group title="Kind" />
+        <Group title="Kind" step={1} />
         <div className="space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
@@ -372,21 +408,27 @@ export default function RegistrationForm() {
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label>Geburtsdatum *</Label>
-              <input type="date" name="birth_date" value={form.birth_date}
-                onChange={handleChange} required className={input()} />
-              {form.birth_date && (
-                <p className="mt-1 text-xs text-gray-400">
-                  {formatDateDE(form.birth_date)}
-                </p>
-              )}
+              <input
+                type="text"
+                inputMode="numeric"
+                name="birth_date"
+                value={form.birth_date}
+                onChange={handleChange}
+                required
+                placeholder="TT.MM.JJJJ"
+                maxLength={10}
+                className={input()}
+              />
+              <HelpText>Kinder von 5 bis 12 Jahren</HelpText>
             </div>
             <div>
-              <Label>Trikotnummer / Größe</Label>
+              <Label>Trikotgröße</Label>
               <select name="jersey_size" value={form.jersey_size}
                 onChange={handleChange} className={input()}>
                 <option value="">– bitte wählen –</option>
                 {JERSEY_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
+              <HelpText>Optional – wird für das Camp-Trikot benötigt</HelpText>
             </div>
           </div>
         </div>
@@ -394,26 +436,28 @@ export default function RegistrationForm() {
 
       {/* ── Elternteil ────────────────────────────────────────── */}
       <div>
-        <Group title="Elternteil / Erziehungsberechtigte*r" />
+        <Group title="Erziehungsberechtigte*r" step={2} />
         <div className="space-y-4">
           <div>
-            <Label>Name *</Label>
+            <Label>Vor- und Nachname *</Label>
             <input type="text" name="parent_name" value={form.parent_name}
               onChange={handleChange} required autoComplete="name"
               placeholder="Anna Mustermann" className={input()} />
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <Label>E-Mail *</Label>
+              <Label>E-Mail-Adresse *</Label>
               <input type="email" name="email" value={form.email}
                 onChange={handleChange} required autoComplete="email"
                 placeholder="anna@beispiel.de" className={input()} />
+              <HelpText>Hieran werden die Zahlungsinformationen gesendet</HelpText>
             </div>
             <div>
-              <Label>Telefon *</Label>
+              <Label>Telefonnummer *</Label>
               <input type="tel" name="phone" value={form.phone}
                 onChange={handleChange} required autoComplete="tel"
                 placeholder="0561 123456" className={input()} />
+              <HelpText>Für Rückfragen zum Camp</HelpText>
             </div>
           </div>
         </div>
@@ -421,10 +465,10 @@ export default function RegistrationForm() {
 
       {/* ── Camp ──────────────────────────────────────────────── */}
       <div>
-        <Group title="Camp-Auswahl" />
+        <Group title="Camp & Besonderheiten" step={3} />
         <div className="space-y-4">
           <div>
-            <Label>Wunschtermin *</Label>
+            <Label>Gewünschter Termin *</Label>
             <select name="selected_camp_week" value={form.selected_camp_week}
               onChange={handleChange} required className={input()}>
               <option value="">– bitte wählen –</option>
@@ -434,13 +478,14 @@ export default function RegistrationForm() {
           <div>
             <Label>Allergien / Unverträglichkeiten</Label>
             <textarea name="allergies" value={form.allergies} onChange={handleChange}
-              rows={2} placeholder="z.B. Laktoseintoleranz, Nussallergie …"
+              rows={2} placeholder="z. B. Laktoseintoleranz, Nussallergie …"
               className={input('resize-none')} />
+            <HelpText>Wichtig für die Verpflegungsplanung</HelpText>
           </div>
           <div>
             <Label>Sonstige Hinweise</Label>
             <textarea name="notes" value={form.notes} onChange={handleChange}
-              rows={2} placeholder="z.B. besondere Bedürfnisse, Fahrtgemeinschaft …"
+              rows={2} placeholder="z. B. besondere Bedürfnisse, Fahrtgemeinschaft …"
               className={input('resize-none')} />
           </div>
         </div>
@@ -448,41 +493,43 @@ export default function RegistrationForm() {
 
       {/* ── Bilderrechte ──────────────────────────────────────── */}
       <div>
-        <Group title="Foto- & Videoerlaubnis" />
-        <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-4 space-y-3">
-          <p className="text-sm text-gray-700 leading-relaxed">
-            Dürfen während des Camps Fotos/Videos Ihres Kindes gemacht und auf der Homepage
-            sowie den Social-Media-Kanälen des Vereins veröffentlicht werden?
+        <Group title="Foto- & Videoerlaubnis" step={4} />
+        <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-4 space-y-4">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            Dürfen während des Camps Fotos und Videos Ihres Kindes aufgenommen und
+            auf der Vereinshomepage sowie den Social-Media-Kanälen des KSV Baunatal
+            veröffentlicht werden?
           </p>
-          <div className="flex gap-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="photo_permission"
-                value="nein"
-                checked={!form.photo_permission}
-                onChange={handleChange}
-                className="h-4 w-4 accent-black"
-              />
-              <span className="text-sm font-medium text-gray-800">Nein</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="photo_permission"
-                value="ja"
-                checked={form.photo_permission}
-                onChange={handleChange}
-                className="h-4 w-4 accent-black"
-              />
-              <span className="text-sm font-medium text-gray-800">Ja</span>
-            </label>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { value: 'nein', label: 'Nein, kein Einverständnis', active: !form.photo_permission },
+              { value: 'ja',   label: 'Ja, Einverständnis erteilt', active: form.photo_permission },
+            ].map(opt => (
+              <label
+                key={opt.value}
+                className={`flex items-center justify-center text-center border-2 rounded-xl px-3 py-3 cursor-pointer transition-all ${
+                  opt.active
+                    ? 'border-gray-900 bg-gray-900 text-white'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="photo_permission"
+                  value={opt.value}
+                  checked={opt.active}
+                  onChange={handleChange}
+                  className="sr-only"
+                />
+                <span className="text-sm font-semibold leading-snug">{opt.label}</span>
+              </label>
+            ))}
           </div>
         </div>
       </div>
 
       {/* ── Datenschutz ───────────────────────────────────────── */}
-      <div className="flex items-start gap-3 rounded-xl bg-gray-50 border border-gray-200 px-4 py-3.5">
+      <div className="flex items-start gap-3 rounded-xl bg-gray-50 border border-gray-200 px-4 py-3.5 mt-2">
         <input
           type="checkbox" id="consent_privacy" name="consent_privacy"
           checked={form.consent_privacy} onChange={handleChange} required
@@ -513,15 +560,16 @@ export default function RegistrationForm() {
       )}
 
       {/* ── Submit ────────────────────────────────────────────── */}
-      <button
-        type="submit"
-        disabled={isPending}
-        className="w-full bg-black hover:opacity-90 disabled:opacity-50 text-white font-semibold py-4 rounded-xl transition-opacity text-base"
-      >
-        {isPending ? 'Wird gesendet …' : 'Verbindlich anmelden'}
-      </button>
-
-      <p className="text-center text-xs text-gray-400">* Pflichtfeld</p>
+      <div className="pt-2">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="w-full bg-gray-900 hover:bg-black disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors text-base tracking-wide shadow-sm"
+        >
+          {isPending ? 'Wird gesendet …' : 'Verbindlich anmelden →'}
+        </button>
+        <p className="text-center text-xs text-gray-400 mt-3">* Pflichtfeld · Anmeldung ist unverbindlich bis zur Zahlung</p>
+      </div>
     </form>
     </>
   )

@@ -1032,12 +1032,16 @@ async def stripe_webhook(request: Request) -> JSONResponse:
         return JSONResponse(status_code=200, content={"received": True})
 
     session_obj = event["data"]["object"]
-    stripe_session_id = session_obj.get("id")
-    metadata = session_obj.get("metadata", {})
+    stripe_session_id = session_obj.id
+    metadata = session_obj.metadata or {}
     registration_id = metadata.get("registration_id")
+    registration_token = metadata.get("registration_token")
 
     if not registration_id:
-        logger.warning("Stripe Webhook: registration_id fehlt in metadata (session %s)", stripe_session_id)
+        logger.warning(
+            "Stripe Webhook: registration_id fehlt in metadata (session %s, token %s)",
+            stripe_session_id, registration_token,
+        )
         return JSONResponse(status_code=200, content={"received": True})
 
     try:

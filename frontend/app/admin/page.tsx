@@ -354,10 +354,10 @@ export default function AdminPage() {
         {!loading && registrations.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: 'Gesamt',     value: registrations.length },
-              { label: 'Bestätigt', value: registrations.filter(r => r.status === 'confirmed').length },
-              { label: 'Bezahlt',   value: registrations.filter(r => r.payment_status === 'paid').length },
-              { label: 'Warteliste',value: registrations.filter(r => r.status === 'waitlist').length },
+              { label: 'Anmeldungen',    value: registrations.length },
+              { label: 'Bezahlt',        value: registrations.filter(r => r.payment_status === 'paid').length },
+              { label: 'Zahlung offen',  value: registrations.filter(r => r.payment_status === 'open').length },
+              { label: 'Storniert',      value: registrations.filter(r => r.payment_status === 'cancelled').length },
             ].map(stat => (
               <div key={stat.label} className="bg-white rounded-xl border border-gray-200 px-5 py-4">
                 <p className="text-2xl font-bold text-gray-900">{stat.value}</p>

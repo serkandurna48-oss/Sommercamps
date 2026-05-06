@@ -363,7 +363,7 @@ export default function Page() {
               </div>
               <p className="text-sm leading-relaxed">
                 Fußballschule des KSV Baunatal e.V. —
-                Nachwuchsförderung seit Jahren.
+                qualifiziertes Training für Kinder von 5 bis 12 Jahren.
               </p>
             </div>
             <div>

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { formatDateDE } from '../lib/formatDate'
 
 /** Felder aus der Backend-Antwort (POST /registrations), die wir in der Bestätigungsansicht brauchen. */
 interface ConfirmedRegistration {
@@ -374,9 +373,9 @@ export default function RegistrationForm() {
 
         <button
           onClick={() => setConfirmed(null)}
-          className="w-full text-sm text-gray-400 hover:text-gray-700 transition-colors py-1"
+          className="w-full text-sm text-gray-500 hover:text-gray-800 border border-gray-200 rounded-xl py-2.5 transition-colors hover:border-gray-300"
         >
-          Weitere Anmeldung einreichen
+          Weiteres Kind anmelden
         </button>
 
       </div>
@@ -459,7 +458,7 @@ export default function RegistrationForm() {
               <Label>Trikotgröße</Label>
               <select name="jersey_size" value={form.jersey_size}
                 onChange={handleChange} className={input()}>
-                <option value="">– bitte wählen –</option>
+                <option value="">Größe wählen (optional)</option>
                 {JERSEY_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
               <HelpText>Optional – wird für das Camp-Trikot benötigt</HelpText>
@@ -505,7 +504,7 @@ export default function RegistrationForm() {
             <Label>Gewünschter Termin *</Label>
             <select name="selected_camp_week" value={form.selected_camp_week}
               onChange={handleChange} required className={input()}>
-              <option value="">– bitte wählen –</option>
+              <option value="">Termin auswählen …</option>
               {CAMP_WEEKS.map(w => <option key={w} value={w}>{w}</option>)}
             </select>
           </div>

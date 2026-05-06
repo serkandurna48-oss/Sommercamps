@@ -16,6 +16,7 @@ import jwt
 import psycopg2
 import requests as http_client
 import stripe
+from stripe._error import SignatureVerificationError as StripeSignatureError
 import psycopg2.extras
 import psycopg2.pool
 from dotenv import load_dotenv
@@ -1019,10 +1020,12 @@ async def stripe_webhook(request: Request) -> JSONResponse:
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
-    except stripe.errors.SignatureVerificationError:
-        return JSONResponse(status_code=400, content={"error": "Ungültige Stripe-Signatur."})
-    except Exception:
-        return JSONResponse(status_code=400, content={"error": "Ungültiger Webhook-Payload."})
+    except StripeSignatureError:
+        print("[webhook] Ungültige Stripe-Signatur")
+        raise HTTPException(status_code=400, detail="Invalid Stripe signature")
+    except Exception as exc:
+        print(f"[webhook] Ungültiger Payload: {type(exc).__name__}: {exc}")
+        raise HTTPException(status_code=400, detail="Invalid webhook payload")
 
     if event["type"] != "checkout.session.completed":
         # Irrelevantes Event – quittieren

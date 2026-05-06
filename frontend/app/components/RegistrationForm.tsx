@@ -302,16 +302,22 @@ export default function RegistrationForm() {
           </div>
         </div>
 
-        {/* Stripe Online-Zahlung – noch nicht aktiv */}
+        {/* Stripe Online-Zahlung */}
         <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm space-y-3">
+          <p className="font-semibold text-gray-900">Jetzt bequem online bezahlen</p>
+          <p className="text-gray-600">Bezahlen Sie den Campbeitrag sicher per Kreditkarte über Stripe.</p>
           <button
             type="button"
-            disabled
-            className="w-full rounded-xl bg-gray-300 text-gray-500 text-sm font-semibold py-3 cursor-not-allowed"
+            onClick={() => handleStripeCheckout(confirmed.registration_token)}
+            disabled={checkoutLoading}
+            className="w-full rounded-xl bg-black text-white text-sm font-semibold py-3 hover:bg-gray-800 transition-colors disabled:opacity-60"
           >
-            Online-Zahlung bald verfügbar
+            {checkoutLoading ? 'Weiterleitung…' : 'Jetzt online bezahlen'}
           </button>
-          <p className="text-xs text-gray-400 text-center">Aktuell ist die Zahlung per Überweisung möglich.</p>
+          {checkoutError && (
+            <p className="text-red-600 text-xs">{checkoutError}</p>
+          )}
+          <p className="text-xs text-gray-400 text-center">Alternativ können Sie auch per Überweisung bezahlen (siehe unten).</p>
         </div>
 
         {/* Überweisungshinweis */}

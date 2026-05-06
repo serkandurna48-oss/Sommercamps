@@ -15,10 +15,11 @@ from uuid import UUID
 import jwt
 import psycopg2
 import requests as http_client
+import stripe
 import psycopg2.extras
 import psycopg2.pool
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -53,6 +54,14 @@ BANK_CONFIG: dict[str, str] = {
     "bic":            os.getenv("BANK_BIC",            "[noch einfügen]"),
     "bank":           os.getenv("BANK_NAME",           "[noch einfügen]"),
 }
+
+# Stripe (Phase 3) — nur Testmode-Keys committen, nie Live-Keys
+# STRIPE_SECRET_KEY:     sk_test_... (Render Env Var)
+# STRIPE_WEBHOOK_SECRET: whsec_...  (Render Env Var)
+STRIPE_SECRET_KEY:      str = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET:  str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_PRICE_CENTS:     int = int(os.getenv("STRIPE_PRICE_CENTS", "0"))  # z. B. 15000 = 150,00 €
+FRONTEND_URL:           str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 logger = logging.getLogger(__name__)
 
@@ -850,3 +859,177 @@ def update_payment_status(registration_id: str, payload: PaymentStatusIn) -> dic
             detail=f"Anmeldung {registration_id} nicht gefunden.",
         )
     return serialize(dict(row))
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 – Stripe Checkout
+# ---------------------------------------------------------------------------
+
+@app.post(
+    "/registrations/{registration_token}/checkout-session",
+    tags=["Payment"],
+    summary="Stripe Checkout Session erstellen",
+)
+def create_checkout_session(registration_token: str) -> dict:
+    """
+    Erstellt eine Stripe Checkout Session für eine Anmeldung.
+
+    Authentifizierung erfolgt ausschließlich über den registration_token
+    im Pfad – kein JWT, kein öffentlicher Zugriff ohne gültigen Token.
+
+    Gibt {"checkout_url": "https://checkout.stripe.com/..."} zurück.
+    """
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Online-Zahlung ist aktuell nicht konfiguriert.",
+        )
+    if STRIPE_PRICE_CENTS <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Camppreis ist nicht konfiguriert.",
+        )
+
+    # Anmeldung per registration_token laden
+    try:
+        with db_cursor() as cur:
+            cur.execute(
+                "SELECT * FROM camp_registrations WHERE registration_token = %s",
+                (registration_token,),
+            )
+            row = cur.fetchone()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Datenbankfehler: {exc}",
+        )
+
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Anmeldung nicht gefunden.",
+        )
+
+    row = dict(row)
+    reg_id = str(row["id"])
+    child_name = f"{row.get('child_first_name', '')} {row.get('child_last_name', '')}".strip()
+
+    stripe.api_key = STRIPE_SECRET_KEY
+
+    try:
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "eur",
+                        "unit_amount": STRIPE_PRICE_CENTS,
+                        "product_data": {
+                            "name": f"Sommercamp 2026 – {child_name}",
+                            "description": row.get("selected_camp_week", ""),
+                        },
+                    },
+                    "quantity": 1,
+                }
+            ],
+            mode="payment",
+            success_url=(
+                f"{FRONTEND_URL}/?stripe=success&token={registration_token}"
+            ),
+            cancel_url=f"{FRONTEND_URL}/",
+            customer_email=row.get("email") or None,
+            metadata={
+                "registration_id": reg_id,
+                "registration_token": registration_token,
+            },
+        )
+    except stripe.StripeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Stripe-Fehler: {exc.user_message or str(exc)}",
+        )
+
+    # stripe_session_id in DB speichern
+    try:
+        with db_cursor() as cur:
+            cur.execute(
+                "UPDATE camp_registrations SET stripe_session_id = %s WHERE id = %s",
+                (session.id, reg_id),
+            )
+    except Exception as exc:
+        # Nicht kritisch – Webhook kann Anmeldung auch per metadata.registration_id finden
+        logger.warning("stripe_session_id konnte nicht gespeichert werden: %s", exc)
+
+    return {"checkout_url": session.url}
+
+
+@app.post(
+    "/stripe/webhook",
+    tags=["Payment"],
+    summary="Stripe Webhook Receiver",
+    include_in_schema=False,
+)
+async def stripe_webhook(request: Request) -> JSONResponse:
+    """
+    Empfängt Stripe Webhook Events.
+
+    - Signatur wird mit STRIPE_WEBHOOK_SECRET verifiziert → 400 bei Fehler.
+    - checkout.session.completed → payment_status = paid, paid_at = now().
+    - Alle anderen Events → 200 OK (ignoriert).
+    """
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
+
+    if not STRIPE_WEBHOOK_SECRET:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Webhook-Secret nicht konfiguriert."},
+        )
+
+    stripe.api_key = STRIPE_SECRET_KEY
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+    except stripe.errors.SignatureVerificationError:
+        return JSONResponse(status_code=400, content={"error": "Ungültige Stripe-Signatur."})
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Ungültiger Webhook-Payload."})
+
+    if event["type"] != "checkout.session.completed":
+        # Irrelevantes Event – quittieren
+        return JSONResponse(status_code=200, content={"received": True})
+
+    session_obj = event["data"]["object"]
+    stripe_session_id = session_obj.get("id")
+    metadata = session_obj.get("metadata", {})
+    registration_id = metadata.get("registration_id")
+
+    if not registration_id:
+        logger.warning("Stripe Webhook: registration_id fehlt in metadata (session %s)", stripe_session_id)
+        return JSONResponse(status_code=200, content={"received": True})
+
+    try:
+        with db_cursor() as cur:
+            cur.execute(
+                """
+                UPDATE camp_registrations
+                   SET payment_status = 'paid',
+                       paid_at = now()
+                 WHERE id = %s
+                   AND payment_status != 'paid'
+                RETURNING id
+                """,
+                (registration_id,),
+            )
+            updated = cur.fetchone()
+    except Exception as exc:
+        logger.error("Stripe Webhook DB-Fehler: %s", exc)
+        # 200 zurückgeben damit Stripe nicht wiederholt – Fehler wird geloggt
+        return JSONResponse(status_code=200, content={"received": True, "warning": "DB-Fehler"})
+
+    if updated:
+        logger.info("Stripe Zahlung verbucht: registration_id=%s", registration_id)
+    else:
+        logger.info("Stripe Webhook: Anmeldung %s bereits bezahlt oder nicht gefunden.", registration_id)
+
+    return JSONResponse(status_code=200, content={"received": True})

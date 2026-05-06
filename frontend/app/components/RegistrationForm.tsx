@@ -124,13 +124,42 @@ export default function RegistrationForm() {
   const [errors, setErrors] = useState<string[]>([])
   const [confirmed, setConfirmed] = useState<ConfirmedRegistration | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
-  // Wenn ein Camp-Termin per URL-Parameter übergeben wird (?week=…),
-  // diesen automatisch im Formular vorausfüllen.
+  async function handleStripeCheckout(registrationToken: string) {
+    setCheckoutLoading(true)
+    setCheckoutError(null)
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+      const res = await fetch(`${apiUrl}/registrations/${registrationToken}/checkout-session`, {
+        method: 'POST',
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setCheckoutError(data?.detail ?? `Fehler (${res.status})`)
+        return
+      }
+      if (data?.checkout_url) {
+        window.location.href = data.checkout_url
+      }
+    } catch {
+      setCheckoutError('Verbindung zum Server fehlgeschlagen.')
+    } finally {
+      setCheckoutLoading(false)
+    }
+  }
+
+  const [stripeSuccess, setStripeSuccess] = useState(false)
+
+  // URL-Parameter auswerten: ?week= für Vorausfüllen, ?stripe=success für Rückkehr von Stripe
   useEffect(() => {
     const week = searchParams.get('week') ?? ''
     if (week && CAMP_WEEKS.includes(week)) {
       setForm(prev => ({ ...prev, selected_camp_week: week }))
+    }
+    if (searchParams.get('stripe') === 'success') {
+      setStripeSuccess(true)
     }
   }, [searchParams])
 
@@ -273,7 +302,25 @@ export default function RegistrationForm() {
           </div>
         </div>
 
-        {/* Hinweis */}
+        {/* Stripe Online-Zahlung */}
+        <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm space-y-3">
+          <p className="font-semibold text-gray-900">Jetzt bequem online bezahlen</p>
+          <p className="text-gray-600">Bezahlen Sie den Campbeitrag sicher per Kreditkarte oder giropay über Stripe.</p>
+          <button
+            type="button"
+            onClick={() => handleStripeCheckout(confirmed.registration_token)}
+            disabled={checkoutLoading}
+            className="w-full rounded-xl bg-black text-white text-sm font-semibold py-3 hover:bg-gray-800 transition-colors disabled:opacity-60"
+          >
+            {checkoutLoading ? 'Weiterleitung…' : 'Jetzt online bezahlen'}
+          </button>
+          {checkoutError && (
+            <p className="text-red-600 text-xs">{checkoutError}</p>
+          )}
+          <p className="text-xs text-gray-400 text-center">Alternativ können Sie auch per Überweisung bezahlen (siehe unten).</p>
+        </div>
+
+        {/* Überweisungshinweis */}
         <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3.5 text-sm">
           <p className="font-semibold text-blue-900 mb-1.5">So geht es weiter</p>
           <ol className="space-y-1 text-blue-700 list-decimal list-inside">
@@ -295,6 +342,13 @@ export default function RegistrationForm() {
   }
 
   return (
+    <>
+    {stripeSuccess && (
+      <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-4 mb-6 text-sm text-green-800">
+        <p className="font-semibold mb-1">Zahlung erfolgreich</p>
+        <p>Vielen Dank! Ihre Zahlung wurde an Stripe übermittelt. Der Zahlungsstatus wird in Kürze aktualisiert.</p>
+      </div>
+    )}
     <form onSubmit={handleSubmit} noValidate className="space-y-8">
 
       {/* ── Kind ──────────────────────────────────────────────── */}
@@ -469,5 +523,6 @@ export default function RegistrationForm() {
 
       <p className="text-center text-xs text-gray-400">* Pflichtfeld</p>
     </form>
+    </>
   )
 }

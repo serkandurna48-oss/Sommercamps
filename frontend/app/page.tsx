@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import Link from 'next/link'
 import ClubLogo from './components/ClubLogo'
 import RegistrationForm from './components/RegistrationForm'
@@ -25,8 +26,8 @@ const HIGHLIGHTS = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
       </svg>
     ),
-    title: 'Training mit der 1. Mannschaft',
-    text: 'Einblicke in den Profi-Alltag und Training auf dem Vereinsgelände des KSV.',
+    title: 'Training mit Spielern der 1. Mannschaft',
+    text: 'Einblicke in den Trainingsalltag auf dem Vereinsgelände des KSV.',
   },
   {
     icon: (
@@ -49,9 +50,9 @@ const HIGHLIGHTS = [
 ]
 
 const CAMPS = [
-  { label: 'Sommercamp I', date: '29.06. – 02.07.2026', tag: 'Sommer' },
-  { label: 'Sommercamp II', date: '03.08. – 06.08.2026', tag: 'Sommer' },
-  { label: 'Herbstcamp', date: '05.10. – 08.10.2026', tag: 'Herbst' },
+  { label: 'Sommercamp I',  date: '29.06. – 02.07.2026', value: '29.06.–02.07.2026', tag: 'Sommer' },
+  { label: 'Sommercamp II', date: '03.08. – 06.08.2026', value: '03.08.–06.08.2026', tag: 'Sommer' },
+  { label: 'Herbstcamp',    date: '05.10. – 08.10.2026', value: '05.10.–08.10.2026', tag: 'Herbst' },
 ]
 
 export default function Page() {
@@ -144,6 +145,16 @@ export default function Page() {
               <p className="text-[#CC0000] text-sm font-semibold tracking-widest uppercase mb-2">Wann findet es statt</p>
               <h2 className="text-3xl font-bold text-gray-900">Termine 2026</h2>
             </div>
+            {/* Hinweis: 1. Mannschaft */}
+            <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-600 leading-relaxed">
+              <p className="font-semibold text-gray-800 mb-1">Hinweis zu Trainingseinheiten mit der 1. Mannschaft</p>
+              <p>
+                Trainingseinheiten mit Spielern der 1. Mannschaft finden – sofern es zeitlich möglich ist –
+                im Rahmen des Camps statt. Wir bitten um Verständnis, dass dies organisatorisch und
+                terminlich abhängig ist und daher nicht garantiert werden kann.
+              </p>
+            </div>
+
             <div className="grid sm:grid-cols-3 gap-5">
               {CAMPS.map(c => (
                 <div
@@ -158,7 +169,7 @@ export default function Page() {
                     <p className="text-[#CC0000] font-semibold text-sm">{c.date}</p>
                   </div>
                   <a
-                    href="#anmeldung"
+                    href={`/?week=${encodeURIComponent(c.value)}#anmeldung`}
                     className="mt-auto bg-black text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-center"
                   >
                     Anmelden
@@ -180,7 +191,9 @@ export default function Page() {
               </p>
             </div>
             <div className="rounded-2xl border border-gray-200 shadow-sm p-8 sm:p-10">
-              <RegistrationForm />
+              <Suspense fallback={<div className="py-10 text-center text-sm text-gray-400">Lädt …</div>}>
+                <RegistrationForm />
+              </Suspense>
             </div>
           </div>
         </section>

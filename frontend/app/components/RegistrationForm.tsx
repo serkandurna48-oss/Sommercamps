@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { BANK_CONFIG, bankPurpose } from '../lib/config'
 
 /** Felder aus der Backend-Antwort, die wir in der Bestätigungsansicht brauchen. */
 interface ConfirmedRegistration {
@@ -12,6 +14,7 @@ interface ConfirmedRegistration {
   email: string
   status: string
   payment_status: string
+  photo_permission: boolean
 }
 
 const CAMP_WEEKS = [
@@ -34,6 +37,7 @@ interface FormState {
   allergies: string
   notes: string
   consent_privacy: boolean
+  photo_permission: boolean
 }
 
 const EMPTY: FormState = {
@@ -48,6 +52,7 @@ const EMPTY: FormState = {
   allergies: '',
   notes: '',
   consent_privacy: false,
+  photo_permission: false,
 }
 
 const input = (extra = '') =>
@@ -108,20 +113,34 @@ function validate(form: FormState): string[] {
 }
 
 export default function RegistrationForm() {
+  const searchParams = useSearchParams()
   const [form, setForm] = useState<FormState>(EMPTY)
   const [errors, setErrors] = useState<string[]>([])
   const [confirmed, setConfirmed] = useState<ConfirmedRegistration | null>(null)
   const [isPending, startTransition] = useTransition()
 
+  // Wenn ein Camp-Termin per URL-Parameter übergeben wird (?week=…),
+  // diesen automatisch im Formular vorausfüllen.
+  useEffect(() => {
+    const week = searchParams.get('week') ?? ''
+    if (week && CAMP_WEEKS.includes(week)) {
+      setForm(prev => ({ ...prev, selected_camp_week: week }))
+    }
+  }, [searchParams])
+
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) {
     const { name, value, type } = e.target
-    setForm(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
-    }))
-    // Fehler beim Tippen ausblenden, damit die Liste nicht nervt
+    let newValue: string | boolean
+    if (type === 'checkbox') {
+      newValue = (e.target as HTMLInputElement).checked
+    } else if (type === 'radio' && name === 'photo_permission') {
+      newValue = value === 'ja'
+    } else {
+      newValue = value
+    }
+    setForm(prev => ({ ...prev, [name]: newValue }))
     if (errors.length > 0) setErrors([])
   }
 
@@ -147,6 +166,7 @@ export default function RegistrationForm() {
             jersey_size: form.jersey_size || null,
             allergies: form.allergies || null,
             notes: form.notes || null,
+            photo_permission: form.photo_permission,
           }),
         })
 
@@ -213,14 +233,42 @@ export default function RegistrationForm() {
               Ausstehend
             </span>
           </div>
+          <div className="px-4 py-3 flex justify-between items-center text-sm">
+            <span className="text-gray-500">Foto-/Videoerlaubnis</span>
+            <span className="font-medium text-gray-900">
+              {confirmed.photo_permission ? 'Ja, erteilt' : 'Nein, nicht erteilt'}
+            </span>
+          </div>
+        </div>
+
+        {/* Bankverbindung */}
+        <div className="rounded-xl border border-green-200 bg-green-50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-green-200">
+            <p className="text-sm font-semibold text-green-900">Zahlung per Banküberweisung</p>
+          </div>
+          <div className="divide-y divide-green-100">
+            {[
+              ['Kontoinhaber', BANK_CONFIG.accountHolder],
+              ['IBAN',         BANK_CONFIG.iban],
+              ['BIC',          BANK_CONFIG.bic],
+              ['Bank',         BANK_CONFIG.bank],
+              ['Verwendungszweck', bankPurpose(confirmed.child_first_name, confirmed.child_last_name)],
+            ].map(([label, value]) => (
+              <div key={label} className="px-4 py-2.5 flex justify-between items-center text-sm gap-4">
+                <span className="text-gray-500 shrink-0">{label}</span>
+                <span className={`font-medium text-gray-900 text-right ${label === 'IBAN' ? 'font-mono' : ''}`}>{value}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Nächste Schritte */}
         <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3.5 text-sm text-blue-800">
           <p className="font-semibold mb-1.5">Nächste Schritte</p>
           <ul className="space-y-1 text-blue-700">
-            <li>→ Du erhältst in Kürze eine Bestätigungs-E-Mail von uns.</li>
-            <li>→ Wir melden uns mit allen Details zu Kosten, Zeiten und Treffpunkt.</li>
+            <li>→ Du erhältst in Kürze eine Bestätigungs-E-Mail mit allen Bankdaten.</li>
+            <li>→ Bitte überweise den Beitrag mit dem Verwendungszweck oben.</li>
+            <li>→ Wir melden uns mit Details zu Zeiten und Treffpunkt.</li>
           </ul>
         </div>
 
@@ -333,6 +381,41 @@ export default function RegistrationForm() {
             <textarea name="notes" value={form.notes} onChange={handleChange}
               rows={2} placeholder="z.B. besondere Bedürfnisse, Fahrtgemeinschaft …"
               className={input('resize-none')} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Bilderrechte ──────────────────────────────────────── */}
+      <div>
+        <Group title="Foto- & Videoerlaubnis" />
+        <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-4 space-y-3">
+          <p className="text-sm text-gray-700 leading-relaxed">
+            Dürfen während des Camps Fotos/Videos Ihres Kindes gemacht und auf der Homepage
+            sowie den Social-Media-Kanälen des Vereins veröffentlicht werden?
+          </p>
+          <div className="flex gap-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="photo_permission"
+                value="nein"
+                checked={!form.photo_permission}
+                onChange={handleChange}
+                className="h-4 w-4 accent-black"
+              />
+              <span className="text-sm font-medium text-gray-800">Nein</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="photo_permission"
+                value="ja"
+                checked={form.photo_permission}
+                onChange={handleChange}
+                className="h-4 w-4 accent-black"
+              />
+              <span className="text-sm font-medium text-gray-800">Ja</span>
+            </label>
           </div>
         </div>
       </div>

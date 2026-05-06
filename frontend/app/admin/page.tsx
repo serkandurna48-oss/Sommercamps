@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { formatDateDE } from '../lib/formatDate'
 
 interface Registration {
   id: string
@@ -16,8 +17,10 @@ interface Registration {
   allergies: string | null
   notes: string | null
   consent_privacy: boolean
+  photo_permission: boolean
   status: string
   payment_status: string
+  paid_at: string | null
   email_sent_at: string | null
 }
 
@@ -29,24 +32,26 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
-  open: 'Offen',
-  paid: 'Bezahlt',
-  refunded: 'Erstattet',
-  waived: 'Erlassen',
+  open:      'Offen',
+  paid:      'Bezahlt',
+  refunded:  'Erstattet',
+  waived:    'Erlassen',
+  cancelled: 'Storniert',
 }
 
 const STATUS_COLORS: Record<string, string> = {
   registered: 'bg-yellow-100 text-yellow-800',
-  confirmed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-700',
-  waitlist: 'bg-blue-100 text-blue-800',
+  confirmed:  'bg-green-100 text-green-800',
+  cancelled:  'bg-red-100 text-red-700',
+  waitlist:   'bg-blue-100 text-blue-800',
 }
 
 const PAYMENT_COLORS: Record<string, string> = {
-  open: 'bg-orange-100 text-orange-800',
-  paid: 'bg-green-100 text-green-800',
-  refunded: 'bg-gray-100 text-gray-700',
-  waived: 'bg-purple-100 text-purple-800',
+  open:      'bg-orange-100 text-orange-800',
+  paid:      'bg-green-100 text-green-800',
+  refunded:  'bg-gray-100 text-gray-700',
+  waived:    'bg-purple-100 text-purple-800',
+  cancelled: 'bg-red-100 text-red-700',
 }
 
 function Badge({ label, color }: { label: string; color: string }) {
@@ -93,6 +98,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [updatingPaymentId, setUpdatingPaymentId] = useState<string | null>(null)
   const [campFilter, setCampFilter] = useState('')
   const [paymentFilter, setPaymentFilter] = useState('')
 
@@ -201,6 +207,32 @@ export default function AdminPage() {
     } finally {
       setDeleting(false)
       setDeleteId(null)
+    }
+  }
+
+  // ── Zahlungsstatus ───────────────────────────────────────────────────────────
+
+  async function handlePaymentStatus(id: string, newStatus: 'paid' | 'open' | 'cancelled') {
+    setUpdatingPaymentId(id)
+    setError(null)
+    try {
+      const res = await adminFetch(`/admin/registrations/${id}/payment-status`, token, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_status: newStatus }),
+      })
+      if (res.status === 401) { clearToken(); setToken(''); setError('Sitzung abgelaufen.'); return }
+      if (!res.ok) {
+        const d = await res.json().catch(() => null)
+        setError(d?.detail ?? `Fehler beim Aktualisieren (${res.status}).`)
+        return
+      }
+      const updated: Registration = await res.json()
+      setRegistrations(prev => prev.map(r => r.id === id ? { ...r, payment_status: updated.payment_status, paid_at: updated.paid_at } : r))
+    } catch {
+      setError('Verbindung zum Server fehlgeschlagen.')
+    } finally {
+      setUpdatingPaymentId(null)
     }
   }
 
@@ -365,6 +397,7 @@ export default function AdminPage() {
               <option value="">Alle Zahlungsstatus</option>
               <option value="open">Offen</option>
               <option value="paid">Bezahlt</option>
+              <option value="cancelled">Storniert</option>
               <option value="refunded">Erstattet</option>
               <option value="waived">Erlassen</option>
             </select>
@@ -392,7 +425,7 @@ export default function AdminPage() {
               <table className="w-full text-sm text-left">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['Datum', 'Kind', 'Geburtsdatum', 'Elternteil', 'E-Mail', 'Telefon', 'Termin', 'Größe', 'Status', 'Zahlung', 'Mail', ''].map(h => (
+                    {['Datum', 'Kind', 'Geburtsdatum', 'Elternteil', 'E-Mail', 'Telefon', 'Termin', 'Größe', 'Fotos', 'Status', 'Zahlung', 'Mail', ''].map(h => (
                       <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -401,13 +434,13 @@ export default function AdminPage() {
                   {filtered.map(r => (
                     <tr key={r.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                        {new Date(r.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {formatDateDE(r.created_at)}
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
                         {r.child_first_name} {r.child_last_name}
                       </td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                        {new Date(r.birth_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {formatDateDE(r.birth_date)}
                       </td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{r.parent_name}</td>
                       <td className="px-4 py-3 text-gray-600">
@@ -417,10 +450,34 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{r.selected_camp_week}</td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{r.jersey_size ?? '–'}</td>
                       <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-md ${r.photo_permission ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
+                          {r.photo_permission ? 'Ja' : 'Nein'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <Badge label={STATUS_LABELS[r.status] ?? r.status} color={STATUS_COLORS[r.status] ?? 'bg-gray-100 text-gray-700'} />
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <Badge label={PAYMENT_LABELS[r.payment_status] ?? r.payment_status} color={PAYMENT_COLORS[r.payment_status] ?? 'bg-gray-100 text-gray-700'} />
+                        <div className="flex flex-col gap-1">
+                          <Badge label={PAYMENT_LABELS[r.payment_status] ?? r.payment_status} color={PAYMENT_COLORS[r.payment_status] ?? 'bg-gray-100 text-gray-700'} />
+                          {r.payment_status !== 'paid' ? (
+                            <button
+                              onClick={() => handlePaymentStatus(r.id, 'paid')}
+                              disabled={updatingPaymentId === r.id}
+                              className="text-xs text-green-700 hover:text-green-900 font-medium disabled:opacity-40 text-left"
+                            >
+                              {updatingPaymentId === r.id ? '…' : 'Als bezahlt markieren'}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handlePaymentStatus(r.id, 'open')}
+                              disabled={updatingPaymentId === r.id}
+                              className="text-xs text-gray-500 hover:text-gray-800 font-medium disabled:opacity-40 text-left"
+                            >
+                              {updatingPaymentId === r.id ? '…' : 'Auf offen setzen'}
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center">
                         {r.email_sent_at ? (

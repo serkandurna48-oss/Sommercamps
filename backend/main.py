@@ -9,7 +9,7 @@ import uuid
 from contextlib import asynccontextmanager, contextmanager
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Any, Generator, Optional
+from typing import Any, Generator, Literal, Optional
 from uuid import UUID
 
 import jwt
@@ -41,6 +41,15 @@ BREVO_API_KEY:   str = os.getenv("BREVO_API_KEY", "")
 EMAIL_FROM:      str = os.getenv("EMAIL_FROM", "")
 EMAIL_FROM_NAME: str = os.getenv("EMAIL_FROM_NAME", "Fußballschule KSV Baunatal")
 CONTACT_EMAIL:   str = os.getenv("CONTACT_EMAIL", "info@ksv-baunatal.de")
+
+# Bankdaten für Überweisungshinweis (Phase 2)
+# Echte Werte per Env-Var setzen: BANK_ACCOUNT_HOLDER, BANK_IBAN, BANK_BIC, BANK_NAME
+BANK_CONFIG: dict[str, str] = {
+    "account_holder": os.getenv("BANK_ACCOUNT_HOLDER", "[noch einfügen]"),
+    "iban":           os.getenv("BANK_IBAN",           "[noch einfügen]"),
+    "bic":            os.getenv("BANK_BIC",            "[noch einfügen]"),
+    "bank":           os.getenv("BANK_NAME",           "[noch einfügen]"),
+}
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +148,11 @@ def serialize(row: dict) -> dict:
     return out
 
 
+def bank_purpose(first_name: str, last_name: str) -> str:
+    """Verwendungszweck für die Überweisung: 'Sommercamp Vorname Nachname'."""
+    return f"Sommercamp {first_name} {last_name}".strip()
+
+
 # ---------------------------------------------------------------------------
 # Lifespan (Startup / Shutdown)
 # ---------------------------------------------------------------------------
@@ -171,7 +185,7 @@ if _extra:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_methods=["GET", "POST", "DELETE"],
+    allow_methods=["GET", "POST", "DELETE", "PATCH"],
     allow_headers=["*"],
 )
 
@@ -195,6 +209,7 @@ class RegistrationIn(BaseModel):
     allergies: Optional[str] = None
     notes: Optional[str] = None
     consent_privacy: bool
+    photo_permission: bool = False  # Bilderrechte; Standard: Nein
 
     @field_validator("child_first_name", "child_last_name", "parent_name", "phone")
     @classmethod
@@ -240,10 +255,16 @@ class RegistrationOut(BaseModel):
     allergies: Optional[str]
     notes: Optional[str]
     consent_privacy: bool
+    photo_permission: bool             # Bilderrechte
     status: str
     payment_status: str
-    email_sent_at: Optional[str]      # gesetzt nach Mailversand (Phase 2)
-    stripe_session_id: Optional[str]  # gesetzt beim Checkout (Phase 3)
+    paid_at: Optional[str]             # gesetzt, wenn payment_status = 'paid'
+    email_sent_at: Optional[str]       # gesetzt nach Mailversand (Phase 2)
+    stripe_session_id: Optional[str]   # gesetzt beim Checkout (Phase 3)
+
+class PaymentStatusIn(BaseModel):
+    payment_status: Literal["open", "paid", "cancelled"]
+
 
 # ---------------------------------------------------------------------------
 # DB Constraint → lesbare Fehlermeldung
@@ -267,6 +288,9 @@ CONSTRAINT_MESSAGES: dict[str, str] = {
 
 def _build_confirmation_html(row: dict) -> str:
     """Gibt den HTML-Body der Bestätigungsmail zurück."""
+    child_name  = f"{row.get('child_first_name', '')} {row.get('child_last_name', '')}".strip()
+    purpose     = bank_purpose(row.get("child_first_name", ""), row.get("child_last_name", ""))
+    photo_label = "Ja, erteilt" if row.get("photo_permission") else "Nein, nicht erteilt"
     return (
         """<!DOCTYPE html>
 <html lang="de">
@@ -320,12 +344,47 @@ def _build_confirmation_html(row: dict) -> str:
                 </td>
               </tr>
               <tr>
-                <td style="padding:13px 16px;">
+                <td style="padding:13px 16px;border-bottom:1px solid #f3f4f6;">
                   <span style="color:#6b7280;font-size:12px;display:block;margin-bottom:2px;">Zahlung</span>
                   <span style="color:#c2410c;font-weight:600;font-size:15px;">Ausstehend</span>
                 </td>
               </tr>
+              <tr>
+                <td style="padding:13px 16px;">
+                  <span style="color:#6b7280;font-size:12px;display:block;margin-bottom:2px;">Foto-/Videoerlaubnis</span>
+                  <span style="color:#111111;font-weight:600;font-size:15px;">PHOTO_PERMISSION_LABEL</span>
+                </td>
+              </tr>
             </table>
+
+            <!-- Bankverbindung -->
+            <div style="border:1px solid #d1fae5;border-radius:8px;margin-bottom:24px;overflow:hidden;">
+              <div style="background:#ecfdf5;padding:10px 16px;border-bottom:1px solid #d1fae5;">
+                <p style="margin:0;font-weight:700;color:#065f46;font-size:13px;">Zahlung per Banküberweisung</p>
+              </div>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:12px;width:42%;">Kontoinhaber</td>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111111;font-size:13px;font-weight:600;">BANK_ACCOUNT_HOLDER</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:12px;">IBAN</td>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111111;font-size:13px;font-weight:600;font-family:monospace,monospace;">BANK_IBAN</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:12px;">BIC</td>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111111;font-size:13px;font-weight:600;">BANK_BIC</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:12px;">Bank</td>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111111;font-size:13px;font-weight:600;">BANK_NAME</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 16px;color:#6b7280;font-size:12px;">Verwendungszweck</td>
+                  <td style="padding:10px 16px;color:#111111;font-size:13px;font-weight:700;">BANK_PURPOSE</td>
+                </tr>
+              </table>
+            </div>
 
             <!-- Nächste Schritte -->
             <div style="background:#eff6ff;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
@@ -357,25 +416,40 @@ def _build_confirmation_html(row: dict) -> str:
   </table>
 </body>
 </html>"""
-        .replace("PARENT_NAME", str(row.get("parent_name", "")))
-        .replace("CHILD_NAME",  f"{row.get('child_first_name', '')} {row.get('child_last_name', '')}".strip())
-        .replace("CAMP_WEEK",   str(row.get("selected_camp_week", "")))
-        .replace("CONTACT_EMAIL", CONTACT_EMAIL)
+        .replace("PARENT_NAME",           str(row.get("parent_name", "")))
+        .replace("CHILD_NAME",            child_name)
+        .replace("CAMP_WEEK",             str(row.get("selected_camp_week", "")))
+        .replace("PHOTO_PERMISSION_LABEL", photo_label)
+        .replace("BANK_ACCOUNT_HOLDER",   BANK_CONFIG["account_holder"])
+        .replace("BANK_IBAN",             BANK_CONFIG["iban"])
+        .replace("BANK_BIC",              BANK_CONFIG["bic"])
+        .replace("BANK_NAME",             BANK_CONFIG["bank"])
+        .replace("BANK_PURPOSE",          purpose)
+        .replace("CONTACT_EMAIL",         CONTACT_EMAIL)
     )
 
 
 def _build_confirmation_text(row: dict) -> str:
     """Gibt den Plain-Text-Fallback der Bestätigungsmail zurück."""
-    child_name = f"{row.get('child_first_name', '')} {row.get('child_last_name', '')}".strip()
+    child_name  = f"{row.get('child_first_name', '')} {row.get('child_last_name', '')}".strip()
+    purpose     = bank_purpose(row.get("child_first_name", ""), row.get("child_last_name", ""))
+    photo_label = "Ja, erteilt" if row.get("photo_permission") else "Nein, nicht erteilt"
     return (
         f"Anmeldung eingegangen!\n\n"
         f"Hallo {row.get('parent_name', '')},\n\n"
         f"wir haben die Anmeldung für {child_name} erhalten.\n\n"
-        f"Termin:          {row.get('selected_camp_week', '')}\n"
-        f"Anmeldestatus:   Angemeldet\n"
-        f"Zahlung:         Ausstehend\n\n"
-        f"Wir prüfen die Anmeldung und melden uns in Kürze mit allen Informationen\n"
-        f"zu Kosten, Zeiten und Treffpunkt.\n\n"
+        f"Termin:               {row.get('selected_camp_week', '')}\n"
+        f"Anmeldestatus:        Angemeldet\n"
+        f"Zahlung:              Ausstehend\n"
+        f"Foto-/Videoerlaubnis: {photo_label}\n\n"
+        f"--- Bankverbindung ---\n"
+        f"Kontoinhaber:     {BANK_CONFIG['account_holder']}\n"
+        f"IBAN:             {BANK_CONFIG['iban']}\n"
+        f"BIC:              {BANK_CONFIG['bic']}\n"
+        f"Bank:             {BANK_CONFIG['bank']}\n"
+        f"Verwendungszweck: {purpose}\n\n"
+        f"Bitte überweise den Betrag mit dem oben angegebenen Verwendungszweck.\n"
+        f"Wir melden uns in Kürze mit allen Informationen zu Zeiten und Treffpunkt.\n\n"
         f"Bei Fragen: {CONTACT_EMAIL}\n\n"
         f"Herzliche Grüße,\n"
         f"Die Fußballschule KSV Baunatal"
@@ -532,12 +606,12 @@ def create_registration(payload: RegistrationIn) -> dict:
             child_first_name, child_last_name, birth_date,
             parent_name, email, phone,
             selected_camp_week, jersey_size,
-            allergies, notes, consent_privacy
+            allergies, notes, consent_privacy, photo_permission
         ) VALUES (
             %(child_first_name)s, %(child_last_name)s, %(birth_date)s,
             %(parent_name)s, %(email)s, %(phone)s,
             %(selected_camp_week)s, %(jersey_size)s,
-            %(allergies)s, %(notes)s, %(consent_privacy)s
+            %(allergies)s, %(notes)s, %(consent_privacy)s, %(photo_permission)s
         )
         RETURNING *
     """
@@ -606,7 +680,8 @@ def export_registrations_csv() -> StreamingResponse:
         "parent_name", "email", "phone",
         "selected_camp_week", "jersey_size",
         "allergies", "notes",
-        "consent_privacy", "status", "payment_status",
+        "consent_privacy", "photo_permission",
+        "status", "payment_status", "paid_at",
         "email_sent_at",
     ]
     CSV_HEADERS = [
@@ -615,7 +690,8 @@ def export_registrations_csv() -> StreamingResponse:
         "Elternteil", "E-Mail", "Telefon",
         "Termin", "Trikotnummer",
         "Allergien", "Notizen",
-        "Datenschutz", "Status", "Zahlungsstatus",
+        "Datenschutz", "Foto-/Videoerlaubnis",
+        "Status", "Zahlungsstatus", "Bezahlt am",
         "Mail gesendet am",
     ]
 
@@ -697,3 +773,54 @@ def delete_registration(registration_id: str) -> dict:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Anmeldung {registration_id} nicht gefunden.")
 
     return {"message": "Anmeldung gelöscht.", "id": str(deleted["id"])}
+
+
+@app.patch(
+    "/admin/registrations/{registration_id}/payment-status",
+    response_model=RegistrationOut,
+    dependencies=[Depends(verify_session_token)],
+    tags=["Admin"],
+    summary="Zahlungsstatus einer Anmeldung setzen (Admin)",
+)
+def update_payment_status(registration_id: str, payload: PaymentStatusIn) -> dict:
+    """
+    Setzt den Zahlungsstatus einer Anmeldung.
+
+    - paid:             paid_at = now()
+    - open / cancelled: paid_at = NULL  (Status eindeutig, kein irreführendes Datum)
+
+    Nur Admins dürfen diesen Endpunkt nutzen (JWT erforderlich).
+    """
+    try:
+        uid = uuid.UUID(registration_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Ungültiges UUID-Format.",
+        )
+
+    paid_at_expr = "paid_at = now()" if payload.payment_status == "paid" else "paid_at = NULL"
+
+    sql = f"""
+        UPDATE camp_registrations
+           SET payment_status = %(payment_status)s,
+               {paid_at_expr}
+         WHERE id = %(id)s
+         RETURNING *
+    """
+    try:
+        with db_cursor() as cur:
+            cur.execute(sql, {"payment_status": payload.payment_status, "id": str(uid)})
+            row = cur.fetchone()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Datenbankfehler: {exc}",
+        )
+
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Anmeldung {registration_id} nicht gefunden.",
+        )
+    return serialize(dict(row))

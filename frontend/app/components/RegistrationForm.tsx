@@ -132,6 +132,10 @@ function validate(form: FormState): string[] {
   return errors
 }
 
+// Online-Zahlung nur anzeigen, wenn NEXT_PUBLIC_STRIPE_ENABLED=true gesetzt ist.
+// Solange Stripe nicht live ist, wird stattdessen ein Hinweis angezeigt.
+const STRIPE_ENABLED = process.env.NEXT_PUBLIC_STRIPE_ENABLED === 'true'
+
 export default function RegistrationForm() {
   const searchParams = useSearchParams()
   const [form, setForm] = useState<FormState>(EMPTY)
@@ -337,22 +341,29 @@ export default function RegistrationForm() {
         </div>
 
         {/* Stripe Online-Zahlung */}
-        <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm space-y-3">
-          <p className="font-semibold text-gray-900">Jetzt bequem online bezahlen</p>
-          <p className="text-gray-600">Bezahlen Sie den Campbeitrag sicher per Kreditkarte über Stripe.</p>
-          <button
-            type="button"
-            onClick={() => handleStripeCheckout(confirmed.registration_token)}
-            disabled={checkoutLoading}
-            className="w-full rounded-xl bg-black text-white text-sm font-semibold py-3 hover:bg-gray-800 transition-colors disabled:opacity-60"
-          >
-            {checkoutLoading ? 'Weiterleitung…' : 'Jetzt online bezahlen'}
-          </button>
-          {checkoutError && (
-            <p className="text-red-600 text-xs">{checkoutError}</p>
-          )}
-          <p className="text-xs text-gray-400 text-center">Alternativ können Sie auch per Überweisung bezahlen (siehe unten).</p>
-        </div>
+        {STRIPE_ENABLED ? (
+          <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm space-y-3">
+            <p className="font-semibold text-gray-900">Jetzt bequem online bezahlen</p>
+            <p className="text-gray-600">Bezahlen Sie den Campbeitrag sicher per Kreditkarte über Stripe.</p>
+            <button
+              type="button"
+              onClick={() => handleStripeCheckout(confirmed.registration_token)}
+              disabled={checkoutLoading}
+              className="w-full rounded-xl bg-black text-white text-sm font-semibold py-3 hover:bg-gray-800 transition-colors disabled:opacity-60"
+            >
+              {checkoutLoading ? 'Weiterleitung…' : 'Jetzt online bezahlen'}
+            </button>
+            {checkoutError && (
+              <p className="text-red-600 text-xs">{checkoutError}</p>
+            )}
+            <p className="text-xs text-gray-400 text-center">Alternativ können Sie auch per Überweisung bezahlen (siehe oben).</p>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm">
+            <p className="font-semibold text-gray-500">Online-Zahlung bald verfügbar</p>
+            <p className="text-gray-400 text-xs mt-1">Bitte überweise den Campbeitrag per Banküberweisung (siehe oben).</p>
+          </div>
+        )}
 
         {/* Nächste Schritte */}
         <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm space-y-3">

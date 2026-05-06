@@ -49,6 +49,9 @@ const HIGHLIGHTS = [
   },
 ]
 
+// ── Campbeitrag – nur hier anpassen ─────────────────────────────────────────
+const CAMP_PRICE = '149 €' // TODO: echten Preis eintragen
+
 const CAMPS = [
   { label: 'Sommercamp I',  date: '29.06. – 02.07.2026', value: '29.06.–02.07.2026', tag: 'Sommer' },
   { label: 'Sommercamp II', date: '03.08. – 06.08.2026', value: '03.08.–06.08.2026', tag: 'Sommer' },
@@ -112,12 +115,13 @@ export default function Page() {
               </div>
 
               {/* Schnellfakten */}
-              <div className="mt-12 pt-8 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-6">
+              <div className="mt-12 pt-8 border-t border-white/10 grid grid-cols-2 sm:grid-cols-5 gap-6">
                 {[
-                  { value: '3',         label: 'Camp-Termine 2026' },
-                  { value: '4 Tage',    label: 'je Camp' },
-                  { value: '5 – 12',    label: 'Jahre' },
-                  { value: 'Baunatal',  label: 'KSV-Vereinsgelände' },
+                  { value: '3',          label: 'Camp-Termine 2026' },
+                  { value: '4 Tage',     label: 'je Camp' },
+                  { value: '5 – 12',     label: 'Jahre' },
+                  { value: CAMP_PRICE,   label: 'Campbeitrag' },
+                  { value: 'Baunatal',   label: 'KSV-Vereinsgelände' },
                 ].map(f => (
                   <div key={f.label}>
                     <p className="text-xl sm:text-2xl font-bold text-white tabular-nums">{f.value}</p>
@@ -218,6 +222,7 @@ export default function Page() {
                     <p className="font-bold text-gray-900 text-lg mb-1">{c.label}</p>
                     <p className="text-[#CC0000] font-semibold text-sm">{c.date}</p>
                     <p className="text-gray-400 text-xs mt-2">4 Tage · Kinder 5–12 Jahre</p>
+                    <p className="text-gray-900 font-bold text-sm mt-2">{CAMP_PRICE}</p>
                   </div>
                   <a
                     href={`/?week=${encodeURIComponent(c.value)}#anmeldung`}
@@ -381,12 +386,20 @@ export default function Page() {
                 Deine Daten werden ausschließlich zur Abwicklung der Camp-Anmeldung genutzt.
                 Rechtsgrundlage: Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;b DSGVO.
               </p>
-              <Link
-                href="/datenschutz"
-                className="inline-block mt-3 text-sm text-gray-400 underline underline-offset-2 hover:text-gray-200 transition-colors"
-              >
-                Vollständige Datenschutzerklärung →
-              </Link>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <Link
+                  href="/datenschutz"
+                  className="text-sm text-gray-400 underline underline-offset-2 hover:text-gray-200 transition-colors"
+                >
+                  Datenschutzerklärung
+                </Link>
+                <Link
+                  href="/impressum"
+                  className="text-sm text-gray-400 underline underline-offset-2 hover:text-gray-200 transition-colors"
+                >
+                  Impressum
+                </Link>
+              </div>
             </div>
           </div>
           <div className="border-t border-gray-800 pt-6 text-xs text-gray-600 text-center">

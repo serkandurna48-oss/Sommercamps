@@ -173,6 +173,12 @@ def bank_purpose(first_name: str, last_name: str) -> str:
 async def lifespan(app: FastAPI):
     """Pool beim Start initialisieren, beim Shutdown schließen."""
     _init_pool()
+    logger.info(
+        "[startup] Stripe konfiguriert: STRIPE_SECRET_KEY=%s | STRIPE_PRICE_CENTS=%d | FRONTEND_URL=%s",
+        bool(STRIPE_SECRET_KEY),
+        STRIPE_PRICE_CENTS,
+        FRONTEND_URL or "(leer)",
+    )
     yield
     _close_pool()
 
@@ -879,12 +885,22 @@ def create_checkout_session(registration_token: str) -> dict:
 
     Gibt {"checkout_url": "https://checkout.stripe.com/..."} zurück.
     """
+    logger.info("[checkout] token empfangen: %s", registration_token[:8] + "…")
+    logger.info(
+        "[checkout] STRIPE_SECRET_KEY gesetzt: %s | STRIPE_PRICE_CENTS: %d | FRONTEND_URL: %s",
+        bool(STRIPE_SECRET_KEY),
+        STRIPE_PRICE_CENTS,
+        FRONTEND_URL or "(leer)",
+    )
+
     if not STRIPE_SECRET_KEY:
+        logger.error("[checkout] STRIPE_SECRET_KEY fehlt – Abbruch.")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Online-Zahlung ist aktuell nicht konfiguriert.",
         )
     if STRIPE_PRICE_CENTS <= 0:
+        logger.error("[checkout] STRIPE_PRICE_CENTS ist 0 oder fehlt – Abbruch.")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Camppreis ist nicht konfiguriert.",
@@ -899,12 +915,14 @@ def create_checkout_session(registration_token: str) -> dict:
             )
             row = cur.fetchone()
     except Exception as exc:
+        logger.error("[checkout] DB-Fehler beim Laden der Anmeldung: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Datenbankfehler: {exc}",
         )
 
     if row is None:
+        logger.warning("[checkout] Keine Anmeldung gefunden für token: %s…", registration_token[:8])
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Anmeldung nicht gefunden.",
@@ -913,8 +931,10 @@ def create_checkout_session(registration_token: str) -> dict:
     row = dict(row)
     reg_id = str(row["id"])
     child_name = f"{row.get('child_first_name', '')} {row.get('child_last_name', '')}".strip()
+    logger.info("[checkout] Anmeldung gefunden: id=%s kind=%s", reg_id, child_name)
 
     stripe.api_key = STRIPE_SECRET_KEY
+    logger.info("[checkout] Stripe Session wird erstellt…")
 
     try:
         session = stripe.checkout.Session.create(
@@ -944,10 +964,19 @@ def create_checkout_session(registration_token: str) -> dict:
             },
         )
     except stripe.StripeError as exc:
+        logger.error("[checkout] stripe.StripeError: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Stripe-Fehler: {exc.user_message or str(exc)}",
+            detail=f"Stripe-Fehler: {getattr(exc, 'user_message', None) or str(exc)}",
         )
+    except Exception as exc:
+        logger.error("[checkout] Unerwarteter Fehler bei Stripe Session: %s: %s", type(exc).__name__, exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Interner Fehler: {type(exc).__name__}: {exc}",
+        )
+
+    logger.info("[checkout] Stripe Session erstellt: %s", session.id)
 
     # stripe_session_id in DB speichern
     try:
@@ -958,7 +987,7 @@ def create_checkout_session(registration_token: str) -> dict:
             )
     except Exception as exc:
         # Nicht kritisch – Webhook kann Anmeldung auch per metadata.registration_id finden
-        logger.warning("stripe_session_id konnte nicht gespeichert werden: %s", exc)
+        logger.warning("[checkout] stripe_session_id konnte nicht gespeichert werden: %s", exc)
 
     return {"checkout_url": session.url}
 

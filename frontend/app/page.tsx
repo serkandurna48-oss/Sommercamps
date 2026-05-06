@@ -18,7 +18,7 @@ const HIGHLIGHTS = [
       </svg>
     ),
     title: 'Qualifizierte Trainer',
-    text: 'Lizenzierte DFB-Trainer mit jahrelanger Erfahrung in der Jugendarbeit.',
+    text: 'Training mit qualifizierten Jugendtrainern aus unserem Verein. Unsere Trainer betreuen die Kinder mit einem altersgerechten Trainingskonzept, unterstützt durch Jugendspieler der A- und B-Jugend.',
   },
   {
     icon: (

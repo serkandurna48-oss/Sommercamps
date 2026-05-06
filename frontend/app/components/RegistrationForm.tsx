@@ -262,7 +262,7 @@ export default function RegistrationForm() {
     ]
 
     return (
-      <div className="py-2 space-y-6">
+      <div className="pt-2 pb-8 space-y-6">
 
         {/* Erfolgs-Header */}
         <div className="text-center pb-2">
@@ -278,10 +278,23 @@ export default function RegistrationForm() {
           </p>
         </div>
 
+        {/* Reservierungs-Status */}
+        <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3.5 flex items-start gap-3">
+          <span className="w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
+            </svg>
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Platz vorläufig reserviert</p>
+            <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">Die Anmeldung ist vollständig bestätigt, sobald der Campbeitrag bei uns eingegangen ist.</p>
+          </div>
+        </div>
+
         {/* Anmeldedaten */}
         <div className="rounded-xl border border-gray-200 overflow-hidden">
           <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Anmeldedaten</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Deine Buchung</p>
           </div>
           <div className="divide-y divide-gray-100">
             <div className="px-4 py-3 flex justify-between items-center text-sm">
@@ -289,20 +302,13 @@ export default function RegistrationForm() {
               <span className="font-semibold text-gray-900">{confirmed.child_first_name} {confirmed.child_last_name}</span>
             </div>
             <div className="px-4 py-3 flex justify-between items-center text-sm">
-              <span className="text-gray-500">Termin</span>
+              <span className="text-gray-500">Camp</span>
               <span className="font-semibold text-gray-900">{confirmed.selected_camp_week}</span>
-            </div>
-            <div className="px-4 py-3 flex justify-between items-center text-sm">
-              <span className="text-gray-500">Status</span>
-              <span className="inline-flex items-center gap-1.5 font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-0.5 text-xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
-                Angemeldet – Zahlung ausstehend
-              </span>
             </div>
             <div className="px-4 py-3 flex justify-between items-center text-sm">
               <span className="text-gray-500">Foto-/Videoerlaubnis</span>
               <span className="font-medium text-gray-700">
-                {confirmed.photo_permission ? 'Ja, erteilt' : 'Nein'}
+                {confirmed.photo_permission ? 'Ja, erteilt' : 'Nicht erteilt'}
               </span>
             </div>
           </div>
@@ -377,14 +383,42 @@ export default function RegistrationForm() {
     )
   }
 
+  if (stripeSuccess) {
+    return (
+      <div className="pt-2 pb-8 space-y-6 text-center">
+        <div>
+          <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-sm">
+            <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">Zahlung erfolgreich</h3>
+          <p className="text-gray-500 text-sm leading-relaxed max-w-sm mx-auto">
+            Vielen Dank! Deine Zahlung wurde übermittelt. Die Anmeldung gilt als vollständig bestätigt, sobald der Betrag bei uns eingegangen ist.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-left text-sm space-y-2">
+          <p className="font-semibold text-gray-900">Was jetzt passiert</p>
+          <ul className="space-y-1.5 text-gray-500">
+            <li className="flex items-start gap-2"><span className="text-green-500 font-bold shrink-0">✓</span> Zahlung wurde an Stripe übermittelt</li>
+            <li className="flex items-start gap-2"><span className="text-gray-400 shrink-0">→</span> Nach Zahlungseingang wird der Status automatisch aktualisiert</li>
+            <li className="flex items-start gap-2"><span className="text-gray-400 shrink-0">→</span> Wir melden uns mit Details zu Uhrzeit und Treffpunkt</li>
+          </ul>
+        </div>
+
+        <a
+          href="/"
+          className="inline-block w-full bg-gray-900 text-white font-semibold py-3 rounded-xl hover:bg-black transition-colors text-sm"
+        >
+          Zurück zur Startseite
+        </a>
+      </div>
+    )
+  }
+
   return (
     <>
-    {stripeSuccess && (
-      <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-4 mb-6 text-sm text-green-800">
-        <p className="font-semibold mb-1">Zahlung erfolgreich</p>
-        <p>Vielen Dank! Ihre Zahlung wurde an Stripe übermittelt. Der Zahlungsstatus wird in Kürze aktualisiert.</p>
-      </div>
-    )}
     <form onSubmit={handleSubmit} noValidate className="space-y-8">
 
       {/* ── Kind ──────────────────────────────────────────────── */}
@@ -560,15 +594,35 @@ export default function RegistrationForm() {
       )}
 
       {/* ── Submit ────────────────────────────────────────────── */}
-      <div className="pt-2">
+      <div className="pt-2 space-y-4">
         <button
           type="submit"
           disabled={isPending}
-          className="w-full bg-gray-900 hover:bg-black disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors text-base tracking-wide shadow-sm"
+          className="w-full bg-gray-900 hover:bg-black disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors text-base shadow-sm"
         >
-          {isPending ? 'Wird gesendet …' : 'Verbindlich anmelden →'}
+          {isPending ? 'Wird gesendet …' : 'Verbindlich anmelden'}
         </button>
-        <p className="text-center text-xs text-gray-400 mt-3">* Pflichtfeld · Anmeldung ist unverbindlich bis zur Zahlung</p>
+        <div className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-xs text-gray-400">
+          <span className="flex items-center gap-1.5">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+            </svg>
+            Bestätigung per E-Mail
+          </span>
+          <span className="flex items-center gap-1.5">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+            </svg>
+            Sichere Datenverarbeitung
+          </span>
+          <span className="flex items-center gap-1.5">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+            </svg>
+            DSGVO-konform
+          </span>
+        </div>
+        <p className="text-center text-xs text-gray-400">* Pflichtfeld</p>
       </div>
     </form>
     </>

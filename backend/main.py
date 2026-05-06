@@ -1032,8 +1032,8 @@ async def stripe_webhook(request: Request) -> JSONResponse:
         return JSONResponse(status_code=200, content={"received": True})
 
     session_obj = event["data"]["object"]
-    stripe_session_id = session_obj.id
-    metadata = session_obj.metadata or {}
+    stripe_session_id = getattr(session_obj, "id", None)
+    metadata = dict(session_obj.metadata or {})
     registration_id = metadata.get("registration_id")
     registration_token = metadata.get("registration_token")
 

@@ -110,6 +110,21 @@ export default function Page() {
                   Termine ansehen
                 </a>
               </div>
+
+              {/* Schnellfakten */}
+              <div className="mt-12 pt-8 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-6">
+                {[
+                  { value: '3',         label: 'Camp-Termine 2026' },
+                  { value: '4 Tage',    label: 'je Camp' },
+                  { value: '5 – 12',    label: 'Jahre' },
+                  { value: 'Baunatal',  label: 'KSV-Vereinsgelände' },
+                ].map(f => (
+                  <div key={f.label}>
+                    <p className="text-xl sm:text-2xl font-bold text-white tabular-nums">{f.value}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{f.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -206,9 +221,9 @@ export default function Page() {
                   </div>
                   <a
                     href={`/?week=${encodeURIComponent(c.value)}#anmeldung`}
-                    className="mt-auto bg-black text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-center"
+                    className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
                   >
-                    Anmelden
+                    Jetzt anmelden →
                   </a>
                 </div>
               ))}
@@ -218,18 +233,76 @@ export default function Page() {
 
         {/* ── Formular ────────────────────────────────────────────────── */}
         <section id="anmeldung" className="py-20 px-6 bg-white">
-          <div className="max-w-2xl mx-auto">
-            <div className="text-center mb-10">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-10 max-w-xl mx-auto">
               <p className="text-[#CC0000] text-sm font-semibold tracking-widest uppercase mb-2">Online-Anmeldung</p>
               <h2 className="text-3xl font-bold text-gray-900 mb-3">Platz sichern</h2>
               <p className="text-gray-500 text-base">
-                Du erhältst direkt nach der Anmeldung eine Bestätigungs-E-Mail mit den Zahlungsinformationen.
+                Direkt nach der Anmeldung erhältst du eine Bestätigungs-E-Mail mit allen Zahlungsinformationen.
               </p>
             </div>
-            <div className="rounded-2xl border border-gray-200 shadow-sm p-8 sm:p-10">
-              <Suspense fallback={<div className="py-10 text-center text-sm text-gray-400">Lädt …</div>}>
-                <RegistrationForm />
-              </Suspense>
+
+            <div className="lg:grid lg:grid-cols-[1fr_288px] lg:gap-10 lg:items-start">
+
+              {/* Formular-Card */}
+              <div className="rounded-2xl border border-gray-200 shadow-sm p-8 sm:p-10">
+                <Suspense fallback={<div className="py-10 text-center text-sm text-gray-400">Lädt …</div>}>
+                  <RegistrationForm />
+                </Suspense>
+              </div>
+
+              {/* Sidebar – nur ab lg sichtbar */}
+              <aside className="hidden lg:flex flex-col gap-4 sticky top-24">
+
+                {/* Was ist dabei */}
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 space-y-3">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Im Camp enthalten</p>
+                  <ul className="space-y-2.5">
+                    {[
+                      'Offizielles KSV-Trikot',
+                      'Teilnehmerpokal',
+                      'Verpflegung & Getränke',
+                      'Qualifizierte Betreuung',
+                      'Training auf dem Vereinsgelände',
+                    ].map(item => (
+                      <li key={item} className="flex items-center gap-2.5 text-sm text-gray-700">
+                        <span className="w-4 h-4 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0 text-[10px] font-bold">✓</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Nach der Anmeldung */}
+                <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-3">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Nach der Anmeldung</p>
+                  <ol className="space-y-2.5 text-sm text-gray-600">
+                    {[
+                      'E-Mail mit Bankdaten erhalten',
+                      'Campbeitrag überweisen',
+                      'Platz ist gesichert',
+                    ].map((s, i) => (
+                      <li key={s} className="flex items-start gap-2.5">
+                        <span className="w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                        {s}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                {/* Kontakt */}
+                <div className="rounded-xl border border-gray-200 bg-white px-5 py-4 text-sm">
+                  <p className="font-semibold text-gray-800 mb-1.5">Fragen zur Anmeldung?</p>
+                  <p className="text-gray-500 leading-relaxed text-xs">
+                    Ergün Ünal<br />
+                    <a href="mailto:Erguen.uenal@fussball.ksv-baunatal.de" className="text-gray-700 hover:underline break-all">
+                      Erguen.uenal@fussball.ksv-baunatal.de
+                    </a><br />
+                    0170 9927281
+                  </p>
+                </div>
+
+              </aside>
             </div>
           </div>
         </section>

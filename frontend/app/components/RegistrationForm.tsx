@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 /** Felder aus der Backend-Antwort (POST /registrations), die wir in der Bestätigungsansicht brauchen. */
@@ -144,6 +144,24 @@ export default function RegistrationForm() {
   const [isPending, startTransition] = useTransition()
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [stripeSuccess, setStripeSuccess] = useState(false)
+
+  // Scroll-Ref für Bestätigungs- und Payment-Success-View
+  const successRef = useRef<HTMLDivElement>(null)
+
+  // Zum Bestätigungsbereich scrollen, sobald Formular erfolgreich abgeschickt wurde
+  useEffect(() => {
+    if (confirmed) {
+      successRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [confirmed])
+
+  // Zum Bestätigungsbereich scrollen, sobald Stripe-Success-State aktiv wird
+  useEffect(() => {
+    if (stripeSuccess) {
+      successRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [stripeSuccess])
 
   async function handleStripeCheckout(registrationToken: string) {
     setCheckoutLoading(true)
@@ -167,8 +185,6 @@ export default function RegistrationForm() {
       setCheckoutLoading(false)
     }
   }
-
-  const [stripeSuccess, setStripeSuccess] = useState(false)
 
   // URL-Parameter auswerten: ?week= für Vorausfüllen, ?stripe=success für Rückkehr von Stripe
   useEffect(() => {
@@ -265,7 +281,7 @@ export default function RegistrationForm() {
     ]
 
     return (
-      <div className="pt-2 pb-8 space-y-6">
+      <div ref={successRef} className="pt-2 pb-8 space-y-6">
 
         {/* Erfolgs-Header */}
         <div className="text-center pb-2">
@@ -395,7 +411,7 @@ export default function RegistrationForm() {
 
   if (stripeSuccess) {
     return (
-      <div className="pt-2 pb-8 space-y-6 text-center">
+      <div ref={successRef} className="pt-2 pb-8 space-y-6 text-center">
         <div>
           <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-sm">
             <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

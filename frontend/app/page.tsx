@@ -18,7 +18,7 @@ const HIGHLIGHTS = [
       </svg>
     ),
     title: 'Qualifizierte Trainer',
-    text: 'Training mit qualifizierten Jugendtrainern aus unserem Verein. Unsere Trainer betreuen die Kinder mit einem altersgerechten Trainingskonzept, unterstützt durch Jugendspieler der A- und B-Jugend.',
+    text: 'Training mit qualifizierten Jugendtrainern und Patenspielern, unterstützt durch Jugendspieler der A- und B-Jugend. Altersgerechtes Konzept mit Technik- und Taktikübungen, abwechslungsreichen Spielformen sowie Teamgeist und Motivation.',
   },
   {
     icon: (
@@ -36,7 +36,7 @@ const HIGHLIGHTS = [
       </svg>
     ),
     title: 'Verpflegung inklusive',
-    text: 'Gesunde Mahlzeiten und Getränke sind im Preis enthalten. Kein Extra-Aufwand für Eltern.',
+    text: 'Warmes Mittagessen, Obst, Snacks und Getränke sind im Preis enthalten. Kein Extra-Aufwand für Eltern.',
   },
   {
     icon: (
@@ -44,8 +44,8 @@ const HIGHLIGHTS = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
       </svg>
     ),
-    title: 'Trikot & Pokal',
-    text: 'Jedes Kind bekommt ein offizielles KSV-Trikot und einen Teilnehmerpokal mit nach Hause.',
+    title: 'Trikot, Hose & Pokal',
+    text: 'Jedes Kind bekommt ein offizielles KSV-Trikot, eine Hose und einen Teilnehmerpokal. Dazu gibt es eine Eintrittskarte für ein Heimspiel der 1. Mannschaft.',
   },
 ]
 
@@ -121,7 +121,7 @@ export default function Page() {
                   { value: '4 Tage',     label: 'je Camp' },
                   { value: '5 – 12',     label: 'Jahre' },
                   { value: CAMP_PRICE,   label: 'Campbeitrag' },
-                  { value: 'Baunatal',   label: 'KSV-Vereinsgelände' },
+                  { value: 'Baunatal',   label: 'Parkstadion Baunatal' },
                 ].map(f => (
                   <div key={f.label}>
                     <p className="text-xl sm:text-2xl font-bold text-white tabular-nums">{f.value}</p>
@@ -199,6 +199,15 @@ export default function Page() {
               <p className="text-[#CC0000] text-sm font-semibold tracking-widest uppercase mb-2">Wann findet es statt</p>
               <h2 className="text-3xl font-bold text-gray-900">Termine 2026</h2>
             </div>
+            {/* Hinweis: Ort */}
+            <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-600 leading-relaxed">
+              <p className="font-semibold text-gray-800 mb-1">Veranstaltungsort</p>
+              <p>
+                Kunstrasen am Parkstadion in Baunatal. Bei Bedarf weichen wir auf Ausweichplätze aus,
+                z.&nbsp;B. die Sportanlage am Baunsberg.
+              </p>
+            </div>
+
             {/* Hinweis: 1. Mannschaft */}
             <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-600 leading-relaxed">
               <p className="font-semibold text-gray-800 mb-1">Hinweis zu Trainingseinheiten mit der 1. Mannschaft</p>
@@ -221,7 +230,7 @@ export default function Page() {
                     </span>
                     <p className="font-bold text-gray-900 text-lg mb-1">{c.label}</p>
                     <p className="text-[#CC0000] font-semibold text-sm">{c.date}</p>
-                    <p className="text-gray-400 text-xs mt-2">4 Tage · Kinder 5–12 Jahre</p>
+                    <p className="text-gray-400 text-xs mt-2">4 Tage · 10:00–15:00 Uhr · Kinder 5–12 Jahre</p>
                     <p className="text-gray-900 font-bold text-sm mt-2">{CAMP_PRICE}</p>
                   </div>
                   <a
@@ -264,11 +273,11 @@ export default function Page() {
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Im Camp enthalten</p>
                   <ul className="space-y-2.5">
                     {[
-                      'Offizielles KSV-Trikot',
+                      'KSV-Trikot & Hose',
                       'Teilnehmerpokal',
-                      'Verpflegung & Getränke',
+                      'Warmes Mittagessen, Obst & Snacks',
+                      'Eintrittskarte für ein Heimspiel',
                       'Qualifizierte Betreuung',
-                      'Training auf dem Vereinsgelände',
                     ].map(item => (
                       <li key={item} className="flex items-center gap-2.5 text-sm text-gray-700">
                         <span className="w-4 h-4 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0 text-[10px] font-bold">✓</span>
@@ -299,7 +308,7 @@ export default function Page() {
                 <div className="rounded-xl border border-gray-200 bg-white px-5 py-4 text-sm">
                   <p className="font-semibold text-gray-800 mb-1.5">Fragen zur Anmeldung?</p>
                   <p className="text-gray-500 leading-relaxed text-xs">
-                    Ergün Ünal<br />
+                    Ergün Ünal – Leiter Fußballschule<br />
                     <a href="mailto:Erguen.uenal@fussball.ksv-baunatal.de" className="text-gray-700 hover:underline break-all">
                       Erguen.uenal@fussball.ksv-baunatal.de
                     </a><br />
@@ -329,7 +338,7 @@ export default function Page() {
               },
               {
                 q: 'Was ist im Beitrag enthalten?',
-                a: 'Verpflegung (Mahlzeiten & Getränke), ein offizielles KSV-Trikot sowie ein Teilnehmerpokal sind im Beitrag inklusive.',
+                a: 'Warmes Mittagessen, Obst, Snacks und Getränke, ein offizielles KSV-Trikot und Hose, ein Teilnehmerpokal sowie eine Eintrittskarte für ein Heimspiel der 1. Mannschaft sind im Beitrag inklusive.',
               },
               {
                 q: 'Wie bezahle ich?',
@@ -375,7 +384,7 @@ export default function Page() {
               <p className="text-white font-semibold mb-3 text-sm">Kontakt</p>
               <ul className="space-y-1.5 text-sm">
                 <li>KSV Baunatal e.V.</li>
-                <li>Ansprechpartner: Ergün Ünal</li>
+                <li>Leiter Fußballschule: Ergün Ünal</li>
                 <li>Erguen.uenal@fussball.ksv-baunatal.de</li>
                 <li>0170 9927281</li>
               </ul>

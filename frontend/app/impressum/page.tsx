@@ -35,18 +35,18 @@ export default function ImpressumPage() {
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Vereinsregister</h2>
             <p>Eingetragener Verein</p>
-            <p>Registergericht: [Amtsgericht – Kassel]</p>
-            <p>Registernummer: [VR – 854]</p>
+            <p>Registergericht: Amtsgericht Kassel</p>
+            <p>Registernummer: VR 854</p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Vertretungsberechtigter Vorstand</h2>
-            <p>[Name des Vorstands – Georg Heinemann]</p>
+            <p>Vorstandsvorsitzender Georg Heinemann</p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Kontakt</h2>
-            <p>Ansprechpartner Fußballschule: Ergün Ünal</p>
+            <p>Leiter Fußballschule: Ergün Ünal</p>
             <p>
               E-Mail:{' '}
               <a href="mailto:Erguen.uenal@fussball.ksv-baunatal.de" className="underline hover:text-gray-900">

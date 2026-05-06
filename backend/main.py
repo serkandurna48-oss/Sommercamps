@@ -41,6 +41,9 @@ BREVO_API_KEY:   str = os.getenv("BREVO_API_KEY", "")
 EMAIL_FROM:      str = os.getenv("EMAIL_FROM", "")
 EMAIL_FROM_NAME: str = os.getenv("EMAIL_FROM_NAME", "Fußballschule KSV Baunatal")
 CONTACT_EMAIL:   str = os.getenv("CONTACT_EMAIL", "info@ksv-baunatal.de")
+# Reply-To: Antworten landen beim Kontakt-Postfach, nicht beim Absender-Alias.
+# Falls nicht gesetzt, wird CONTACT_EMAIL genutzt.
+EMAIL_REPLY_TO:  str = os.getenv("EMAIL_REPLY_TO", "") or os.getenv("CONTACT_EMAIL", "info@ksv-baunatal.de")
 
 # Bankdaten für Überweisungshinweis (Phase 2)
 # Echte Werte per Env-Var setzen: BANK_ACCOUNT_HOLDER, BANK_IBAN, BANK_BIC, BANK_NAME
@@ -321,11 +324,11 @@ def _build_confirmation_html(row: dict) -> str:
         <!-- Body -->
         <tr>
           <td style="padding:32px;">
-            <p style="margin:0 0 6px;font-size:22px;font-weight:700;color:#111111;">Anmeldung eingegangen ✓</p>
+            <p style="margin:0 0 6px;font-size:22px;font-weight:700;color:#111111;">Anmeldung eingegangen</p>
             <p style="margin:0 0 24px;font-size:15px;color:#6b7280;">Hallo PARENT_NAME,</p>
             <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">
-              wir haben die Anmeldung für <strong>CHILD_NAME</strong> erhalten und
-              freuen uns, euch beim Sommercamp 2026 dabei zu haben!
+              vielen Dank für die Anmeldung von <strong>CHILD_NAME</strong> beim Sommercamp 2026
+              der Fußballschule KSV Baunatal.
             </p>
 
             <!-- Zusammenfassung -->
@@ -393,16 +396,16 @@ def _build_confirmation_html(row: dict) -> str:
             </div>
 
             <!-- Nächste Schritte -->
-            <div style="background:#eff6ff;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
-              <p style="margin:0 0 8px;font-weight:700;color:#1e40af;font-size:13px;">So geht es weiter</p>
-              <p style="margin:0 0 6px;color:#1d4ed8;font-size:14px;line-height:1.6;">
-                1. Bitte überweise den Campbeitrag mit dem <strong>Verwendungszweck oben</strong>.
+            <div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+              <p style="margin:0 0 10px;font-weight:700;color:#111111;font-size:14px;">So geht es weiter</p>
+              <p style="margin:0 0 6px;color:#374151;font-size:14px;line-height:1.6;">
+                1. Bitte überweisen Sie den Campbeitrag mit dem <strong>Verwendungszweck oben</strong>.
               </p>
-              <p style="margin:0 0 6px;color:#1d4ed8;font-size:14px;line-height:1.6;">
-                2. Deine Anmeldung ist vollständig bestätigt, sobald deine Zahlung bei uns eingegangen ist.
+              <p style="margin:0 0 6px;color:#374151;font-size:14px;line-height:1.6;">
+                2. Ihre Anmeldung gilt als vollständig bestaetigt, sobald Ihre Zahlung bei uns eingegangen ist.
               </p>
-              <p style="margin:0;color:#1d4ed8;font-size:14px;line-height:1.6;">
-                3. Wir melden uns anschließend mit allen Details zu Uhrzeit und Treffpunkt.
+              <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+                3. Wir melden uns anschliessend mit allen Details zu Uhrzeit und Treffpunkt.
               </p>
             </div>
 
@@ -496,9 +499,10 @@ def _try_send_confirmation_email(row: dict) -> None:
             json={
                 "sender": {"name": EMAIL_FROM_NAME, "email": EMAIL_FROM},
                 "to": [{"email": row["email"], "name": row.get("parent_name", "")}],
-                "subject": "Deine Anmeldung für das Sommercamp 2026 – KSV Baunatal",
+                "subject": "Anmeldebestätigung Fußballschule KSV Baunatal",
                 "htmlContent": _build_confirmation_html(row),
                 "textContent": _build_confirmation_text(row),
+                "replyTo": {"email": EMAIL_REPLY_TO, "name": EMAIL_FROM_NAME},
             },
             timeout=10,
         )

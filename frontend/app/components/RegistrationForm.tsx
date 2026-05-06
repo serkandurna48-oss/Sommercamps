@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { formatDateDE } from '../lib/formatDate'
 
 /** Felder aus der Backend-Antwort (POST /registrations), die wir in der Bestätigungsansicht brauchen. */
 interface ConfirmedRegistration {
@@ -319,6 +320,11 @@ export default function RegistrationForm() {
               <Label>Geburtsdatum *</Label>
               <input type="date" name="birth_date" value={form.birth_date}
                 onChange={handleChange} required className={input()} />
+              {form.birth_date && (
+                <p className="mt-1 text-xs text-gray-400">
+                  {formatDateDE(form.birth_date)}
+                </p>
+              )}
             </div>
             <div>
               <Label>Trikotnummer / Größe</Label>

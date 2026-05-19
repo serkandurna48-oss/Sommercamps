@@ -10,7 +10,10 @@
 ```
 chore/phase-1-bugfixes
 ├── 1ccf257  docs: add CLAUDE.md and TODO.md
-└── 7baee61  fix(validation): replace age range constraint with plausibility check
+├── 7baee61  fix(validation): replace age range constraint with plausibility check
+├── fa8e737  docs: add session notes with B1/B2/B3 diagnosis and next-session checklist
+├── 3413173  fix(deploy): rename ADMIN_API_KEY to ADMIN_PASSWORD in render.yaml  ← B3 ✓
+└── 38b9c37  fix(pricing): load camp price from backend config endpoint            ← B2 ✓
 ```
 
 ---
@@ -42,92 +45,48 @@ chore/phase-1-bugfixes
 
 ---
 
-## B3 — render.yaml veraltet (nächste Session, Commit A)
+## B3 — render.yaml veraltet
 
-**Status:** Diagnostiziert, noch nicht implementiert.
+**Status: ERLEDIGT** — Commit `3413173`
 
-**Problem:** `render.yaml:14` listet `ADMIN_API_KEY`, Code nutzt `ADMIN_PASSWORD`.
-Außerdem fehlen `STRIPE_PRICE_CENTS`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
-`FRONTEND_URL` als dokumentierte Vars.
-
-**Scope Commit A:** Nur `ADMIN_API_KEY` → `ADMIN_PASSWORD` umbenennen.
-Die Stripe-Vars kommen im gleichen Zug mit Commit B (B2).
-
-**Commit-Message:**
-```
-fix(deploy): align admin env var name in render.yaml
-
-ADMIN_API_KEY was never the correct name — the backend reads
-ADMIN_PASSWORD. Prevents confusion when reconfiguring on Render.
-```
+`ADMIN_API_KEY` → `ADMIN_PASSWORD` in render.yaml umbenannt.
+Production-Check: ADMIN_API_KEY-Eintrag im Render-Dashboard prüfen und ggf. löschen.
 
 ---
 
-## B2 — Preis-Inkonsistenz (nächste Session, Commit B)
+## B2 — Preis-Inkonsistenz
 
-**Status:** Diagnose abgeschlossen. Implementierung wartet auf Produktionswert.
+**Status: ERLEDIGT** — Commit `38b9c37`
 
-### Offene Voraussetzung
-**Produktionswert von `STRIPE_PRICE_CENTS` auf Render nachschauen.**
-Erwartung: `14900` (= 149,00 €). Falls abweichend → erst Render korrigieren,
-dann implementieren.
+- `GET /config` im Backend implementiert (gibt `{camp: {price_cents, currency}}` zurück)
+- `frontend/app/lib/campConfig.ts` neu: fetch-Helper mit 5-Min-Revalidate
+- `page.tsx`: Hardcoded `'149 €'` entfernt, Preis kommt jetzt vom Backend
+- `backend/.env.example` und `render.yaml` dokumentieren `STRIPE_PRICE_CENTS`
 
-### Diagnose-Befunde
-- `backend/.env.example`: `STRIPE_PRICE_CENTS` **fehlt komplett** (kein Platzhalter, kein Kommentar)
-- `backend/render.yaml`: `STRIPE_PRICE_CENTS` **nicht gelistet**
-- `main.py:64`: `os.getenv("STRIPE_PRICE_CENTS", "0")` — Default `0` = Stripe deaktiviert
-- `frontend/page.tsx:53`: `const CAMP_PRICE = '149 €'` — vollständig unabhängig vom echten Wert
+**Production-Checks (nach Push):**
+1. Render Deploy-Log: erfolgreich?
+2. Admin-Login: funktioniert noch?
+3. `ADMIN_API_KEY` im Render-Dashboard: noch da → manuell entfernen
+4. `GET /config` auf Production: liefert `{"camp": {...}}`?
+5. Vercel Deploy-Log: erfolgreich?
+6. Landing-Page Production: Preis zeigt `149 €`?
 
-### Render-Stellen im Frontend
-| Datei | Zeile | Wird ersetzt durch |
-|-------|-------|-------------------|
-| `page.tsx:53` | `const CAMP_PRICE = '149 €'` | Konstante fällt weg |
-| `page.tsx:123` | `{ value: CAMP_PRICE, ... }` | `config.camp.price_display` |
-| `page.tsx:234` | `<p>{CAMP_PRICE}</p>` | `config.camp.price_display` |
-
-### Entschiedene Architektur
-
-**Backend `GET /config`:**
-```python
-class CampConfig(BaseModel):
-    price_cents: int
-    currency: str = "EUR"
-
-class ConfigResponse(BaseModel):
-    camp: CampConfig
-
-# GET /config — public, Cache-Control: public, max-age=300
-# Guard: STRIPE_PRICE_CENTS <= 0 → HTTP 503
-```
-
-**Frontend `frontend/app/lib/campConfig.ts`:**
-- Typ-Definition + `fetchCampConfig()` (Server-side fetch, `{ next: { revalidate: 300 } }`)
-- Formatierung: `Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 })`
-  → `"149 €"` bei glattem Betrag, `"149,50 €"` bei krummem
-
-**page.tsx:** bleibt Server Component, `await fetchCampConfig()` direkt im Component-Body.
-Error-Fallback: `"Preis auf Anfrage"` + `console.error`.
-
-**Noch zu dokumentieren in `.env.example`:**
-```
-# Camp registration fee in cents (e.g. 14900 = 149.00 EUR).
-# Must match the price configured in Stripe.
-STRIPE_PRICE_CENTS=14900
-```
-
-### Offene ENV-Frage
-`NEXT_PUBLIC_API_BASE_URL` im Frontend bereits vorhanden als `NEXT_PUBLIC_API_URL`
-(in `.env.local.example` und in `RegistrationForm.tsx`/`admin/page.tsx` genutzt).
-→ Beim Implementieren `NEXT_PUBLIC_API_URL` nutzen, **keine neue Var einführen**.
+**Offener Punkt:** `stripe` in `requirements.txt` prüfen — war lokal ein `ModuleNotFoundError`.
 
 ---
 
 ## Nächste Session — Checkliste
 
-- [ ] Produktionswert `STRIPE_PRICE_CENTS` mitbringen
-- [ ] Commit A: B3 (render.yaml `ADMIN_API_KEY` → `ADMIN_PASSWORD`)
-- [ ] Commit B: B2 (`GET /config`, Frontend-Fetch, `.env.example`, render.yaml Stripe-Vars)
-- [ ] Supabase-Snapshot ziehen + Pre-Check-Query → B1-Migration ausführen
-- [ ] Commit 5: `backend/camp_config.py` + `python-dateutil` in requirements.txt + Pydantic-Validator
-- [ ] Commit 6: Frontend-Helper `isAgeValidAtCampStart()` + RegistrationForm.tsx
-- [ ] Commit 7: Tests (Pydantic + Frontend, inkl. Schaltjahr-Cases)
+**Vor der Session:**
+- [ ] Production-Checks aus B2 oben durchgehen (falls noch nicht erledigt)
+- [ ] `ADMIN_API_KEY`-Eintrag im Render-Dashboard manuell entfernen (B3-Nacharbeit)
+- [ ] `stripe` in `requirements.txt` prüfen (war lokal `ModuleNotFoundError`)
+
+**B1 (noch offen — größter Block):**
+- [ ] Supabase-Snapshot ziehen (Dashboard → Database → Backups)
+- [ ] Pre-Check-Query ausführen (0 Zeilen bestätigen), dann `backend/migration_fix_age_constraint.sql` in Supabase ausführen
+- [ ] Commit: `backend/camp_config.py` + `python-dateutil` in requirements.txt + Pydantic-Validator
+- [ ] Commit: Frontend-Helper `isAgeValidAtCampStart()` + RegistrationForm.tsx
+- [ ] Commit: Tests (Pydantic + Frontend, inkl. Schaltjahr-Cases)
+
+**Phase 1 danach vollständig:** B1 ✓ B2 ✓ B3 ✓ B4 B5 ausstehend

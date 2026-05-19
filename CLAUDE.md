@@ -155,6 +155,20 @@ Wichtige Spalten:
 - Keine Daten an Dritte ohne explizite Rechtsgrundlage
 - Bei DB-Schema-Änderungen: Auswirkung auf Datenschutzerklärung prüfen
 
+### Hardcoded-Strings während Phase 1
+
+Jeder neu eingeführte hardcoded String, der sich auf einen spezifischen Verein bezieht
+(Name, E-Mail, Adresse, Bankdaten, Telefon, etc.), wird mit einem Kommentar markiert:
+
+```ts
+// TODO(multi-tenant): replace with organization.email
+```
+
+Und in `TODO.md` unter **„Phase 1 Hardcoded-Schulden"** erfasst.
+
+**Begründung:** In Phase 1 entfernen wir alte hardcoded Strings. Damit wir keine neuen
+unsichtbar einführen, wird jede Ausnahme explizit dokumentiert und nachverfolgbar gemacht.
+
 ### API-Konventionen
 
 - Alle Admin-Endpunkte: `Authorization: Bearer <jwt>` erforderlich

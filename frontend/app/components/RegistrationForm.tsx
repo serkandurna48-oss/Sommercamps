@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { type CampConfig, isAgeValidAtCampStart, parseLocalDate } from '../lib/campConfig'
 
 /** Felder aus der Backend-Antwort (POST /registrations), die wir in der Bestätigungsansicht brauchen. */
 interface ConfirmedRegistration {
@@ -22,11 +23,6 @@ interface ConfirmedRegistration {
   bank_purpose: string | null
 }
 
-const CAMP_WEEKS = [
-  '29.06.–02.07.2026',
-  '03.08.–06.08.2026',
-  '05.10.–08.10.2026',
-]
 
 const JERSEY_SIZES = ['6XS–5XS (104–116)', '4XS–3XS (128–140)', '2XS (152)', 'XS (164)', 'S', 'M']
 
@@ -86,7 +82,7 @@ function HelpText({ children }: { children: React.ReactNode }) {
 }
 
 /** Gibt alle Fehler auf einmal zurück (leeres Array = alles ok). */
-function validate(form: FormState): string[] {
+function validate(form: FormState, config: CampConfig): string[] {
   const errors: string[] = []
 
   if (!form.child_first_name.trim()) errors.push('Vorname des Kindes fehlt.')
@@ -100,18 +96,20 @@ function validate(form: FormState): string[] {
       errors.push('Geburtsdatum ungültig. Format: TT.MM.JJJJ')
     } else {
       const [, d, m, y] = match
-      const birth = new Date(parseInt(y), parseInt(m) - 1, parseInt(d))
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const minAge = new Date(today)
-      minAge.setFullYear(today.getFullYear() - 12)
-      const maxAge = new Date(today)
-      maxAge.setFullYear(today.getFullYear() - 5)
-      if (birth > maxAge) {
-        errors.push('Das Kind muss mindestens 5 Jahre alt sein.')
-      } else if (birth < minAge) {
-        errors.push('Das Kind darf höchstens 12 Jahre alt sein.')
+      const birth = parseLocalDate(`${y}-${m}-${d}`)
+      const campWeek = config.weeks.find(w => w.label === form.selected_camp_week)
+      if (campWeek) {
+        const ageCheck = isAgeValidAtCampStart(
+          birth,
+          parseLocalDate(campWeek.start_date),
+          config.camp.age_min,
+          config.camp.age_max,
+        )
+        if (!ageCheck.valid && ageCheck.reason) {
+          errors.push(ageCheck.reason)
+        }
       }
+      // Kein Camp ausgewählt: wird weiter unten durch den Week-Check abgefangen.
     }
   }
 
@@ -136,7 +134,7 @@ function validate(form: FormState): string[] {
 // Solange Stripe nicht live ist, wird stattdessen ein Hinweis angezeigt.
 const STRIPE_ENABLED = process.env.NEXT_PUBLIC_STRIPE_ENABLED === 'true'
 
-export default function RegistrationForm() {
+export default function RegistrationForm({ config }: { config: CampConfig }) {
   const searchParams = useSearchParams()
   const [form, setForm] = useState<FormState>(EMPTY)
   const [errors, setErrors] = useState<string[]>([])
@@ -189,13 +187,13 @@ export default function RegistrationForm() {
   // URL-Parameter auswerten: ?week= für Vorausfüllen, ?stripe=success für Rückkehr von Stripe
   useEffect(() => {
     const week = searchParams.get('week') ?? ''
-    if (week && CAMP_WEEKS.includes(week)) {
+    if (week && config.weeks.some(w => w.label === week)) {
       setForm(prev => ({ ...prev, selected_camp_week: week }))
     }
     if (searchParams.get('stripe') === 'success') {
       setStripeSuccess(true)
     }
-  }, [searchParams])
+  }, [searchParams, config])
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
@@ -226,7 +224,7 @@ export default function RegistrationForm() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    const clientErrors = validate(form)
+    const clientErrors = validate(form, config)
     if (clientErrors.length > 0) {
       setErrors(clientErrors)
       return
@@ -532,7 +530,7 @@ export default function RegistrationForm() {
             <select name="selected_camp_week" value={form.selected_camp_week}
               onChange={handleChange} required className={input()}>
               <option value="">Termin auswählen …</option>
-              {CAMP_WEEKS.map(w => <option key={w} value={w}>{w}</option>)}
+              {config.weeks.map(w => <option key={w.label} value={w.label}>{w.label}</option>)}
             </select>
           </div>
           <div>

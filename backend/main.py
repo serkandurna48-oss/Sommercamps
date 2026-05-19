@@ -24,7 +24,15 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, model_validator
+
+from camp_config import (
+    CAMP_AGE_MAX,
+    CAMP_AGE_MIN,
+    CAMP_WEEKS,
+    get_camp_week_by_label,
+    validate_age_at_camp_start,
+)
 
 load_dotenv()
 
@@ -67,11 +75,8 @@ FRONTEND_URL:           str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 logger = logging.getLogger(__name__)
 
 ALLOWED_JERSEY_SIZES = {"6XS–5XS (104–116)", "4XS–3XS (128–140)", "2XS (152)", "XS (164)", "S", "M"}
-ALLOWED_CAMP_WEEKS = {
-    "29.06.–02.07.2026",
-    "03.08.–06.08.2026",
-    "05.10.–08.10.2026",
-}
+# Derived from camp_config.CAMP_WEEKS — single source of truth is camp_config.
+ALLOWED_CAMP_WEEKS = {w.label for w in CAMP_WEEKS}
 
 # ---------------------------------------------------------------------------
 # Connection Pool
@@ -258,6 +263,17 @@ class RegistrationIn(BaseModel):
             raise ValueError("Datenschutzerklärung muss akzeptiert werden.")
         return v
 
+    @model_validator(mode="after")
+    def check_age_at_camp_start(self) -> RegistrationIn:
+        camp_week = get_camp_week_by_label(self.selected_camp_week)
+        if camp_week is None:
+            # valid_week field_validator already raised; nothing more to do here.
+            return self
+        ok, error_msg = validate_age_at_camp_start(self.birth_date, camp_week.start_date)
+        if not ok:
+            raise ValueError(error_msg)
+        return self
+
 
 class RegistrationOut(BaseModel):
     id: str
@@ -294,10 +310,19 @@ class PaymentStatusIn(BaseModel):
 class CampPriceConfig(BaseModel):
     price_cents: int
     currency: str = "EUR"
+    age_min: int
+    age_max: int
+
+
+class WeekInfo(BaseModel):
+    label: str
+    start_date: date
+    end_date: date
 
 
 class ConfigResponse(BaseModel):
     camp: CampPriceConfig
+    weeks: list[WeekInfo]
 
 
 # ---------------------------------------------------------------------------
@@ -617,7 +642,7 @@ def admin_login(payload: AdminLoginIn) -> dict:
 
 @app.get("/config", tags=["System"])
 def get_config(response: Response) -> ConfigResponse:
-    """Gibt öffentliche Konfigurationswerte zurück (Campbeitrag, Währung)."""
+    """Gibt öffentliche Konfigurationswerte zurück (Preis, Altersregel, Camp-Wochen)."""
     if STRIPE_PRICE_CENTS <= 0:
         logger.warning("GET /config: STRIPE_PRICE_CENTS ist nicht gesetzt oder <= 0")
         raise HTTPException(
@@ -625,7 +650,17 @@ def get_config(response: Response) -> ConfigResponse:
             detail="Preiskonfiguration nicht verfügbar.",
         )
     response.headers["Cache-Control"] = "public, max-age=300"
-    return ConfigResponse(camp=CampPriceConfig(price_cents=STRIPE_PRICE_CENTS))
+    return ConfigResponse(
+        camp=CampPriceConfig(
+            price_cents=STRIPE_PRICE_CENTS,
+            age_min=CAMP_AGE_MIN,
+            age_max=CAMP_AGE_MAX,
+        ),
+        weeks=[
+            WeekInfo(label=w.label, start_date=w.start_date, end_date=w.end_date)
+            for w in CAMP_WEEKS
+        ],
+    )
 
 
 @app.get("/health", tags=["System"])

@@ -1,93 +1,90 @@
-# Session Notes — chore/phase-1-bugfixes
+# Session Notes — chore/phase-1-b1-completion
 
-> Arbeitsprotokoll für die laufende Phase-1-Bugfix-Session.
-> Kann nach Abschluss aller Commits auf diesem Branch gelöscht werden.
+> Arbeitsprotokoll für die B1-Completion-Session (2026-05-19).
+> Kann nach Merge auf main gelöscht werden.
+
+## Lessons Learned
+
+- **Commit-Reihenfolge:** Foundation-Module (`campConfig.ts`) müssen VOR Konsumenten
+  (`RegistrationForm.tsx`) committed werden, damit jeder Commit einzeln buildbar bleibt
+  und `git bisect` funktioniert.
 
 ---
 
-## Branch-Stand (Stand 2026-05-19, auf main gemergt + deployed)
+## Branch-Stand (Stand 2026-05-19, auf chore/phase-1-b1-completion)
 
 ```
-main
-├── 1ccf257  docs: add CLAUDE.md and TODO.md
-├── 7baee61  fix(validation): replace age range constraint with plausibility check
-├── fa8e737  docs: add session notes with B1/B2/B3 diagnosis and next-session checklist
-├── 3413173  fix(deploy): rename ADMIN_API_KEY to ADMIN_PASSWORD in render.yaml  ← B3 ✓ LIVE
-├── 38b9c37  fix(pricing): load camp price from backend config endpoint            ← B2 ✓ LIVE
-└── 1a883b0  docs: update session notes with B1 status and B3 post-deploy checklist
+chore/phase-1-b1-completion
+├── b03657e  fix(form): pass config as prop, add fallback when /config unreachable
+├── 80c27e4  fix(form): use camp config from prop, validate age at camp start
+├── 2003f94  feat(frontend): add campConfig helpers, install date-fns
+├── 3f48b2b  docs: add convention for tracking hardcoded strings in Phase 1
+└── 558cc59  docs: add bank env vars to hardcoded debt list
 ```
 
-**Phase 1 Fortschritt: ~75%** — B2 ✓ B3 ✓ live, B1 offen (größter Block), B4/B5 ausstehend
+**Phase 1 Fortschritt: ~95%** — B1 ✓ B2 ✓ B3 ✓ live, B4/B5 + Tests + Deploy ausstehend
 
 ---
 
-## B1 — Altersgrenze (SQL committed, nicht ausgeführt)
+## B1 — Altersgrenze
 
-**Status:** SQL-Migrationsdatei liegt im Repo. **Noch nicht in Supabase ausgeführt.**
+**Status: CODE FERTIG, LOKAL GETESTET — noch nicht auf main / Production**
 
-**Nächste Schritte (in dieser Reihenfolge):**
-1. Supabase-Snapshot ziehen (Dashboard → Database → Backups)
-2. Pre-Check-Query ausführen, 0 Zeilen bestätigen:
-   ```sql
-   SELECT id, child_first_name, child_last_name, birth_date,
-          age(birth_date) AS current_age, status
-   FROM camp_registrations
-   WHERE birth_date <= (current_date - interval '13 years')
-     AND status NOT IN ('cancelled')
-   ORDER BY birth_date ASC;
-   ```
-3. Ergebnis melden → dann `backend/migration_fix_age_constraint.sql` in Supabase ausführen
-4. Verify-Query aus der Migrationsdatei ausführen
-5. Danach: Commits 5–7 (camp_config.py, Pydantic-Validator, Frontend-Helper, Tests)
+### Was erledigt wurde (diese Session):
 
-**Entschiedene Architektur:**
-- DB-Constraint wird zu Plausibilitätsprüfung (`not in future`, `not older than 25y`)
-- Fachliche 5–12-Jahre-Regel → Pydantic `model_validator` gegen `camp_start_date`
-- Schaltjahr-Handling: `python-dateutil` / `relativedelta` im Backend, `date-fns addYears` im Frontend
-- Altersregel-Parameter (`age_min`, `age_max`) kommen später aus `GET /config` (T12)
+**DB-Migration (Production-Supabase):**
+- Supabase-Snapshot gezogen ✓
+- Pre-Check: 0 Zeilen mit Alter > 12 in aktiven Anmeldungen ✓
+- `migration_fix_age_constraint.sql` ausgeführt ✓
+- Verify: `chk_birth_date_plausible` aktiv, `chk_birth_date_range` entfernt ✓
 
----
+**Backend (`chore/phase-1-b1-completion`):**
+- `backend/camp_config.py` neu: `CampWeek` dataclass, `CAMP_WEEKS` list, `CAMP_AGE_MIN/MAX`,
+  `get_camp_week_by_label()`, `validate_age_at_camp_start()` mit `python-dateutil.relativedelta`
+- `requirements.txt`: `python-dateutil>=2.9.0` ergänzt
+- `main.py`: `ALLOWED_CAMP_WEEKS` wird aus `camp_config.CAMP_WEEKS` abgeleitet (Single Source of Truth)
+- `main.py`: `@model_validator(mode="after")` in `RegistrationIn` — prüft Alter gegen Camp-Startdatum
+- `GET /config` erweitert: gibt jetzt `age_min`, `age_max`, `weeks[]` zurück
 
-## B3 — render.yaml veraltet
+**Frontend (`chore/phase-1-b1-completion`):**
+- `frontend/app/lib/campConfig.ts` komplett neu: `CampConfig`/`CampInfo`/`CampWeek` Interfaces,
+  `fetchCampConfig()`, `isAgeValidAtCampStart()` mit `date-fns` (Schaltjahr-sicher), `parseLocalDate()`
+- `date-fns@4.2.1` installiert
+- `page.tsx`: Breaking Change gefixt (`config.camp.price_cents` statt `config.price_cents`),
+  Config als Prop an `RegistrationForm` übergeben, Fallback-UI wenn `/config` nicht erreichbar
+- `RegistrationForm.tsx`: hardcoded `CAMP_WEEKS` entfernt, `config: CampConfig` Prop,
+  Altersvalidierung gegen Camp-Startdatum umgestellt, Dropdown aus `config.weeks`
 
-**Status: ERLEDIGT + LIVE** — Commit `3413173`, deployed 2026-05-19
-
-`ADMIN_API_KEY` → `ADMIN_PASSWORD` in render.yaml umbenannt.
-**Nacharbeit noch offen:** `ADMIN_API_KEY`-Eintrag im Render-Dashboard manuell entfernen.
-
----
-
-## B2 — Preis-Inkonsistenz
-
-**Status: ERLEDIGT + LIVE** — Commit `38b9c37`, deployed 2026-05-19
-
-- `GET /config` im Backend implementiert (gibt `{camp: {price_cents, currency}}` zurück)
-- `frontend/app/lib/campConfig.ts` neu: fetch-Helper mit 5-Min-Revalidate
-- `page.tsx`: Hardcoded `'149 €'` entfernt, Preis kommt jetzt vom Backend
-- `backend/.env.example` und `render.yaml` dokumentieren `STRIPE_PRICE_CENTS`
-
-**Production verifiziert:**
-- `/config` liefert `{"camp": {"price_cents": 14900, "currency": "eur"}}` ✓
-- Landing-Page zeigt `149 €` ✓ (nach Vercel Redeploy ohne Cache — Next.js Data Cache war stale)
-- Admin-Login funktioniert ✓
-
-**Offener Punkt:** `stripe` in `requirements.txt` prüfen — war lokal ein `ModuleNotFoundError`.
+**Lokal getestet:**
+- Alle 4 Altersfälle korrekt validiert (zu jung, genau 5, genau 12, zu alt)
+- Anmeldung end-to-end lokal durchgelaufen ✓
+- Bank-Daten zeigen `[noch einfügen]` lokal — erwartet, Production hat echte Werte ✓
 
 ---
 
 ## Nächste Session — Checkliste
 
-**Sofort (Nacharbeit dieser Session):**
+**Sofort: Merge + Deploy**
+- [ ] PR `chore/phase-1-b1-completion` → `main` auf GitHub erstellen und mergen
+- [ ] Render: Backend-Deploy abwarten, `/config` auf neue Struktur prüfen
+  ```
+  curl https://<render-url>/config
+  # Erwartetes Format:
+  # {"camp": {"price_cents": 14900, "currency": "eur", "age_min": 5, "age_max": 12},
+  #  "weeks": [{"label": "29.06.–02.07.2026", "start_date": "2026-06-29", ...}, ...]}
+  ```
+- [ ] Vercel: Frontend-Deploy abwarten
+- [ ] Production-Verifikation — 4 Testfälle im Formular:
+  1. Kind zu jung (z. B. geb. 2023) → Fehlermeldung
+  2. Kind genau 5 am Camp-Start → kein Fehler
+  3. Kind genau 12 am Camp-Start → kein Fehler
+  4. Kind zu alt (z. B. geb. 2010) → Fehlermeldung
+- [ ] Bank-Daten nach Anmeldung prüfen (Production zeigt echte Werte)
+
+**Offene Schulden (nicht blockierend):**
 - [ ] `ADMIN_API_KEY`-Eintrag im Render-Dashboard manuell entfernen (B3-Nacharbeit)
-- [ ] `stripe` in `requirements.txt` prüfen (war lokal `ModuleNotFoundError`)
+- [ ] Tests schreiben: Pydantic-Validator + Frontend-Helper inkl. Schaltjahr-Cases (TODO B1 Rest)
 
-**B1 — Altersgrenze (größter offener Block):**
-- [ ] Supabase-Snapshot ziehen (Dashboard → Database → Backups)
-- [ ] Pre-Check-Query ausführen (0 Zeilen bestätigen), dann `backend/migration_fix_age_constraint.sql` in Supabase ausführen
-- [ ] Commit: `backend/camp_config.py` + `python-dateutil` in requirements.txt + Pydantic-Validator
-- [ ] Commit: Frontend-Helper `isAgeValidAtCampStart()` + RegistrationForm.tsx
-- [ ] Commit: Tests (Pydantic + Frontend, inkl. Schaltjahr-Cases)
+**Danach: B4 + B5** (Camp-Wochen und Jersey-Sizes via `/config` deduplizieren)
 
-**Danach: B4 + B5** (Camp-Wochen und Jersey-Sizes deduplizieren — beide via `/config` exponieren)
-
-**Phase 1 vollständig wenn:** B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓
+**Phase 1 vollständig wenn:** B1 ✓ B2 ✓ B3 ✓ B4 ✓ B5 ✓ Tests ✓

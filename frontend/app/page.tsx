@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import ClubLogo from './components/ClubLogo'
 import RegistrationForm from './components/RegistrationForm'
+import { fetchCampConfig } from './lib/campConfig'
 
 export const metadata: Metadata = {
   title: 'Fußballschule Sommercamp 2026 – KSV Baunatal',
@@ -49,16 +50,26 @@ const HIGHLIGHTS = [
   },
 ]
 
-// ── Campbeitrag – nur hier anpassen ─────────────────────────────────────────
-const CAMP_PRICE = '149 €' // TODO: echten Preis eintragen
-
 const CAMPS = [
   { label: 'Sommercamp I',  date: '29.06. – 02.07.2026', value: '29.06.–02.07.2026', tag: 'Sommer' },
   { label: 'Sommercamp II', date: '03.08. – 06.08.2026', value: '03.08.–06.08.2026', tag: 'Sommer' },
   { label: 'Herbstcamp',    date: '05.10. – 08.10.2026', value: '05.10.–08.10.2026', tag: 'Herbst' },
 ]
 
-export default function Page() {
+export default async function Page() {
+  let campPrice = 'Preis auf Anfrage'
+  try {
+    const config = await fetchCampConfig()
+    campPrice = new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: config.currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(config.price_cents / 100)
+  } catch {
+    // Fallback bleibt 'Preis auf Anfrage'
+  }
+
   return (
     <div className="min-h-screen bg-white text-gray-900 flex flex-col">
 
@@ -120,7 +131,7 @@ export default function Page() {
                   { value: '3',          label: 'Camp-Termine 2026' },
                   { value: '4 Tage',     label: 'je Camp' },
                   { value: '5 – 12',     label: 'Jahre' },
-                  { value: CAMP_PRICE,   label: 'Campbeitrag' },
+                  { value: campPrice,   label: 'Campbeitrag' },
                   { value: 'Baunatal',   label: 'Parkstadion Baunatal' },
                 ].map(f => (
                   <div key={f.label}>
@@ -231,7 +242,7 @@ export default function Page() {
                     <p className="font-bold text-gray-900 text-lg mb-1">{c.label}</p>
                     <p className="text-[#CC0000] font-semibold text-sm">{c.date}</p>
                     <p className="text-gray-400 text-xs mt-2">4 Tage · 10:00–15:00 Uhr · Kinder 5–12 Jahre</p>
-                    <p className="text-gray-900 font-bold text-sm mt-2">{CAMP_PRICE}</p>
+                    <p className="text-gray-900 font-bold text-sm mt-2">{campPrice}</p>
                   </div>
                   <a
                     href={`/?week=${encodeURIComponent(c.value)}#anmeldung`}

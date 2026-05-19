@@ -11,5 +11,7 @@ services:
         sync: false        # wird manuell im Render Dashboard gesetzt
       - key: ADMIN_PASSWORD
         sync: false
+      - key: STRIPE_PRICE_CENTS
+        sync: false        # Campbeitrag in Cent, z.B. 14900 für 149,00 €
       - key: CORS_ORIGINS_EXTRA
         sync: false        # z.B. https://deine-app.vercel.app

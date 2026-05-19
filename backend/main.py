@@ -20,7 +20,7 @@ from stripe._error import SignatureVerificationError as StripeSignatureError
 import psycopg2.extras
 import psycopg2.pool
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -289,6 +289,15 @@ class RegistrationOut(BaseModel):
 
 class PaymentStatusIn(BaseModel):
     payment_status: Literal["open", "paid", "cancelled"]
+
+
+class CampPriceConfig(BaseModel):
+    price_cents: int
+    currency: str = "EUR"
+
+
+class ConfigResponse(BaseModel):
+    camp: CampPriceConfig
 
 
 # ---------------------------------------------------------------------------
@@ -604,6 +613,19 @@ def admin_login(payload: AdminLoginIn) -> dict:
         algorithm="HS256",
     )
     return {"token": token, "expires_in_hours": TOKEN_EXPIRE_HOURS}
+
+
+@app.get("/config", tags=["System"])
+def get_config(response: Response) -> ConfigResponse:
+    """Gibt öffentliche Konfigurationswerte zurück (Campbeitrag, Währung)."""
+    if STRIPE_PRICE_CENTS <= 0:
+        logger.warning("GET /config: STRIPE_PRICE_CENTS ist nicht gesetzt oder <= 0")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Preiskonfiguration nicht verfügbar.",
+        )
+    response.headers["Cache-Control"] = "public, max-age=300"
+    return ConfigResponse(camp=CampPriceConfig(price_cents=STRIPE_PRICE_CENTS))
 
 
 @app.get("/health", tags=["System"])

@@ -186,6 +186,16 @@ Response:
 
 ---
 
+## Hardcoded-Schulden (für Phase 2)
+
+Strings, die in Phase 1 neu eingeführt wurden und noch durch Tenant-Config ersetzt
+werden müssen. Jede Stelle ist im Code mit `// TODO(multi-tenant): ...` markiert.
+
+- [ ] `frontend/app/page.tsx`: hardcoded mailto `info@ksv-baunatal.de` in
+  `ConfigUnavailableNotice` → ersetzen durch `organization.contact_email`
+
+---
+
 ## Empfohlene Reihenfolge
 
 ```

@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import ClubLogo from './components/ClubLogo'
 import RegistrationForm from './components/RegistrationForm'
-import { fetchCampConfig } from './lib/campConfig'
+import { type CampConfig, fetchCampConfig } from './lib/campConfig'
 
 export const metadata: Metadata = {
   title: 'Fußballschule Sommercamp 2026 – KSV Baunatal',
@@ -57,17 +57,18 @@ const CAMPS = [
 ]
 
 export default async function Page() {
+  let config: CampConfig | null = null
   let campPrice = 'Preis auf Anfrage'
   try {
-    const config = await fetchCampConfig()
+    config = await fetchCampConfig()
     campPrice = new Intl.NumberFormat('de-DE', {
       style: 'currency',
-      currency: config.currency,
+      currency: config.camp.currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(config.price_cents / 100)
-  } catch {
-    // Fallback bleibt 'Preis auf Anfrage'
+    }).format(config.camp.price_cents / 100)
+  } catch (e) {
+    console.error('GET /config failed:', e)
   }
 
   return (
@@ -271,9 +272,24 @@ export default async function Page() {
 
               {/* Formular-Card */}
               <div className="rounded-2xl border border-gray-200 shadow-sm p-8 sm:p-10">
-                <Suspense fallback={<div className="py-10 text-center text-sm text-gray-400">Lädt …</div>}>
-                  <RegistrationForm />
-                </Suspense>
+                {config ? (
+                  <Suspense fallback={<div className="py-10 text-center text-sm text-gray-400">Lädt …</div>}>
+                    <RegistrationForm config={config} />
+                  </Suspense>
+                ) : (
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 px-5 py-6 text-sm text-amber-800 space-y-2">
+                    {/* TODO(multi-tenant): replace hardcoded email with
+                        organization.contact_email when org context is
+                        available (Phase 2) */}
+                    <p className="font-semibold">Online-Anmeldung vorübergehend nicht verfügbar</p>
+                    <p className="text-amber-700 leading-relaxed">
+                      Bitte versuchen Sie es in wenigen Minuten erneut oder melden Sie sich direkt bei uns:{' '}
+                      <a href="mailto:info@ksv-baunatal.de" className="underline underline-offset-2 font-medium hover:opacity-70">
+                        info@ksv-baunatal.de
+                      </a>
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Sidebar – nur ab lg sichtbar */}

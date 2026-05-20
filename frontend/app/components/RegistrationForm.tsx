@@ -275,94 +275,181 @@ export default function RegistrationForm({ config }: { config: CampConfig }) {
   }
 
   if (confirmed) {
+    const childName = `${confirmed.child_first_name} ${confirmed.child_last_name}`
+    const hasBankDetails = !!(
+      confirmed.bank_account_holder || confirmed.bank_iban ||
+      confirmed.bank_bic || confirmed.bank_name
+    )
+    const paymentIsOpen   = !confirmed.payment_status || confirmed.payment_status === 'open'
+    const paymentIsPaid   = confirmed.payment_status === 'paid'
+    const paymentIsWaived = confirmed.payment_status === 'waived'
+
+    const campPrice = new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: config.camp.currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(config.camp.price_cents / 100)
+
+    const STATUS_LABELS: Record<string, string> = {
+      registered: 'Anmeldung eingegangen',
+      confirmed:  'Teilnahme bestätigt',
+      waitlist:   'Warteliste',
+      cancelled:  'Storniert',
+    }
+    const PAYMENT_LABELS: Record<string, string> = {
+      open:      'Zahlung offen',
+      paid:      'Bezahlt',
+      waived:    'Zahlung nicht erforderlich',
+      refunded:  'Erstattet',
+      cancelled: 'Storniert',
+    }
+
     const bankRows: [string, string | null, boolean][] = [
-      ['Kontoinhaber',    confirmed.bank_account_holder, false],
-      ['IBAN',            confirmed.bank_iban,           true],
-      ['BIC',             confirmed.bank_bic,            false],
-      ['Bank',            confirmed.bank_name,           false],
+      ['Kontoinhaber', confirmed.bank_account_holder, false],
+      ['IBAN',         confirmed.bank_iban,           true],
+      ['BIC',          confirmed.bank_bic,            false],
+      ['Bank',         confirmed.bank_name,           false],
+      ['Betrag',       campPrice,                     false],
     ]
 
     return (
       <div ref={successRef} className="pt-2 pb-8 space-y-6">
 
-        {/* Erfolgs-Header */}
+        {/* ── Header ─────────────────────────────────────────────── */}
         <div className="text-center pb-2">
           <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-sm">
             <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">Anmeldung eingegangen</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">
+            {confirmed.status === 'confirmed' ? 'Teilnahme bestätigt' : 'Anmeldung eingegangen'}
+          </h3>
           <p className="text-gray-500 text-sm leading-relaxed max-w-sm mx-auto">
-            Eine Bestätigungs-E-Mail mit den Zahlungsdaten geht in Kürze an{' '}
+            Wir haben die Anmeldung für{' '}
+            <span className="font-semibold text-gray-800">{childName}</span> erhalten.
+            Eine Bestätigungs-E-Mail geht in Kürze an{' '}
             <span className="font-semibold text-gray-800">{confirmed.email}</span>.
           </p>
         </div>
 
-        {/* Reservierungs-Status */}
-        <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3.5 flex items-start gap-3">
-          <span className="w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
-            </svg>
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-amber-800">Platz vorläufig reserviert</p>
-            <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">Die Anmeldung ist vollständig bestätigt, sobald der Campbeitrag bei uns eingegangen ist.</p>
+        {/* ── Statusbanner ───────────────────────────────────────── */}
+        {paymentIsOpen && (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3.5 flex items-start gap-3">
+            <span className="w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
+              </svg>
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-amber-800">Platz vorläufig reserviert</p>
+              <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                Der Platz für {confirmed.child_first_name} ist fest gesichert, sobald der Campbeitrag bei uns eingegangen ist.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Anmeldedaten */}
+        {(paymentIsPaid || paymentIsWaived) && (
+          <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3.5 flex items-start gap-3">
+            <span className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shrink-0 mt-0.5">
+              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-green-800">
+                {paymentIsWaived ? 'Zahlung nicht erforderlich' : 'Zahlung bestätigt'}
+              </p>
+              <p className="text-xs text-green-700 mt-0.5 leading-relaxed">
+                {paymentIsWaived
+                  ? 'Für diese Anmeldung ist keine Zahlung erforderlich.'
+                  : `Die Teilnahme von ${confirmed.child_first_name} ist damit bestätigt.`}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Buchungsübersicht ──────────────────────────────────── */}
         <div className="rounded-xl border border-gray-200 overflow-hidden">
           <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Deine Buchung</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Ihre Buchung</p>
           </div>
           <div className="divide-y divide-gray-100">
             <div className="px-4 py-3 flex justify-between items-center text-sm">
               <span className="text-gray-500">Teilnehmer</span>
-              <span className="font-semibold text-gray-900">{confirmed.child_first_name} {confirmed.child_last_name}</span>
+              <span className="font-semibold text-gray-900">{childName}</span>
             </div>
             <div className="px-4 py-3 flex justify-between items-center text-sm">
               <span className="text-gray-500">Camp</span>
               <span className="font-semibold text-gray-900">{confirmed.selected_camp_week}</span>
             </div>
             <div className="px-4 py-3 flex justify-between items-center text-sm">
+              <span className="text-gray-500">Anmeldestatus</span>
+              <span className="font-medium text-gray-700">
+                {STATUS_LABELS[confirmed.status] ?? 'Status wird geprüft'}
+              </span>
+            </div>
+            <div className="px-4 py-3 flex justify-between items-center text-sm">
+              <span className="text-gray-500">Zahlungsstatus</span>
+              <span className="font-medium text-gray-700">
+                {PAYMENT_LABELS[confirmed.payment_status] ?? 'Zahlungsstatus wird geprüft'}
+              </span>
+            </div>
+            <div className="px-4 py-3 flex justify-between items-center text-sm">
               <span className="text-gray-500">Foto-/Videoerlaubnis</span>
               <span className="font-medium text-gray-700">
-                {confirmed.photo_permission ? 'Ja, erteilt' : 'Nicht erteilt'}
+                {confirmed.photo_permission ? 'Einverständnis erteilt' : 'Kein Einverständnis'}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Bankverbindung */}
-        <div className="rounded-xl border border-green-200 overflow-hidden">
-          <div className="bg-green-700 px-4 py-3">
-            <p className="text-sm font-bold text-white">Bitte jetzt überweisen</p>
-            <p className="text-green-200 text-xs mt-0.5">Deine Anmeldung ist bestätigt, sobald deine Zahlung eingegangen ist.</p>
-          </div>
-          <div className="divide-y divide-gray-100 bg-white">
-            {bankRows.map(([label, value, isMono]) => (
-              <div key={label} className="px-4 py-3 flex justify-between items-center text-sm gap-4">
-                <span className="text-gray-500 shrink-0">{label}</span>
-                <span className={`font-semibold text-gray-900 text-right ${isMono ? 'font-mono tracking-wide' : ''}`}>
-                  {value ?? '–'}
-                </span>
-              </div>
-            ))}
-            {/* Verwendungszweck hervorgehoben */}
-            <div className="px-4 py-3 bg-amber-50">
-              <p className="text-xs text-amber-700 font-semibold uppercase tracking-wider mb-1">Verwendungszweck (wichtig!)</p>
-              <p className="font-bold text-gray-900 text-sm">{confirmed.bank_purpose ?? `Sommercamp ${confirmed.child_first_name} ${confirmed.child_last_name}`}</p>
+        {/* ── Bankverbindung (nur bei offener Zahlung) ────────────── */}
+        {paymentIsOpen && (
+          <div className="rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-gray-900 px-4 py-3">
+              <p className="text-sm font-bold text-white">Campbeitrag überweisen</p>
+              <p className="text-gray-400 text-xs mt-0.5">
+                Bitte überweisen Sie den Campbeitrag mit dem angegebenen Verwendungszweck.
+              </p>
             </div>
+            {hasBankDetails ? (
+              <div className="divide-y divide-gray-100 bg-white">
+                {bankRows.map(([label, value, isMono]) =>
+                  value ? (
+                    <div key={label} className="px-4 py-3 flex justify-between items-center text-sm gap-4">
+                      <span className="text-gray-500 shrink-0">{label}</span>
+                      <span className={`font-semibold text-gray-900 text-right ${isMono ? 'font-mono tracking-wide' : ''}`}>
+                        {value}
+                      </span>
+                    </div>
+                  ) : null
+                )}
+                <div className="px-4 py-3 bg-amber-50">
+                  <p className="text-xs text-amber-700 font-semibold uppercase tracking-wider mb-1">Verwendungszweck (wichtig!)</p>
+                  <p className="font-bold text-gray-900 text-sm select-all">
+                    {confirmed.bank_purpose ?? `Sommercamp – ${childName} – ${confirmed.selected_camp_week}`}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="px-4 py-4 bg-white">
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Die Zahlungsinformationen werden Ihnen durch den Verein mitgeteilt.
+                  Bei Fragen wenden Sie sich bitte direkt an den Ansprechpartner (siehe unten).
+                </p>
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Stripe Online-Zahlung */}
-        {STRIPE_ENABLED ? (
+        {/* ── Online-Zahlung (Stripe) ────────────────────────────── */}
+        {STRIPE_ENABLED && paymentIsOpen && (
           <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm space-y-3">
             <p className="font-semibold text-gray-900">Jetzt bequem online bezahlen</p>
-            <p className="text-gray-600">Bezahlen Sie den Campbeitrag sicher per Kreditkarte über Stripe.</p>
+            <p className="text-gray-600">Bezahlen Sie den Campbeitrag sicher per Kreditkarte.</p>
             <button
               type="button"
               onClick={() => handleStripeCheckout(confirmed.registration_token)}
@@ -376,23 +463,42 @@ export default function RegistrationForm({ config }: { config: CampConfig }) {
             )}
             <p className="text-xs text-gray-400 text-center">Alternativ können Sie auch per Überweisung bezahlen (siehe oben).</p>
           </div>
-        ) : null}
+        )}
 
-        {/* Nächste Schritte */}
+        {/* ── Nächste Schritte ───────────────────────────────────── */}
         <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm space-y-3">
           <p className="font-semibold text-gray-900">Nächste Schritte</p>
           <ol className="space-y-2 text-gray-600">
-            {[
-              'Überweisung mit dem Verwendungszweck oben durchführen.',
-              'Nach Zahlungseingang gilt die Anmeldung als vollständig bestätigt.',
-              'Wir melden uns mit allen Details zu Uhrzeit und Treffpunkt.',
-            ].map((step, i) => (
+            {(paymentIsOpen
+              ? [
+                  'Campbeitrag mit dem oben angegebenen Verwendungszweck überweisen.',
+                  'Nach Zahlungseingang erhalten Sie eine Bestätigung vom Verein.',
+                  'Kurz vor dem Camp melden wir uns mit Details zu Uhrzeit und Treffpunkt.',
+                ]
+              : [
+                  'Halten Sie die Bestätigungs-E-Mail griffbereit.',
+                  'Kurz vor dem Camp melden wir uns mit Details zu Uhrzeit und Treffpunkt.',
+                ]
+            ).map((step, i) => (
               <li key={i} className="flex items-start gap-3">
                 <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
                 <span>{step}</span>
               </li>
             ))}
           </ol>
+        </div>
+
+        {/* ── Kontakt ────────────────────────────────────────────── */}
+        {/* TODO(multi-tenant): replace with organization.contact_name / organization.contact_email */}
+        <div className="rounded-xl border border-gray-200 bg-white px-4 py-4 text-sm">
+          <p className="font-semibold text-gray-800 mb-1.5">Fragen zur Anmeldung?</p>
+          <p className="text-gray-500 leading-relaxed text-xs">
+            Ergün Ünal – Leiter Fußballschule<br />
+            <a href="mailto:Erguen.uenal@fussball.ksv-baunatal.de" className="text-gray-700 hover:underline break-all">
+              Erguen.uenal@fussball.ksv-baunatal.de
+            </a>{' · '}
+            0170 9927281
+          </p>
         </div>
 
         <button
@@ -415,19 +521,27 @@ export default function RegistrationForm({ config }: { config: CampConfig }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">Zahlung erfolgreich</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">Zahlung übermittelt</h3>
           <p className="text-gray-500 text-sm leading-relaxed max-w-sm mx-auto">
-            Vielen Dank! Deine Zahlung wurde übermittelt. Die Anmeldung gilt als vollständig bestätigt, sobald der Betrag bei uns eingegangen ist.
+            Vielen Dank! Ihre Zahlung wurde übermittelt.
+            Die Anmeldung gilt als vollständig bestätigt, sobald der Betrag bei uns eingegangen ist.
           </p>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-left text-sm space-y-2">
-          <p className="font-semibold text-gray-900">Was jetzt passiert</p>
-          <ul className="space-y-1.5 text-gray-500">
-            <li className="flex items-start gap-2"><span className="text-green-500 font-bold shrink-0">✓</span> Zahlung wurde an Stripe übermittelt</li>
-            <li className="flex items-start gap-2"><span className="text-gray-400 shrink-0">→</span> Nach Zahlungseingang wird der Status automatisch aktualisiert</li>
-            <li className="flex items-start gap-2"><span className="text-gray-400 shrink-0">→</span> Wir melden uns mit Details zu Uhrzeit und Treffpunkt</li>
-          </ul>
+        <div className="rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-left text-sm space-y-3">
+          <p className="font-semibold text-gray-900">Nächste Schritte</p>
+          <ol className="space-y-2 text-gray-500">
+            {[
+              'Zahlung wurde erfolgreich übermittelt.',
+              'Nach Zahlungseingang erhalten Sie eine Bestätigung vom Verein.',
+              'Kurz vor dem Camp melden wir uns mit Details zu Uhrzeit und Treffpunkt.',
+            ].map((step, i) => (
+              <li key={i} className="flex items-start gap-3">
+                <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
         </div>
 
         <Link

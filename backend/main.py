@@ -201,7 +201,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+CORS_ORIGINS: list[str] = [
+    "http://localhost:3000",
+    "https://sommercamps.vercel.app",
+]
+CORS_ORIGIN_REGEX = (
+    r"^https://sommercamps-[a-z0-9-]+-serkans-projects-a49183cd\.vercel\.app$"
+)
 _extra = os.getenv("CORS_ORIGINS_EXTRA", "")
 if _extra:
     CORS_ORIGINS.extend(o.strip() for o in _extra.split(",") if o.strip())
@@ -209,6 +215,7 @@ if _extra:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
+    allow_origin_regex=CORS_ORIGIN_REGEX,
     allow_methods=["GET", "POST", "DELETE", "PATCH"],
     allow_headers=["*"],
 )

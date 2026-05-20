@@ -30,7 +30,7 @@ export default function DatenschutzPage() {
             </p>
             <address className="not-italic mt-3 space-y-1 text-gray-700">
               <p className="font-medium">KSV Baunatal e.V.</p>
-              <p>Altenritter Str. 37, 34225 Baunatal</p>
+              <p>Altenritter Str. 37</p>
               <p>34225 Baunatal</p>
               <p>E-Mail: <a href="mailto:info@ksv-baunatal.de" className="underline hover:text-gray-900">info@ksv-baunatal.de</a></p>
             </address>
@@ -136,6 +136,8 @@ export default function DatenschutzPage() {
       <footer className="border-t border-gray-100 px-6 py-6 text-center text-xs text-gray-400">
         © 2026 KSV Baunatal e.V. ·{' '}
         <Link href="/" className="underline hover:text-gray-700">Startseite</Link>
+        {' · '}
+        <Link href="/impressum" className="underline hover:text-gray-700">Impressum</Link>
       </footer>
     </div>
   )

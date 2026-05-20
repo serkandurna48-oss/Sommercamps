@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
 import { formatDateDE } from '../lib/formatDate'
 
 interface Registration {
@@ -104,10 +104,10 @@ export default function AdminPage() {
 
   const passwordRef = useRef<HTMLInputElement>(null)
 
-  // Session-Token beim ersten Render aus localStorage laden
+  // Session-Token beim ersten Render aus localStorage laden (mount-only, hydration-safe)
   useEffect(() => {
     const stored = getStoredToken()
-    if (stored) setToken(stored)
+    if (stored) startTransition(() => setToken(stored))
   }, [])
 
   // ── Daten laden ─────────────────────────────────────────────────────────────
@@ -140,7 +140,7 @@ export default function AdminPage() {
 
   // Automatisch laden, sobald ein Token vorliegt
   useEffect(() => {
-    if (token) fetchRegistrations(token)
+    if (token) startTransition(() => { void fetchRegistrations(token) })
   }, [token, fetchRegistrations])
 
   // ── Login ────────────────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { type CampConfig, isAgeValidAtCampStart, parseLocalDate } from '../lib/campConfig'
 
 /** Felder aus der Backend-Antwort (POST /registrations), die wir in der Bestätigungsansicht brauchen. */
@@ -187,12 +188,15 @@ export default function RegistrationForm({ config }: { config: CampConfig }) {
   // URL-Parameter auswerten: ?week= für Vorausfüllen, ?stripe=success für Rückkehr von Stripe
   useEffect(() => {
     const week = searchParams.get('week') ?? ''
-    if (week && config.weeks.some(w => w.label === week)) {
-      setForm(prev => ({ ...prev, selected_camp_week: week }))
-    }
-    if (searchParams.get('stripe') === 'success') {
-      setStripeSuccess(true)
-    }
+    const stripe = searchParams.get('stripe')
+    startTransition(() => {
+      if (week && config.weeks.some(w => w.label === week)) {
+        setForm(prev => ({ ...prev, selected_camp_week: week }))
+      }
+      if (stripe === 'success') {
+        setStripeSuccess(true)
+      }
+    })
   }, [searchParams, config])
 
   function handleChange(
@@ -372,12 +376,7 @@ export default function RegistrationForm({ config }: { config: CampConfig }) {
             )}
             <p className="text-xs text-gray-400 text-center">Alternativ können Sie auch per Überweisung bezahlen (siehe oben).</p>
           </div>
-        ) : (
-          <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm">
-            <p className="font-semibold text-gray-500">Online-Zahlung bald verfügbar</p>
-            <p className="text-gray-400 text-xs mt-1">Bitte überweise den Campbeitrag per Banküberweisung (siehe oben).</p>
-          </div>
-        )}
+        ) : null}
 
         {/* Nächste Schritte */}
         <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm space-y-3">
@@ -431,12 +430,12 @@ export default function RegistrationForm({ config }: { config: CampConfig }) {
           </ul>
         </div>
 
-        <a
+        <Link
           href="/"
           className="inline-block w-full bg-gray-900 text-white font-semibold py-3 rounded-xl hover:bg-black transition-colors text-sm"
         >
           Zurück zur Startseite
-        </a>
+        </Link>
       </div>
     )
   }

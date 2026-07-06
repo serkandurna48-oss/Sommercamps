@@ -10,13 +10,8 @@ interface ClubLogoProps {
 
 export default function ClubLogo({ src = CLUB_CONFIG.logoSrc, alt = CLUB_CONFIG.name }: ClubLogoProps) {
   return (
-    <Image
-      src={src}
-      alt={alt}
-      width={56}
-      height={56}
-      className="shrink-0 drop-shadow-sm"
-      unoptimized
-    />
+    <span className="relative inline-block h-14 w-14 shrink-0 drop-shadow-sm">
+      <Image src={src} alt={alt} fill unoptimized className="object-contain" />
+    </span>
   )
 }

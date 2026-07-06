@@ -1,16 +1,35 @@
+import type { CSSProperties } from 'react'
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import ClubLogo from './components/ClubLogo'
 import RegistrationForm from './components/RegistrationForm'
 import { type CampConfig, fetchCampConfig } from './lib/campConfig'
-import { CLUB_CONFIG, CAMPS, HIGHLIGHTS } from './lib/clubConfig'
+import {
+  CLUB_CONFIG,
+  CAMPS,
+  PROGRAMS,
+  HIGHLIGHTS,
+  INCLUDED_ITEMS,
+  FAQ_ITEMS,
+  VENUE_INFO_TEXT,
+  FIRST_TEAM_INFO_TEXT,
+} from './lib/clubConfig'
+import Image from 'next/image'
 
-export const metadata: Metadata = {
-  title: `${CLUB_CONFIG.subtitle} Sommercamp 2026 – ${CLUB_CONFIG.name}`,
-  description:
-    `Melde dein Kind jetzt für das Sommercamp 2026 der ${CLUB_CONFIG.subtitle} ${CLUB_CONFIG.name} an. 4 Tage professionelles Training für Kinder von 5–12 Jahren.`,
-}
+// Clubs mit PROGRAMS (z. B. JK) bieten mehr als "das eine Sommercamp" an,
+// daher generische Formulierung statt "Sommercamp 2026" in Titel/Beschreibung.
+export const metadata: Metadata = PROGRAMS.length > 0
+  ? {
+      title: `${CLUB_CONFIG.subtitle} – ${CLUB_CONFIG.name}`,
+      description:
+        `Events & Programme der ${CLUB_CONFIG.subtitle} ${CLUB_CONFIG.name} – Training für Kinder von 5–12 Jahren.`,
+    }
+  : {
+      title: `${CLUB_CONFIG.subtitle} Sommercamp 2026 – ${CLUB_CONFIG.name}`,
+      description:
+        `Melde dein Kind jetzt für das Sommercamp 2026 der ${CLUB_CONFIG.subtitle} ${CLUB_CONFIG.name} an. 4 Tage professionelles Training für Kinder von 5–12 Jahren.`,
+    }
 
 export default async function Page() {
   let config: CampConfig | null = null
@@ -28,7 +47,10 @@ export default async function Page() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 flex flex-col">
+    <div
+      className="min-h-screen bg-white text-gray-900 flex flex-col"
+      style={{ '--brand-accent': CLUB_CONFIG.accentColor ?? '#CC0000' } as CSSProperties}
+    >
 
       {/* ── Navbar ──────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
@@ -44,7 +66,7 @@ export default async function Page() {
             href="#anmeldung"
             className="bg-black text-white text-sm font-semibold px-5 py-2 rounded-xl hover:opacity-90 transition-opacity"
           >
-            Jetzt anmelden
+            {PROGRAMS.length > 0 ? 'Trainingsanfrage stellen' : 'Jetzt anmelden'}
           </a>
         </div>
       </header>
@@ -52,45 +74,72 @@ export default async function Page() {
       <main className="flex-1">
 
         {/* ── Hero ────────────────────────────────────────────────────── */}
-        <section className="bg-gray-950 text-white">
-          <div className="max-w-5xl mx-auto px-6 py-24 sm:py-32">
+        <section className="relative overflow-hidden bg-gray-950 text-white">
+          {CLUB_CONFIG.heroImageSrc && (
+            <div className="absolute inset-0 z-0">
+              <Image
+                src={CLUB_CONFIG.heroImageSrc}
+                alt=""
+                fill
+                priority
+                unoptimized
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/85 to-gray-950/50" />
+            </div>
+          )}
+          <div className="relative z-10 max-w-5xl mx-auto px-6 py-24 sm:py-32">
             <div className="max-w-2xl">
               <span className="inline-flex items-center gap-2 bg-white/10 text-white/80 text-xs font-semibold tracking-widest uppercase px-3 py-1.5 rounded-full mb-8">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#CC0000] inline-block" />
-                Sommercamps 2026 · {CLUB_CONFIG.name}
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-accent)] inline-block" />
+                {PROGRAMS.length > 0 ? 'Events & Programme' : 'Sommercamps 2026'} · {CLUB_CONFIG.name}
               </span>
               <h1 className="text-4xl sm:text-6xl font-extrabold leading-[1.1] tracking-tight mb-6">
-                {CLUB_CONFIG.subtitle} 2026<br />
-                <span className="text-[#CC0000]">beim {CLUB_CONFIG.name}</span>
+                {PROGRAMS.length > 0 && CLUB_CONFIG.heroTagline ? (
+                  CLUB_CONFIG.heroTagline
+                ) : (
+                  <>
+                    {CLUB_CONFIG.subtitle} 2026<br />
+                    <span className="text-[var(--brand-accent)]">beim {CLUB_CONFIG.name}</span>
+                  </>
+                )}
               </h1>
               <p className="text-gray-300 text-lg sm:text-xl leading-relaxed mb-10 max-w-xl">
-                4 Tage professionelles Training, Spaß und Entwicklung
-                für Kinder von 5–12 Jahren.
+                {PROGRAMS.length > 0
+                  ? 'Individual-, Gruppen- und Teamtraining sowie Camps und Events – für deine Weiterentwicklung.'
+                  : '4 Tage professionelles Training, Spaß und Entwicklung für Kinder von 5–12 Jahren.'}
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <a
                   href="#anmeldung"
                   className="bg-white text-gray-900 font-bold px-7 py-3.5 rounded-xl hover:bg-gray-100 transition-colors text-center"
                 >
-                  Jetzt Platz sichern
+                  {PROGRAMS.length > 0 ? 'Trainingsanfrage stellen' : 'Jetzt Platz sichern'}
                 </a>
                 <a
                   href="#termine"
                   className="bg-white/10 text-white font-semibold px-7 py-3.5 rounded-xl hover:bg-white/15 transition-colors text-center"
                 >
-                  Termine ansehen
+                  {PROGRAMS.length > 0 ? 'Programme ansehen' : 'Termine ansehen'}
                 </a>
               </div>
 
               {/* Schnellfakten */}
               <div className="mt-12 pt-8 border-t border-white/10 grid grid-cols-2 sm:grid-cols-5 gap-6">
-                {[
-                  { value: '3',          label: 'Camp-Termine 2026' },
-                  { value: '4 Tage',     label: 'je Camp' },
+                {(PROGRAMS.length > 0
+                  ? [
+                      { value: String(PROGRAMS.length), label: 'Programme & Formate' },
+                      { value: 'Flexibel',   label: 'Trainingsformate' },
+                    ]
+                  : [
+                      { value: '3',          label: 'Camp-Termine 2026' },
+                      { value: '4 Tage',     label: 'je Camp' },
+                    ]
+                ).concat([
                   { value: '5 – 12',     label: 'Jahre' },
                   { value: campPrice,   label: 'Campbeitrag' },
-                  { value: 'Baunatal',   label: CLUB_CONFIG.venueName },
-                ].map(f => (
+                  { value: CLUB_CONFIG.venueName, label: 'Standort' },
+                ]).map(f => (
                   <div key={f.label}>
                     <p className="text-xl sm:text-2xl font-bold text-white tabular-nums">{f.value}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{f.label}</p>
@@ -105,10 +154,19 @@ export default async function Page() {
         <section className="py-20 px-6 bg-white">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
-              <p className="text-[#CC0000] text-sm font-semibold tracking-widest uppercase mb-2">Das erwartet euch</p>
-              <h2 className="text-3xl font-bold text-gray-900">Warum unser Camp?</h2>
+              {PROGRAMS.length > 0 ? (
+                <>
+                  <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Unsere Positionierung</p>
+                  <h2 className="text-3xl font-bold text-gray-900">Training, Camps &amp; Kooperationen</h2>
+                </>
+              ) : (
+                <>
+                  <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Das erwartet euch</p>
+                  <h2 className="text-3xl font-bold text-gray-900">Warum unser Camp?</h2>
+                </>
+              )}
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className={`grid sm:grid-cols-2 gap-5 ${HIGHLIGHTS.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
               {HIGHLIGHTS.map(h => (
                 <div
                   key={h.title}
@@ -129,27 +187,46 @@ export default async function Page() {
         <section className="py-20 px-6 bg-gray-950 text-white">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-14">
-              <p className="text-[#CC0000] text-sm font-semibold tracking-widest uppercase mb-2">Einfach & unkompliziert</p>
-              <h2 className="text-3xl font-bold">So läuft die Anmeldung ab</h2>
+              <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Einfach & unkompliziert</p>
+              <h2 className="text-3xl font-bold">{PROGRAMS.length > 0 ? 'So läuft deine Anfrage ab' : 'So läuft die Anmeldung ab'}</h2>
             </div>
             <div className="grid sm:grid-cols-3 gap-10">
-              {[
-                {
-                  step: '01',
-                  title: 'Termin wählen',
-                  text: 'Wähle einen der verfügbaren Camp-Termine und klicke auf "Anmelden" – der Termin wird im Formular automatisch vorausgewählt.',
-                },
-                {
-                  step: '02',
-                  title: 'Anmeldung absenden',
-                  text: 'Trage die Daten deines Kindes ein und sende das Formular ab. Die Anmeldung dauert nur wenige Minuten.',
-                },
-                {
-                  step: '03',
-                  title: 'Bestätigung & Zahlung',
-                  text: 'Du erhältst sofort eine Bestätigungs-E-Mail mit den Bankdaten. Nach Zahlungseingang ist der Platz gesichert.',
-                },
-              ].map(s => (
+              {(PROGRAMS.length > 0
+                ? [
+                    {
+                      step: '01',
+                      title: 'Anfrage stellen',
+                      text: 'Schreib uns über das Formular, welches Programm dich interessiert – eine Trainingsanfrage oder ein Angebot.',
+                    },
+                    {
+                      step: '02',
+                      title: 'Wir melden uns',
+                      text: 'Wir nehmen persönlich Kontakt zu dir auf und klären die Details zu Region, Gruppe und Ablauf.',
+                    },
+                    {
+                      step: '03',
+                      title: 'Training oder Event vereinbaren',
+                      text: 'Gemeinsam vereinbaren wir Termin und Ablauf für dein Training, Camp oder Event.',
+                    },
+                  ]
+                : [
+                    {
+                      step: '01',
+                      title: 'Termin wählen',
+                      text: 'Wähle einen der verfügbaren Camp-Termine und klicke auf "Anmelden" – der Termin wird im Formular automatisch vorausgewählt.',
+                    },
+                    {
+                      step: '02',
+                      title: 'Anmeldung absenden',
+                      text: 'Trage die Daten deines Kindes ein und sende das Formular ab. Die Anmeldung dauert nur wenige Minuten.',
+                    },
+                    {
+                      step: '03',
+                      title: 'Bestätigung & Zahlung',
+                      text: 'Du erhältst sofort eine Bestätigungs-E-Mail mit den Bankdaten. Nach Zahlungseingang ist der Platz gesichert.',
+                    },
+                  ]
+              ).map(s => (
                 <div key={s.step} className="flex flex-col">
                   <p className="text-6xl font-black text-white/10 leading-none mb-4 tabular-nums">{s.step}</p>
                   <p className="text-base font-bold text-white mb-2">{s.title}</p>
@@ -160,56 +237,86 @@ export default async function Page() {
           </div>
         </section>
 
-        {/* ── Termine ─────────────────────────────────────────────────── */}
+        {/* ── Termine / Events & Programme ──────────────────────────────── */}
         <section id="termine" className="py-20 px-6 bg-gray-50">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
-              <p className="text-[#CC0000] text-sm font-semibold tracking-widest uppercase mb-2">Wann findet es statt</p>
-              <h2 className="text-3xl font-bold text-gray-900">Termine 2026</h2>
+              {PROGRAMS.length > 0 ? (
+                <>
+                  <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Was wir anbieten</p>
+                  <h2 className="text-3xl font-bold text-gray-900">Aktuelle Events & Programme</h2>
+                </>
+              ) : (
+                <>
+                  <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Wann findet es statt</p>
+                  <h2 className="text-3xl font-bold text-gray-900">Termine 2026</h2>
+                </>
+              )}
             </div>
             {/* Hinweis: Ort */}
-            <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-600 leading-relaxed">
-              <p className="font-semibold text-gray-800 mb-1">Veranstaltungsort</p>
-              <p>
-                Kunstrasen am Parkstadion in Baunatal. Bei Bedarf weichen wir auf Ausweichplätze aus,
-                z.&nbsp;B. die Sportanlage am Baunsberg.
-              </p>
-            </div>
+            {VENUE_INFO_TEXT && (
+              <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-600 leading-relaxed">
+                <p className="font-semibold text-gray-800 mb-1">Veranstaltungsort</p>
+                <p>{VENUE_INFO_TEXT}</p>
+              </div>
+            )}
 
             {/* Hinweis: 1. Mannschaft */}
-            <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-600 leading-relaxed">
-              <p className="font-semibold text-gray-800 mb-1">Hinweis zu Trainingseinheiten mit der 1. Mannschaft</p>
-              <p>
-                Trainingseinheiten mit Spielern der 1. Mannschaft finden – sofern es zeitlich möglich ist –
-                im Rahmen des Camps statt. Wir bitten um Verständnis, dass dies organisatorisch und
-                terminlich abhängig ist und daher nicht garantiert werden kann.
-              </p>
-            </div>
+            {FIRST_TEAM_INFO_TEXT && (
+              <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-600 leading-relaxed">
+                <p className="font-semibold text-gray-800 mb-1">Hinweis zu Trainingseinheiten mit der 1. Mannschaft</p>
+                <p>{FIRST_TEAM_INFO_TEXT}</p>
+              </div>
+            )}
 
-            <div className="grid sm:grid-cols-3 gap-5">
-              {CAMPS.map(c => (
-                <div
-                  key={c.label}
-                  className="bg-white rounded-2xl border border-gray-200 p-7 flex flex-col gap-5 hover:shadow-md transition-shadow"
-                >
-                  <div>
-                    <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md mb-3">
-                      {c.tag}
-                    </span>
-                    <p className="font-bold text-gray-900 text-lg mb-1">{c.label}</p>
-                    <p className="text-[#CC0000] font-semibold text-sm">{c.date}</p>
-                    <p className="text-gray-400 text-xs mt-2">4 Tage · 10:00–15:00 Uhr · Kinder 5–12 Jahre</p>
-                    <p className="text-gray-900 font-bold text-sm mt-2">{campPrice}</p>
-                  </div>
-                  <a
-                    href={`/?week=${encodeURIComponent(c.value)}#anmeldung`}
-                    className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
+            {PROGRAMS.length > 0 ? (
+              <div className={`grid sm:grid-cols-2 gap-5 ${PROGRAMS.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+                {PROGRAMS.map(p => (
+                  <div
+                    key={p.title}
+                    className="bg-white rounded-2xl border border-gray-200 p-7 flex flex-col gap-3 hover:shadow-md transition-shadow"
                   >
-                    Jetzt anmelden →
-                  </a>
-                </div>
-              ))}
-            </div>
+                    <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md w-fit">
+                      {p.tag ?? p.category}
+                    </span>
+                    <p className="font-bold text-gray-900 text-lg">{p.title}</p>
+                    <p className="text-sm text-gray-500 leading-relaxed">{p.description}</p>
+                    <p className="text-[var(--brand-accent)] font-semibold text-sm">{p.cadence}</p>
+                    <a
+                      href="#anmeldung"
+                      className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
+                    >
+                      Angebot anfragen →
+                    </a>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-3 gap-5">
+                {CAMPS.map(c => (
+                  <div
+                    key={c.label}
+                    className="bg-white rounded-2xl border border-gray-200 p-7 flex flex-col gap-5 hover:shadow-md transition-shadow"
+                  >
+                    <div>
+                      <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md mb-3">
+                        {c.tag}
+                      </span>
+                      <p className="font-bold text-gray-900 text-lg mb-1">{c.label}</p>
+                      <p className="text-[var(--brand-accent)] font-semibold text-sm">{c.date}</p>
+                      <p className="text-gray-400 text-xs mt-2">4 Tage · 10:00–15:00 Uhr · Kinder 5–12 Jahre</p>
+                      <p className="text-gray-900 font-bold text-sm mt-2">{campPrice}</p>
+                    </div>
+                    <a
+                      href={`/?week=${encodeURIComponent(c.value)}#anmeldung`}
+                      className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
+                    >
+                      Jetzt anmelden →
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -217,11 +324,23 @@ export default async function Page() {
         <section id="anmeldung" className="py-20 px-6 bg-white">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-10 max-w-xl mx-auto">
-              <p className="text-[#CC0000] text-sm font-semibold tracking-widest uppercase mb-2">Online-Anmeldung</p>
-              <h2 className="text-3xl font-bold text-gray-900 mb-3">Platz sichern</h2>
-              <p className="text-gray-500 text-base">
-                Direkt nach der Anmeldung erhältst du eine Bestätigungs-E-Mail mit allen Zahlungsinformationen.
-              </p>
+              {PROGRAMS.length > 0 ? (
+                <>
+                  <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Trainingsanfrage</p>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-3">Anfrage stellen</h2>
+                  <p className="text-gray-500 text-base">
+                    Schreib uns, welches Programm dich interessiert – wir melden uns bei dir.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Online-Anmeldung</p>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-3">Platz sichern</h2>
+                  <p className="text-gray-500 text-base">
+                    Direkt nach der Anmeldung erhältst du eine Bestätigungs-E-Mail mit allen Zahlungsinformationen.
+                  </p>
+                </>
+              )}
             </div>
 
             <div className="lg:grid lg:grid-cols-[1fr_288px] lg:gap-10 lg:items-start">
@@ -232,16 +351,26 @@ export default async function Page() {
                   <Suspense fallback={<div className="py-10 text-center text-sm text-gray-400">Lädt …</div>}>
                     <RegistrationForm config={config} />
                   </Suspense>
+                ) : PROGRAMS.length > 0 ? (
+                  // Reines Draft-Preview: es gibt noch kein echtes Anfrageformular.
+                  // Realer Trainingsanfrage-Flow ist als Folge-Ticket CP-JK-101
+                  // ("Training Inquiry Flow") vorgesehen.
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 px-5 py-6 text-sm text-amber-800 space-y-2">
+                    <p className="font-semibold">Trainingsanfragen sind hier bald direkt online möglich</p>
+                    <p className="text-amber-700 leading-relaxed">
+                      Bis dahin schreib uns gerne direkt eine E-Mail, wir melden uns zeitnah zurück:{' '}
+                      <a href={`mailto:${CLUB_CONFIG.contactEmail}`} className="underline underline-offset-2 font-medium hover:opacity-70">
+                        {CLUB_CONFIG.contactEmail}
+                      </a>
+                    </p>
+                  </div>
                 ) : (
                   <div className="rounded-xl bg-amber-50 border border-amber-200 px-5 py-6 text-sm text-amber-800 space-y-2">
-                    {/* TODO(multi-tenant): replace hardcoded email with
-                        organization.contact_email when org context is
-                        available (Phase 2) */}
                     <p className="font-semibold">Online-Anmeldung vorübergehend nicht verfügbar</p>
                     <p className="text-amber-700 leading-relaxed">
                       Bitte versuchen Sie es in wenigen Minuten erneut oder melden Sie sich direkt bei uns:{' '}
-                      <a href="mailto:info@ksv-baunatal.de" className="underline underline-offset-2 font-medium hover:opacity-70">
-                        info@ksv-baunatal.de
+                      <a href={`mailto:${CLUB_CONFIG.contactEmail}`} className="underline underline-offset-2 font-medium hover:opacity-70">
+                        {CLUB_CONFIG.contactEmail}
                       </a>
                     </p>
                   </div>
@@ -251,34 +380,31 @@ export default async function Page() {
               {/* Sidebar – nur ab lg sichtbar */}
               <aside className="hidden lg:flex flex-col gap-4 sticky top-24">
 
-                {/* Was ist dabei */}
-                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 space-y-3">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Im Camp enthalten</p>
-                  <ul className="space-y-2.5">
-                    {[
-                      'KSV-Trikot & Hose',
-                      'Teilnehmerpokal',
-                      'Warmes Mittagessen, Obst & Snacks',
-                      'Eintrittskarte für ein Heimspiel',
-                      'Qualifizierte Betreuung',
-                    ].map(item => (
-                      <li key={item} className="flex items-center gap-2.5 text-sm text-gray-700">
-                        <span className="w-4 h-4 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0 text-[10px] font-bold">✓</span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {/* Was ist dabei — nur wenn ein Camp-Paket existiert (nicht bei PROGRAMS-Clubs wie JK) */}
+                {INCLUDED_ITEMS.length > 0 && (
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 space-y-3">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Im Camp enthalten</p>
+                    <ul className="space-y-2.5">
+                      {INCLUDED_ITEMS.map(item => (
+                        <li key={item} className="flex items-center gap-2.5 text-sm text-gray-700">
+                          <span className="w-4 h-4 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0 text-[10px] font-bold">✓</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-                {/* Nach der Anmeldung */}
+                {/* Nach der Anmeldung / So geht's weiter */}
                 <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-3">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Nach der Anmeldung</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                    {PROGRAMS.length > 0 ? 'So geht’s weiter' : 'Nach der Anmeldung'}
+                  </p>
                   <ol className="space-y-2.5 text-sm text-gray-600">
-                    {[
-                      'E-Mail mit Bankdaten erhalten',
-                      'Campbeitrag überweisen',
-                      'Platz ist gesichert',
-                    ].map((s, i) => (
+                    {(PROGRAMS.length > 0
+                      ? ['Anfrage senden', 'Wir melden uns bei dir', 'Programm & Termin abstimmen']
+                      : ['E-Mail mit Bankdaten erhalten', 'Campbeitrag überweisen', 'Platz ist gesichert']
+                    ).map((s, i) => (
                       <li key={s} className="flex items-start gap-2.5">
                         <span className="w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
                         {s}
@@ -289,7 +415,9 @@ export default async function Page() {
 
                 {/* Kontakt */}
                 <div className="rounded-xl border border-gray-200 bg-white px-5 py-4 text-sm">
-                  <p className="font-semibold text-gray-800 mb-1.5">Fragen zur Anmeldung?</p>
+                  <p className="font-semibold text-gray-800 mb-1.5">
+                    {PROGRAMS.length > 0 ? 'Fragen zu unseren Programmen?' : 'Fragen zur Anmeldung?'}
+                  </p>
                   <p className="text-gray-500 leading-relaxed text-xs">
                     {CLUB_CONFIG.contactName} – Leiter {CLUB_CONFIG.subtitle}<br />
                     <a href={`mailto:${CLUB_CONFIG.contactEmail}`} className="text-gray-700 hover:underline break-all">
@@ -310,36 +438,11 @@ export default async function Page() {
       <section className="py-20 px-6 bg-gray-50">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-12">
-            <p className="text-[#CC0000] text-sm font-semibold tracking-widest uppercase mb-2">Häufige Fragen</p>
+            <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Häufige Fragen</p>
             <h2 className="text-3xl font-bold text-gray-900">FAQ für Eltern</h2>
           </div>
           <div className="space-y-3">
-            {[
-              {
-                q: 'Für welches Alter ist das Camp geeignet?',
-                a: 'Das Camp richtet sich an Kinder im Alter von 5 bis 12 Jahren.',
-              },
-              {
-                q: 'Was ist im Beitrag enthalten?',
-                a: 'Warmes Mittagessen, Obst, Snacks und Getränke, ein offizielles KSV-Trikot und Hose, ein Teilnehmerpokal sowie eine Eintrittskarte für ein Heimspiel der 1. Mannschaft sind im Beitrag inklusive.',
-              },
-              {
-                q: 'Wie bezahle ich?',
-                a: 'Die Zahlung erfolgt per Überweisung. Die Bankdaten sowie den Verwendungszweck erhältst du direkt nach der Anmeldung per E-Mail.',
-              },
-              {
-                q: 'Wann gilt die Anmeldung als abgeschlossen?',
-                a: 'Die Anmeldung ist vollständig bestätigt, sobald der Campbeitrag auf unserem Konto eingegangen ist.',
-              },
-              {
-                q: 'Können Kinder mit Allergien teilnehmen?',
-                a: 'Ja. Bitte trage alle relevanten Allergien und Unverträglichkeiten im Anmeldeformular ein, damit wir entsprechend planen können.',
-              },
-              {
-                q: 'An wen wende ich mich bei Fragen?',
-                a: `Für alle Fragen steht dir ${CLUB_CONFIG.contactName} zur Verfügung: ${CLUB_CONFIG.contactEmail} · ${CLUB_CONFIG.contactPhone}`,
-              },
-            ].map(faq => (
+            {FAQ_ITEMS.map(faq => (
               <div key={faq.q} className="rounded-xl border border-gray-200 bg-white px-5 py-4">
                 <p className="font-semibold text-gray-900 text-sm mb-1.5">{faq.q}</p>
                 <p className="text-sm text-gray-500 leading-relaxed">{faq.a}</p>
@@ -375,7 +478,7 @@ export default async function Page() {
             <div>
               <p className="text-white font-semibold mb-3 text-sm">Rechtliches</p>
               <p className="text-sm leading-relaxed" id="datenschutz">
-                Deine Daten werden ausschließlich zur Abwicklung der Camp-Anmeldung genutzt.
+                Deine Daten werden ausschließlich zur Bearbeitung {PROGRAMS.length > 0 ? 'deiner Anfrage' : 'der Camp-Anmeldung'} genutzt.
                 Rechtsgrundlage: Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;b DSGVO.
               </p>
               <div className="mt-3 flex flex-wrap gap-3">

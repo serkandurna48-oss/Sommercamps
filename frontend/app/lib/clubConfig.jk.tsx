@@ -37,6 +37,11 @@ export const JK_OVERRIDES: {
     // CSS-Variable-Mechanismus, der das ohne dynamische Tailwind-Klassen umsetzt.
     accentColor: '#B8912B',
     heroTagline: 'DU willst DICH weiterentwickeln, wir bringen DICH auf DEIN nächstes Level.',
+    // logo.jpg ist auf den Wappen-Ausschnitt zugeschnitten (kein Wortmarke/Bälle mehr),
+    // hat aber weiterhin einen schwarzen Hintergrund — auf Weiß wirkt das hart.
+    // Ein dunkler Chip macht den schwarzen Hintergrund zu einem bewussten Badge statt
+    // einem Bildfehler; passt zur navy/gold-Flyer-Optik.
+    logoChipColor: '#0F172A',
   },
 
   // Leer: JK zeigt statt der Termine-Sektion die PROGRAMS-basierte
@@ -69,6 +74,25 @@ export const JK_OVERRIDES: {
       cadence: 'Auf Anfrage',
       tag: '1 Spieler',
     },
+    // Konkrete, terminierte Sommercamps bei Partnervereinen (nicht bei JK selbst) —
+    // deshalb explizit "für Vereinsmitglieder des Partnervereins" / "für externe
+    // Spieler" statt einer JK-Mitgliedschaft, die es nicht gibt.
+    {
+      category: 'Feriencamps',
+      title: 'Sommercamp bei FSK Vollmarshausen',
+      description: '3 Tage Spielerentwicklung mit Stationstraining, Wettbewerben, Events und Turnier, Techniktraining, Individualtraining sowie Spieleranalyse und Videoanalyse. Inklusive Mittagessen, Getränke und Verpflegung vor Ort.',
+      cadence: '08.07.–10.07.2026 · 9–15 Uhr',
+      tag: '6–14 Jahre',
+      priceNote: '149 € für Vereinsmitglieder des Partnervereins · 169 € für externe Spieler',
+    },
+    {
+      category: 'Feriencamps',
+      title: 'Sommercamp bei TSV Wolfsanger',
+      description: '3 Tage Spielerentwicklung mit Stationstraining, Wettbewerben, Events und Turnier, Techniktraining, Individualtraining sowie Spieleranalyse und Videoanalyse. Inklusive Mittagessen, Getränke und Verpflegung vor Ort.',
+      cadence: '29.07.–31.07.2026 · 9–15 Uhr',
+      tag: '8–14 Jahre',
+      priceNote: '149 € für Vereinsmitglieder des Partnervereins · 169 € für externe Spieler',
+    },
   ],
 
   // Positionierung (Training / Camps und Events / Kooperationen), reale Copy.
@@ -81,7 +105,7 @@ export const JK_OVERRIDES: {
         </svg>
       ),
       title: 'Training',
-      text: 'Wir bieten Individualtrainings, Gruppentrainings und Teamtrainings an. Stelle eine Trainingsanfrage.',
+      text: 'Individualtraining, Gruppentraining und Teamtraining. Stelle eine Trainingsanfrage.',
     },
     {
       icon: (
@@ -90,7 +114,7 @@ export const JK_OVERRIDES: {
         </svg>
       ),
       title: 'Camps und Events',
-      text: 'Kreative Events und Camps in den Ferien mit Fokus auf individueller Spielerentwicklung.',
+      text: 'Feriencamps und coole Events mit Fokus auf individueller Spielerentwicklung.',
     },
     {
       icon: (
@@ -99,7 +123,7 @@ export const JK_OVERRIDES: {
         </svg>
       ),
       title: 'Kooperationen',
-      text: 'Wir kooperieren mit Vereinen und Sponsoren und sind offen für neue Entwicklungen. Wir bieten Trainings in deiner Region an.',
+      text: 'Mit Vereinen und Sponsoren – wir sind offen für neue Entwicklungen und bieten Trainings in deiner Region an.',
     },
   ],
 
@@ -114,6 +138,10 @@ export const JK_OVERRIDES: {
     {
       q: 'Wie läuft eine Anfrage ab?',
       a: 'Du stellst uns eine unverbindliche Trainingsanfrage oder fragst ein Angebot an. Wir melden uns anschließend bei dir, um Programm, Region und Termin abzustimmen.',
+    },
+    {
+      q: 'Gibt es aktuell Sommercamps?',
+      a: 'Ja – aktuell bei unseren Partnervereinen FSK Vollmarshausen (08.07.–10.07.2026) und TSV Wolfsanger (29.07.–31.07.2026). Die Teilnahme ist sowohl für Vereinsmitglieder des Partnervereins als auch für externe Spieler möglich.',
     },
     {
       q: 'Was ist "5 Freunde"?',

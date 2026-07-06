@@ -85,11 +85,11 @@ export default async function Page() {
                 unoptimized
                 className="object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/85 to-gray-950/50" />
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-950/90 via-gray-950/55 to-gray-950/10" />
             </div>
           )}
           <div className="relative z-10 max-w-5xl mx-auto px-6 py-24 sm:py-32">
-            <div className="max-w-2xl">
+            <div className={PROGRAMS.length > 0 ? 'max-w-xl' : 'max-w-2xl'}>
               <span className="inline-flex items-center gap-2 bg-white/10 text-white/80 text-xs font-semibold tracking-widest uppercase px-3 py-1.5 rounded-full mb-8">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-accent)] inline-block" />
                 {PROGRAMS.length > 0 ? 'Events & Programme' : 'Sommercamps 2026'} · {CLUB_CONFIG.name}
@@ -270,7 +270,7 @@ export default async function Page() {
             )}
 
             {PROGRAMS.length > 0 ? (
-              <div className={`grid sm:grid-cols-2 gap-5 ${PROGRAMS.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+              <div className={`grid sm:grid-cols-2 gap-5 ${PROGRAMS.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
                 {PROGRAMS.map(p => (
                   <div
                     key={p.title}
@@ -282,6 +282,9 @@ export default async function Page() {
                     <p className="font-bold text-gray-900 text-lg">{p.title}</p>
                     <p className="text-sm text-gray-500 leading-relaxed">{p.description}</p>
                     <p className="text-[var(--brand-accent)] font-semibold text-sm">{p.cadence}</p>
+                    {p.priceNote && (
+                      <p className="text-gray-400 text-xs leading-relaxed">{p.priceNote}</p>
+                    )}
                     <a
                       href="#anmeldung"
                       className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"

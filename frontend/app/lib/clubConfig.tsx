@@ -17,6 +17,8 @@ export interface ClubIdentity {
   accentColor?: string
   /** Optionaler Hero-Claim; ersetzt bei PROGRAMS-Clubs die generische "{subtitle} 2026"-Headline. */
   heroTagline?: string
+  /** Optionale Chip-Hintergrundfarbe (Hex) hinter dem Logo — für Logos mit dunklem/eigenem Hintergrund, die sonst auf Weiß hart wirken. */
+  logoChipColor?: string
 }
 
 export interface CampEntry {
@@ -38,6 +40,8 @@ export interface ProgramEntry {
   description: string
   cadence: string
   tag?: string
+  /** Optionaler Preishinweis (z. B. gestaffelt Vereinsmitglieder/externe Spieler) — separat von `cadence`, damit Datum/Zeit und Preis nicht in einer Zeile verschmelzen. */
+  priceNote?: string
 }
 
 export interface HighlightEntry {

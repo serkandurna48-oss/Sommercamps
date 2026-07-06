@@ -382,6 +382,29 @@ export default async function Page() {
           </div>
         </section>
 
+        {/* ── Mitgliedschaft (nur PROGRAMS-Clubs wie JK) ──────────────────
+            Ehrlich und ausdrücklich: keine Online-Anmeldung/Mitgliedschaft
+            heute möglich, nur ein Interesse-Kontakt per Mailto. */}
+        {PROGRAMS.length > 0 && (
+          <section className="py-16 px-6 bg-gray-50">
+            <div className="max-w-5xl mx-auto">
+              <div className="rounded-2xl border-2 border-[var(--brand-accent)] bg-white p-8 sm:p-10 text-center max-w-2xl mx-auto">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Mitgliedschaft in Vorbereitung</h2>
+                <p className="text-gray-600 leading-relaxed mb-6">
+                  Du möchtest Teil der JK Performance Academy werden? Die Mitgliedschaft ist aktuell in Vorbereitung.
+                  Schreib uns bei Interesse – wir informieren dich, sobald der Prozess startet.
+                </p>
+                <a
+                  href={`mailto:${CLUB_CONFIG.contactEmail}?subject=${encodeURIComponent('Interesse an Mitgliedschaft')}`}
+                  className="inline-block bg-gray-900 text-white font-semibold px-7 py-3.5 rounded-xl hover:bg-black transition-colors"
+                >
+                  Interesse an Mitgliedschaft melden
+                </a>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* ── Formular ────────────────────────────────────────────────── */}
         <section id="anmeldung" className="py-20 px-6 bg-white">
           <div className="max-w-5xl mx-auto">

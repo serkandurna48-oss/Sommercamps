@@ -58,7 +58,7 @@ const EMPTY: FormState = {
 }
 
 const input = (extra = '') =>
-  `w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900
+  `w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-base sm:text-sm text-gray-900
    placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black
    focus:bg-white transition-all ${extra}`
 
@@ -419,9 +419,9 @@ export default function RegistrationForm({ config }: { config: CampConfig }) {
               <div className="divide-y divide-gray-100 bg-white">
                 {bankRows.map(([label, value, isMono]) =>
                   value ? (
-                    <div key={label} className="px-4 py-3 flex justify-between items-center text-sm gap-4">
+                    <div key={label} className="px-4 py-3 flex justify-between items-center text-sm gap-4 min-w-0">
                       <span className="text-gray-500 shrink-0">{label}</span>
-                      <span className={`font-semibold text-gray-900 text-right ${isMono ? 'font-mono tracking-wide' : ''}`}>
+                      <span className={`font-semibold text-gray-900 text-right min-w-0 ${isMono ? 'font-mono tracking-wide break-all' : 'break-words'}`}>
                         {value}
                       </span>
                     </div>

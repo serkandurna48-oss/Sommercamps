@@ -4,57 +4,13 @@ import Link from 'next/link'
 import ClubLogo from './components/ClubLogo'
 import RegistrationForm from './components/RegistrationForm'
 import { type CampConfig, fetchCampConfig } from './lib/campConfig'
+import { CLUB_CONFIG, CAMPS, HIGHLIGHTS } from './lib/clubConfig'
 
 export const metadata: Metadata = {
-  title: 'Fußballschule Sommercamp 2026 – KSV Baunatal',
+  title: `${CLUB_CONFIG.subtitle} Sommercamp 2026 – ${CLUB_CONFIG.name}`,
   description:
-    'Melde dein Kind jetzt für das Sommercamp 2026 der Fußballschule KSV Baunatal an. 4 Tage professionelles Training für Kinder von 5–12 Jahren.',
+    `Melde dein Kind jetzt für das Sommercamp 2026 der ${CLUB_CONFIG.subtitle} ${CLUB_CONFIG.name} an. 4 Tage professionelles Training für Kinder von 5–12 Jahren.`,
 }
-
-const HIGHLIGHTS = [
-  {
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
-      </svg>
-    ),
-    title: 'Qualifizierte Trainer',
-    text: 'Training mit qualifizierten Jugendtrainern und Patenspielern, unterstützt durch Jugendspieler der A- und B-Jugend. Altersgerechtes Konzept mit Technik- und Taktikübungen, abwechslungsreichen Spielformen sowie Teamgeist und Motivation.',
-  },
-  {
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
-      </svg>
-    ),
-    title: 'Training mit Spielern der 1. Mannschaft',
-    text: 'Einblicke in den Trainingsalltag auf dem Vereinsgelände des KSV.',
-  },
-  {
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0L3 16.5m15-3.379a48.474 48.474 0 0 0-6-.371c-2.032 0-4.034.126-6 .371m12 0c.39.049.777.102 1.163.16 1.07.16 1.837 1.094 1.837 2.175v5.169c0 .621-.504 1.125-1.125 1.125H4.125A1.125 1.125 0 0 1 3 20.625v-5.17c0-1.08.768-2.014 1.837-2.174A47.78 47.78 0 0 1 6 13.12M12.265 3.11a.375.375 0 1 1-.53 0L12 2.845l.265.265Zm-3 0a.375.375 0 1 1-.53 0L9 2.845l.265.265Zm6 0a.375.375 0 1 1-.53 0L15 2.845l.265.265Z" />
-      </svg>
-    ),
-    title: 'Verpflegung inklusive',
-    text: 'Warmes Mittagessen, Obst, Snacks und Getränke sind im Preis enthalten. Kein Extra-Aufwand für Eltern.',
-  },
-  {
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
-      </svg>
-    ),
-    title: 'Trikot, Hose & Pokal',
-    text: 'Jedes Kind bekommt ein offizielles KSV-Trikot, eine Hose und einen Teilnehmerpokal. Dazu gibt es eine Eintrittskarte für ein Heimspiel der 1. Mannschaft.',
-  },
-]
-
-const CAMPS = [
-  { label: 'Sommercamp I',  date: '29.06. – 02.07.2026', value: '29.06.–02.07.2026', tag: 'Sommer' },
-  { label: 'Sommercamp II', date: '03.08. – 06.08.2026', value: '03.08.–06.08.2026', tag: 'Sommer' },
-  { label: 'Herbstcamp',    date: '05.10. – 08.10.2026', value: '05.10.–08.10.2026', tag: 'Herbst' },
-]
 
 export default async function Page() {
   let config: CampConfig | null = null
@@ -80,8 +36,8 @@ export default async function Page() {
           <div className="flex items-center gap-3">
             <ClubLogo />
             <div>
-              <p className="font-bold text-gray-900 text-base leading-tight">KSV Baunatal</p>
-              <p className="text-gray-400 text-xs tracking-widest uppercase">Fußballschule</p>
+              <p className="font-bold text-gray-900 text-base leading-tight">{CLUB_CONFIG.name}</p>
+              <p className="text-gray-400 text-xs tracking-widest uppercase">{CLUB_CONFIG.subtitle}</p>
             </div>
           </div>
           <a
@@ -101,11 +57,11 @@ export default async function Page() {
             <div className="max-w-2xl">
               <span className="inline-flex items-center gap-2 bg-white/10 text-white/80 text-xs font-semibold tracking-widest uppercase px-3 py-1.5 rounded-full mb-8">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#CC0000] inline-block" />
-                Sommercamps 2026 · KSV Baunatal
+                Sommercamps 2026 · {CLUB_CONFIG.name}
               </span>
               <h1 className="text-4xl sm:text-6xl font-extrabold leading-[1.1] tracking-tight mb-6">
-                Fußballschule 2026<br />
-                <span className="text-[#CC0000]">beim KSV Baunatal</span>
+                {CLUB_CONFIG.subtitle} 2026<br />
+                <span className="text-[#CC0000]">beim {CLUB_CONFIG.name}</span>
               </h1>
               <p className="text-gray-300 text-lg sm:text-xl leading-relaxed mb-10 max-w-xl">
                 4 Tage professionelles Training, Spaß und Entwicklung
@@ -133,7 +89,7 @@ export default async function Page() {
                   { value: '4 Tage',     label: 'je Camp' },
                   { value: '5 – 12',     label: 'Jahre' },
                   { value: campPrice,   label: 'Campbeitrag' },
-                  { value: 'Baunatal',   label: 'Parkstadion Baunatal' },
+                  { value: 'Baunatal',   label: CLUB_CONFIG.venueName },
                 ].map(f => (
                   <div key={f.label}>
                     <p className="text-xl sm:text-2xl font-bold text-white tabular-nums">{f.value}</p>
@@ -335,11 +291,11 @@ export default async function Page() {
                 <div className="rounded-xl border border-gray-200 bg-white px-5 py-4 text-sm">
                   <p className="font-semibold text-gray-800 mb-1.5">Fragen zur Anmeldung?</p>
                   <p className="text-gray-500 leading-relaxed text-xs">
-                    Ergün Ünal – Leiter Fußballschule<br />
-                    <a href="mailto:Erguen.uenal@fussball.ksv-baunatal.de" className="text-gray-700 hover:underline break-all">
-                      Erguen.uenal@fussball.ksv-baunatal.de
+                    {CLUB_CONFIG.contactName} – Leiter {CLUB_CONFIG.subtitle}<br />
+                    <a href={`mailto:${CLUB_CONFIG.contactEmail}`} className="text-gray-700 hover:underline break-all">
+                      {CLUB_CONFIG.contactEmail}
                     </a><br />
-                    0170 9927281
+                    {CLUB_CONFIG.contactPhone}
                   </p>
                 </div>
 
@@ -381,7 +337,7 @@ export default async function Page() {
               },
               {
                 q: 'An wen wende ich mich bei Fragen?',
-                a: 'Für alle Fragen steht dir Ergün Ünal zur Verfügung: Erguen.uenal@fussball.ksv-baunatal.de · 0170 9927281',
+                a: `Für alle Fragen steht dir ${CLUB_CONFIG.contactName} zur Verfügung: ${CLUB_CONFIG.contactEmail} · ${CLUB_CONFIG.contactPhone}`,
               },
             ].map(faq => (
               <div key={faq.q} className="rounded-xl border border-gray-200 bg-white px-5 py-4">
@@ -400,20 +356,20 @@ export default async function Page() {
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <ClubLogo />
-                <p className="text-white font-bold">KSV Baunatal</p>
+                <p className="text-white font-bold">{CLUB_CONFIG.name}</p>
               </div>
               <p className="text-sm leading-relaxed">
-                Fußballschule des KSV Baunatal e.V. —
+                {CLUB_CONFIG.subtitle} des {CLUB_CONFIG.name} e.V. —
                 qualifiziertes Training für Kinder von 5 bis 12 Jahren.
               </p>
             </div>
             <div>
               <p className="text-white font-semibold mb-3 text-sm">Kontakt</p>
               <ul className="space-y-1.5 text-sm">
-                <li>KSV Baunatal e.V.</li>
-                <li>Leiter Fußballschule: Ergün Ünal</li>
-                <li>Erguen.uenal@fussball.ksv-baunatal.de</li>
-                <li>0170 9927281</li>
+                <li>{CLUB_CONFIG.name} e.V.</li>
+                <li>Leiter {CLUB_CONFIG.subtitle}: {CLUB_CONFIG.contactName}</li>
+                <li>{CLUB_CONFIG.contactEmail}</li>
+                <li>{CLUB_CONFIG.contactPhone}</li>
               </ul>
             </div>
             <div>
@@ -439,7 +395,7 @@ export default async function Page() {
             </div>
           </div>
           <div className="border-t border-gray-800 pt-6 text-xs text-gray-600 text-center">
-            © 2026 KSV Baunatal e.V. · Alle Rechte vorbehalten
+            © 2026 {CLUB_CONFIG.name} e.V. · Alle Rechte vorbehalten
           </div>
         </div>
       </footer>

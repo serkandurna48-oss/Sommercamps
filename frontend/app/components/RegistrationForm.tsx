@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { type CampConfig, isAgeValidAtCampStart, parseLocalDate } from '../lib/campConfig'
+import { CLUB_CONFIG, JERSEY_SIZES } from '../lib/clubConfig'
 
 /** Felder aus der Backend-Antwort (POST /registrations), die wir in der Bestätigungsansicht brauchen. */
 interface ConfirmedRegistration {
@@ -24,8 +25,6 @@ interface ConfirmedRegistration {
   bank_purpose: string | null
 }
 
-
-const JERSEY_SIZES = ['6XS–5XS (104–116)', '4XS–3XS (128–140)', '2XS (152)', 'XS (164)', 'S', 'M']
 
 interface FormState {
   child_first_name: string
@@ -489,15 +488,14 @@ export default function RegistrationForm({ config }: { config: CampConfig }) {
         </div>
 
         {/* ── Kontakt ────────────────────────────────────────────── */}
-        {/* TODO(multi-tenant): replace with organization.contact_name / organization.contact_email */}
         <div className="rounded-xl border border-gray-200 bg-white px-4 py-4 text-sm">
           <p className="font-semibold text-gray-800 mb-1.5">Fragen zur Anmeldung?</p>
           <p className="text-gray-500 leading-relaxed text-xs">
-            Ergün Ünal – Leiter Fußballschule<br />
-            <a href="mailto:Erguen.uenal@fussball.ksv-baunatal.de" className="text-gray-700 hover:underline break-all">
-              Erguen.uenal@fussball.ksv-baunatal.de
+            {CLUB_CONFIG.contactName} – Leiter {CLUB_CONFIG.subtitle}<br />
+            <a href={`mailto:${CLUB_CONFIG.contactEmail}`} className="text-gray-700 hover:underline break-all">
+              {CLUB_CONFIG.contactEmail}
             </a>{' · '}
-            0170 9927281
+            {CLUB_CONFIG.contactPhone}
           </p>
         </div>
 
@@ -668,7 +666,7 @@ export default function RegistrationForm({ config }: { config: CampConfig }) {
         <div className="rounded-xl bg-gray-50 border border-gray-200 px-4 py-4 space-y-4">
           <p className="text-sm text-gray-600 leading-relaxed">
             Dürfen während des Camps Fotos und Videos Ihres Kindes aufgenommen und
-            auf der Vereinshomepage sowie den Social-Media-Kanälen des KSV Baunatal
+            auf der Vereinshomepage sowie den Social-Media-Kanälen des {CLUB_CONFIG.name}
             veröffentlicht werden?
           </p>
           <div className="grid grid-cols-2 gap-3">

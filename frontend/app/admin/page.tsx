@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
 import { formatDateDE } from '../lib/formatDate'
+import { CLUB_CONFIG } from '../lib/clubConfig'
 
 interface Registration {
   id: string
@@ -281,7 +282,7 @@ export default function AdminPage() {
         <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
           <div className="mb-6 text-center">
             <p className="text-xs font-semibold text-[#CC0000] tracking-widest uppercase mb-1">Admin</p>
-            <h1 className="text-xl font-bold text-gray-900">KSV Baunatal – Anmeldungen</h1>
+            <h1 className="text-xl font-bold text-gray-900">{CLUB_CONFIG.name} – Anmeldungen</h1>
           </div>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
@@ -328,7 +329,7 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold text-[#CC0000] tracking-widest uppercase">Admin</p>
-            <h1 className="text-lg font-bold text-gray-900">KSV Baunatal – Anmeldungen</h1>
+            <h1 className="text-lg font-bold text-gray-900">{CLUB_CONFIG.name} – Anmeldungen</h1>
           </div>
           <div className="flex items-center gap-3">
             <button

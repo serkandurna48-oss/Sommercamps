@@ -72,6 +72,13 @@ STRIPE_WEBHOOK_SECRET:  str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PRICE_CENTS:     int = int(os.getenv("STRIPE_PRICE_CENTS", "0"))  # z. B. 15000 = 150,00 €
 FRONTEND_URL:           str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
+# Club-Identität (CP-S301-light) — Defaults entsprechen dem heutigen KSV-Verhalten 1:1.
+CLUB_NAME:        str = os.getenv("CLUB_NAME", "KSV Baunatal")
+CLUB_SUBTITLE:    str = os.getenv("CLUB_SUBTITLE", "Fußballschule")
+CAMP_YEAR:        str = os.getenv("CAMP_YEAR", "2026")
+# Eingetragener Vereinsname für die Copyright-Zeile — kann von CLUB_NAME abweichen (z. B. "e.V.").
+CLUB_LEGAL_NAME:  str = os.getenv("CLUB_LEGAL_NAME", "KSV Baunatal e.V.")
+
 logger = logging.getLogger(__name__)
 
 ALLOWED_JERSEY_SIZES = {"6XS–5XS (104–116)", "4XS–3XS (128–140)", "2XS (152)", "XS (164)", "S", "M"}
@@ -219,7 +226,7 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 
 app = FastAPI(
-    title="KSV Baunatal Sommercamp API",
+    title=f"{CLUB_NAME} Sommercamp API",
     version="0.3.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -355,6 +362,9 @@ class WeekInfo(BaseModel):
 class ConfigResponse(BaseModel):
     camp: CampPriceConfig
     weeks: list[WeekInfo]
+    club_name: str
+    club_subtitle: str
+    camp_year: str
 
 
 # ---------------------------------------------------------------------------
@@ -527,8 +537,8 @@ def _build_confirmation_html(row: dict) -> str:
         <!-- Header -->
         <tr>
           <td style="background:#111111;padding:24px 32px;">
-            <p style="margin:0;color:#ffffff;font-size:18px;font-weight:700;">KSV Baunatal</p>
-            <p style="margin:4px 0 0;color:#9ca3af;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Fußballschule</p>
+            <p style="margin:0;color:#ffffff;font-size:18px;font-weight:700;">CLUB_NAME</p>
+            <p style="margin:4px 0 0;color:#9ca3af;font-size:11px;letter-spacing:2px;text-transform:uppercase;">CLUB_SUBTITLE</p>
           </td>
         </tr>
 
@@ -538,8 +548,8 @@ def _build_confirmation_html(row: dict) -> str:
             <p style="margin:0 0 6px;font-size:22px;font-weight:700;color:#111111;">Anmeldung eingegangen</p>
             <p style="margin:0 0 24px;font-size:15px;color:#6b7280;">Hallo PARENT_NAME,</p>
             <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">
-              vielen Dank für die Anmeldung von <strong>CHILD_NAME</strong> beim Sommercamp 2026
-              der Fußballschule KSV Baunatal.
+              vielen Dank für die Anmeldung von <strong>CHILD_NAME</strong> beim Sommercamp CAMP_YEAR
+              der CLUB_SUBTITLE CLUB_NAME.
             </p>
 
             STATUS_BANNER_HTML
@@ -598,7 +608,7 @@ def _build_confirmation_html(row: dict) -> str:
         <tr>
           <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;">
             <p style="margin:0;font-size:11px;color:#9ca3af;text-align:center;">
-              © 2026 KSV Baunatal e.V. · Diese E-Mail wurde automatisch erstellt.
+              © CAMP_YEAR CLUB_LEGAL_NAME · Diese E-Mail wurde automatisch erstellt.
             </p>
           </td>
         </tr>
@@ -618,6 +628,10 @@ def _build_confirmation_html(row: dict) -> str:
         .replace("BANK_SECTION_HTML",     _bank_section_html(row))
         .replace("NEXT_STEPS_HTML",       _next_steps_html(row))
         .replace("CONTACT_EMAIL",         CONTACT_EMAIL)
+        .replace("CLUB_NAME",             CLUB_NAME)
+        .replace("CLUB_SUBTITLE",         CLUB_SUBTITLE)
+        .replace("CAMP_YEAR",             CAMP_YEAR)
+        .replace("CLUB_LEGAL_NAME",       CLUB_LEGAL_NAME)
     )
 
 
@@ -699,7 +713,7 @@ def _build_confirmation_text(row: dict) -> str:
         f"{_next_steps_text(row)}\n\n"
         f"Fragen zur Anmeldung? Wir sind für dich da unter: {CONTACT_EMAIL}\n\n"
         f"Herzliche Grüße,\n"
-        f"Dein Team der Fußballschule KSV Baunatal"
+        f"Dein Team der {CLUB_SUBTITLE} {CLUB_NAME}"
     )
 
 
@@ -841,6 +855,9 @@ def get_config(response: Response) -> ConfigResponse:
             WeekInfo(label=w.label, start_date=w.start_date, end_date=w.end_date)
             for w in CAMP_WEEKS
         ],
+        club_name=CLUB_NAME,
+        club_subtitle=CLUB_SUBTITLE,
+        camp_year=CAMP_YEAR,
     )
 
 
@@ -1185,7 +1202,7 @@ def create_checkout_session(registration_token: str) -> dict:
                         "currency": "eur",
                         "unit_amount": STRIPE_PRICE_CENTS,
                         "product_data": {
-                            "name": f"Sommercamp 2026 – {child_name}",
+                            "name": f"Sommercamp {CAMP_YEAR} – {child_name}",
                             "description": row.get("selected_camp_week", ""),
                         },
                     },

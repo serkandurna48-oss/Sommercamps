@@ -75,23 +75,39 @@ export const JK_OVERRIDES: {
       tag: '1 Spieler',
     },
     // Konkrete, terminierte Sommercamps bei Partnervereinen (nicht bei JK selbst) —
-    // deshalb explizit "für Vereinsmitglieder des Partnervereins" / "für externe
-    // Spieler" statt einer JK-Mitgliedschaft, die es nicht gibt.
+    // deshalb explizit "für Mitglieder des Partnervereins" / "für externe Spieler"
+    // statt einer JK-Mitgliedschaft, die es (noch) nicht gibt.
     {
       category: 'Feriencamps',
       title: 'Sommercamp bei FSK Vollmarshausen',
-      description: '3 Tage Spielerentwicklung mit Stationstraining, Wettbewerben, Events und Turnier, Techniktraining, Individualtraining sowie Spieleranalyse und Videoanalyse. Inklusive Mittagessen, Getränke und Verpflegung vor Ort.',
-      cadence: '08.07.–10.07.2026 · 9–15 Uhr',
+      description: '3 Tage Spielerentwicklung mit unserem Partnerverein FSK Vollmarshausen.',
+      cadence: '2. Ferienwoche · Mi 08.07. – Fr 10.07.2026 · 9–15 Uhr',
       tag: '6–14 Jahre',
-      priceNote: '149 € für Vereinsmitglieder des Partnervereins · 169 € für externe Spieler',
+      benefits: [
+        'Stationstraining',
+        'Wettbewerbe, Events und Turnier',
+        'Techniktraining & Individualtraining',
+        'Spieleranalyse und Videoanalyse',
+        'Mittagessen, Getränke und Verpflegung vor Ort',
+      ],
+      priceNote: '149 € für Mitglieder des Partnervereins · 169 € für externe Spieler',
+      featured: true,
     },
     {
       category: 'Feriencamps',
       title: 'Sommercamp bei TSV Wolfsanger',
-      description: '3 Tage Spielerentwicklung mit Stationstraining, Wettbewerben, Events und Turnier, Techniktraining, Individualtraining sowie Spieleranalyse und Videoanalyse. Inklusive Mittagessen, Getränke und Verpflegung vor Ort.',
-      cadence: '29.07.–31.07.2026 · 9–15 Uhr',
+      description: '3 Tage Spielerentwicklung mit unserem Partnerverein TSV Wolfsanger.',
+      cadence: '5. Ferienwoche · Mi 29.07. – Fr 31.07.2026 · 9–15 Uhr',
       tag: '8–14 Jahre',
-      priceNote: '149 € für Vereinsmitglieder des Partnervereins · 169 € für externe Spieler',
+      benefits: [
+        'Stationstraining',
+        'Wettbewerbe, Events und Turnier',
+        'Techniktraining & Individualtraining',
+        'Spieleranalyse und Videoanalyse',
+        'Mittagessen, Getränke und Verpflegung vor Ort',
+      ],
+      priceNote: '149 € für Mitglieder des Partnervereins · 169 € für externe Spieler',
+      featured: true,
     },
   ],
 
@@ -123,7 +139,7 @@ export const JK_OVERRIDES: {
         </svg>
       ),
       title: 'Kooperationen',
-      text: 'Mit Vereinen und Sponsoren – wir sind offen für neue Entwicklungen und bieten Trainings in deiner Region an.',
+      text: 'Mit Vereinen und Sponsoren – wir sind offen für neue Entwicklungen und bieten Trainings in verschiedenen Regionen an.',
     },
   ],
 
@@ -158,6 +174,10 @@ export const JK_OVERRIDES: {
     {
       q: 'Bietet ihr Trainings auch außerhalb eurer Region an?',
       a: 'Wir kooperieren mit Vereinen und Sponsoren und sind offen für neue Entwicklungen. Sprich uns gerne auf dein Region an.',
+    },
+    {
+      q: 'Kann ich bei JK Mitglied werden?',
+      a: 'Eine Mitgliedschaft bei JK Performance Academy ist aktuell in Vorbereitung. Interesse an Mitgliedschaft? Schreib uns – wir melden uns, sobald es so weit ist.',
     },
     {
       q: 'An wen wende ich mich bei Fragen?',

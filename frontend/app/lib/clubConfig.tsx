@@ -42,6 +42,10 @@ export interface ProgramEntry {
   tag?: string
   /** Optionaler Preishinweis (z. B. gestaffelt Vereinsmitglieder/externe Spieler) — separat von `cadence`, damit Datum/Zeit und Preis nicht in einer Zeile verschmelzen. */
   priceNote?: string
+  /** Optionale Stichpunkt-Liste (z. B. Trainingsinhalte) für eine ausführlichere Kartendarstellung. */
+  benefits?: string[]
+  /** Hebt die Karte visuell hervor (z. B. aktuelle, terminierte Camps vs. generische Angebote auf Anfrage). */
+  featured?: boolean
 }
 
 export interface HighlightEntry {

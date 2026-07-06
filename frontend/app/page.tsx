@@ -46,6 +46,11 @@ export default async function Page() {
     console.error('GET /config failed:', e)
   }
 
+  // Terminierte, hervorgehobene Angebote (z. B. aktuelle Sommercamps) getrennt von
+  // generischen Auf-Anfrage-Programmen, damit das Angebot leichter verständlich ist.
+  const featuredPrograms = PROGRAMS.filter(p => p.featured)
+  const otherPrograms = PROGRAMS.filter(p => !p.featured)
+
   return (
     <div
       className="min-h-screen bg-white text-gray-900 flex flex-col"
@@ -85,7 +90,8 @@ export default async function Page() {
                 unoptimized
                 className="object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-gray-950/90 via-gray-950/55 to-gray-950/10" />
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-950/80 via-gray-950/35 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-950/60 via-transparent to-transparent" />
             </div>
           )}
           <div className="relative z-10 max-w-5xl mx-auto px-6 py-24 sm:py-32">
@@ -120,9 +126,15 @@ export default async function Page() {
                   href="#termine"
                   className="bg-white/10 text-white font-semibold px-7 py-3.5 rounded-xl hover:bg-white/15 transition-colors text-center"
                 >
-                  {PROGRAMS.length > 0 ? 'Programme ansehen' : 'Termine ansehen'}
+                  {PROGRAMS.length > 0 ? 'Aktuelle Events ansehen' : 'Termine ansehen'}
                 </a>
               </div>
+
+              {PROGRAMS.length > 0 && (
+                <p className="mt-4 text-xs sm:text-sm text-gray-400">
+                  Für Spielerinnen und Spieler · Individuelle Spielerentwicklung · Training in deiner Region
+                </p>
+              )}
 
               {/* Schnellfakten */}
               <div className="mt-12 pt-8 border-t border-white/10 grid grid-cols-2 sm:grid-cols-5 gap-6">
@@ -270,29 +282,76 @@ export default async function Page() {
             )}
 
             {PROGRAMS.length > 0 ? (
-              <div className={`grid sm:grid-cols-2 gap-5 ${PROGRAMS.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
-                {PROGRAMS.map(p => (
-                  <div
-                    key={p.title}
-                    className="bg-white rounded-2xl border border-gray-200 p-7 flex flex-col gap-3 hover:shadow-md transition-shadow"
-                  >
-                    <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md w-fit">
-                      {p.tag ?? p.category}
-                    </span>
-                    <p className="font-bold text-gray-900 text-lg">{p.title}</p>
-                    <p className="text-sm text-gray-500 leading-relaxed">{p.description}</p>
-                    <p className="text-[var(--brand-accent)] font-semibold text-sm">{p.cadence}</p>
-                    {p.priceNote && (
-                      <p className="text-gray-400 text-xs leading-relaxed">{p.priceNote}</p>
-                    )}
-                    <a
-                      href="#anmeldung"
-                      className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
-                    >
-                      Angebot anfragen →
-                    </a>
+              <div className="space-y-10">
+                {featuredPrograms.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Aktuelle Sommercamps</p>
+                    <div className="grid sm:grid-cols-2 gap-5">
+                      {featuredPrograms.map(p => (
+                        <div
+                          key={p.title}
+                          className="bg-white rounded-2xl border-2 border-[var(--brand-accent)] p-7 flex flex-col gap-3 hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md w-fit">
+                              {p.tag ?? p.category}
+                            </span>
+                            <span className="text-[var(--brand-accent)] text-xs font-semibold uppercase tracking-wider text-right">Begrenzte Plätze</span>
+                          </div>
+                          <p className="font-bold text-gray-900 text-lg">{p.title}</p>
+                          <p className="text-sm text-gray-500 leading-relaxed">{p.description}</p>
+                          <p className="text-[var(--brand-accent)] font-semibold text-sm">{p.cadence}</p>
+                          {p.benefits && (
+                            <ul className="space-y-1.5 mt-1">
+                              {p.benefits.map(b => (
+                                <li key={b} className="flex items-start gap-2.5 text-sm text-gray-700">
+                                  <span className="w-4 h-4 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">✓</span>
+                                  {b}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {p.priceNote && (
+                            <p className="text-gray-800 text-sm font-semibold border-t border-gray-100 pt-3 mt-1">{p.priceNote}</p>
+                          )}
+                          <a
+                            href="#anmeldung"
+                            className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
+                          >
+                            Angebot anfragen →
+                          </a>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
+
+                {otherPrograms.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Weitere Angebote</p>
+                    <div className={`grid sm:grid-cols-2 gap-5 ${otherPrograms.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+                      {otherPrograms.map(p => (
+                        <div
+                          key={p.title}
+                          className="bg-white rounded-2xl border border-gray-200 p-7 flex flex-col gap-3 hover:shadow-md transition-shadow"
+                        >
+                          <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md w-fit">
+                            {p.tag ?? p.category}
+                          </span>
+                          <p className="font-bold text-gray-900 text-lg">{p.title}</p>
+                          <p className="text-sm text-gray-500 leading-relaxed">{p.description}</p>
+                          <p className="text-[var(--brand-accent)] font-semibold text-sm">{p.cadence}</p>
+                          <a
+                            href="#anmeldung"
+                            className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
+                          >
+                            Angebot anfragen →
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="grid sm:grid-cols-3 gap-5">
@@ -359,9 +418,9 @@ export default async function Page() {
                   // Realer Trainingsanfrage-Flow ist als Folge-Ticket CP-JK-101
                   // ("Training Inquiry Flow") vorgesehen.
                   <div className="rounded-xl bg-amber-50 border border-amber-200 px-5 py-6 text-sm text-amber-800 space-y-2">
-                    <p className="font-semibold">Trainingsanfragen sind hier bald direkt online möglich</p>
+                    <p className="font-semibold">Trainingsanfragen sind hier bald direkt online möglich.</p>
                     <p className="text-amber-700 leading-relaxed">
-                      Bis dahin schreib uns gerne direkt eine E-Mail, wir melden uns zeitnah zurück:{' '}
+                      Bis dahin kannst du JK direkt kontaktieren:{' '}
                       <a href={`mailto:${CLUB_CONFIG.contactEmail}`} className="underline underline-offset-2 font-medium hover:opacity-70">
                         {CLUB_CONFIG.contactEmail}
                       </a>

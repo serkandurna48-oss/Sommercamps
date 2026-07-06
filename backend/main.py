@@ -171,6 +171,18 @@ def bank_purpose(first_name: str, last_name: str) -> str:
     return f"Sommercamp {first_name} {last_name}".strip()
 
 
+def format_price_display(cents: int) -> str:
+    """Formatiert einen Cent-Betrag als ganzzahligen Euro-Betrag (z. B. 14900 -> '149 €')."""
+    if cents <= 0:
+        return ""
+    return f"{round(cents / 100):,}".replace(",", ".") + " €"
+
+
+def bank_details_configured() -> bool:
+    """True, wenn alle Bankdaten-Felder per Env-Var gesetzt wurden (kein Platzhalter mehr)."""
+    return all(value and value != "[noch einfügen]" for value in BANK_CONFIG.values())
+
+
 # ---------------------------------------------------------------------------
 # Lifespan (Startup / Shutdown)
 # ---------------------------------------------------------------------------
@@ -352,11 +364,140 @@ CONSTRAINT_MESSAGES: dict[str, str] = {
 # E-Mail (Phase 2)
 # ---------------------------------------------------------------------------
 
+_STATUS_LABELS: dict[str, str] = {
+    "registered": "Anmeldung eingegangen",
+    "confirmed":  "Teilnahme bestätigt",
+    "waitlist":   "Warteliste",
+    "cancelled":  "Storniert",
+}
+_PAYMENT_LABELS: dict[str, str] = {
+    "open":      "Zahlung offen",
+    "paid":      "Bezahlt",
+    "waived":    "Zahlung nicht erforderlich",
+    "refunded":  "Erstattet",
+    "cancelled": "Storniert",
+}
+
+
+def _child_name(row: dict) -> str:
+    return f"{row.get('child_first_name', '')} {row.get('child_last_name', '')}".strip()
+
+
+def _status_banner_html(row: dict) -> str:
+    """Farbige Statusmeldung analog zur Bestätigungsseite im Frontend (RegistrationForm.tsx)."""
+    payment_status = row.get("payment_status") or "open"
+    child_first = row.get("child_first_name", "")
+    if payment_status == "open":
+        return (
+            '<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;'
+            'padding:14px 16px;margin-bottom:24px;">'
+            '<p style="margin:0 0 4px;font-weight:700;color:#92400e;font-size:14px;">'
+            "Platz vorläufig reserviert</p>"
+            f'<p style="margin:0;color:#b45309;font-size:13px;line-height:1.5;">'
+            f"Der Platz für {child_first} ist fest gesichert, sobald der Campbeitrag "
+            "bei uns eingegangen ist.</p></div>"
+        )
+    if payment_status == "waived":
+        return (
+            '<div style="border:1px solid #bbf7d0;background:#ecfdf5;border-radius:8px;'
+            'padding:14px 16px;margin-bottom:24px;">'
+            '<p style="margin:0 0 4px;font-weight:700;color:#065f46;font-size:14px;">'
+            "Zahlung nicht erforderlich</p>"
+            '<p style="margin:0;color:#047857;font-size:13px;line-height:1.5;">'
+            "Für diese Anmeldung ist keine Zahlung erforderlich.</p></div>"
+        )
+    if payment_status == "paid":
+        return (
+            '<div style="border:1px solid #bbf7d0;background:#ecfdf5;border-radius:8px;'
+            'padding:14px 16px;margin-bottom:24px;">'
+            '<p style="margin:0 0 4px;font-weight:700;color:#065f46;font-size:14px;">'
+            "Zahlung bestätigt</p>"
+            f'<p style="margin:0;color:#047857;font-size:13px;line-height:1.5;">'
+            f"Die Teilnahme von {child_first} ist damit bestätigt.</p></div>"
+        )
+    return ""
+
+
+def _bank_section_html(row: dict) -> str:
+    """Banküberweisungs-Block, oder ein Hinweistext, falls Bankdaten fehlen oder Zahlung nicht offen ist."""
+    if row.get("payment_status") not in (None, "", "open"):
+        return ""
+
+    if not bank_details_configured():
+        return (
+            '<div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px 20px;margin-bottom:24px;">'
+            '<p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">'
+            "Die Zahlungsinformationen werden dir durch den Verein mitgeteilt. "
+            "Bei Fragen wende dich bitte direkt an unseren Ansprechpartner "
+            f'(<a href="mailto:{CONTACT_EMAIL}" style="color:#111111;">{CONTACT_EMAIL}</a>).</p></div>'
+        )
+
+    purpose = bank_purpose(row.get("child_first_name", ""), row.get("child_last_name", ""))
+    amount = format_price_display(STRIPE_PRICE_CENTS)
+    amount_row = (
+        '<tr><td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:12px;">'
+        "Betrag</td>"
+        '<td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111111;font-size:13px;'
+        f'font-weight:700;">{amount}</td></tr>'
+        if amount
+        else ""
+    )
+    return f"""
+            <div style="border:1px solid #d1fae5;border-radius:8px;margin-bottom:24px;overflow:hidden;">
+              <div style="background:#ecfdf5;padding:10px 16px;border-bottom:1px solid #d1fae5;">
+                <p style="margin:0;font-weight:700;color:#065f46;font-size:13px;">Zahlung per Banküberweisung</p>
+              </div>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:12px;width:42%;">Kontoinhaber</td>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111111;font-size:13px;font-weight:600;">{BANK_CONFIG['account_holder']}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:12px;">IBAN</td>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111111;font-size:13px;font-weight:600;font-family:monospace,monospace;">{BANK_CONFIG['iban']}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:12px;">BIC</td>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111111;font-size:13px;font-weight:600;">{BANK_CONFIG['bic']}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:12px;">Bank</td>
+                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111111;font-size:13px;font-weight:600;">{BANK_CONFIG['bank']}</td>
+                </tr>
+                {amount_row}
+                <tr>
+                  <td style="padding:10px 16px;color:#6b7280;font-size:12px;">Verwendungszweck</td>
+                  <td style="padding:10px 16px;color:#111111;font-size:13px;font-weight:700;">{purpose}</td>
+                </tr>
+              </table>
+            </div>"""
+
+
+def _next_steps_html(row: dict) -> str:
+    """Nummerierte Schritte, analog zur Bestätigungsseite im Frontend."""
+    if row.get("payment_status") in (None, "", "open"):
+        steps = [
+            "Campbeitrag mit dem oben angegebenen Verwendungszweck überweisen.",
+            "Nach Zahlungseingang erhältst du eine Bestätigung vom Verein.",
+            "Kurz vor dem Camp melden wir uns mit Details zu Uhrzeit und Treffpunkt.",
+        ]
+    else:
+        steps = [
+            "Bestätigungs-E-Mail griffbereit halten.",
+            "Kurz vor dem Camp melden wir uns mit Details zu Uhrzeit und Treffpunkt.",
+        ]
+    return "".join(
+        f'<p style="margin:0 0 6px;color:#374151;font-size:14px;line-height:1.6;">{i + 1}. {step}</p>'
+        for i, step in enumerate(steps)
+    )
+
+
 def _build_confirmation_html(row: dict) -> str:
     """Gibt den HTML-Body der Bestätigungsmail zurück."""
-    child_name  = f"{row.get('child_first_name', '')} {row.get('child_last_name', '')}".strip()
-    purpose     = bank_purpose(row.get("child_first_name", ""), row.get("child_last_name", ""))
-    photo_label = "Ja, erteilt" if row.get("photo_permission") else "Nein, nicht erteilt"
+    child_name    = _child_name(row)
+    status_label  = _STATUS_LABELS.get(row.get("status", ""), "Anmeldung eingegangen")
+    payment_label = _PAYMENT_LABELS.get(row.get("payment_status", ""), "Zahlung offen")
+    photo_label   = "Ja, erteilt" if row.get("photo_permission") else "Nein, nicht erteilt"
     return (
         """<!DOCTYPE html>
 <html lang="de">
@@ -388,6 +529,8 @@ def _build_confirmation_html(row: dict) -> str:
               der Fußballschule KSV Baunatal.
             </p>
 
+            STATUS_BANNER_HTML
+
             <!-- Zusammenfassung -->
             <table width="100%" cellpadding="0" cellspacing="0"
                    style="border:1px solid #e5e7eb;border-radius:8px;margin-bottom:24px;">
@@ -406,13 +549,13 @@ def _build_confirmation_html(row: dict) -> str:
               <tr>
                 <td style="padding:13px 16px;border-bottom:1px solid #f3f4f6;">
                   <span style="color:#6b7280;font-size:12px;display:block;margin-bottom:2px;">Anmeldestatus</span>
-                  <span style="color:#b45309;font-weight:600;font-size:15px;">Angemeldet</span>
+                  <span style="color:#111111;font-weight:600;font-size:15px;">STATUS_LABEL</span>
                 </td>
               </tr>
               <tr>
                 <td style="padding:13px 16px;border-bottom:1px solid #f3f4f6;">
-                  <span style="color:#6b7280;font-size:12px;display:block;margin-bottom:2px;">Zahlung</span>
-                  <span style="color:#c2410c;font-weight:600;font-size:15px;">Ausstehend</span>
+                  <span style="color:#6b7280;font-size:12px;display:block;margin-bottom:2px;">Zahlungsstatus</span>
+                  <span style="color:#111111;font-weight:600;font-size:15px;">PAYMENT_LABEL</span>
                 </td>
               </tr>
               <tr>
@@ -423,52 +566,17 @@ def _build_confirmation_html(row: dict) -> str:
               </tr>
             </table>
 
-            <!-- Bankverbindung -->
-            <div style="border:1px solid #d1fae5;border-radius:8px;margin-bottom:24px;overflow:hidden;">
-              <div style="background:#ecfdf5;padding:10px 16px;border-bottom:1px solid #d1fae5;">
-                <p style="margin:0;font-weight:700;color:#065f46;font-size:13px;">Zahlung per Banküberweisung</p>
-              </div>
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:12px;width:42%;">Kontoinhaber</td>
-                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111111;font-size:13px;font-weight:600;">BANK_ACCOUNT_HOLDER</td>
-                </tr>
-                <tr>
-                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:12px;">IBAN</td>
-                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111111;font-size:13px;font-weight:600;font-family:monospace,monospace;">BANK_IBAN</td>
-                </tr>
-                <tr>
-                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:12px;">BIC</td>
-                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111111;font-size:13px;font-weight:600;">BANK_BIC</td>
-                </tr>
-                <tr>
-                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:12px;">Bank</td>
-                  <td style="padding:10px 16px;border-bottom:1px solid #f3f4f6;color:#111111;font-size:13px;font-weight:600;">BANK_NAME</td>
-                </tr>
-                <tr>
-                  <td style="padding:10px 16px;color:#6b7280;font-size:12px;">Verwendungszweck</td>
-                  <td style="padding:10px 16px;color:#111111;font-size:13px;font-weight:700;">BANK_PURPOSE</td>
-                </tr>
-              </table>
-            </div>
+            BANK_SECTION_HTML
 
             <!-- Nächste Schritte -->
             <div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
               <p style="margin:0 0 10px;font-weight:700;color:#111111;font-size:14px;">So geht es weiter</p>
-              <p style="margin:0 0 6px;color:#374151;font-size:14px;line-height:1.6;">
-                1. Bitte überweisen Sie den Campbeitrag mit dem <strong>Verwendungszweck oben</strong>.
-              </p>
-              <p style="margin:0 0 6px;color:#374151;font-size:14px;line-height:1.6;">
-                2. Ihre Anmeldung gilt als vollständig bestaetigt, sobald Ihre Zahlung bei uns eingegangen ist.
-              </p>
-              <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
-                3. Wir melden uns anschliessend mit allen Details zu Uhrzeit und Treffpunkt.
-              </p>
+              NEXT_STEPS_HTML
             </div>
 
             <p style="margin:0;font-size:14px;color:#6b7280;">
-              Bei Fragen erreichst du uns unter:
-              <a href="mailto:CONTACT_EMAIL" style="color:#111111;font-weight:500;">CONTACT_EMAIL</a>
+              Fragen zur Anmeldung? Wir sind für dich da unter
+              <a href="mailto:CONTACT_EMAIL" style="color:#111111;font-weight:500;">CONTACT_EMAIL</a>.
             </p>
           </td>
         </tr>
@@ -490,40 +598,93 @@ def _build_confirmation_html(row: dict) -> str:
         .replace("PARENT_NAME",           str(row.get("parent_name", "")))
         .replace("CHILD_NAME",            child_name)
         .replace("CAMP_WEEK",             str(row.get("selected_camp_week", "")))
+        .replace("STATUS_LABEL",          status_label)
+        .replace("PAYMENT_LABEL",         payment_label)
         .replace("PHOTO_PERMISSION_LABEL", photo_label)
-        .replace("BANK_ACCOUNT_HOLDER",   BANK_CONFIG["account_holder"])
-        .replace("BANK_IBAN",             BANK_CONFIG["iban"])
-        .replace("BANK_BIC",              BANK_CONFIG["bic"])
-        .replace("BANK_NAME",             BANK_CONFIG["bank"])
-        .replace("BANK_PURPOSE",          purpose)
+        .replace("STATUS_BANNER_HTML",    _status_banner_html(row))
+        .replace("BANK_SECTION_HTML",     _bank_section_html(row))
+        .replace("NEXT_STEPS_HTML",       _next_steps_html(row))
         .replace("CONTACT_EMAIL",         CONTACT_EMAIL)
     )
 
 
-def _build_confirmation_text(row: dict) -> str:
-    """Gibt den Plain-Text-Fallback der Bestätigungsmail zurück."""
-    child_name  = f"{row.get('child_first_name', '')} {row.get('child_last_name', '')}".strip()
-    purpose     = bank_purpose(row.get("child_first_name", ""), row.get("child_last_name", ""))
-    photo_label = "Ja, erteilt" if row.get("photo_permission") else "Nein, nicht erteilt"
+def _status_banner_text(row: dict) -> str:
+    """Plain-Text-Gegenstück zu _status_banner_html."""
+    payment_status = row.get("payment_status") or "open"
+    child_first = row.get("child_first_name", "")
+    if payment_status == "open":
+        return (
+            f"Platz vorläufig reserviert: Der Platz für {child_first} ist fest gesichert, "
+            "sobald der Campbeitrag bei uns eingegangen ist.\n\n"
+        )
+    if payment_status == "waived":
+        return "Zahlung nicht erforderlich: Für diese Anmeldung ist keine Zahlung erforderlich.\n\n"
+    if payment_status == "paid":
+        return f"Zahlung bestätigt: Die Teilnahme von {child_first} ist damit bestätigt.\n\n"
+    return ""
+
+
+def _bank_section_text(row: dict) -> str:
+    """Plain-Text-Gegenstück zu _bank_section_html."""
+    if row.get("payment_status") not in (None, "", "open"):
+        return ""
+
+    if not bank_details_configured():
+        return (
+            "Die Zahlungsinformationen werden dir durch den Verein mitgeteilt. "
+            "Bei Fragen wende dich bitte direkt an unseren Ansprechpartner "
+            f"({CONTACT_EMAIL}).\n\n"
+        )
+
+    purpose = bank_purpose(row.get("child_first_name", ""), row.get("child_last_name", ""))
+    amount = format_price_display(STRIPE_PRICE_CENTS)
+    amount_line = f"Betrag:           {amount}\n" if amount else ""
     return (
-        f"Anmeldung eingegangen!\n\n"
-        f"Hallo {row.get('parent_name', '')},\n\n"
-        f"wir haben die Anmeldung für {child_name} erhalten.\n\n"
-        f"Termin:               {row.get('selected_camp_week', '')}\n"
-        f"Anmeldestatus:        Angemeldet\n"
-        f"Zahlung:              Ausstehend\n"
-        f"Foto-/Videoerlaubnis: {photo_label}\n\n"
-        f"--- Bankverbindung ---\n"
+        "--- Bankverbindung ---\n"
         f"Kontoinhaber:     {BANK_CONFIG['account_holder']}\n"
         f"IBAN:             {BANK_CONFIG['iban']}\n"
         f"BIC:              {BANK_CONFIG['bic']}\n"
         f"Bank:             {BANK_CONFIG['bank']}\n"
+        f"{amount_line}"
         f"Verwendungszweck: {purpose}\n\n"
+    )
+
+
+def _next_steps_text(row: dict) -> str:
+    """Plain-Text-Gegenstück zu _next_steps_html."""
+    if row.get("payment_status") in (None, "", "open"):
+        steps = [
+            "Campbeitrag mit dem oben angegebenen Verwendungszweck überweisen.",
+            "Nach Zahlungseingang erhältst du eine Bestätigung vom Verein.",
+            "Kurz vor dem Camp melden wir uns mit Details zu Uhrzeit und Treffpunkt.",
+        ]
+    else:
+        steps = [
+            "Bestätigungs-E-Mail griffbereit halten.",
+            "Kurz vor dem Camp melden wir uns mit Details zu Uhrzeit und Treffpunkt.",
+        ]
+    return "\n".join(f"{i + 1}. {step}" for i, step in enumerate(steps))
+
+
+def _build_confirmation_text(row: dict) -> str:
+    """Gibt den Plain-Text-Fallback der Bestätigungsmail zurück."""
+    child_name    = _child_name(row)
+    status_label  = _STATUS_LABELS.get(row.get("status", ""), "Anmeldung eingegangen")
+    payment_label = _PAYMENT_LABELS.get(row.get("payment_status", ""), "Zahlung offen")
+    photo_label   = "Ja, erteilt" if row.get("photo_permission") else "Nein, nicht erteilt"
+    return (
+        f"Anmeldung eingegangen!\n\n"
+        f"Hallo {row.get('parent_name', '')},\n\n"
+        f"wir haben die Anmeldung für {child_name} erhalten.\n\n"
+        f"{_status_banner_text(row)}"
+        f"Termin:               {row.get('selected_camp_week', '')}\n"
+        f"Anmeldestatus:        {status_label}\n"
+        f"Zahlungsstatus:       {payment_label}\n"
+        f"Foto-/Videoerlaubnis: {photo_label}\n\n"
+        f"{_bank_section_text(row)}"
         f"So geht es weiter:\n"
-        f"1. Bitte überweise den Campbeitrag mit dem Verwendungszweck oben.\n"
-        f"2. Deine Anmeldung gilt als bestätigt, sobald deine Zahlung bei uns eingegangen ist.\n"
-        f"3. Wir melden uns dann mit allen Details zu Uhrzeit und Treffpunkt.\n\n"
-        f"Bei Fragen erreichst du uns unter: {CONTACT_EMAIL}\n\n"
+        f"{_next_steps_text(row)}\n\n"
+        f"Fragen zur Anmeldung? Wir sind für dich da unter: {CONTACT_EMAIL}\n\n"
         f"Herzliche Grüße,\n"
         f"Dein Team der Fußballschule KSV Baunatal"
     )
@@ -556,7 +717,7 @@ def _try_send_confirmation_email(row: dict) -> None:
             json={
                 "sender": {"name": EMAIL_FROM_NAME, "email": EMAIL_FROM},
                 "to": [{"email": row["email"], "name": row.get("parent_name", "")}],
-                "subject": "Anmeldebestätigung Fußballschule KSV Baunatal",
+                "subject": f"Anmeldebestätigung Sommercamp – {_child_name(row)} ({row.get('selected_camp_week', '')})",
                 "htmlContent": _build_confirmation_html(row),
                 "textContent": _build_confirmation_text(row),
                 "replyTo": {"email": EMAIL_REPLY_TO, "name": EMAIL_FROM_NAME},

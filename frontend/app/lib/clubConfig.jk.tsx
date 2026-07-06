@@ -26,10 +26,13 @@ export const JK_OVERRIDES: {
   CLUB_CONFIG: {
     name: 'JK Performance Academy',
     subtitle: 'Talententwicklung',
-    contactName: '[JK Ansprechpartner]',
+    contactName: 'JK Performance Academy',
+    // Platzhalter-Domain — echte Adresse folgt; bleibt nur als mailto-Ziel für die
+    // eine erlaubte Kontakt-CTA (Mitgliedschaft) im Hintergrund, wird nirgends mehr
+    // als sichtbarer Text angezeigt (siehe page.tsx).
     contactEmail: 'platzhalter@jk-performance-academy.example',
-    contactPhone: '[JK Telefonnummer]',
-    venueName: '[JK Trainingsstandort]',
+    contactPhone: 'Telefon auf Anfrage',
+    venueName: 'Region Kassel',
     logoSrc: '/jk/logo.jpg',
     heroImageSrc: '/jk/hero.jpg',
     // Aus dem JK-Logo abgeleitet (Wappen: Gold/Bronze auf Dunkelgrün/Schwarz) —
@@ -181,7 +184,7 @@ export const JK_OVERRIDES: {
     },
     {
       q: 'An wen wende ich mich bei Fragen?',
-      a: '[Platzhalter — Kontaktangaben werden automatisch aus CLUB_CONFIG befüllt, sobald echte Werte hinterlegt sind.]',
+      a: 'Kontakt per Instagram/WhatsApp ist in Vorbereitung. Nutze bis dahin gerne die Trainingsanfrage oder das Interesse-Formular oben auf der Seite.',
     },
   ],
 

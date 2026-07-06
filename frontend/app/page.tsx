@@ -94,13 +94,13 @@ export default async function Page() {
               <div className="absolute inset-0 bg-gradient-to-t from-gray-950/60 via-transparent to-transparent" />
             </div>
           )}
-          <div className="relative z-10 max-w-5xl mx-auto px-6 py-24 sm:py-32">
+          <div className={`relative z-10 max-w-5xl mx-auto px-6 ${PROGRAMS.length > 0 ? 'py-20 sm:py-28' : 'py-24 sm:py-32'}`}>
             <div className={PROGRAMS.length > 0 ? 'max-w-xl' : 'max-w-2xl'}>
               <span className="inline-flex items-center gap-2 bg-white/10 text-white/80 text-xs font-semibold tracking-widest uppercase px-3 py-1.5 rounded-full mb-8">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-accent)] inline-block" />
                 {PROGRAMS.length > 0 ? 'Aktuelle Sommercamps' : 'Sommercamps 2026'} · {CLUB_CONFIG.name}
               </span>
-              <h1 className="text-4xl sm:text-6xl font-extrabold leading-[1.1] tracking-tight mb-6">
+              <h1 className={`text-4xl ${PROGRAMS.length > 0 ? 'sm:text-5xl' : 'sm:text-6xl'} font-extrabold leading-[1.1] tracking-tight mb-6`}>
                 {PROGRAMS.length > 0 && CLUB_CONFIG.heroTagline ? (
                   CLUB_CONFIG.heroTagline
                 ) : (
@@ -492,10 +492,7 @@ export default async function Page() {
                   <div className="rounded-xl bg-amber-50 border border-amber-200 px-5 py-6 text-sm text-amber-800 space-y-2">
                     <p className="font-semibold">Trainingsanfragen sind hier bald direkt online möglich.</p>
                     <p className="text-amber-700 leading-relaxed">
-                      Bis dahin kannst du JK direkt kontaktieren:{' '}
-                      <a href={`mailto:${CLUB_CONFIG.contactEmail}`} className="underline underline-offset-2 font-medium hover:opacity-70">
-                        {CLUB_CONFIG.contactEmail}
-                      </a>
+                      Kontakt per Instagram/WhatsApp ist in Vorbereitung.
                     </p>
                   </div>
                 ) : (
@@ -553,11 +550,20 @@ export default async function Page() {
                     {PROGRAMS.length > 0 ? 'Fragen zu unseren Programmen?' : 'Fragen zur Anmeldung?'}
                   </p>
                   <p className="text-gray-500 leading-relaxed text-xs">
-                    {CLUB_CONFIG.contactName} – Leiter {CLUB_CONFIG.subtitle}<br />
-                    <a href={`mailto:${CLUB_CONFIG.contactEmail}`} className="text-gray-700 hover:underline break-all">
-                      {CLUB_CONFIG.contactEmail}
-                    </a><br />
-                    {CLUB_CONFIG.contactPhone}
+                    {PROGRAMS.length > 0 ? (
+                      <>
+                        {CLUB_CONFIG.contactName}<br />
+                        Kontakt per Instagram/WhatsApp in Vorbereitung
+                      </>
+                    ) : (
+                      <>
+                        {CLUB_CONFIG.contactName} – Leiter {CLUB_CONFIG.subtitle}<br />
+                        <a href={`mailto:${CLUB_CONFIG.contactEmail}`} className="text-gray-700 hover:underline break-all">
+                          {CLUB_CONFIG.contactEmail}
+                        </a><br />
+                        {CLUB_CONFIG.contactPhone}
+                      </>
+                    )}
                   </p>
                 </div>
 
@@ -572,8 +578,12 @@ export default async function Page() {
       <section className="py-20 px-6 bg-gray-50">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-12">
-            <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Häufige Fragen</p>
-            <h2 className="text-3xl font-bold text-gray-900">FAQ für Eltern</h2>
+            <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">
+              {PROGRAMS.length > 0 ? 'Fragen & Antworten' : 'Häufige Fragen'}
+            </p>
+            <h2 className="text-3xl font-bold text-gray-900">
+              {PROGRAMS.length > 0 ? 'Häufige Fragen' : 'FAQ für Eltern'}
+            </h2>
           </div>
           <div className="space-y-3">
             {FAQ_ITEMS.map(faq => (
@@ -604,9 +614,15 @@ export default async function Page() {
               <p className="text-white font-semibold mb-3 text-sm">Kontakt</p>
               <ul className="space-y-1.5 text-sm">
                 <li>{CLUB_CONFIG.name} e.V.</li>
-                <li>Leiter {CLUB_CONFIG.subtitle}: {CLUB_CONFIG.contactName}</li>
-                <li>{CLUB_CONFIG.contactEmail}</li>
-                <li>{CLUB_CONFIG.contactPhone}</li>
+                {PROGRAMS.length > 0 ? (
+                  <li>Kontakt per Instagram/WhatsApp in Vorbereitung</li>
+                ) : (
+                  <>
+                    <li>Leiter {CLUB_CONFIG.subtitle}: {CLUB_CONFIG.contactName}</li>
+                    <li>{CLUB_CONFIG.contactEmail}</li>
+                    <li>{CLUB_CONFIG.contactPhone}</li>
+                  </>
+                )}
               </ul>
             </div>
             <div>

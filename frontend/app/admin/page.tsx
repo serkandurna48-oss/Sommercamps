@@ -418,7 +418,11 @@ export default function AdminPage() {
         {loading ? (
           <div className="text-center py-20 text-gray-400 text-sm">Lädt …</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20 text-gray-400 text-sm">Keine Anmeldungen vorhanden.</div>
+          <div className="text-center py-20 text-gray-400 text-sm">
+            {registrations.length === 0
+              ? 'Keine Anmeldungen vorhanden.'
+              : 'Keine Anmeldungen für diese Filterauswahl.'}
+          </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">

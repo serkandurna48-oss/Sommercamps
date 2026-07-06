@@ -166,6 +166,19 @@ def serialize(row: dict) -> dict:
     return out
 
 
+_CSV_FORMULA_PREFIXES = ("=", "+", "-", "@")
+
+
+def sanitize_csv_row(row: dict) -> dict:
+    """Verhindert CSV-Formel-Injection: Zellen, die mit =, +, -, @ beginnen
+    (z. B. aus Freitextfeldern wie Notizen/Allergien), werden mit einem
+    führenden Apostroph maskiert, damit Excel/Sheets sie nicht als Formel ausführt."""
+    return {
+        key: ("'" + value if isinstance(value, str) and value.startswith(_CSV_FORMULA_PREFIXES) else value)
+        for key, value in row.items()
+    }
+
+
 def bank_purpose(first_name: str, last_name: str) -> str:
     """Verwendungszweck für die Überweisung: 'Sommercamp Vorname Nachname'."""
     return f"Sommercamp {first_name} {last_name}".strip()
@@ -819,7 +832,7 @@ def export_registrations_csv() -> StreamingResponse:
     # Eigene Kopfzeile mit deutschen Labels
     writer.writerow(dict(zip(CSV_COLUMNS, CSV_HEADERS)))
     for row in rows:
-        writer.writerow(serialize(dict(row)))
+        writer.writerow(sanitize_csv_row(serialize(dict(row))))
 
     filename = f"anmeldungen-{__import__('datetime').date.today().isoformat()}.csv"
     return StreamingResponse(

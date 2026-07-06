@@ -98,7 +98,7 @@ export default async function Page() {
             <div className={PROGRAMS.length > 0 ? 'max-w-xl' : 'max-w-2xl'}>
               <span className="inline-flex items-center gap-2 bg-white/10 text-white/80 text-xs font-semibold tracking-widest uppercase px-3 py-1.5 rounded-full mb-8">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-accent)] inline-block" />
-                {PROGRAMS.length > 0 ? 'Events & Programme' : 'Sommercamps 2026'} · {CLUB_CONFIG.name}
+                {PROGRAMS.length > 0 ? 'Aktuelle Sommercamps' : 'Sommercamps 2026'} · {CLUB_CONFIG.name}
               </span>
               <h1 className="text-4xl sm:text-6xl font-extrabold leading-[1.1] tracking-tight mb-6">
                 {PROGRAMS.length > 0 && CLUB_CONFIG.heroTagline ? (
@@ -112,7 +112,7 @@ export default async function Page() {
               </h1>
               <p className="text-gray-300 text-lg sm:text-xl leading-relaxed mb-10 max-w-xl">
                 {PROGRAMS.length > 0
-                  ? 'Individual-, Gruppen- und Teamtraining sowie Camps und Events – für deine Weiterentwicklung.'
+                  ? 'Individuelles Training. Starke Camps. Dein nächstes Level.'
                   : '4 Tage professionelles Training, Spaß und Entwicklung für Kinder von 5–12 Jahren.'}
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
@@ -126,7 +126,7 @@ export default async function Page() {
                   href="#termine"
                   className="bg-white/10 text-white font-semibold px-7 py-3.5 rounded-xl hover:bg-white/15 transition-colors text-center"
                 >
-                  {PROGRAMS.length > 0 ? 'Aktuelle Events ansehen' : 'Termine ansehen'}
+                  {PROGRAMS.length > 0 ? 'Aktuelle Sommercamps ansehen' : 'Termine ansehen'}
                 </a>
               </div>
 
@@ -162,66 +162,220 @@ export default async function Page() {
           </div>
         </section>
 
-        {/* ── Highlights ──────────────────────────────────────────────── */}
-        <section className="py-20 px-6 bg-white">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              {PROGRAMS.length > 0 ? (
-                <>
-                  <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Unsere Positionierung</p>
-                  <h2 className="text-3xl font-bold text-gray-900">Training, Camps &amp; Kooperationen</h2>
-                </>
-              ) : (
-                <>
+        {PROGRAMS.length > 0 ? (
+          <>
+            {/* ── Aktuelle Sommercamps (hochgezogen, navy für Energie/Kontrast) ── */}
+            <section id="termine" className="relative overflow-hidden py-20 px-6 bg-gray-950 text-white">
+              <div className="absolute inset-0 z-0">
+                <Image src="/jk/camp.jpg" alt="" fill unoptimized className="object-cover object-top" />
+                <div className="absolute inset-0 bg-gray-950/70" />
+              </div>
+              <div className="relative z-10 max-w-5xl mx-auto">
+                <div className="text-center mb-12">
+                  <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Jetzt aktuell</p>
+                  <h2 className="text-3xl font-bold">Aktuelle Sommercamps</h2>
+                </div>
+
+                {VENUE_INFO_TEXT && (
+                  <div className="mb-4 rounded-xl border border-white/10 bg-white/5 px-5 py-4 text-sm text-gray-300 leading-relaxed">
+                    <p className="font-semibold text-white mb-1">Veranstaltungsort</p>
+                    <p>{VENUE_INFO_TEXT}</p>
+                  </div>
+                )}
+                {FIRST_TEAM_INFO_TEXT && (
+                  <div className="mb-8 rounded-xl border border-white/10 bg-white/5 px-5 py-4 text-sm text-gray-300 leading-relaxed">
+                    <p className="font-semibold text-white mb-1">Hinweis zu Trainingseinheiten mit der 1. Mannschaft</p>
+                    <p>{FIRST_TEAM_INFO_TEXT}</p>
+                  </div>
+                )}
+
+                {featuredPrograms.length > 0 && (
+                  <div className="grid sm:grid-cols-2 gap-5">
+                    {featuredPrograms.map(p => (
+                      <div
+                        key={p.title}
+                        className="bg-white text-gray-900 rounded-2xl border-2 border-[var(--brand-accent)] p-7 flex flex-col gap-3 hover:shadow-lg transition-shadow"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md w-fit">
+                            {p.tag ?? p.category}
+                          </span>
+                          <span className="text-[var(--brand-accent)] text-xs font-semibold uppercase tracking-wider text-right">Begrenzte Plätze</span>
+                        </div>
+                        <p className="font-bold text-gray-900 text-lg">{p.title}</p>
+                        <p className="text-sm text-gray-500 leading-relaxed">{p.description}</p>
+                        <p className="text-[var(--brand-accent)] font-semibold text-sm">{p.cadence}</p>
+                        {p.benefits && (
+                          <ul className="space-y-1.5 mt-1">
+                            {p.benefits.map(b => (
+                              <li key={b} className="flex items-start gap-2.5 text-sm text-gray-700">
+                                <span className="w-4 h-4 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">✓</span>
+                                {b}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {p.priceNote && (
+                          <p className="text-gray-800 text-sm font-semibold border-t border-gray-100 pt-3 mt-1">{p.priceNote}</p>
+                        )}
+                        <a
+                          href="#anmeldung"
+                          className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
+                        >
+                          Angebot anfragen →
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* ── Warum JK? (Bild + Karten, mehr Academy-Atmosphäre) ─────────── */}
+            <section className="py-20 px-6 bg-white">
+              <div className="max-w-5xl mx-auto">
+                <div className="text-center mb-12">
+                  <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Warum JK?</p>
+                  <h2 className="text-3xl font-bold text-gray-900">Für Spieler, die mehr wollen</h2>
+                </div>
+                <div className="lg:grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-10 lg:items-stretch">
+                  <div className="relative rounded-2xl overflow-hidden h-72 sm:h-96 lg:h-auto mb-8 lg:mb-0">
+                    <Image src="/jk/team.jpg" alt="" fill unoptimized className="object-cover" />
+                  </div>
+                  <div className="grid gap-5 sm:grid-cols-3 lg:grid-cols-1">
+                    {HIGHLIGHTS.map(h => (
+                      <div
+                        key={h.title}
+                        className="rounded-2xl border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                      >
+                        <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-gray-700">
+                          {h.icon}
+                        </div>
+                        <p className="font-semibold text-gray-900 mb-1.5">{h.title}</p>
+                        <p className="text-sm text-gray-500 leading-relaxed">{h.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* ── Weitere Angebote ─────────────────────────────────────────── */}
+            {otherPrograms.length > 0 && (
+              <section className="py-16 px-6 bg-gray-50">
+                <div className="max-w-5xl mx-auto">
+                  <div className="text-center mb-10">
+                    <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Auf Anfrage</p>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Weitere Angebote</h2>
+                  </div>
+                  <div className={`grid sm:grid-cols-2 gap-5 ${otherPrograms.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+                    {otherPrograms.map(p => (
+                      <div
+                        key={p.title}
+                        className="bg-white rounded-2xl border border-gray-200 p-7 flex flex-col gap-3 hover:shadow-md transition-shadow"
+                      >
+                        <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md w-fit">
+                          {p.tag ?? p.category}
+                        </span>
+                        <p className="font-bold text-gray-900 text-lg">{p.title}</p>
+                        <p className="text-sm text-gray-500 leading-relaxed">{p.description}</p>
+                        <p className="text-[var(--brand-accent)] font-semibold text-sm">{p.cadence}</p>
+                        <a
+                          href="#anmeldung"
+                          className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
+                        >
+                          Angebot anfragen →
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* ── Ablauf (kompakt, keine dominante Sektion mehr) ──────────── */}
+            <section className="py-12 px-6 bg-white border-t border-gray-100">
+              <div className="max-w-5xl mx-auto">
+                <p className="text-center text-xs font-semibold text-gray-400 uppercase tracking-widest mb-6">So einfach geht’s</p>
+                <div className="grid sm:grid-cols-3 gap-6">
+                  {[
+                    { step: '1', title: 'Anfrage stellen', text: 'Sag uns, was dich interessiert.' },
+                    { step: '2', title: 'Wir melden uns', text: 'Persönlich, meist innerhalb weniger Tage.' },
+                    { step: '3', title: 'Loslegen', text: 'Training, Camp oder Event vereinbaren.' },
+                  ].map(s => (
+                    <div key={s.step} className="flex items-center gap-4">
+                      <span className="w-9 h-9 rounded-full bg-[var(--brand-accent)] text-gray-950 font-bold flex items-center justify-center shrink-0 text-sm">
+                        {s.step}
+                      </span>
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">{s.title}</p>
+                        <p className="text-xs text-gray-500 leading-snug">{s.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* ── Mitgliedschaft ───────────────────────────────────────────
+                Ehrlich und ausdrücklich: keine Online-Anmeldung/Mitgliedschaft
+                heute möglich, nur ein Interesse-Kontakt per Mailto. */}
+            <section className="py-16 px-6 bg-gray-50">
+              <div className="max-w-5xl mx-auto">
+                <div className="rounded-2xl border-2 border-[var(--brand-accent)] bg-white p-8 sm:p-10 text-center max-w-2xl mx-auto">
+                  <div className="relative w-16 h-16 rounded-full overflow-hidden mx-auto mb-4 ring-2 ring-[var(--brand-accent)]">
+                    <Image src="/jk/training.jpg" alt="" fill unoptimized className="object-cover" />
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Mitgliedschaft in Vorbereitung</h2>
+                  <p className="text-gray-600 leading-relaxed mb-6">
+                    Du möchtest Teil der JK Performance Academy werden? Die Mitgliedschaft ist aktuell in Vorbereitung.
+                    Schreib uns bei Interesse – wir informieren dich, sobald der Prozess startet.
+                  </p>
+                  <a
+                    href={`mailto:${CLUB_CONFIG.contactEmail}?subject=${encodeURIComponent('Interesse an Mitgliedschaft')}`}
+                    className="inline-block bg-gray-900 text-white font-semibold px-7 py-3.5 rounded-xl hover:bg-black transition-colors"
+                  >
+                    Interesse an Mitgliedschaft melden
+                  </a>
+                </div>
+              </div>
+            </section>
+          </>
+        ) : (
+          <>
+            {/* ── Highlights ──────────────────────────────────────────────── */}
+            <section className="py-20 px-6 bg-white">
+              <div className="max-w-5xl mx-auto">
+                <div className="text-center mb-12">
                   <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Das erwartet euch</p>
                   <h2 className="text-3xl font-bold text-gray-900">Warum unser Camp?</h2>
-                </>
-              )}
-            </div>
-            <div className={`grid sm:grid-cols-2 gap-5 ${HIGHLIGHTS.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
-              {HIGHLIGHTS.map(h => (
-                <div
-                  key={h.title}
-                  className="rounded-2xl border border-gray-200 p-6 hover:shadow-md transition-shadow"
-                >
-                  <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-gray-700">
-                    {h.icon}
-                  </div>
-                  <p className="font-semibold text-gray-900 mb-1.5">{h.title}</p>
-                  <p className="text-sm text-gray-500 leading-relaxed">{h.text}</p>
                 </div>
-              ))}
-            </div>
-          </div>
-        </section>
+                <div className={`grid sm:grid-cols-2 gap-5 ${HIGHLIGHTS.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+                  {HIGHLIGHTS.map(h => (
+                    <div
+                      key={h.title}
+                      className="rounded-2xl border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                    >
+                      <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-gray-700">
+                        {h.icon}
+                      </div>
+                      <p className="font-semibold text-gray-900 mb-1.5">{h.title}</p>
+                      <p className="text-sm text-gray-500 leading-relaxed">{h.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
 
-        {/* ── Ablauf ──────────────────────────────────────────────────── */}
-        <section className="py-20 px-6 bg-gray-950 text-white">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-14">
-              <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Einfach & unkompliziert</p>
-              <h2 className="text-3xl font-bold">{PROGRAMS.length > 0 ? 'So läuft deine Anfrage ab' : 'So läuft die Anmeldung ab'}</h2>
-            </div>
-            <div className="grid sm:grid-cols-3 gap-10">
-              {(PROGRAMS.length > 0
-                ? [
-                    {
-                      step: '01',
-                      title: 'Anfrage stellen',
-                      text: 'Schreib uns über das Formular, welches Programm dich interessiert – eine Trainingsanfrage oder ein Angebot.',
-                    },
-                    {
-                      step: '02',
-                      title: 'Wir melden uns',
-                      text: 'Wir nehmen persönlich Kontakt zu dir auf und klären die Details zu Region, Gruppe und Ablauf.',
-                    },
-                    {
-                      step: '03',
-                      title: 'Training oder Event vereinbaren',
-                      text: 'Gemeinsam vereinbaren wir Termin und Ablauf für dein Training, Camp oder Event.',
-                    },
-                  ]
-                : [
+            {/* ── Ablauf ──────────────────────────────────────────────────── */}
+            <section className="py-20 px-6 bg-gray-950 text-white">
+              <div className="max-w-5xl mx-auto">
+                <div className="text-center mb-14">
+                  <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Einfach & unkompliziert</p>
+                  <h2 className="text-3xl font-bold">So läuft die Anmeldung ab</h2>
+                </div>
+                <div className="grid sm:grid-cols-3 gap-10">
+                  {[
                     {
                       step: '01',
                       title: 'Termin wählen',
@@ -237,172 +391,67 @@ export default async function Page() {
                       title: 'Bestätigung & Zahlung',
                       text: 'Du erhältst sofort eine Bestätigungs-E-Mail mit den Bankdaten. Nach Zahlungseingang ist der Platz gesichert.',
                     },
-                  ]
-              ).map(s => (
-                <div key={s.step} className="flex flex-col">
-                  <p className="text-6xl font-black text-white/10 leading-none mb-4 tabular-nums">{s.step}</p>
-                  <p className="text-base font-bold text-white mb-2">{s.title}</p>
-                  <p className="text-sm text-gray-400 leading-relaxed">{s.text}</p>
+                  ].map(s => (
+                    <div key={s.step} className="flex flex-col">
+                      <p className="text-6xl font-black text-white/10 leading-none mb-4 tabular-nums">{s.step}</p>
+                      <p className="text-base font-bold text-white mb-2">{s.title}</p>
+                      <p className="text-sm text-gray-400 leading-relaxed">{s.text}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        </section>
+              </div>
+            </section>
 
-        {/* ── Termine / Events & Programme ──────────────────────────────── */}
-        <section id="termine" className="py-20 px-6 bg-gray-50">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              {PROGRAMS.length > 0 ? (
-                <>
-                  <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Was wir anbieten</p>
-                  <h2 className="text-3xl font-bold text-gray-900">Aktuelle Events & Programme</h2>
-                </>
-              ) : (
-                <>
+            {/* ── Termine ─────────────────────────────────────────────────── */}
+            <section id="termine" className="py-20 px-6 bg-gray-50">
+              <div className="max-w-5xl mx-auto">
+                <div className="text-center mb-12">
                   <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Wann findet es statt</p>
                   <h2 className="text-3xl font-bold text-gray-900">Termine 2026</h2>
-                </>
-              )}
-            </div>
-            {/* Hinweis: Ort */}
-            {VENUE_INFO_TEXT && (
-              <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-600 leading-relaxed">
-                <p className="font-semibold text-gray-800 mb-1">Veranstaltungsort</p>
-                <p>{VENUE_INFO_TEXT}</p>
-              </div>
-            )}
-
-            {/* Hinweis: 1. Mannschaft */}
-            {FIRST_TEAM_INFO_TEXT && (
-              <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-600 leading-relaxed">
-                <p className="font-semibold text-gray-800 mb-1">Hinweis zu Trainingseinheiten mit der 1. Mannschaft</p>
-                <p>{FIRST_TEAM_INFO_TEXT}</p>
-              </div>
-            )}
-
-            {PROGRAMS.length > 0 ? (
-              <div className="space-y-10">
-                {featuredPrograms.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Aktuelle Sommercamps</p>
-                    <div className="grid sm:grid-cols-2 gap-5">
-                      {featuredPrograms.map(p => (
-                        <div
-                          key={p.title}
-                          className="bg-white rounded-2xl border-2 border-[var(--brand-accent)] p-7 flex flex-col gap-3 hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md w-fit">
-                              {p.tag ?? p.category}
-                            </span>
-                            <span className="text-[var(--brand-accent)] text-xs font-semibold uppercase tracking-wider text-right">Begrenzte Plätze</span>
-                          </div>
-                          <p className="font-bold text-gray-900 text-lg">{p.title}</p>
-                          <p className="text-sm text-gray-500 leading-relaxed">{p.description}</p>
-                          <p className="text-[var(--brand-accent)] font-semibold text-sm">{p.cadence}</p>
-                          {p.benefits && (
-                            <ul className="space-y-1.5 mt-1">
-                              {p.benefits.map(b => (
-                                <li key={b} className="flex items-start gap-2.5 text-sm text-gray-700">
-                                  <span className="w-4 h-4 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">✓</span>
-                                  {b}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                          {p.priceNote && (
-                            <p className="text-gray-800 text-sm font-semibold border-t border-gray-100 pt-3 mt-1">{p.priceNote}</p>
-                          )}
-                          <a
-                            href="#anmeldung"
-                            className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
-                          >
-                            Angebot anfragen →
-                          </a>
-                        </div>
-                      ))}
-                    </div>
+                </div>
+                {/* Hinweis: Ort */}
+                {VENUE_INFO_TEXT && (
+                  <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-600 leading-relaxed">
+                    <p className="font-semibold text-gray-800 mb-1">Veranstaltungsort</p>
+                    <p>{VENUE_INFO_TEXT}</p>
                   </div>
                 )}
 
-                {otherPrograms.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Weitere Angebote</p>
-                    <div className={`grid sm:grid-cols-2 gap-5 ${otherPrograms.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
-                      {otherPrograms.map(p => (
-                        <div
-                          key={p.title}
-                          className="bg-white rounded-2xl border border-gray-200 p-7 flex flex-col gap-3 hover:shadow-md transition-shadow"
-                        >
-                          <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md w-fit">
-                            {p.tag ?? p.category}
-                          </span>
-                          <p className="font-bold text-gray-900 text-lg">{p.title}</p>
-                          <p className="text-sm text-gray-500 leading-relaxed">{p.description}</p>
-                          <p className="text-[var(--brand-accent)] font-semibold text-sm">{p.cadence}</p>
-                          <a
-                            href="#anmeldung"
-                            className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
-                          >
-                            Angebot anfragen →
-                          </a>
-                        </div>
-                      ))}
-                    </div>
+                {/* Hinweis: 1. Mannschaft */}
+                {FIRST_TEAM_INFO_TEXT && (
+                  <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 text-sm text-gray-600 leading-relaxed">
+                    <p className="font-semibold text-gray-800 mb-1">Hinweis zu Trainingseinheiten mit der 1. Mannschaft</p>
+                    <p>{FIRST_TEAM_INFO_TEXT}</p>
                   </div>
                 )}
-              </div>
-            ) : (
-              <div className="grid sm:grid-cols-3 gap-5">
-                {CAMPS.map(c => (
-                  <div
-                    key={c.label}
-                    className="bg-white rounded-2xl border border-gray-200 p-7 flex flex-col gap-5 hover:shadow-md transition-shadow"
-                  >
-                    <div>
-                      <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md mb-3">
-                        {c.tag}
-                      </span>
-                      <p className="font-bold text-gray-900 text-lg mb-1">{c.label}</p>
-                      <p className="text-[var(--brand-accent)] font-semibold text-sm">{c.date}</p>
-                      <p className="text-gray-400 text-xs mt-2">4 Tage · 10:00–15:00 Uhr · Kinder 5–12 Jahre</p>
-                      <p className="text-gray-900 font-bold text-sm mt-2">{campPrice}</p>
-                    </div>
-                    <a
-                      href={`/?week=${encodeURIComponent(c.value)}#anmeldung`}
-                      className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
+
+                <div className="grid sm:grid-cols-3 gap-5">
+                  {CAMPS.map(c => (
+                    <div
+                      key={c.label}
+                      className="bg-white rounded-2xl border border-gray-200 p-7 flex flex-col gap-5 hover:shadow-md transition-shadow"
                     >
-                      Jetzt anmelden →
-                    </a>
-                  </div>
-                ))}
+                      <div>
+                        <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md mb-3">
+                          {c.tag}
+                        </span>
+                        <p className="font-bold text-gray-900 text-lg mb-1">{c.label}</p>
+                        <p className="text-[var(--brand-accent)] font-semibold text-sm">{c.date}</p>
+                        <p className="text-gray-400 text-xs mt-2">4 Tage · 10:00–15:00 Uhr · Kinder 5–12 Jahre</p>
+                        <p className="text-gray-900 font-bold text-sm mt-2">{campPrice}</p>
+                      </div>
+                      <a
+                        href={`/?week=${encodeURIComponent(c.value)}#anmeldung`}
+                        className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
+                      >
+                        Jetzt anmelden →
+                      </a>
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
-        </section>
-
-        {/* ── Mitgliedschaft (nur PROGRAMS-Clubs wie JK) ──────────────────
-            Ehrlich und ausdrücklich: keine Online-Anmeldung/Mitgliedschaft
-            heute möglich, nur ein Interesse-Kontakt per Mailto. */}
-        {PROGRAMS.length > 0 && (
-          <section className="py-16 px-6 bg-gray-50">
-            <div className="max-w-5xl mx-auto">
-              <div className="rounded-2xl border-2 border-[var(--brand-accent)] bg-white p-8 sm:p-10 text-center max-w-2xl mx-auto">
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Mitgliedschaft in Vorbereitung</h2>
-                <p className="text-gray-600 leading-relaxed mb-6">
-                  Du möchtest Teil der JK Performance Academy werden? Die Mitgliedschaft ist aktuell in Vorbereitung.
-                  Schreib uns bei Interesse – wir informieren dich, sobald der Prozess startet.
-                </p>
-                <a
-                  href={`mailto:${CLUB_CONFIG.contactEmail}?subject=${encodeURIComponent('Interesse an Mitgliedschaft')}`}
-                  className="inline-block bg-gray-900 text-white font-semibold px-7 py-3.5 rounded-xl hover:bg-black transition-colors"
-                >
-                  Interesse an Mitgliedschaft melden
-                </a>
-              </div>
-            </div>
-          </section>
+            </section>
+          </>
         )}
 
         {/* ── Formular ────────────────────────────────────────────────── */}

@@ -17,14 +17,27 @@
 | `DATABASE_URL` | PostgreSQL-URI aus Supabase (Transaction Pooler, Port 6543) | Supabase Dashboard |
 | `ADMIN_PASSWORD` | Das Admin-Passwort für den Browser-Login | Frei wählen, stark halten |
 | `JWT_SECRET` | Zufälliger Geheimschlüssel zum Signieren der Session-Tokens | `openssl rand -hex 32` |
+| `TOKEN_EXPIRE_HOURS` | Gültigkeit eines Session-Tokens in Stunden (optional, Standard: 24) | Frei wählen |
 | `CORS_ORIGINS_EXTRA` | Vercel-URL des Frontends, z.B. `https://ksv-baunatal.vercel.app` | Nach Vercel-Deployment setzen |
+| `STRIPE_SECRET_KEY` | Stripe Secret Key | Stripe Dashboard → Developers → API keys |
+| `STRIPE_WEBHOOK_SECRET` | Signing Secret des Stripe-Webhook-Endpoints | Stripe Dashboard → Webhooks → Endpoint |
+| `STRIPE_PRICE_CENTS` | Campbeitrag in Cent, z.B. `14900` = 149,00 € | Muss zum Stripe-Produktpreis passen |
+| `FRONTEND_URL` | Vollständige Frontend-URL (für Stripe-Redirect) | z.B. `https://ksv-baunatal.vercel.app` |
 | `BREVO_API_KEY` | API-Key aus dem Brevo Dashboard | Brevo → Settings → API Keys |
 | `EMAIL_FROM` | Absender-E-Mail (muss in Brevo verifiziert sein) | z.B. `info@ksv-baunatal.de` |
 | `EMAIL_FROM_NAME` | Anzeigename des Absenders | z.B. `Fußballschule KSV Baunatal` |
+| `EMAIL_REPLY_TO` | Reply-To der Bestätigungsmail (optional; Standard: `CONTACT_EMAIL`) | z.B. `info@ksv-baunatal.de` |
 | `CONTACT_EMAIL` | Kontaktadresse in der Mail-Signatur | z.B. `info@ksv-baunatal.de` |
+| `BANK_ACCOUNT_HOLDER` | Kontoinhaber für den Überweisungshinweis in der Bestätigungsmail | z.B. `KSV Baunatal e.V.` |
+| `BANK_IBAN` | IBAN für den Überweisungshinweis | — |
+| `BANK_BIC` | BIC für den Überweisungshinweis | — |
+| `BANK_NAME` | Bankname für den Überweisungshinweis | z.B. `Sparkasse Baunatal` |
 
-> **E-Mail-Vars sind optional.** Wenn `BREVO_API_KEY` oder `EMAIL_FROM` nicht gesetzt sind,
-> läuft das Backend normal — Mailversand wird nur übersprungen. Kein Crash.
+> **E-Mail-, Stripe- und Bank-Vars sind optional.** Fehlen sie, läuft das Backend normal weiter —
+> Mailversand/Checkout/Bankdaten-Anzeige werden nur übersprungen bzw. zeigen einen Platzhalter-Hinweis.
+> Kein Crash. Diese Tabelle ist die vollständige Referenz; `render.yaml` selbst listet aus
+> historischen Gründen nur einen Teil der Variablen — Production-Werte werden aktuell manuell im
+> Render-Dashboard gepflegt und nicht in `render.yaml` synchronisiert.
 
 > **ADMIN_PASSWORD** ist das Passwort, das du / dein Kollege im Browser auf `/admin` eingibt.
 > Es landet **nie** im Frontend-Code oder im Repo — nur auf Render.
@@ -132,6 +145,102 @@ Das Backend startet normal, loggt nur: `E-Mail-Versand übersprungen: BREVO_API_
 1. `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME`, `CONTACT_EMAIL` in `backend/.env` eintragen
 2. Backend neu starten
 3. Formular ausfüllen → absenden
-4. Backend-Terminal zeigt: `Bestätigungsmail gesendet und email_sent_at gesetzt für ...`
+4. Backend-Terminal zeigt: `Bestätigungsmail gesendet und email_sent_at gesetzt für Anmeldung id=...`
 5. Postfach der eingetragenen E-Mail prüfen
 6. In `/admin` → Mail-Spalte zeigt ✓
+
+---
+
+## Backup & Restore
+
+**Aktueller Stand: kein aktives Backup-Abo, keine PITR-Konfiguration bestätigt.**
+Supabase läuft aktuell im **Free-Tier** — dort gibt es keine garantierten automatischen
+Backups mit Retention. Vor jeder riskanten Aktion (Migration, Bulk-Update) selbst ein Backup
+ziehen:
+
+```bash
+# Manuelles Backup der einzigen Kerntabelle (via psql, mit DATABASE_URL aus Render)
+pg_dump "$DATABASE_URL" --table=camp_registrations --format=custom --file=camp_registrations_backup.dump
+
+# Restore (im Notfall, nur gegen eine leere/neue Tabelle)
+pg_restore --dbname="$DATABASE_URL" camp_registrations_backup.dump
+```
+
+Alternativ: Supabase Dashboard → **Database → Backups** (Snapshot-Funktion, sofern im
+aktuellen Plan verfügbar — im Free-Tier eingeschränkt, im Zweifel im Dashboard prüfen).
+
+**Konvention für alle zukünftigen `migration_*.sql`-Dateien:** Jede Migration, die Daten
+verändert (nicht nur Schema/Constraints), bekommt einen Kommentar-Block am Dateianfang nach
+dem Vorbild von `migration_fix_age_constraint.sql`:
+
+```sql
+-- VOR ANWENDUNG: Supabase-Snapshot nehmen (Dashboard → Database → Backups)
+-- oder: pg_dump "$DATABASE_URL" --table=camp_registrations --format=custom --file=vor_migration_xy.dump
+```
+
+---
+
+## Monitoring & Rollback
+
+**Aktueller Stand: kein aktives Monitoring/Alerting.** Kein Sentry, kein Uptime-Check, keine
+Slack-/E-Mail-Alarme bei Fehlern — das ist eine bewusste Lücke, kein Versehen. Das Backend
+liefert einen einfachen Health-Check:
+
+```bash
+curl https://<deine-render-url>/health
+# {"status": "ok", "database": "reachable"}  (200)
+# {"status": "error", "database": "unavailable"}  (503, keine Detail-Preisgabe mehr seit CP-S206)
+```
+
+- **Empfehlung (nicht Teil dieses Checks, nur Backlog-Hinweis):** externer Uptime-Ping auf
+  `/health` (z.B. per kostenlosem Cron-Ping-Dienst), da Render Free-Tier-Services bei
+  Inaktivität in den Ruhezustand gehen und der erste Request danach langsam ist (Cold Start).
+
+**Rollback:**
+- **Render:** Dashboard → Service → **Deploys** → älteren erfolgreichen Deploy auswählen →
+  **Redeploy**. Kein CLI-Rollback nötig.
+- **Vercel:** Dashboard → Deployments → älteres Deployment → **Promote to Production**.
+- **Datenbank:** kein automatischer Rollback-Mechanismus — siehe Backup & Restore oben.
+
+---
+
+## Rough Monthly Cost (grobe Kostenübersicht)
+
+> Zahlen sind Richtwerte, keine Rechnungsgarantie. Vor Budget-Entscheidungen im jeweiligen
+> Dashboard bestätigen.
+
+| Dienst | Aktueller Tier (Stand dieses Checks) | Ca. Kosten/Monat |
+|---|---|---|
+| Render (Backend) | Paid-Plan (~7 €), **`render.yaml` sagt weiterhin `free`** — Datei ist hier veraltet gegenüber der tatsächlichen Konfiguration | ~7 € |
+| Vercel (Frontend) | Free/Hobby (im Dashboard bestätigen) | 0 € |
+| Supabase (DB) | Free-Tier | 0 € |
+| Brevo (E-Mail) | vermutlich Free-Tier (im Dashboard bestätigen), Limit i.d.R. 300 Mails/Tag | 0 € |
+| Stripe (Zahlungen) | Kein Fixpreis — nur Transaktionsgebühr (~1,5 % + 0,25 € pro europäischer Kartenzahlung), nur relevant wenn Online-Zahlung aktiv genutzt wird | variabel, transaktionsabhängig |
+
+**Gesamt (fix, ohne Stripe-Transaktionsgebühren): ca. 7 €/Monat**, solange Vercel/Supabase/Brevo
+auf den kostenlosen Stufen bleiben. Bei steigendem Anmeldevolumen zuerst Brevo-Sendelimit
+(300/Tag) und Supabase-Free-Tier-Grenzen (Storage/Bandbreite) im Auge behalten.
+
+> Hinweis: `backend/render.yaml:6` listet weiterhin `plan: free` — dies wurde bewusst **nicht**
+> im Rahmen von CP-S206 korrigiert, da render.yaml aktuell nicht als Quelle der Wahrheit für
+> Produktionswerte dient (siehe Env-Var-Hinweis oben). Falls `render.yaml` jemals wieder als
+> Deploy-Quelle genutzt wird, muss der Plan-Wert vorher angeglichen werden.
+
+---
+
+## Pre-Deploy Checklist
+
+Vor jedem Produktions-Deployment (Backend oder Frontend):
+
+- [ ] Alle benötigten Env-Vars in Render **und** Vercel gesetzt (siehe Tabellen oben) —
+      insbesondere nach dem Hinzufügen neuer Vars im Code
+- [ ] Migrationen (falls neue vorhanden) in der richtigen Reihenfolge gegen Supabase ausgeführt,
+      **vorher Backup gezogen** (siehe Backup & Restore)
+- [ ] `python -m py_compile backend/main.py`, `npm run lint`, `npx tsc --noEmit`, `npm run build`
+      laufen lokal grün
+- [ ] `/health`-Endpunkt nach Deploy manuell geprüft (`curl .../health` → `200 ok`)
+- [ ] Stripe-Webhook-Endpoint (falls Backend-URL sich geändert hat) im Stripe-Dashboard auf die
+      neue Render-URL aktualisiert
+- [ ] `CORS_ORIGINS_EXTRA` enthält die aktuelle Vercel-Produktions-URL
+- [ ] Kurzer manueller Smoke-Test: Anmeldung einreichen → in `/admin` sichtbar → Login mit
+      `ADMIN_PASSWORD` funktioniert

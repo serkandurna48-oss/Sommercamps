@@ -717,7 +717,7 @@ def _try_send_confirmation_email(row: dict) -> None:
         return
 
     if row.get("email_sent_at"):
-        logger.info("E-Mail für %s bereits gesendet — übersprungen.", row.get("email"))
+        logger.info("E-Mail für Anmeldung id=%s bereits gesendet — übersprungen.", row.get("id"))
         return
 
     try:
@@ -749,12 +749,12 @@ def _try_send_confirmation_email(row: dict) -> None:
 
         if updated and updated.get("email_sent_at"):
             row["email_sent_at"] = updated["email_sent_at"]
-            logger.info("Bestätigungsmail gesendet und email_sent_at gesetzt für %s.", row.get("email"))
+            logger.info("Bestätigungsmail gesendet und email_sent_at gesetzt für Anmeldung id=%s.", row.get("id"))
 
     except Exception as exc:
         logger.warning(
-            "E-Mail-Versand fehlgeschlagen für %s: %s — Registrierung bleibt gespeichert.",
-            row.get("email"),
+            "E-Mail-Versand fehlgeschlagen für Anmeldung id=%s: %s — Registrierung bleibt gespeichert.",
+            row.get("id"),
             exc,
         )
 
@@ -852,9 +852,10 @@ def health() -> dict:
             cur.execute("SELECT 1")
         return {"status": "ok", "database": "reachable"}
     except Exception as exc:
+        logger.error("[health] Datenbankverbindung fehlgeschlagen: %s", exc)
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"status": "error", "database": str(exc)},
+            content={"status": "error", "database": "unavailable"},
         )
 
 
@@ -1170,7 +1171,7 @@ def create_checkout_session(registration_token: str) -> dict:
     row = dict(row)
     reg_id = str(row["id"])
     child_name = f"{row.get('child_first_name', '')} {row.get('child_last_name', '')}".strip()
-    logger.info("[checkout] Anmeldung gefunden: id=%s kind=%s", reg_id, child_name)
+    logger.info("[checkout] Anmeldung gefunden: id=%s", reg_id)
 
     stripe.api_key = STRIPE_SECRET_KEY
     logger.info("[checkout] Stripe Session wird erstellt…")

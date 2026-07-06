@@ -55,7 +55,7 @@ Sommercamps/
 │   ├── migration_phase3.sql  ← Sicherheits-Migration (dupliziert stripe_session_id; IF NOT EXISTS)
 │   ├── migration_jersey_sizes.sql ← Constraint-Update für neue Trikotnummern-Werte
 │   ├── requirements.txt      ← Python-Abhängigkeiten
-│   ├── render.yaml           ← Render.com Deployment-Config (⚠ ADMIN_API_KEY veraltet)
+│   ├── render.yaml           ← Render.com Deployment-Config
 │   ├── .env                  ← Lokale Secrets (nie ins Repo!)
 │   ├── .env.example          ← Template ohne Secrets (im Repo)
 │   └── test_db.py            ← Minimaler DB-Verbindungstest
@@ -187,7 +187,7 @@ unsichtbar einführen, wird jede Ausnahme explizit dokumentiert und nachverfolgb
 |----|---------|---------|---------|
 | B1 | Mittel | **Altersgrenze-Split-Brain**: Frontend max. 12 Jahre, DB-Schema max. 18 Jahre, Landing Page sagt "5–12 Jahre" | `RegistrationForm.tsx:107-113` vs `schema.sql:24-27` |
 | B2 | Mittel | **Preis-Split-Brain**: `CAMP_PRICE = '149 €'` im Frontend (TODO-Kommentar!), Stripe nutzt `STRIPE_PRICE_CENTS` Env-Var — könnten auseinanderlaufen | `page.tsx:53` |
-| B3 | Niedrig | **render.yaml veraltet**: `ADMIN_API_KEY` statt `ADMIN_PASSWORD` | `render.yaml:14` |
+| ~~B3~~ | ~~Niedrig~~ | ✅ **Behoben** (Commit `3413173`): `render.yaml` nutzt jetzt `ADMIN_PASSWORD` | `render.yaml:12` |
 | B4 | Mittel | **CAMP_WEEKS dupliziert**: Identische 3 Daten in Backend + Frontend — Änderung muss an 2 Stellen erfolgen | `main.py:70-74`, `RegistrationForm.tsx:25-29` |
 | B5 | Niedrig | **JERSEY_SIZES dupliziert**: Identisch in Backend + Frontend | `main.py:69`, `RegistrationForm.tsx:31` |
 

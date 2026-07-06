@@ -91,13 +91,11 @@ Lösung: Im `GET /config` Endpunkt (aus T03) auch `allowed_jersey_sizes[]` mitli
 
 ---
 
-### T06 — render.yaml korrigieren
-**Priorität: Niedrig | Dateien: `backend/render.yaml`**
+### T06 — render.yaml korrigieren ✅ ERLEDIGT (Commit `3413173`)
 
-Problem: `render.yaml:14` listet `ADMIN_API_KEY` — im Code wird aber `ADMIN_PASSWORD` verwendet.
-Dieses Mismatch könnte beim nächsten Render-Deployment zu Verwirrung führen.
-
-Fix: `ADMIN_API_KEY` → `ADMIN_PASSWORD` in render.yaml, alle fehlenden Vars ergänzen.
+`render.yaml` nutzt jetzt korrekt `ADMIN_PASSWORD` statt `ADMIN_API_KEY`. Vollständige
+Env-Var-Referenz (inkl. der in `render.yaml` weiterhin fehlenden Vars wie `STRIPE_SECRET_KEY`,
+`BREVO_API_KEY`, `BANK_*`, etc.) lebt jetzt in `DEPLOYMENT.md` (siehe CP-S206).
 
 ---
 
@@ -152,13 +150,14 @@ die vor Phase 1 angelegt wurden.
 
 ## Dokumentation
 
-### T11 — DEPLOYMENT.md auf aktuellen Stand bringen
-**Priorität: Niedrig | Dateien: `DEPLOYMENT.md`**
+### T11 — DEPLOYMENT.md auf aktuellen Stand bringen ✅ TEILWEISE ERLEDIGT (CP-S206)
 
-- Stripe-Env-Vars fehlen in der Env-Var-Tabelle (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
-  `STRIPE_PRICE_CENTS`, `FRONTEND_URL`)
-- Stripe-Onboarding-Schritte fehlen
-- `render.yaml` Diskrepanz (ADMIN_API_KEY) dokumentieren
+- ✅ Stripe/Brevo/Bank/Kontakt-Env-Vars sind jetzt vollständig in der Env-Var-Tabelle
+  dokumentiert (siehe `DEPLOYMENT.md`)
+- ✅ `render.yaml` ADMIN_API_KEY-Diskrepanz war bereits behoben (Commit `3413173`), jetzt auch
+  in CLAUDE.md/TODO.md korrigiert
+- [ ] Offen: Stripe-Onboarding-Schritte (Connect, falls Phase 5) fehlen weiterhin — bleibt
+  Phase-5-Thema
 
 ---
 
@@ -186,6 +185,55 @@ Response:
 
 ---
 
+## Production-Readiness Backlog (aus CP-S206)
+
+> Im Rahmen des Backup/Logging/Cost-Checks (CP-S206) identifiziert. Bewusst nicht sofort
+> behoben, da jeweils mehrere Call-Sites oder ein Design-Entscheid betroffen sind.
+
+### T13 — Rohe Exception-Details in Admin-Endpunkten maskieren
+**Priorität: Mittel | Dateien: `backend/main.py` (~9 Stellen: u.a. Zeilen um 903, 908, 941,
+983, 1024, 1050, 1098, 1160, 1215)**
+
+Mehrere Admin-Endpunkte geben `detail=f"...{exc}"` direkt in der HTTP-Response zurück
+(psycopg2-Fehlertext kann DB-Struktur/Constraint-Namen preisgeben). Alle Stellen sind
+JWT-geschützt, daher niedrigere Dringlichkeit als der öffentliche `/health`-Fall (bereits in
+CP-S206 gefixt). Fix: Exception serverseitig loggen, generische deutsche Fehlermeldung an
+Client zurückgeben.
+
+---
+
+### T14 — registration_token in URL/Access-Log
+**Priorität: Mittel | Dateien: `backend/main.py` (`POST /registrations/{registration_token}/checkout-session`), `backend/render.yaml`**
+
+Der öffentliche Identifier `registration_token` steht im URL-Pfad und landet dadurch in
+uvicorns Standard-Access-Log (Method+Path pro Request) — faktisch ein Secret-Leak in Logs.
+Fix erfordert entweder Routing-Änderung (Token in Body/Header statt URL) oder Access-Log-Format
+anpassen. Beides bewusst nicht in CP-S206 angefasst (Routing-Design-Entscheidung).
+
+---
+
+### T15 — Logging-Konfiguration (Log-Level, Handler)
+**Priorität: Niedrig | Dateien: `backend/main.py`**
+
+Kein `logging.basicConfig()`/Level-Config vorhanden — `logger.info()`-Aufrufe können je nach
+Uvicorn-Start-Konfiguration verloren gehen. Zwei verbliebene `print()`-Aufrufe (Webhook-Fehler)
+umgehen Logging komplett. Fix: zentrale Logging-Konfiguration einführen (Level per Env-Var),
+`print()` durch `logger` ersetzen. Bewusst nicht in CP-S206 angefasst, da dies das
+Produktions-Log-Verhalten insgesamt ändert und eine eigene Verifikation verdient.
+
+---
+
+### T16 — Backup-vor-Migration als Konvention etablieren
+**Priorität: Niedrig | Dateien: `backend/migration_*.sql`**
+
+`migration_fix_age_constraint.sql` enthält vorbildlich einen Kommentar-Block
+("Vor Anwendung: Supabase-Snapshot nehmen"). Andere Migrationen (z. B.
+`migration_jersey_sizes.sql`, die per `UPDATE` nicht-passende Werte auf `NULL` setzt) haben
+keinen solchen Hinweis. Fix: Standard-Kommentarblock für alle zukünftigen `migration_*.sql`
+verbindlich machen (siehe `DEPLOYMENT.md` → Backup & Restore).
+
+---
+
 ## Hardcoded-Schulden (für Phase 2)
 
 Strings, die in Phase 1 neu eingeführt wurden und noch durch Tenant-Config ersetzt
@@ -208,7 +256,7 @@ T12 (GET /config)      ← Enabler für T02, T03, T05
 T03 (CAMP_WEEKS DRY)   ← Nach T12
 T02 (Preis alignen)    ← Nach T12
 T04 (Club-Config)      ← Unabhängig, kann parallel zu T03
-T06 (render.yaml)      ← Klein, unabhängig
+T06 (render.yaml)      ← ✅ erledigt
 T05 (JERSEY_SIZES DRY) ← Nach T12
 T07 (Kontaktdaten)     ← Unabhängig
 T09 (Tests)            ← Kontinuierlich, parallel zu allem

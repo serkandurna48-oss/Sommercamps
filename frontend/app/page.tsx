@@ -23,7 +23,7 @@ export const metadata: Metadata = PROGRAMS.length > 0
   ? {
       title: `${CLUB_CONFIG.subtitle} – ${CLUB_CONFIG.name}`,
       description:
-        `Events & Programme der ${CLUB_CONFIG.subtitle} ${CLUB_CONFIG.name} – Training für Kinder von 5–12 Jahren.`,
+        `Events & Programme der ${CLUB_CONFIG.subtitle} ${CLUB_CONFIG.name} – individuelle Spielerentwicklung für Kinder und Jugendliche.`,
     }
   : {
       title: `${CLUB_CONFIG.subtitle} Sommercamp 2026 – ${CLUB_CONFIG.name}`,
@@ -146,9 +146,9 @@ export default async function Page() {
                   : [
                       { value: '3',          label: 'Camp-Termine 2026' },
                       { value: '4 Tage',     label: 'je Camp' },
+                      { value: '5 – 12',     label: 'Jahre' },
                     ]
                 ).concat([
-                  { value: '5 – 12',     label: 'Jahre' },
                   { value: campPrice,   label: 'Campbeitrag' },
                   { value: CLUB_CONFIG.venueName, label: 'Standort' },
                 ]).map(f => (
@@ -481,7 +481,7 @@ export default async function Page() {
 
               {/* Formular-Card */}
               <div className="rounded-2xl border border-gray-200 shadow-sm p-8 sm:p-10">
-                {config ? (
+                {PROGRAMS.length === 0 && config ? (
                   <Suspense fallback={<div className="py-10 text-center text-sm text-gray-400">Lädt …</div>}>
                     <RegistrationForm config={config} />
                   </Suspense>
@@ -606,14 +606,15 @@ export default async function Page() {
                 <p className="text-white font-bold">{CLUB_CONFIG.name}</p>
               </div>
               <p className="text-sm leading-relaxed">
-                {CLUB_CONFIG.subtitle} des {CLUB_CONFIG.name} e.V. —
-                qualifiziertes Training für Kinder von 5 bis 12 Jahren.
+                {PROGRAMS.length > 0
+                  ? `${CLUB_CONFIG.subtitle} der ${CLUB_CONFIG.name} — individuelle Spielerentwicklung für Kinder und Jugendliche.`
+                  : `${CLUB_CONFIG.subtitle} des ${CLUB_CONFIG.name} e.V. — qualifiziertes Training für Kinder von 5 bis 12 Jahren.`}
               </p>
             </div>
             <div>
               <p className="text-white font-semibold mb-3 text-sm">Kontakt</p>
               <ul className="space-y-1.5 text-sm">
-                <li>{CLUB_CONFIG.name} e.V.</li>
+                <li>{CLUB_CONFIG.name}{PROGRAMS.length > 0 ? '' : ' e.V.'}</li>
                 {PROGRAMS.length > 0 ? (
                   <li>Kontakt per Instagram/WhatsApp in Vorbereitung</li>
                 ) : (

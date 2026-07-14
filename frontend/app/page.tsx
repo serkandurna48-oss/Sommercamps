@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import ClubLogo from './components/ClubLogo'
+import MediaSlideshow from './components/MediaSlideshow'
 import RegistrationForm from './components/RegistrationForm'
 import { type CampConfig, fetchCampConfig } from './lib/campConfig'
 import {
@@ -14,6 +15,8 @@ import {
   FAQ_ITEMS,
   VENUE_INFO_TEXT,
   FIRST_TEAM_INFO_TEXT,
+  MEMBERSHIP_BENEFITS,
+  SLIDESHOW_ITEMS,
 } from './lib/clubConfig'
 import Image from 'next/image'
 
@@ -118,16 +121,24 @@ export default async function Page() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <a
                   href="#anmeldung"
-                  className="bg-white text-gray-900 font-bold px-7 py-3.5 rounded-xl hover:bg-gray-100 transition-colors text-center"
+                  className="bg-white text-gray-900 font-bold px-8 py-3.5 rounded-xl hover:bg-gray-100 transition-colors text-center shrink-0"
                 >
                   {PROGRAMS.length > 0 ? 'Trainingsanfrage stellen' : 'Jetzt Platz sichern'}
                 </a>
                 <a
                   href="#termine"
-                  className="bg-white/10 text-white font-semibold px-7 py-3.5 rounded-xl hover:bg-white/15 transition-colors text-center"
+                  className="bg-white/10 text-white font-semibold px-8 py-3.5 rounded-xl hover:bg-white/15 transition-colors text-center shrink-0"
                 >
                   {PROGRAMS.length > 0 ? 'Aktuelle Sommercamps ansehen' : 'Termine ansehen'}
                 </a>
+                {PROGRAMS.length > 0 && (
+                  <a
+                    href="#mitgliedschaft"
+                    className="bg-white/10 text-white font-semibold px-8 py-3.5 rounded-xl hover:bg-white/15 transition-colors text-center shrink-0"
+                  >
+                    Mitgliedschaft
+                  </a>
+                )}
               </div>
 
               {PROGRAMS.length > 0 && (
@@ -164,6 +175,8 @@ export default async function Page() {
 
         {PROGRAMS.length > 0 ? (
           <>
+            {SLIDESHOW_ITEMS.length > 0 && <MediaSlideshow items={SLIDESHOW_ITEMS} />}
+
             {/* ── Aktuelle Sommercamps (hochgezogen, navy für Energie/Kontrast) ── */}
             <section id="termine" className="relative overflow-hidden py-20 px-6 bg-gray-950 text-white">
               <div className="absolute inset-0 z-0">
@@ -203,8 +216,24 @@ export default async function Page() {
                           <span className="text-[var(--brand-accent)] text-xs font-semibold uppercase tracking-wider text-right">Begrenzte Plätze</span>
                         </div>
                         <p className="font-bold text-gray-900 text-lg">{p.title}</p>
+                        <div className="flex flex-col gap-1">
+                          <p className="flex items-center gap-1.5 text-[var(--brand-accent)] font-semibold text-sm">
+                            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                            </svg>
+                            {p.cadence}
+                          </p>
+                          {p.title.includes(' bei ') && (
+                            <p className="flex items-center gap-1.5 text-gray-500 text-xs">
+                              <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+                              </svg>
+                              {p.title.split(' bei ')[1]}
+                            </p>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-500 leading-relaxed">{p.description}</p>
-                        <p className="text-[var(--brand-accent)] font-semibold text-sm">{p.cadence}</p>
                         {p.benefits && (
                           <ul className="space-y-1.5 mt-1">
                             {p.benefits.map(b => (
@@ -222,41 +251,12 @@ export default async function Page() {
                           href="#anmeldung"
                           className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
                         >
-                          Angebot anfragen →
+                          Jetzt teilnehmen →
                         </a>
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
-            </section>
-
-            {/* ── Warum JK? (Bild + Karten, mehr Academy-Atmosphäre) ─────────── */}
-            <section className="py-20 px-6 bg-white">
-              <div className="max-w-5xl mx-auto">
-                <div className="text-center mb-12">
-                  <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Warum JK?</p>
-                  <h2 className="text-3xl font-bold text-gray-900">Für Spieler, die mehr wollen</h2>
-                </div>
-                <div className="lg:grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-10 lg:items-stretch">
-                  <div className="relative rounded-2xl overflow-hidden h-72 sm:h-96 lg:h-auto mb-8 lg:mb-0">
-                    <Image src="/jk/team.jpg" alt="" fill unoptimized className="object-cover" />
-                  </div>
-                  <div className="grid gap-5 sm:grid-cols-3 lg:grid-cols-1">
-                    {HIGHLIGHTS.map(h => (
-                      <div
-                        key={h.title}
-                        className="rounded-2xl border border-gray-200 p-6 hover:shadow-md transition-shadow"
-                      >
-                        <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-gray-700">
-                          {h.icon}
-                        </div>
-                        <p className="font-semibold text-gray-900 mb-1.5">{h.title}</p>
-                        <p className="text-sm text-gray-500 leading-relaxed">{h.text}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
             </section>
 
@@ -293,6 +293,35 @@ export default async function Page() {
               </section>
             )}
 
+            {/* ── Warum JK? (Bild + Karten, mehr Academy-Atmosphäre) ─────────── */}
+            <section className="py-20 px-6 bg-white">
+              <div className="max-w-5xl mx-auto">
+                <div className="text-center mb-12">
+                  <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Warum JK?</p>
+                  <h2 className="text-3xl font-bold text-gray-900">Für Spieler, die mehr wollen</h2>
+                </div>
+                <div className="lg:grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-10 lg:items-stretch">
+                  <div className="relative rounded-2xl overflow-hidden h-72 sm:h-96 lg:h-auto mb-8 lg:mb-0">
+                    <Image src="/jk/team.jpg" alt="" fill unoptimized className="object-cover" />
+                  </div>
+                  <div className="grid gap-5 sm:grid-cols-3 lg:grid-cols-1">
+                    {HIGHLIGHTS.map(h => (
+                      <div
+                        key={h.title}
+                        className="rounded-2xl border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                      >
+                        <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-gray-700">
+                          {h.icon}
+                        </div>
+                        <p className="font-semibold text-gray-900 mb-1.5">{h.title}</p>
+                        <p className="text-sm text-gray-500 leading-relaxed">{h.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+
             {/* ── Ablauf (kompakt, keine dominante Sektion mehr) ──────────── */}
             <section className="py-12 px-6 bg-white border-t border-gray-100">
               <div className="max-w-5xl mx-auto">
@@ -320,7 +349,7 @@ export default async function Page() {
             {/* ── Mitgliedschaft ───────────────────────────────────────────
                 Ehrlich und ausdrücklich: keine Online-Anmeldung/Mitgliedschaft
                 heute möglich, nur ein Interesse-Kontakt per Mailto. */}
-            <section className="py-16 px-6 bg-gray-50">
+            <section id="mitgliedschaft" className="py-16 px-6 bg-gray-50">
               <div className="max-w-5xl mx-auto">
                 <div className="rounded-2xl border-2 border-[var(--brand-accent)] bg-white p-8 sm:p-10 text-center max-w-2xl mx-auto">
                   <div className="relative w-16 h-16 rounded-full overflow-hidden mx-auto mb-4 ring-2 ring-[var(--brand-accent)]">
@@ -331,6 +360,16 @@ export default async function Page() {
                     Du möchtest Teil der JK Performance Academy werden? Die Mitgliedschaft ist aktuell in Vorbereitung.
                     Schreib uns bei Interesse – wir informieren dich, sobald der Prozess startet.
                   </p>
+                  {MEMBERSHIP_BENEFITS.length > 0 && (
+                    <ul className="text-left space-y-2 mb-8 max-w-sm mx-auto">
+                      {MEMBERSHIP_BENEFITS.map(b => (
+                        <li key={b} className="flex items-start gap-2.5 text-sm text-gray-700">
+                          <span className="w-4 h-4 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5">✓</span>
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   <a
                     href={`mailto:${CLUB_CONFIG.contactEmail}?subject=${encodeURIComponent('Interesse an Mitgliedschaft')}`}
                     className="inline-block bg-gray-900 text-white font-semibold px-7 py-3.5 rounded-xl hover:bg-black transition-colors"
@@ -587,10 +626,21 @@ export default async function Page() {
           </div>
           <div className="space-y-3">
             {FAQ_ITEMS.map(faq => (
-              <div key={faq.q} className="rounded-xl border border-gray-200 bg-white px-5 py-4">
-                <p className="font-semibold text-gray-900 text-sm mb-1.5">{faq.q}</p>
-                <p className="text-sm text-gray-500 leading-relaxed">{faq.a}</p>
-              </div>
+              <details key={faq.q} className="group rounded-xl border border-gray-200 bg-white px-5 py-4">
+                <summary className="flex items-center justify-between gap-3 font-semibold text-gray-900 text-sm cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                  {faq.q}
+                  <svg
+                    className="w-4 h-4 shrink-0 text-gray-400 transition-transform [&[open]]:rotate-180 group-open:rotate-180"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </summary>
+                <p className="text-sm text-gray-500 leading-relaxed mt-2.5">{faq.a}</p>
+              </details>
             ))}
           </div>
         </div>

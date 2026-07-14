@@ -59,6 +59,13 @@ export interface FaqEntry {
   a: string
 }
 
+/** Ein Slide der Hero-Slideshow — Bild oder Video, gleiche Darstellung im Karussell. */
+export interface MediaEntry {
+  type: 'image' | 'video'
+  src: string
+  alt?: string
+}
+
 const ACTIVE_CLUB = process.env.NEXT_PUBLIC_ACTIVE_CLUB === 'jk' ? 'jk' : 'ksv'
 
 const DEFAULT_CLUB_CONFIG: ClubIdentity = {
@@ -158,6 +165,10 @@ const DEFAULT_FAQ_ITEMS: FaqEntry[] = [
   },
 ]
 
+// Leer für KSV — Mitgliedschaft/Slideshow sind bisher JK-spezifische Draft-Konzepte.
+const DEFAULT_MEMBERSHIP_BENEFITS: string[] = []
+const DEFAULT_SLIDESHOW_ITEMS: MediaEntry[] = []
+
 const DEFAULT_VENUE_INFO_TEXT =
   'Kunstrasen am Parkstadion in Baunatal. Bei Bedarf weichen wir auf Ausweichplätze aus, z. B. die Sportanlage am Baunsberg.'
 
@@ -192,3 +203,9 @@ export const VENUE_INFO_TEXT: string | null =
 
 export const FIRST_TEAM_INFO_TEXT: string | null =
   ACTIVE_CLUB === 'jk' ? JK_OVERRIDES.FIRST_TEAM_INFO_TEXT : DEFAULT_FIRST_TEAM_INFO_TEXT
+
+export const MEMBERSHIP_BENEFITS: string[] =
+  ACTIVE_CLUB === 'jk' ? JK_OVERRIDES.MEMBERSHIP_BENEFITS : DEFAULT_MEMBERSHIP_BENEFITS
+
+export const SLIDESHOW_ITEMS: MediaEntry[] =
+  ACTIVE_CLUB === 'jk' ? JK_OVERRIDES.SLIDESHOW_ITEMS : DEFAULT_SLIDESHOW_ITEMS

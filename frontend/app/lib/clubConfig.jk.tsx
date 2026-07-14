@@ -10,7 +10,7 @@
 // Der reale Trainingsanfrage-Flow ist als Folge-Ticket CP-JK-101
 // ("Training Inquiry Flow") vorgesehen — siehe page.tsx Formular-Fallback.
 
-import type { CampEntry, ClubIdentity, FaqEntry, HighlightEntry, ProgramEntry } from './clubConfig'
+import type { CampEntry, ClubIdentity, FaqEntry, HighlightEntry, MediaEntry, ProgramEntry } from './clubConfig'
 
 export const JK_OVERRIDES: {
   CLUB_CONFIG: ClubIdentity
@@ -22,6 +22,8 @@ export const JK_OVERRIDES: {
   FAQ_ITEMS: FaqEntry[]
   VENUE_INFO_TEXT: string | null
   FIRST_TEAM_INFO_TEXT: string | null
+  MEMBERSHIP_BENEFITS: string[]
+  SLIDESHOW_ITEMS: MediaEntry[]
 } = {
   CLUB_CONFIG: {
     name: 'JK Performance Academy',
@@ -192,4 +194,29 @@ export const JK_OVERRIDES: {
   // statt KSV-spezifischen Text zu übernehmen.
   VENUE_INFO_TEXT: null,
   FIRST_TEAM_INFO_TEXT: null,
+
+  // TODO(jk-content): echte Mitgliedschafts-Vorteile von Jan einholen — aktuell plausible
+  // Platzhalter, damit die Mitgliedschaft-Sektion nicht leer wirkt.
+  MEMBERSHIP_BENEFITS: [
+    'Bevorzugter Zugang zu Camp-Plätzen bei unseren Partnervereinen',
+    'Vergünstigte Konditionen für Training und Camps',
+    'Eigenes Spielerprofil mit Trainings- und Entwicklungsdokumentation',
+    'Direkter Draht zu unseren Trainern für individuelles Feedback',
+  ],
+
+  // Nur Bild-Slides zum Start — Video-Slides werden ergänzt, sobald echtes
+  // Videomaterial von Jan vorliegt (gleicher MediaEntry-Typ, type: 'video').
+  //
+  // TODO(jk-content): Bildrechte/Einwilligungen für die abgebildeten Jugendlichen sind laut
+  // jk-client-intake.md noch NICHT bestätigt (gleiche Spieler wie in hero.jpg/team.jpg, die
+  // bereits live sind). Vor dem finalen Go-Live mit Jan explizit bestätigen lassen, sonst
+  // Slides 2/3/6 gegen Logo-/Solo-Motive austauschen.
+  SLIDESHOW_ITEMS: [
+    { type: 'image', src: '/jk/slideshow/01.jpg', alt: 'JK Performance Academy' },
+    { type: 'image', src: '/jk/slideshow/02.jpg', alt: 'JK Performance Academy Team' },
+    { type: 'image', src: '/jk/slideshow/03.jpg', alt: 'JK Performance Academy Team' },
+    { type: 'image', src: '/jk/slideshow/04.jpg', alt: 'Trainer JK Performance Academy' },
+    { type: 'image', src: '/jk/slideshow/05.jpg', alt: 'JK Performance Academy Training' },
+    { type: 'image', src: '/jk/slideshow/06.jpg', alt: 'JK Performance Academy Team' },
+  ],
 }

@@ -17,6 +17,13 @@ Routing: Path-basiert (`/[org-slug]/...`) für MVP, Subdomain später.
 **Produktionsstatus:** KSV Baunatal läuft live. Änderungen dürfen den Betrieb nicht
 unterbrechen. Datenschutz ist kritisch — das System verarbeitet Kinderdaten (DSGVO Art. 9).
 
+**Zweiter Kunde — JK Performance Academy (Draft):** Landingpage-Vorschau auf eigenem
+Vercel-Projekt (`jkperformance`), Branch `cp-s308-light-jk-draft`, gesteuert über
+`NEXT_PUBLIC_ACTIVE_CLUB=jk`. Kein eigener Backend-Schreibpfad, kein produktiver
+Kunde — reines Frontend-Preview auf geteiltem Backend/DB. Details:
+[`docs/customers/jk-performance.md`](docs/customers/jk-performance.md),
+technischer Zusammenhang mit KSV: [`docs/architecture/system-overview.md`](docs/architecture/system-overview.md).
+
 ---
 
 ## Stack & Versionen
@@ -146,6 +153,13 @@ Wichtige Spalten:
 - **Nichts committen ohne Bestätigung** des Entwicklers
 - **Ein Thema, ein Commit** — keine Massen-Refactorings
 - Tests schreiben für jeden neuen Code-Pfad, der DB oder externe Services anfasst
+- **Keine direkte Arbeit auf `main`** — jede Änderung auf einem eigenen Feature-Branch
+- **Ein klarer Auftrag/ein Issue pro Branch** — kein Sammel-Branch für mehrere unabhängige Themen
+- **Vor jedem Merge beide Club-Konfigurationen prüfen** (`NEXT_PUBLIC_ACTIVE_CLUB` unset/`ksv`
+  **und** `jk`) — geteilter Code kann Regressionen auf der jeweils anderen Seite verursachen
+- **DB-Migrationen und neue Dependencies im PR ausdrücklich melden**, nicht stillschweigend
+  mitschleifen — beides braucht eine bewusste Entscheidung (Migration-Reihenfolge, Backup;
+  neue Dependency-Notwendigkeit)
 
 ### Sicherheitspflichten (DSGVO!)
 
@@ -154,6 +168,9 @@ Wichtige Spalten:
 - Keine Kinderdaten in Logs ausgeben
 - Keine Daten an Dritte ohne explizite Rechtsgrundlage
 - Bei DB-Schema-Änderungen: Auswirkung auf Datenschutzerklärung prüfen
+- **Keine produktiven Datenbanken für Tests verwenden** — niemals gegen die echte,
+  in `DATABASE_URL` konfigurierte Produktions-DB testen (das betrifft auch `test_db.py`,
+  das aktuell direkt gegen die konfigurierte `DATABASE_URL` verbindet)
 
 ### Hardcoded-Strings während Phase 1
 
@@ -279,8 +296,12 @@ Keine Multi-Tenant-Änderungen an DB oder Auth.
 
 ## Lokale Entwicklung
 
+**Kanonische Python-Umgebung: `backend/.venv`.** Das Root-Verzeichnis `venv/` existiert
+zwar noch im Repo, wird aber von keinem Skript und keiner Dokumentation referenziert
+(`start-dev.ps1` nutzt ausschließlich `backend/.venv`) — nicht verwenden.
+
 ```bash
-# Backend (Voraussetzung: Python venv aktiv)
+# Backend (Voraussetzung: Python venv aktiv, siehe oben)
 cd backend
 pip install -r requirements.txt
 uvicorn main:app --reload

@@ -1,0 +1,86 @@
+name: CI
+
+# Minimale CI: Lint/Typecheck/Build (Frontend, beide Club-Configs) + Syntax-Check (Backend).
+# Bewusst KEIN Deployment, KEIN pytest/ruff/mypy, KEINE DB-Verbindung — siehe README/CLAUDE.md
+# zum aktuellen Stand fehlender automatisierter Tests (TODO.md T09).
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (${{ matrix.club }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        club: [ksv, jk]
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      # Einziger Schalter zwischen den beiden Club-Konfigurationen (clubConfig.tsx /
+      # clubConfig.jk.tsx) — siehe docs/architecture/system-overview.md. Kein Secret,
+      # keine echten Backend-/Produktivwerte nötig: fetchCampConfig() fängt einen
+      # nicht erreichbaren Backend-Host (localhost:8000, Default) ab und fällt auf
+      # "Preis auf Anfrage" zurück (frontend/app/page.tsx, try/catch um fetchCampConfig).
+      NEXT_PUBLIC_ACTIVE_CLUB: ${{ matrix.club }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v7
+        with:
+          # Kein .nvmrc/engines-Feld im Repo vorhanden — orientiert an der lokal
+          # verifizierten, funktionierenden Dev-Umgebung (node --version: v24.11.0).
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Dependencies installieren
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Python einrichten
+        uses: actions/setup-python@v6
+        with:
+          # Kein .python-version/runtime.txt im Repo, render.yaml pinnt keine Version.
+          # Orientiert an der lokal verifizierten backend/.venv-Umgebung (Python 3.13.3).
+          python-version: "3.13"
+
+      - name: Dependencies installieren
+        run: pip install -r requirements.txt
+
+      - name: Syntax-Check
+        # Reiner Parse-Check, keine Imports/Ausführung — verbindet sich nicht zu einer
+        # Datenbank. test_db.py bewusst nicht Teil dieses Jobs (siehe CLAUDE.md:
+        # "Keine produktiven Datenbanken für Tests verwenden").
+        run: python -m py_compile main.py camp_config.py

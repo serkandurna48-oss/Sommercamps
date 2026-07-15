@@ -206,17 +206,20 @@ export const JK_OVERRIDES: {
 
   // Nur Bild-Slides zum Start — Video-Slides werden ergänzt, sobald echtes
   // Videomaterial von Jan vorliegt (gleicher MediaEntry-Typ, type: 'video').
+  // Bewusst kuratiert: 5 klar unterschiedliche Motive (2x Team, Trainer mit Ball,
+  // Trainer-Portrait, Trikot-Detail) statt Serienbild-Duplikate — keine Wiederholung
+  // des Hero-Fotos, keine reinen Logo-Grafiken (siehe MediaSlideshow: Hochformat-Fotos
+  // werden per Blur-Backdrop vollständig gezeigt statt hart beschnitten).
   //
   // TODO(jk-content): Bildrechte/Einwilligungen für die abgebildeten Jugendlichen sind laut
   // jk-client-intake.md noch NICHT bestätigt (gleiche Spieler wie in hero.jpg/team.jpg, die
   // bereits live sind). Vor dem finalen Go-Live mit Jan explizit bestätigen lassen, sonst
-  // Slides 2/3/6 gegen Logo-/Solo-Motive austauschen.
+  // Slides 1/2 gegen Solo-/Detail-Motive austauschen.
   SLIDESHOW_ITEMS: [
-    { type: 'image', src: '/jk/slideshow/01.jpg', alt: 'JK Performance Academy' },
+    { type: 'image', src: '/jk/slideshow/01.jpg', alt: 'JK Performance Academy Team' },
     { type: 'image', src: '/jk/slideshow/02.jpg', alt: 'JK Performance Academy Team' },
-    { type: 'image', src: '/jk/slideshow/03.jpg', alt: 'JK Performance Academy Team' },
+    { type: 'image', src: '/jk/slideshow/03.jpg', alt: 'Trainer JK Performance Academy mit Ball' },
     { type: 'image', src: '/jk/slideshow/04.jpg', alt: 'Trainer JK Performance Academy' },
-    { type: 'image', src: '/jk/slideshow/05.jpg', alt: 'JK Performance Academy Training' },
-    { type: 'image', src: '/jk/slideshow/06.jpg', alt: 'JK Performance Academy Team' },
+    { type: 'image', src: '/jk/slideshow/05.jpg', alt: 'JK Performance Academy Trikot' },
   ],
 }

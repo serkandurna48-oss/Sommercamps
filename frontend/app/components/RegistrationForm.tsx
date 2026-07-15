@@ -453,7 +453,7 @@ export default function RegistrationForm({ config }: { config: CampConfig }) {
               type="button"
               onClick={() => handleStripeCheckout(confirmed.registration_token)}
               disabled={checkoutLoading}
-              className="w-full rounded-xl bg-black text-white text-sm font-semibold py-3 hover:bg-gray-800 transition-colors disabled:opacity-60"
+              className="w-full rounded-xl bg-black text-white text-sm font-semibold py-3 hover:bg-gray-800 transition-colors disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
             >
               {checkoutLoading ? 'Weiterleitung…' : 'Jetzt online bezahlen'}
             </button>
@@ -501,7 +501,7 @@ export default function RegistrationForm({ config }: { config: CampConfig }) {
 
         <button
           onClick={() => setConfirmed(null)}
-          className="w-full text-sm text-gray-500 hover:text-gray-800 border border-gray-200 rounded-xl py-2.5 transition-colors hover:border-gray-300"
+          className="w-full text-sm text-gray-500 hover:text-gray-800 border border-gray-200 rounded-xl py-2.5 transition-colors hover:border-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
         >
           Weiteres Kind anmelden
         </button>
@@ -544,7 +544,7 @@ export default function RegistrationForm({ config }: { config: CampConfig }) {
 
         <Link
           href="/"
-          className="inline-block w-full bg-gray-900 text-white font-semibold py-3 rounded-xl hover:bg-black transition-colors text-sm"
+          className="inline-block w-full bg-gray-900 text-white font-semibold py-3 rounded-xl hover:bg-black transition-colors text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
         >
           Zurück zur Startseite
         </Link>
@@ -676,7 +676,7 @@ export default function RegistrationForm({ config }: { config: CampConfig }) {
             ].map(opt => (
               <label
                 key={opt.value}
-                className={`flex items-center justify-center text-center border-2 rounded-xl px-3 py-3 cursor-pointer transition-all ${
+                className={`flex items-center justify-center text-center border-2 rounded-xl px-3 py-3 cursor-pointer transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-black has-[:focus-visible]:ring-offset-2 ${
                   opt.active
                     ? 'border-gray-900 bg-gray-900 text-white'
                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
@@ -733,7 +733,7 @@ export default function RegistrationForm({ config }: { config: CampConfig }) {
         <button
           type="submit"
           disabled={isPending}
-          className="w-full bg-gray-900 hover:bg-black disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors text-base shadow-sm"
+          className="w-full bg-gray-900 hover:bg-black active:bg-black disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors text-base shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
         >
           {isPending ? 'Wird gesendet …' : 'Verbindlich anmelden'}
         </button>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import ClubLogo from './components/ClubLogo'
 import MediaSlideshow from './components/MediaSlideshow'
 import RegistrationForm from './components/RegistrationForm'
+import Reveal from './components/Reveal'
 import { type CampConfig, fetchCampConfig } from './lib/campConfig'
 import {
   CLUB_CONFIG,
@@ -22,17 +23,26 @@ import Image from 'next/image'
 
 // Clubs mit PROGRAMS (z. B. JK) bieten mehr als "das eine Sommercamp" an,
 // daher generische Formulierung statt "Sommercamp 2026" in Titel/Beschreibung.
-export const metadata: Metadata = PROGRAMS.length > 0
-  ? {
-      title: `${CLUB_CONFIG.subtitle} – ${CLUB_CONFIG.name}`,
-      description:
-        `Events & Programme der ${CLUB_CONFIG.subtitle} ${CLUB_CONFIG.name} – individuelle Spielerentwicklung für Kinder und Jugendliche.`,
-    }
-  : {
-      title: `${CLUB_CONFIG.subtitle} Sommercamp 2026 – ${CLUB_CONFIG.name}`,
-      description:
-        `Melde dein Kind jetzt für das Sommercamp 2026 der ${CLUB_CONFIG.subtitle} ${CLUB_CONFIG.name} an. 4 Tage professionelles Training für Kinder von 5–12 Jahren.`,
-    }
+const metaTitle = PROGRAMS.length > 0
+  ? `${CLUB_CONFIG.subtitle} – ${CLUB_CONFIG.name}`
+  : `${CLUB_CONFIG.subtitle} Sommercamp 2026 – ${CLUB_CONFIG.name}`
+const metaDescription = PROGRAMS.length > 0
+  ? `Events & Programme der ${CLUB_CONFIG.subtitle} ${CLUB_CONFIG.name} – individuelle Spielerentwicklung für Kinder und Jugendliche.`
+  : `Melde dein Kind jetzt für das Sommercamp 2026 der ${CLUB_CONFIG.subtitle} ${CLUB_CONFIG.name} an. 4 Tage professionelles Training für Kinder von 5–12 Jahren.`
+
+// Kein metadataBase gesetzt (Domain für JK noch nicht final) — deshalb bewusst kein
+// og:image mit relativer URL, das würde Next zu einer localhost-Warnung im Build führen.
+export const metadata: Metadata = {
+  title: metaTitle,
+  description: metaDescription,
+  openGraph: {
+    title: metaTitle,
+    description: metaDescription,
+    siteName: CLUB_CONFIG.name,
+    locale: 'de_DE',
+    type: 'website',
+  },
+}
 
 export default async function Page() {
   let config: CampConfig | null = null
@@ -59,22 +69,39 @@ export default async function Page() {
       className="min-h-screen bg-white text-gray-900 flex flex-col"
       style={{ '--brand-accent': CLUB_CONFIG.accentColor ?? '#CC0000' } as CSSProperties}
     >
+      {/* Strukturierte Daten für Suchmaschinen — Werte kommen ausschließlich aus
+          clubConfig, keine Nutzereingaben. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'SportsActivityLocation',
+            name: CLUB_CONFIG.name,
+            description: metaDescription,
+            areaServed: CLUB_CONFIG.venueName,
+          }),
+        }}
+      />
 
       {/* ── Navbar ──────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <ClubLogo />
-            <div>
+            {/* Vereinsname erst ab sm sichtbar — verlässlicher als Truncate-Wettlauf
+                gegen den Button auf sehr schmalen Screens (< 400px). */}
+            <div className="hidden sm:block">
               <p className="font-bold text-gray-900 text-base leading-tight">{CLUB_CONFIG.name}</p>
               <p className="text-gray-400 text-xs tracking-widest uppercase">{CLUB_CONFIG.subtitle}</p>
             </div>
           </div>
           <a
             href="#anmeldung"
-            className="bg-black text-white text-sm font-semibold px-5 py-2 rounded-xl hover:opacity-90 transition-opacity"
+            className="bg-black text-white text-sm font-semibold px-4 sm:px-5 py-2 rounded-xl hover:opacity-90 active:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2 shrink-0 whitespace-nowrap"
           >
-            {PROGRAMS.length > 0 ? 'Trainingsanfrage stellen' : 'Jetzt anmelden'}
+            <span className="sm:hidden">{PROGRAMS.length > 0 ? 'Anfrage' : 'Anmelden'}</span>
+            <span className="hidden sm:inline">{PROGRAMS.length > 0 ? 'Trainingsanfrage stellen' : 'Jetzt anmelden'}</span>
           </a>
         </div>
       </header>
@@ -103,7 +130,7 @@ export default async function Page() {
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-accent)] inline-block" />
                 {PROGRAMS.length > 0 ? 'Aktuelle Sommercamps' : 'Sommercamps 2026'} · {CLUB_CONFIG.name}
               </span>
-              <h1 className={`text-4xl ${PROGRAMS.length > 0 ? 'sm:text-5xl' : 'sm:text-6xl'} font-extrabold leading-[1.1] tracking-tight mb-6`}>
+              <h1 className={`text-4xl ${PROGRAMS.length > 0 ? 'sm:text-5xl lg:text-6xl' : 'sm:text-6xl'} font-extrabold leading-[1.1] tracking-tight mb-6`}>
                 {PROGRAMS.length > 0 && CLUB_CONFIG.heroTagline ? (
                   CLUB_CONFIG.heroTagline
                 ) : (
@@ -121,48 +148,50 @@ export default async function Page() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <a
                   href="#anmeldung"
-                  className="bg-white text-gray-900 font-bold px-8 py-3.5 rounded-xl hover:bg-gray-100 transition-colors text-center shrink-0"
+                  className="bg-white text-gray-900 font-bold px-8 py-3.5 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors text-center shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
                 >
                   {PROGRAMS.length > 0 ? 'Trainingsanfrage stellen' : 'Jetzt Platz sichern'}
                 </a>
                 <a
                   href="#termine"
-                  className="bg-white/10 text-white font-semibold px-8 py-3.5 rounded-xl hover:bg-white/15 transition-colors text-center shrink-0"
+                  className="border border-white/40 bg-white/5 text-white font-semibold px-8 py-3.5 rounded-xl hover:bg-white/15 hover:border-white/60 active:bg-white/20 transition-colors text-center shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
                 >
                   {PROGRAMS.length > 0 ? 'Aktuelle Sommercamps ansehen' : 'Termine ansehen'}
                 </a>
-                {PROGRAMS.length > 0 && (
-                  <a
-                    href="#mitgliedschaft"
-                    className="bg-white/10 text-white font-semibold px-8 py-3.5 rounded-xl hover:bg-white/15 transition-colors text-center shrink-0"
-                  >
-                    Mitgliedschaft
-                  </a>
-                )}
               </div>
 
               {PROGRAMS.length > 0 && (
                 <p className="mt-4 text-xs sm:text-sm text-gray-400">
                   Für Spielerinnen und Spieler · Individuelle Spielerentwicklung · Training in deiner Region
+                  {' · '}
+                  <a
+                    href="#mitgliedschaft"
+                    className="underline underline-offset-2 hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-1"
+                  >
+                    Interesse an Mitgliedschaft?
+                  </a>
                 </p>
               )}
 
-              {/* Schnellfakten */}
-              <div className="mt-12 pt-8 border-t border-white/10 grid grid-cols-2 sm:grid-cols-5 gap-6">
+              {/* Schnellfakten. PROGRAMS-Zweig zeigt bewusst keinen Preis: campPrice kommt
+                  aus dem geteilten KSV-Backend (/config) und hat keinen Bezug zu JKs
+                  gestaffelten Camp-Preisen (149 €/169 € je Camp, sonst "Auf Anfrage"). */}
+              <div className={`mt-12 pt-8 border-t border-white/10 grid grid-cols-2 ${PROGRAMS.length > 0 ? 'sm:grid-cols-4' : 'sm:grid-cols-5'} gap-6`}>
                 {(PROGRAMS.length > 0
                   ? [
                       { value: String(PROGRAMS.length), label: 'Programme & Formate' },
-                      { value: 'Flexibel',   label: 'Trainingsformate' },
+                      { value: String(featuredPrograms.length), label: 'Aktuelle Camps' },
+                      { value: 'Flexibel', label: 'Trainingsformate' },
+                      { value: CLUB_CONFIG.venueName, label: 'Standort' },
                     ]
                   : [
                       { value: '3',          label: 'Camp-Termine 2026' },
                       { value: '4 Tage',     label: 'je Camp' },
                       { value: '5 – 12',     label: 'Jahre' },
+                      { value: campPrice,   label: 'Campbeitrag' },
+                      { value: CLUB_CONFIG.venueName, label: 'Standort' },
                     ]
-                ).concat([
-                  { value: campPrice,   label: 'Campbeitrag' },
-                  { value: CLUB_CONFIG.venueName, label: 'Standort' },
-                ]).map(f => (
+                ).map(f => (
                   <div key={f.label}>
                     <p className="text-xl sm:text-2xl font-bold text-white tabular-nums">{f.value}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{f.label}</p>
@@ -175,10 +204,16 @@ export default async function Page() {
 
         {PROGRAMS.length > 0 ? (
           <>
-            {SLIDESHOW_ITEMS.length > 0 && <MediaSlideshow items={SLIDESHOW_ITEMS} />}
+            {/* Full-bleed, kein Card-Wrapper: setzt die Foto-Erzählung aus dem Hero
+                nahtlos fort statt sie in einer weißen Box abzubrechen. */}
+            {SLIDESHOW_ITEMS.length > 0 && (
+              <section className="bg-gray-950">
+                <MediaSlideshow items={SLIDESHOW_ITEMS} />
+              </section>
+            )}
 
             {/* ── Aktuelle Sommercamps (hochgezogen, navy für Energie/Kontrast) ── */}
-            <section id="termine" className="relative overflow-hidden py-20 px-6 bg-gray-950 text-white">
+            <section id="termine" className="relative overflow-hidden py-20 px-6 bg-gray-950 text-white scroll-mt-20">
               <div className="absolute inset-0 z-0">
                 <Image src="/jk/camp.jpg" alt="" fill unoptimized className="object-cover object-top" />
                 <div className="absolute inset-0 bg-gray-950/70" />
@@ -203,11 +238,11 @@ export default async function Page() {
                 )}
 
                 {featuredPrograms.length > 0 && (
-                  <div className="grid sm:grid-cols-2 gap-5">
+                  <Reveal className="grid sm:grid-cols-2 gap-5">
                     {featuredPrograms.map(p => (
                       <div
                         key={p.title}
-                        className="bg-white text-gray-900 rounded-2xl border-2 border-[var(--brand-accent)] p-7 flex flex-col gap-3 hover:shadow-lg transition-shadow"
+                        className="bg-white text-gray-900 rounded-2xl border-2 border-[var(--brand-accent)] shadow-md p-7 flex flex-col gap-3 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
                       >
                         <div className="flex items-center justify-between gap-3">
                           <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md w-fit">
@@ -249,13 +284,13 @@ export default async function Page() {
                         )}
                         <a
                           href="#anmeldung"
-                          className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
+                          className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black active:bg-gray-800 transition-colors text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2"
                         >
                           Jetzt teilnehmen →
                         </a>
                       </div>
                     ))}
-                  </div>
+                  </Reveal>
                 )}
               </div>
             </section>
@@ -272,7 +307,7 @@ export default async function Page() {
                     {otherPrograms.map(p => (
                       <div
                         key={p.title}
-                        className="bg-white rounded-2xl border border-gray-200 p-7 flex flex-col gap-3 hover:shadow-md transition-shadow"
+                        className="bg-white rounded-2xl border border-gray-200 shadow-sm p-7 flex flex-col gap-3 hover:shadow-lg hover:-translate-y-1 hover:border-gray-300 transition-all duration-300"
                       >
                         <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md w-fit">
                           {p.tag ?? p.category}
@@ -282,7 +317,7 @@ export default async function Page() {
                         <p className="text-[var(--brand-accent)] font-semibold text-sm">{p.cadence}</p>
                         <a
                           href="#anmeldung"
-                          className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
+                          className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black active:bg-gray-800 transition-colors text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2"
                         >
                           Angebot anfragen →
                         </a>
@@ -300,7 +335,7 @@ export default async function Page() {
                   <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Warum JK?</p>
                   <h2 className="text-3xl font-bold text-gray-900">Für Spieler, die mehr wollen</h2>
                 </div>
-                <div className="lg:grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-10 lg:items-stretch">
+                <Reveal className="lg:grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-10 lg:items-stretch">
                   <div className="relative rounded-2xl overflow-hidden h-72 sm:h-96 lg:h-auto mb-8 lg:mb-0">
                     <Image src="/jk/team.jpg" alt="" fill unoptimized className="object-cover" />
                   </div>
@@ -308,9 +343,9 @@ export default async function Page() {
                     {HIGHLIGHTS.map(h => (
                       <div
                         key={h.title}
-                        className="rounded-2xl border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                        className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 hover:border-gray-300 transition-all duration-300"
                       >
-                        <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-gray-700">
+                        <div className="w-11 h-11 bg-[var(--brand-accent)]/10 rounded-xl flex items-center justify-center mb-4 text-[var(--brand-accent)]">
                           {h.icon}
                         </div>
                         <p className="font-semibold text-gray-900 mb-1.5">{h.title}</p>
@@ -318,7 +353,7 @@ export default async function Page() {
                       </div>
                     ))}
                   </div>
-                </div>
+                </Reveal>
               </div>
             </section>
 
@@ -349,9 +384,9 @@ export default async function Page() {
             {/* ── Mitgliedschaft ───────────────────────────────────────────
                 Ehrlich und ausdrücklich: keine Online-Anmeldung/Mitgliedschaft
                 heute möglich, nur ein Interesse-Kontakt per Mailto. */}
-            <section id="mitgliedschaft" className="py-16 px-6 bg-gray-50">
+            <section id="mitgliedschaft" className="py-16 px-6 bg-gray-50 scroll-mt-20">
               <div className="max-w-5xl mx-auto">
-                <div className="rounded-2xl border-2 border-[var(--brand-accent)] bg-white p-8 sm:p-10 text-center max-w-2xl mx-auto">
+                <Reveal className="rounded-2xl border-2 border-[var(--brand-accent)] bg-white p-8 sm:p-10 text-center max-w-2xl mx-auto shadow-sm hover:shadow-md transition-shadow duration-300">
                   <div className="relative w-16 h-16 rounded-full overflow-hidden mx-auto mb-4 ring-2 ring-[var(--brand-accent)]">
                     <Image src="/jk/training.jpg" alt="" fill unoptimized className="object-cover" />
                   </div>
@@ -372,11 +407,11 @@ export default async function Page() {
                   )}
                   <a
                     href={`mailto:${CLUB_CONFIG.contactEmail}?subject=${encodeURIComponent('Interesse an Mitgliedschaft')}`}
-                    className="inline-block bg-gray-900 text-white font-semibold px-7 py-3.5 rounded-xl hover:bg-black transition-colors"
+                    className="inline-block bg-gray-900 text-white font-semibold px-7 py-3.5 rounded-xl hover:bg-black active:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2"
                   >
                     Interesse an Mitgliedschaft melden
                   </a>
-                </div>
+                </Reveal>
               </div>
             </section>
           </>
@@ -393,9 +428,9 @@ export default async function Page() {
                   {HIGHLIGHTS.map(h => (
                     <div
                       key={h.title}
-                      className="rounded-2xl border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                      className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 hover:border-gray-300 transition-all duration-300"
                     >
-                      <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-gray-700">
+                      <div className="w-11 h-11 bg-[var(--brand-accent)]/10 rounded-xl flex items-center justify-center mb-4 text-[var(--brand-accent)]">
                         {h.icon}
                       </div>
                       <p className="font-semibold text-gray-900 mb-1.5">{h.title}</p>
@@ -442,7 +477,7 @@ export default async function Page() {
             </section>
 
             {/* ── Termine ─────────────────────────────────────────────────── */}
-            <section id="termine" className="py-20 px-6 bg-gray-50">
+            <section id="termine" className="py-20 px-6 bg-gray-50 scroll-mt-20">
               <div className="max-w-5xl mx-auto">
                 <div className="text-center mb-12">
                   <p className="text-[var(--brand-accent)] text-sm font-semibold tracking-widest uppercase mb-2">Wann findet es statt</p>
@@ -468,7 +503,7 @@ export default async function Page() {
                   {CAMPS.map(c => (
                     <div
                       key={c.label}
-                      className="bg-white rounded-2xl border border-gray-200 p-7 flex flex-col gap-5 hover:shadow-md transition-shadow"
+                      className="bg-white rounded-2xl border border-gray-200 shadow-sm p-7 flex flex-col gap-5 hover:shadow-lg hover:-translate-y-1 hover:border-gray-300 transition-all duration-300"
                     >
                       <div>
                         <span className="inline-block bg-gray-100 text-gray-500 text-xs font-semibold tracking-wider uppercase px-2.5 py-1 rounded-md mb-3">
@@ -481,7 +516,7 @@ export default async function Page() {
                       </div>
                       <a
                         href={`/?week=${encodeURIComponent(c.value)}#anmeldung`}
-                        className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black transition-colors text-center"
+                        className="mt-auto bg-gray-900 text-white text-sm font-semibold px-4 py-3 rounded-xl hover:bg-black active:bg-gray-800 transition-colors text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2"
                       >
                         Jetzt anmelden →
                       </a>
@@ -494,7 +529,7 @@ export default async function Page() {
         )}
 
         {/* ── Formular ────────────────────────────────────────────────── */}
-        <section id="anmeldung" className="py-20 px-6 bg-white">
+        <section id="anmeldung" className="py-20 px-6 bg-white scroll-mt-20">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-10 max-w-xl mx-auto">
               {PROGRAMS.length > 0 ? (
@@ -527,19 +562,48 @@ export default async function Page() {
                 ) : PROGRAMS.length > 0 ? (
                   // Reines Draft-Preview: es gibt noch kein echtes Anfrageformular.
                   // Realer Trainingsanfrage-Flow ist als Folge-Ticket CP-JK-101
-                  // ("Training Inquiry Flow") vorgesehen.
-                  <div className="rounded-xl bg-amber-50 border border-amber-200 px-5 py-6 text-sm text-amber-800 space-y-2">
-                    <p className="font-semibold">Trainingsanfragen sind hier bald direkt online möglich.</p>
-                    <p className="text-amber-700 leading-relaxed">
-                      Kontakt per Instagram/WhatsApp ist in Vorbereitung.
+                  // ("Training Inquiry Flow") vorgesehen. Bis dahin: E-Mail als echter
+                  // Interims-CTA statt einer reinen "kommt bald"-Sackgasse.
+                  <div className="text-center py-4">
+                    <div className="w-14 h-14 rounded-2xl bg-[var(--brand-accent)]/10 text-[var(--brand-accent)] flex items-center justify-center mx-auto mb-5">
+                      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.5-1.185A8.959 8.959 0 0 1 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+                      </svg>
+                    </div>
+                    <p className="font-bold text-gray-900 text-lg mb-2">Trainingsanfragen bald direkt online möglich</p>
+                    <p className="text-gray-500 text-sm leading-relaxed max-w-sm mx-auto mb-7">
+                      Das Online-Formular ist gerade im Aufbau. Bis dahin melden wir uns persönlich,
+                      wenn du uns direkt schreibst.
                     </p>
+                    <div className="grid sm:grid-cols-3 gap-4 max-w-lg mx-auto mb-8 text-left">
+                      {[
+                        { step: '1', title: 'Nachricht senden', text: 'Per E-Mail an uns' },
+                        { step: '2', title: 'Wir melden uns', text: 'Meist innerhalb weniger Tage' },
+                        { step: '3', title: 'Loslegen', text: 'Programm & Termin abstimmen' },
+                      ].map(s => (
+                        <div key={s.step} className="flex items-start gap-2.5">
+                          <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 text-xs font-bold flex items-center justify-center shrink-0">{s.step}</span>
+                          <div>
+                            <p className="text-xs font-semibold text-gray-900">{s.title}</p>
+                            <p className="text-xs text-gray-400 leading-snug">{s.text}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <a
+                      href={`mailto:${CLUB_CONFIG.contactEmail}?subject=${encodeURIComponent('Trainingsanfrage')}`}
+                      className="inline-block bg-gray-900 text-white text-sm font-semibold px-7 py-3.5 rounded-xl hover:bg-black active:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2"
+                    >
+                      Anfrage per E-Mail senden
+                    </a>
+                    <p className="text-xs text-gray-400 mt-4">Kontakt per Instagram/WhatsApp ist zusätzlich in Vorbereitung.</p>
                   </div>
                 ) : (
                   <div className="rounded-xl bg-amber-50 border border-amber-200 px-5 py-6 text-sm text-amber-800 space-y-2">
                     <p className="font-semibold">Online-Anmeldung vorübergehend nicht verfügbar</p>
                     <p className="text-amber-700 leading-relaxed">
                       Bitte versuchen Sie es in wenigen Minuten erneut oder melden Sie sich direkt bei uns:{' '}
-                      <a href={`mailto:${CLUB_CONFIG.contactEmail}`} className="underline underline-offset-2 font-medium hover:opacity-70">
+                      <a href={`mailto:${CLUB_CONFIG.contactEmail}`} className="underline underline-offset-2 font-medium hover:opacity-70 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1">
                         {CLUB_CONFIG.contactEmail}
                       </a>
                     </p>
@@ -597,7 +661,7 @@ export default async function Page() {
                     ) : (
                       <>
                         {CLUB_CONFIG.contactName} – Leiter {CLUB_CONFIG.subtitle}<br />
-                        <a href={`mailto:${CLUB_CONFIG.contactEmail}`} className="text-gray-700 hover:underline break-all">
+                        <a href={`mailto:${CLUB_CONFIG.contactEmail}`} className="text-gray-700 hover:underline break-all rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-1">
                           {CLUB_CONFIG.contactEmail}
                         </a><br />
                         {CLUB_CONFIG.contactPhone}
@@ -626,8 +690,8 @@ export default async function Page() {
           </div>
           <div className="space-y-3">
             {FAQ_ITEMS.map(faq => (
-              <details key={faq.q} className="group rounded-xl border border-gray-200 bg-white px-5 py-4">
-                <summary className="flex items-center justify-between gap-3 font-semibold text-gray-900 text-sm cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+              <details key={faq.q} className="group rounded-xl border border-gray-200 bg-white px-5 py-4 open:border-gray-300 open:shadow-sm transition-shadow duration-300">
+                <summary className="flex items-center justify-between gap-3 font-semibold text-gray-900 text-sm cursor-pointer list-none [&::-webkit-details-marker]:hidden rounded-lg -mx-2 px-2 py-0.5 hover:text-[var(--brand-accent)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2">
                   {faq.q}
                   <svg
                     className="w-4 h-4 shrink-0 text-gray-400 transition-transform [&[open]]:rotate-180 group-open:rotate-180"
@@ -685,13 +749,13 @@ export default async function Page() {
               <div className="mt-3 flex flex-wrap gap-3">
                 <Link
                   href="/datenschutz"
-                  className="text-sm text-gray-400 underline underline-offset-2 hover:text-gray-200 transition-colors"
+                  className="text-sm text-gray-400 underline underline-offset-2 hover:text-gray-200 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
                 >
                   Datenschutzerklärung
                 </Link>
                 <Link
                   href="/impressum"
-                  className="text-sm text-gray-400 underline underline-offset-2 hover:text-gray-200 transition-colors"
+                  className="text-sm text-gray-400 underline underline-offset-2 hover:text-gray-200 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
                 >
                   Impressum
                 </Link>
@@ -699,7 +763,7 @@ export default async function Page() {
             </div>
           </div>
           <div className="border-t border-gray-800 pt-6 text-xs text-gray-600 text-center">
-            © 2026 {CLUB_CONFIG.name} e.V. · Alle Rechte vorbehalten
+            © 2026 {CLUB_CONFIG.name}{PROGRAMS.length > 0 ? '' : ' e.V.'} · Alle Rechte vorbehalten
           </div>
         </div>
       </footer>

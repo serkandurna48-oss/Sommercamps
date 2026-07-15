@@ -1,5 +1,13 @@
 # Deployment-Checkliste
 
+> **Führende Konfigurationsquelle:** Aktuell sind das **Vercel-Dashboard** und das
+> **Render-Dashboard** die maßgeblichen Orte für Produktions-Konfiguration, nicht die
+> Dateien in diesem Repository. `backend/render.yaml` bildet die tatsächliche Produktivkonfiguration
+> derzeit **nicht vollständig** ab (siehe Hinweis im Render-Abschnitt unten) — im Zweifel gilt
+> immer der jeweilige Dashboard-Stand, nicht `render.yaml`. Ein `vercel.json` existiert bewusst
+> nicht im Repo; Vercel-Projekteinstellungen (Root Directory, Branch, Env-Vars) liegen
+> ausschließlich im Dashboard.
+
 ## Supabase (bereits eingerichtet)
 
 - [ ] Schema ausgeführt: `backend/schema.sql` einmalig im Supabase SQL Editor ausführen
@@ -73,6 +81,29 @@
 - Framework Preset: Next.js (automatisch erkannt)
 - Build Command: `npm run build` (Standard)
 - Output Directory: `.next` (Standard)
+
+### Zweites Vercel-Projekt: JK Performance Academy (Draft)
+
+Es existiert ein **zweites, eigenständiges Vercel-Projekt** (`jkperformance`), das denselben
+Frontend-Code aus diesem Repository baut, aber von einem anderen Branch und mit einer
+zusätzlichen Env-Var:
+
+| Einstellung | KSV-Projekt | `jkperformance`-Projekt |
+|---|---|---|
+| Production Branch | `main` | `cp-s308-light-jk-draft` |
+| `NEXT_PUBLIC_API_URL` | Render-URL (geteiltes Backend) | dieselbe Render-URL |
+| `NEXT_PUBLIC_ACTIVE_CLUB` | nicht gesetzt | `jk` |
+
+**Aktueller Status: Draft/Preview**, nicht produktiv. Kein eigenes Backend, kein eigener
+Registrierungs-Schreibpfad — siehe [`docs/architecture/system-overview.md`](docs/architecture/system-overview.md)
+und [`docs/customers/jk-performance.md`](docs/customers/jk-performance.md).
+
+> **Wichtig:** `NEXT_PUBLIC_ACTIVE_CLUB=jk` darf **nicht** im KSV-Vercel-Projekt gesetzt werden
+> — sonst zeigt die produktive KSV-Domain die JK-Vorschau statt der echten KSV-Seite.
+
+Geplant (noch nicht umgesetzt, siehe Roadmap): Sobald `cp-s308-light-jk-draft` nach `main`
+gemerged wird, soll das `jkperformance`-Projekt ebenfalls auf `main` als Production-Branch
+umgestellt werden, damit beide Auftritte aus derselben Quelle bauen und nicht auseinanderdriften.
 
 ---
 
@@ -198,8 +229,13 @@ curl https://<deine-render-url>/health
 
 **Rollback:**
 - **Render:** Dashboard → Service → **Deploys** → älteren erfolgreichen Deploy auswählen →
-  **Redeploy**. Kein CLI-Rollback nötig.
-- **Vercel:** Dashboard → Deployments → älteres Deployment → **Promote to Production**.
+  **Redeploy**. Kein CLI-Rollback nötig. Betrifft immer beide Frontends gleichzeitig, da
+  Backend geteilt ist (siehe [`docs/architecture/system-overview.md`](docs/architecture/system-overview.md)).
+- **Vercel — KSV-Projekt:** Dashboard → KSV-Projekt → Deployments → älteres Deployment →
+  **Promote to Production**.
+- **Vercel — `jkperformance`-Projekt:** Dashboard → `jkperformance`-Projekt → Deployments →
+  älteres Deployment → **Promote to Production**. Getrennt vom KSV-Projekt, ein Rollback dort
+  wirkt sich nicht auf KSV aus (und umgekehrt) — beide Projekte müssen einzeln geprüft werden.
 - **Datenbank:** kein automatischer Rollback-Mechanismus — siehe Backup & Restore oben.
 
 ---

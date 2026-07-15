@@ -87,13 +87,11 @@ export default async function Page() {
       {/* ── Navbar ──────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <ClubLogo />
-            {/* Vereinsname erst ab sm sichtbar — verlässlicher als Truncate-Wettlauf
-                gegen den Button auf sehr schmalen Screens (< 400px). */}
-            <div className="hidden sm:block">
-              <p className="font-bold text-gray-900 text-base leading-tight">{CLUB_CONFIG.name}</p>
-              <p className="text-gray-400 text-xs tracking-widest uppercase">{CLUB_CONFIG.subtitle}</p>
+            <div className="min-w-0">
+              <p className="font-bold text-gray-900 text-base leading-tight truncate">{CLUB_CONFIG.name}</p>
+              <p className="text-gray-400 text-xs tracking-widest uppercase truncate">{CLUB_CONFIG.subtitle}</p>
             </div>
           </div>
           <a
@@ -158,18 +156,19 @@ export default async function Page() {
                 >
                   {PROGRAMS.length > 0 ? 'Aktuelle Sommercamps ansehen' : 'Termine ansehen'}
                 </a>
+                {PROGRAMS.length > 0 && (
+                  <a
+                    href="#mitgliedschaft"
+                    className="border border-white/40 bg-white/5 text-white font-semibold px-8 py-3.5 rounded-xl hover:bg-white/15 hover:border-white/60 active:bg-white/20 transition-colors text-center shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                  >
+                    Mitgliedschaft
+                  </a>
+                )}
               </div>
 
               {PROGRAMS.length > 0 && (
                 <p className="mt-4 text-xs sm:text-sm text-gray-400">
                   Für Spielerinnen und Spieler · Individuelle Spielerentwicklung · Training in deiner Region
-                  {' · '}
-                  <a
-                    href="#mitgliedschaft"
-                    className="underline underline-offset-2 hover:text-white transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-1"
-                  >
-                    Interesse an Mitgliedschaft?
-                  </a>
                 </p>
               )}
 

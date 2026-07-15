@@ -206,20 +206,20 @@ export const JK_OVERRIDES: {
 
   // Nur Bild-Slides zum Start — Video-Slides werden ergänzt, sobald echtes
   // Videomaterial von Jan vorliegt (gleicher MediaEntry-Typ, type: 'video').
-  // Bewusst kuratiert: 5 klar unterschiedliche Motive (2x Team, Trainer mit Ball,
-  // Trainer-Portrait, Trikot-Detail) statt Serienbild-Duplikate — keine Wiederholung
-  // des Hero-Fotos, keine reinen Logo-Grafiken (siehe MediaSlideshow: Hochformat-Fotos
-  // werden per Blur-Backdrop vollständig gezeigt statt hart beschnitten).
+  // Der komplette Rohbilder-Pool stammt aus einem einzigen Shooting mit nur 3
+  // wirklich unterschiedlichen Motiven (Team, Trainer mit Ball, Trainer-Portrait).
+  // Ein zweites Team-Foto (nur Sekunden später, andere Pose) wurde bewusst
+  // NICHT mit aufgenommen — wirkte im Slideshow-Kontext wie ein Duplikat statt
+  // wie ein eigenständiger Slide. 4 statt 5 Slides, aber jeder eigenständig.
   //
   // TODO(jk-content): Bildrechte/Einwilligungen für die abgebildeten Jugendlichen sind laut
   // jk-client-intake.md noch NICHT bestätigt (gleiche Spieler wie in hero.jpg/team.jpg, die
   // bereits live sind). Vor dem finalen Go-Live mit Jan explizit bestätigen lassen, sonst
-  // Slides 1/2 gegen Solo-/Detail-Motive austauschen.
+  // Slide 1 gegen ein Solo-/Detail-Motiv austauschen.
   SLIDESHOW_ITEMS: [
     { type: 'image', src: '/jk/slideshow/01.jpg', alt: 'JK Performance Academy Team' },
-    { type: 'image', src: '/jk/slideshow/02.jpg', alt: 'JK Performance Academy Team' },
-    { type: 'image', src: '/jk/slideshow/03.jpg', alt: 'Trainer JK Performance Academy mit Ball' },
-    { type: 'image', src: '/jk/slideshow/04.jpg', alt: 'Trainer JK Performance Academy' },
-    { type: 'image', src: '/jk/slideshow/05.jpg', alt: 'JK Performance Academy Trikot' },
+    { type: 'image', src: '/jk/slideshow/02.jpg', alt: 'Trainer JK Performance Academy mit Ball' },
+    { type: 'image', src: '/jk/slideshow/03.jpg', alt: 'Trainer JK Performance Academy' },
+    { type: 'image', src: '/jk/slideshow/04.jpg', alt: 'JK Performance Academy Trikot' },
   ],
 }

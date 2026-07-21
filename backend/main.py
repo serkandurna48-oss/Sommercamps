@@ -5,11 +5,13 @@ import io
 import logging
 import os
 import secrets
+import threading
 import uuid
 from contextlib import asynccontextmanager, contextmanager
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, Generator, Literal, Optional
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from uuid import UUID
 
 import jwt
@@ -40,9 +42,16 @@ load_dotenv()
 # Config
 # ---------------------------------------------------------------------------
 
-DATABASE_URL: str    = os.environ["DATABASE_URL"]
-ADMIN_PASSWORD: str  = os.environ["ADMIN_PASSWORD"]
-JWT_SECRET: str      = os.environ["JWT_SECRET"]
+def _require_env(name: str) -> str:
+    value = os.getenv(name)
+    if not value:
+        raise RuntimeError(f"Pflicht-Environment-Variable fehlt: {name}")
+    return value
+
+
+DATABASE_URL: str    = _require_env("DATABASE_URL")
+ADMIN_PASSWORD: str  = _require_env("ADMIN_PASSWORD")
+JWT_SECRET: str      = _require_env("JWT_SECRET")
 TOKEN_EXPIRE_HOURS: int = int(os.getenv("TOKEN_EXPIRE_HOURS", "24"))
 
 # E-Mail (Phase 2) — optional; Backend läuft auch ohne diese Vars.
@@ -91,25 +100,129 @@ ALLOWED_CAMP_WEEKS = {w.label for w in CAMP_WEEKS}
 
 # Wird beim App-Start befüllt, beim Shutdown geschlossen.
 _pool: psycopg2.pool.ThreadedConnectionPool | None = None
+_pool_lock = threading.RLock()
+
+DB_POOL_MINCONN = int(os.getenv("DB_POOL_MINCONN", "1"))
+DB_POOL_MAXCONN = int(os.getenv("DB_POOL_MAXCONN", "10"))
+DB_CONNECT_TIMEOUT_SECONDS = int(os.getenv("DB_CONNECT_TIMEOUT_SECONDS", "5"))
+
+
+def _build_database_dsn(database_url: str) -> str:
+    """Return a PostgreSQL DSN with safe defaults without duplicating query params."""
+    parsed = urlsplit(database_url)
+    query_pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    existing_keys = {key.lower() for key, _ in query_pairs}
+    defaults = {
+        "sslmode": "require",
+        "connect_timeout": str(DB_CONNECT_TIMEOUT_SECONDS),
+        "keepalives": "1",
+        "keepalives_idle": "30",
+        "keepalives_interval": "10",
+        "keepalives_count": "5",
+    }
+    for key, value in defaults.items():
+        if key not in existing_keys:
+            query_pairs.append((key, value))
+    return urlunsplit(parsed._replace(query=urlencode(query_pairs)))
+
+
+def _pgcode(exc: BaseException | None) -> str:
+    return str(getattr(exc, "pgcode", "") or "")
+
+
+def _exception_name(exc: BaseException | None) -> str:
+    return type(exc).__name__ if exc is not None else ""
+
+
+def _connection_is_closed(conn: Any) -> bool:
+    return bool(getattr(conn, "closed", False))
+
+
+def _pool_required() -> psycopg2.pool.ThreadedConnectionPool:
+    if _pool is None:
+        raise RuntimeError("Datenbankpool wurde noch nicht initialisiert.")
+    return _pool
+
+
+def _put_connection(
+    conn: psycopg2.extensions.connection,
+    *,
+    close: bool,
+    phase: str,
+    exc: BaseException | None = None,
+) -> None:
+    pool = _pool_required()
+    if close:
+        logger.warning(
+            "db_connection_discarded phase=%s exception=%s pgcode=%s",
+            phase,
+            _exception_name(exc),
+            _pgcode(exc),
+        )
+    try:
+        pool.putconn(conn, close=close)
+    except Exception as put_exc:
+        logger.error(
+            "db_connection_return_failed phase=%s close=%s exception=%s pgcode=%s",
+            phase,
+            close,
+            _exception_name(put_exc),
+            _pgcode(put_exc),
+        )
+        raise
+
+
+def _checkout_connection() -> psycopg2.extensions.connection:
+    """Checkout with one bounded retry when the pool hands out a closed connection."""
+    pool = _pool_required()
+    last_exc: BaseException | None = None
+    for attempt in (1, 2):
+        try:
+            conn = pool.getconn()
+        except Exception as exc:
+            logger.error(
+                "db_connection_checkout_failed phase=checkout attempt=%d exception=%s pgcode=%s",
+                attempt,
+                _exception_name(exc),
+                _pgcode(exc),
+            )
+            raise
+        if not _connection_is_closed(conn):
+            return conn
+
+        last_exc = psycopg2.InterfaceError("Pool returned a closed database connection.")
+        _put_connection(conn, close=True, phase="checkout", exc=last_exc)
+
+    raise last_exc or psycopg2.InterfaceError("No usable database connection available.")
 
 
 def _init_pool() -> None:
     """Erzeugt den ThreadedConnectionPool aus DATABASE_URL."""
     global _pool
-    # sslmode=require für Supabase Transaction Pooler (falls nicht bereits in der URL)
-    dsn = DATABASE_URL if "sslmode=" in DATABASE_URL else DATABASE_URL + "?sslmode=require"
-    _pool = psycopg2.pool.ThreadedConnectionPool(
-        minconn=1,
-        maxconn=10,
-        dsn=dsn,
-        cursor_factory=psycopg2.extras.RealDictCursor,
-    )
+    with _pool_lock:
+        _pool = psycopg2.pool.ThreadedConnectionPool(
+            minconn=DB_POOL_MINCONN,
+            maxconn=DB_POOL_MAXCONN,
+            dsn=_build_database_dsn(DATABASE_URL),
+            cursor_factory=psycopg2.extras.RealDictCursor,
+        )
 
 
 def _close_pool() -> None:
     """Gibt alle Pool-Verbindungen frei."""
-    if _pool is not None:
-        _pool.closeall()
+    global _pool
+    with _pool_lock:
+        if _pool is not None:
+            _pool.closeall()
+            _pool = None
+
+
+def reset_db_pool(reason: str = "manual") -> None:
+    """Thread-safe pool rebuild hook for controlled operational recovery/tests."""
+    logger.warning("db_pool_reset_started reason=%s", reason)
+    _close_pool()
+    _init_pool()
+    logger.warning("db_pool_reset_finished reason=%s", reason)
 
 
 @contextmanager
@@ -122,13 +235,17 @@ def get_db_connection() -> Generator[psycopg2.extensions.connection, None, None]
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
     """
-    if _pool is None:
-        raise RuntimeError("Datenbankpool wurde noch nicht initialisiert.")
-    conn = _pool.getconn()
+    conn = _checkout_connection()
+    discard = False
     try:
         yield conn
+    except (psycopg2.OperationalError, psycopg2.InterfaceError) as exc:
+        discard = True
+        raise
+    except Exception:
+        raise
     finally:
-        _pool.putconn(conn)
+        _put_connection(conn, close=discard or _connection_is_closed(conn), phase="return")
 
 
 @contextmanager
@@ -142,14 +259,51 @@ def db_cursor() -> Generator[psycopg2.extras.RealDictCursor, None, None]:
             cur.execute("SELECT * FROM camp_registrations")
             rows = cur.fetchall()
     """
-    with get_db_connection() as conn:
+    conn = _checkout_connection()
+    discard = False
+    phase = "cursor"
+    failure: BaseException | None = None
+    try:
+        with conn.cursor() as cur:
+            phase = "execute"
+            yield cur
+        phase = "commit"
+        conn.commit()
+    except (psycopg2.OperationalError, psycopg2.InterfaceError) as exc:
+        failure = exc
+        discard = True
+        phase = "rollback"
         try:
-            with conn.cursor() as cur:
-                yield cur
-            conn.commit()
-        except Exception:
             conn.rollback()
-            raise
+        except Exception as rollback_exc:
+            logger.error(
+                "db_transaction_rollback_failed exception=%s pgcode=%s original_exception=%s",
+                _exception_name(rollback_exc),
+                _pgcode(rollback_exc),
+                _exception_name(exc),
+            )
+        raise
+    except Exception as exc:
+        failure = exc
+        phase = "rollback"
+        try:
+            conn.rollback()
+        except Exception as rollback_exc:
+            discard = True
+            logger.error(
+                "db_transaction_rollback_failed exception=%s pgcode=%s original_exception=%s",
+                _exception_name(rollback_exc),
+                _pgcode(rollback_exc),
+                _exception_name(exc),
+            )
+        raise
+    finally:
+        _put_connection(
+            conn,
+            close=discard or _connection_is_closed(conn),
+            phase=phase,
+            exc=failure,
+        )
 
 
 # ---------------------------------------------------------------------------

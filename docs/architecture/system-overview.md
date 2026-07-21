@@ -69,13 +69,14 @@ Die JK-Landingpage ist reine Vorschau/Marketing:
 - Der einzige Backend-Kontakt von JK aus ist der lesende `GET /config`-Aufruf.
 - Es entstehen dadurch **keine** JK-Datensätze in der (KSV-)Datenbank.
 
-## Geplant: isolierte JK-Infrastruktur (Track B)
+## In Arbeit: isolierte JK-Infrastruktur (JK-102)
 
-Sobald JK ein Paket mit echtem Anfrage-Flow bestätigt (siehe `docs/onboarding/jk-implementation-plan-after-yes.md`
-— liegt aktuell nur auf Branch `cp-s308-light-jk-draft`, noch nicht auf `main`, daher hier
-ohne Link), ist als nächster Schritt eine **von KSV komplett isolierte** Infrastruktur
-vorgesehen: eigenes Supabase-Projekt, eigener Render-Service, eigene Env-Vars — kein
-geteilter Tenant-Zustand. Diese Trennung existiert **noch nicht**, sie ist Planungsstand.
+Paket und Preis sind mit Jan final bestätigt. Als nächster Schritt wird JK **von KSV komplett
+isoliert**: eigenes Supabase-Projekt, eigener Render-Service, eigene Env-Vars — kein geteilter
+Tenant-Zustand mehr. Schritt-für-Schritt-Anleitung:
+[`docs/onboarding/jk-infrastructure-setup.md`](../onboarding/jk-infrastructure-setup.md).
+Diese Trennung ist **in Umsetzung**, der oben beschriebene geteilte Zustand gilt bis zum
+Abschluss von JK-102 weiter.
 
 ## Ausdrücklich keine Behauptung
 

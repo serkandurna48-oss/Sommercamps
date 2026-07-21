@@ -1,7 +1,74 @@
-// Club-Identität (CP-S301-light) — zentraler Ort für KSV-spezifische Werte.
-// Ohne NEXT_PUBLIC_*-Overrides verhält sich die App exakt wie vor dieser Extraktion.
+// Club-Identität (CP-S301-light / CP-S308-light) — zentraler Ort für club-spezifische Werte.
+// Ohne NEXT_PUBLIC_ACTIVE_CLUB=jk verhält sich die App exakt wie vor dieser Extraktion (KSV-Defaults).
 
-export const CLUB_CONFIG = {
+import { JK_OVERRIDES } from './clubConfig.jk'
+
+export interface ClubIdentity {
+  name: string
+  subtitle: string
+  contactName: string
+  contactEmail: string
+  contactPhone: string
+  venueName: string
+  logoSrc: string
+  /** Optional Hero-Hintergrundbild; ohne Wert bleibt der Hero ein reiner Farbblock. */
+  heroImageSrc?: string
+  /** Optionale Akzentfarbe (Hex); ohne Wert bleibt KSV-Rot (#CC0000) aktiv. */
+  accentColor?: string
+  /** Optionaler Hero-Claim; ersetzt bei PROGRAMS-Clubs die generische "{subtitle} 2026"-Headline. */
+  heroTagline?: string
+  /** Optionale Chip-Hintergrundfarbe (Hex) hinter dem Logo — für Logos mit dunklem/eigenem Hintergrund, die sonst auf Weiß hart wirken. */
+  logoChipColor?: string
+}
+
+export interface CampEntry {
+  label: string
+  date: string
+  value: string
+  tag: string
+}
+
+/**
+ * Ein Event-/Programm-Eintrag für Vereine mit breiterem Angebot als KSVs
+ * "3 Sommercamp-Wochen" (z. B. wiederkehrende Sessions, Feriencamps,
+ * Einzeltermine). `cadence` ist Freitext zur Terminierung, kein festes Datum —
+ * anders als `CampEntry.date`, das eine konkrete buchbare Woche beschreibt.
+ */
+export interface ProgramEntry {
+  category: string
+  title: string
+  description: string
+  cadence: string
+  tag?: string
+  /** Optionaler Preishinweis (z. B. gestaffelt Vereinsmitglieder/externe Spieler) — separat von `cadence`, damit Datum/Zeit und Preis nicht in einer Zeile verschmelzen. */
+  priceNote?: string
+  /** Optionale Stichpunkt-Liste (z. B. Trainingsinhalte) für eine ausführlichere Kartendarstellung. */
+  benefits?: string[]
+  /** Hebt die Karte visuell hervor (z. B. aktuelle, terminierte Camps vs. generische Angebote auf Anfrage). */
+  featured?: boolean
+}
+
+export interface HighlightEntry {
+  icon: React.ReactNode
+  title: string
+  text: string
+}
+
+export interface FaqEntry {
+  q: string
+  a: string
+}
+
+/** Ein Slide der Hero-Slideshow — Bild oder Video, gleiche Darstellung im Karussell. */
+export interface MediaEntry {
+  type: 'image' | 'video'
+  src: string
+  alt?: string
+}
+
+const ACTIVE_CLUB = process.env.NEXT_PUBLIC_ACTIVE_CLUB === 'jk' ? 'jk' : 'ksv'
+
+const DEFAULT_CLUB_CONFIG: ClubIdentity = {
   name: process.env.NEXT_PUBLIC_CLUB_NAME ?? 'KSV Baunatal',
   subtitle: process.env.NEXT_PUBLIC_CLUB_SUBTITLE ?? 'Fußballschule',
   contactName: process.env.NEXT_PUBLIC_CONTACT_NAME ?? 'Ergün Ünal',
@@ -9,15 +76,20 @@ export const CLUB_CONFIG = {
   contactPhone: process.env.NEXT_PUBLIC_CONTACT_PHONE ?? '0170 9927281',
   venueName: process.env.NEXT_PUBLIC_VENUE_NAME ?? 'Parkstadion Baunatal',
   logoSrc: process.env.NEXT_PUBLIC_LOGO_SRC ?? '/logo.svg',
-} as const
+}
 
-export const CAMPS = [
+const DEFAULT_CAMPS: CampEntry[] = [
   { label: 'Sommercamp I',  date: '29.06. – 02.07.2026', value: '29.06.–02.07.2026', tag: 'Sommer' },
   { label: 'Sommercamp II', date: '03.08. – 06.08.2026', value: '03.08.–06.08.2026', tag: 'Sommer' },
   { label: 'Herbstcamp',    date: '05.10. – 08.10.2026', value: '05.10.–08.10.2026', tag: 'Herbst' },
 ]
 
-export const HIGHLIGHTS = [
+// Leer für KSV (nutzt weiterhin die Termine-Sektion auf Basis von CAMPS).
+// Clubs mit breiterem Angebot (z. B. JK) füllen PROGRAMS statt CAMPS —
+// page.tsx zeigt genau eine der beiden Sektionen, nie beide.
+const DEFAULT_PROGRAMS: ProgramEntry[] = []
+
+const DEFAULT_HIGHLIGHTS: HighlightEntry[] = [
   {
     icon: (
       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -56,4 +128,84 @@ export const HIGHLIGHTS = [
   },
 ]
 
-export const JERSEY_SIZES = ['6XS–5XS (104–116)', '4XS–3XS (128–140)', '2XS (152)', 'XS (164)', 'S', 'M']
+const DEFAULT_JERSEY_SIZES = ['6XS–5XS (104–116)', '4XS–3XS (128–140)', '2XS (152)', 'XS (164)', 'S', 'M']
+
+const DEFAULT_INCLUDED_ITEMS = [
+  'KSV-Trikot & Hose',
+  'Teilnehmerpokal',
+  'Warmes Mittagessen, Obst & Snacks',
+  'Eintrittskarte für ein Heimspiel',
+  'Qualifizierte Betreuung',
+]
+
+const DEFAULT_FAQ_ITEMS: FaqEntry[] = [
+  {
+    q: 'Für welches Alter ist das Camp geeignet?',
+    a: 'Das Camp richtet sich an Kinder im Alter von 5 bis 12 Jahren.',
+  },
+  {
+    q: 'Was ist im Beitrag enthalten?',
+    a: 'Warmes Mittagessen, Obst, Snacks und Getränke, ein offizielles KSV-Trikot und Hose, ein Teilnehmerpokal sowie eine Eintrittskarte für ein Heimspiel der 1. Mannschaft sind im Beitrag inklusive.',
+  },
+  {
+    q: 'Wie bezahle ich?',
+    a: 'Die Zahlung erfolgt per Überweisung. Die Bankdaten sowie den Verwendungszweck erhältst du direkt nach der Anmeldung per E-Mail.',
+  },
+  {
+    q: 'Wann gilt die Anmeldung als abgeschlossen?',
+    a: 'Die Anmeldung ist vollständig bestätigt, sobald der Campbeitrag auf unserem Konto eingegangen ist.',
+  },
+  {
+    q: 'Können Kinder mit Allergien teilnehmen?',
+    a: 'Ja. Bitte trage alle relevanten Allergien und Unverträglichkeiten im Anmeldeformular ein, damit wir entsprechend planen können.',
+  },
+  {
+    q: 'An wen wende ich mich bei Fragen?',
+    a: `Für alle Fragen steht dir ${DEFAULT_CLUB_CONFIG.contactName} zur Verfügung: ${DEFAULT_CLUB_CONFIG.contactEmail} · ${DEFAULT_CLUB_CONFIG.contactPhone}`,
+  },
+]
+
+// Leer für KSV — Mitgliedschaft/Slideshow sind bisher JK-spezifische Draft-Konzepte.
+const DEFAULT_MEMBERSHIP_BENEFITS: string[] = []
+const DEFAULT_SLIDESHOW_ITEMS: MediaEntry[] = []
+
+const DEFAULT_VENUE_INFO_TEXT =
+  'Kunstrasen am Parkstadion in Baunatal. Bei Bedarf weichen wir auf Ausweichplätze aus, z. B. die Sportanlage am Baunsberg.'
+
+const DEFAULT_FIRST_TEAM_INFO_TEXT =
+  'Trainingseinheiten mit Spielern der 1. Mannschaft finden – sofern es zeitlich möglich ist – im Rahmen des Camps statt. Wir bitten um Verständnis, dass dies organisatorisch und terminlich abhängig ist und daher nicht garantiert werden kann.'
+
+export const CLUB_CONFIG: ClubIdentity =
+  ACTIVE_CLUB === 'jk' ? JK_OVERRIDES.CLUB_CONFIG : DEFAULT_CLUB_CONFIG
+
+export const CAMPS: CampEntry[] =
+  ACTIVE_CLUB === 'jk' ? JK_OVERRIDES.CAMPS : DEFAULT_CAMPS
+
+export const PROGRAMS: ProgramEntry[] =
+  ACTIVE_CLUB === 'jk' ? JK_OVERRIDES.PROGRAMS : DEFAULT_PROGRAMS
+
+export const HIGHLIGHTS: HighlightEntry[] =
+  ACTIVE_CLUB === 'jk' ? JK_OVERRIDES.HIGHLIGHTS : DEFAULT_HIGHLIGHTS
+
+export const JERSEY_SIZES: string[] =
+  ACTIVE_CLUB === 'jk' ? JK_OVERRIDES.JERSEY_SIZES : DEFAULT_JERSEY_SIZES
+
+export const INCLUDED_ITEMS: string[] =
+  ACTIVE_CLUB === 'jk' ? JK_OVERRIDES.INCLUDED_ITEMS : DEFAULT_INCLUDED_ITEMS
+
+export const FAQ_ITEMS: FaqEntry[] =
+  ACTIVE_CLUB === 'jk' ? JK_OVERRIDES.FAQ_ITEMS : DEFAULT_FAQ_ITEMS
+
+// Freitext-Infoboxen im Termine-Bereich — pro Club optional. `null` blendet die Box komplett aus,
+// statt club-fremden Text (z. B. KSV-Vereinsstruktur) anzuzeigen.
+export const VENUE_INFO_TEXT: string | null =
+  ACTIVE_CLUB === 'jk' ? JK_OVERRIDES.VENUE_INFO_TEXT : DEFAULT_VENUE_INFO_TEXT
+
+export const FIRST_TEAM_INFO_TEXT: string | null =
+  ACTIVE_CLUB === 'jk' ? JK_OVERRIDES.FIRST_TEAM_INFO_TEXT : DEFAULT_FIRST_TEAM_INFO_TEXT
+
+export const MEMBERSHIP_BENEFITS: string[] =
+  ACTIVE_CLUB === 'jk' ? JK_OVERRIDES.MEMBERSHIP_BENEFITS : DEFAULT_MEMBERSHIP_BENEFITS
+
+export const SLIDESHOW_ITEMS: MediaEntry[] =
+  ACTIVE_CLUB === 'jk' ? JK_OVERRIDES.SLIDESHOW_ITEMS : DEFAULT_SLIDESHOW_ITEMS

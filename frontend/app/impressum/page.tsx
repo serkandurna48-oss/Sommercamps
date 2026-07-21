@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { PROGRAMS } from '../lib/clubConfig'
 
 export const metadata: Metadata = {
   title: 'Impressum – KSV Baunatal Fußballschule',
@@ -7,6 +8,29 @@ export const metadata: Metadata = {
 }
 
 export default function ImpressumPage() {
+  if (PROGRAMS.length > 0) {
+    // JK-Entwurf: noch keine bestätigten Rechtsdaten (siehe docs/onboarding/jk-content-and-legal-questions.md).
+    // Die KSV-Angaben unten dürfen hier nicht als Platzhalter erscheinen.
+    return (
+      <div className="min-h-screen bg-white">
+        <header className="border-b border-gray-100 px-6 py-4">
+          <div className="max-w-2xl mx-auto">
+            <Link href="/" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
+              ← Zurück zur Startseite
+            </Link>
+          </div>
+        </header>
+        <main className="max-w-2xl mx-auto px-6 py-12">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Impressum</h1>
+          <p className="text-sm leading-relaxed text-gray-700">
+            Diese Seite ist Teil eines unverbindlichen Entwurfs. Die rechtlichen Angaben
+            (Impressum gemäß § 5 TMG) werden nach Abstimmung ergänzt.
+          </p>
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <header className="border-b border-gray-100 px-6 py-4">

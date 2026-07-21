@@ -10,13 +10,26 @@ interface ClubLogoProps {
 
 export default function ClubLogo({ src = CLUB_CONFIG.logoSrc, alt = CLUB_CONFIG.name }: ClubLogoProps) {
   return (
-    <Image
-      src={src}
-      alt={alt}
-      width={56}
-      height={56}
-      className="shrink-0 drop-shadow-sm"
-      unoptimized
-    />
+    <span
+      className="relative inline-block h-14 w-14 shrink-0 drop-shadow-sm rounded-lg overflow-hidden"
+      style={
+        CLUB_CONFIG.logoChipColor
+          ? {
+              backgroundColor: CLUB_CONFIG.logoChipColor,
+              // Dünner Akzent-Rahmen macht aus dem dunklen Hintergrund ein bewusstes
+              // Badge statt einer harten Kante — passt zur navy/gold-Markenoptik.
+              boxShadow: CLUB_CONFIG.accentColor ? `inset 0 0 0 1px ${CLUB_CONFIG.accentColor}` : undefined,
+            }
+          : undefined
+      }
+    >
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        unoptimized
+        className={CLUB_CONFIG.logoChipColor ? 'object-contain p-1' : 'object-contain'}
+      />
+    </span>
   )
 }

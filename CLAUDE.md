@@ -7,12 +7,17 @@
 
 ## Projektübersicht
 
-Online-Anmeldesystem für Fußball-Feriencamps. Aktuell Single-Tenant für **KSV Baunatal**,
-wird zu einem **Multi-Tenant SaaS** umgebaut (mehrere Vereine auf derselben Plattform).
+Online-Anmeldesystem für Fußball-Feriencamps. Dieses Repository enthält aktuell das
+Single-Tenant-System für **KSV Baunatal** (`backend/` + `frontend/`, siehe unten).
 
-**Zielarchitektur:** Shared DB / Shared Schema + Row Level Security in Supabase.
-Stripe Connect (Express) für Auszahlungen pro Verein.
-Routing: Path-basiert (`/[org-slug]/...`) für MVP, Subdomain später.
+**Multi-Tenant SaaS ("CampsPilot"):** Wird **nicht** durch einen In-Place-Umbau dieses Systems
+erreicht, sondern als paralleles, isoliertes System aufgebaut (`backend_saas/` + eigenes
+Supabase-Projekt + eigenes Deployment). KSV Baunatal bleibt in `backend/` + dem bestehenden
+KSV-Supabase-Projekt unverändert bestehen; eine KSV-Migration in das neue System ist ein
+späterer, separat zu entscheidender Schritt. **Source of Truth für die Multi-Tenant-Architektur
+sind ab jetzt [`docs/saas/architecture.md`](docs/saas/architecture.md) und
+[`docs/saas/migration-strategy.md`](docs/saas/migration-strategy.md)** — nicht die ältere
+Roadmap weiter unten in diesem Dokument (siehe dort für den historischen Hintergrund).
 
 **Produktionsstatus:** KSV Baunatal läuft live. Änderungen dürfen den Betrieb nicht
 unterbrechen. Datenschutz ist kritisch — das System verarbeitet Kinderdaten (DSGVO Art. 9).
@@ -113,8 +118,12 @@ Stripe → POST /stripe/webhook
 
 ### DB-Schema (Kerntabelle)
 
-`camp_registrations` — einzige Tabelle, enthält alle Anmeldungen.
-Für Multi-Tenant muss hier eine `organization_id` FK ergänzt werden.
+`camp_registrations` — einzige Tabelle, enthält alle Anmeldungen für KSV Baunatal.
+
+> **Überholt:** Hier stand früher, dass für Multi-Tenant eine `organization_id`-FK in *diese*
+> Tabelle ergänzt werden müsse. Das ist nicht mehr der Plan — `organization_id` (und `camp_id`)
+> entstehen in einem neuen `camp_registrations`-Schema im separaten `backend_saas/`-System, nicht
+> als Migration gegen diese KSV-Tabelle. Siehe [`docs/saas/architecture.md`](docs/saas/architecture.md#43-camp_registrations).
 
 Wichtige Spalten:
 - `id` — UUID, intern
@@ -228,9 +237,9 @@ diese in Datenbank-Konfigurationen oder Env-Vars extrahiert werden.
 
 ---
 
-## Roadmap: 5 Phasen Richtung Multi-Tenant SaaS
+## Roadmap: 5 Phasen Richtung Multi-Tenant SaaS (historisch, Phase 2–5 überholt)
 
-### Phase 1 — Foundation Hardening (JETZT)
+### Phase 1 — Foundation Hardening ✅ ERLEDIGT
 **Ziel:** Alle Bugs fix, alle Hardcodings in Config extrahiert. KSV läuft stabil.
 Keine Multi-Tenant-Änderungen an DB oder Auth.
 
@@ -240,6 +249,25 @@ Keine Multi-Tenant-Änderungen an DB oder Auth.
 - Alle E-Mail-Template-Strings in Env-Vars (`CLUB_NAME`, `CAMP_YEAR`, etc.)
 - `render.yaml` korrigieren
 - Minimale Test-Coverage für alle Endpunkte
+
+Diese Phase ist abgeschlossen (siehe `SESSION_NOTES.md`) und bleibt gültig — sie war reines
+KSV-Hardening ohne Multi-Tenant-Bezug und widerspricht der neuen SaaS-Architektur nicht.
+
+> **Phase 2–5 unten sind überholt (Stand CP-S401A) und beschreiben bewusst nicht mehr den
+> aktuellen Plan.** Sie gingen von einer **In-Place-Evolution** von `backend/` aus (dieselbe
+> Codebasis und dasselbe KSV-Supabase-Projekt bekommen `organizations`/`tenant_id`, RLS,
+> Path-Routing, Stripe Connect direkt draufgesetzt). Der aktuelle Plan ist stattdessen ein
+> **paralleler Neubau**: ein neues `backend_saas/` mit eigenem Supabase-Projekt und eigenem
+> Deployment, in das JK Performance Academy als erster Tenant einzieht — KSV bleibt in
+> `backend/` + seinem bestehenden Supabase-Projekt unverändert, eine KSV-Migration in das neue
+> System ist frühestens ein späterer, separat zu entscheidender Schritt (nicht automatisch
+> "Phase 2" von hier). Verbindlich sind jetzt ausschließlich
+> [`docs/saas/architecture.md`](docs/saas/architecture.md) und
+> [`docs/saas/migration-strategy.md`](docs/saas/migration-strategy.md). Der folgende Text bleibt
+> nur als historischer Kontext stehen, keine der folgenden Aussagen ist noch eine aktive Anweisung.
+
+<details>
+<summary>Historisch — Phase 2–5 (überholt, nicht mehr befolgen)</summary>
 
 ### Phase 2 — Tenant Data Model
 **Ziel:** DB unterstützt mehrere Vereine, KSV weiter als einziger Tenant.
@@ -274,6 +302,8 @@ Keine Multi-Tenant-Änderungen an DB oder Auth.
 - Checkout Sessions mit `stripe_account` Parameter
 - Platform-Gebühr konfigurierbar
 - Payout-Dashboard im Admin
+
+</details>
 
 ---
 

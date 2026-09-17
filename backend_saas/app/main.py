@@ -1,9 +1,10 @@
 """
 CampsPilot SaaS API — FastAPI entrypoint.
 
-Since CP-S404: exposes read-only, tenant-scoped Organization and Camp
-endpoints on top of the CP-S403 foundation (DB pool, tenant resolution,
-/health). No registrations or admin CRUD yet — see README.md.
+CP-S403: DB pool, tenant resolution, /health.
+CP-S404: read-only, tenant-scoped Organization and Camp endpoints.
+CP-S405: the first write endpoint — public camp registration.
+No admin CRUD, auth, payments, or email yet — see README.md.
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from fastapi.responses import JSONResponse
 
 from . import db
 from .config import get_settings
-from .routers import camps_router, organizations_router
+from .routers import camps_router, organizations_router, registrations_router
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ app = FastAPI(
 
 app.include_router(organizations_router)
 app.include_router(camps_router)
+app.include_router(registrations_router)
 
 
 @app.get("/health", tags=["System"])

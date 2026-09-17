@@ -6,21 +6,24 @@ FastAPI backend for the new, parallel CampsPilot multi-tenant SaaS — built ind
 [`docs/saas/database-schema.md`](../docs/saas/database-schema.md) for the database this service
 talks to.
 
-## Scope (CP-S403 + CP-S404)
+## Scope (CP-S403 + CP-S404 + CP-S405)
 
-This is a foundation with a first thin slice of real API on top, not a product. What exists:
+This is a foundation with a first real (if narrow) product slice on top, not a finished product.
+What exists:
 
 - App boots, connects to Postgres, exposes `GET /health` (CP-S403).
 - A tenant-resolution layer (`app/tenancy.py` + `app/repositories/organizations.py`) that turns
-  a URL slug into a trusted `organization_id` (CP-S403), now actually wired into routes via
+  a URL slug into a trusted `organization_id` (CP-S403), wired into every route via
   `app/deps.py::get_tenant_context` (CP-S404).
-- Read-only, tenant-scoped public endpoints for organizations and published camps (CP-S404) —
-  see [Public API](#public-api) below.
+- Read-only, tenant-scoped public endpoints for organizations and published camps (CP-S404).
+- The first **write** endpoint: parents can register a child for a published camp without an
+  account (CP-S405) — with server-side age/window/capacity enforcement and a
+  concurrency-safe capacity check. See [Public API](#public-api) below.
 
-What does **not** exist yet (deliberately out of scope): any Organizations/Camps/Registrations
-**write** API (no POST/PATCH/DELETE anywhere), parent-facing registration flow, capacity/
-waitlist counting, JK onboarding, KSV migration, Supabase Auth, `organization_members`, admin
-login, Stripe, Brevo/email, payments, a frontend, or any deployment config (Render/Vercel).
+What does **not** exist yet (deliberately out of scope): Organizations/Camps **admin** CRUD (no
+POST/PATCH/DELETE for organizations or camps), automatic waitlisting, Stripe/payments, Brevo/
+email (no confirmation mail is sent), a confirmation page, JK onboarding, KSV migration, Supabase
+Auth, `organization_members`, admin login, a frontend, or any deployment config (Render/Vercel).
 Don't build against this expecting any of that to exist.
 
 ## Public API
@@ -36,6 +39,7 @@ add it to `OrganizationPublic`/`CampPublic` first.
 | `GET` | `/api/v1/organizations/{organization_slug}` | `OrganizationPublic` |
 | `GET` | `/api/v1/organizations/{organization_slug}/camps` | `list[CampPublic]`, only `status = 'published'`, sorted by `start_date` |
 | `GET` | `/api/v1/organizations/{organization_slug}/camps/{camp_slug}` | `CampPublic`, only if `status = 'published'` |
+| `POST` | `/api/v1/organizations/{organization_slug}/camps/{camp_slug}/registrations` | `RegistrationCreated` (201), see [Registration write-flow](#registration-write-flow) |
 
 **`OrganizationPublic`** fields: `slug`, `name`, `legal_name`, `contact_email`, `contact_phone`,
 `logo_url`, `primary_color`. Deliberately **excluded**: the internal `id` (the frontend never
@@ -71,6 +75,153 @@ just currently inactive," which is itself information the public API shouldn't l
 organization slug can be a real client/company name). The distinction is still logged
 server-side (`app/deps.py::get_tenant_context`) for operational visibility — just never surfaced
 to the client. See the CP-S404 report's "offene Entscheidungen" for the full reasoning.
+
+## Registration write-flow
+
+`POST /api/v1/organizations/{organization_slug}/camps/{camp_slug}/registrations` — the first
+endpoint in this service that writes anything, and the first that handles a real child's
+personal data. No account, login, or auth of any kind is required (matches the legacy KSV
+system's model: parents don't need an account to register).
+
+**Request** (`RegistrationCreate`) — no `organization_id`, no `camp_id`, no `id` of any kind:
+
+```json
+{
+  "parent_first_name": "Max",
+  "parent_last_name": "Mustermann",
+  "parent_email": "max@example.com",
+  "parent_phone": "+49 123 456789",
+  "child_first_name": "Lena",
+  "child_last_name": "Mustermann",
+  "child_birth_date": "2017-05-10",
+  "emergency_contact_name": "Anna Mustermann",
+  "emergency_contact_phone": "+49 987 654321",
+  "medical_notes": null,
+  "allergies": null,
+  "photo_permission": false,
+  "terms_accepted": true,
+  "privacy_accepted": true
+}
+```
+
+`model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")`: every string field is
+trimmed, and any unexpected field (e.g. someone trying to pass `organization_id` or `camp_id`
+directly) makes the whole request fail with 422 — a visible rejection rather than a silent
+no-op, which is a stronger guarantee than the Pydantic default of silently ignoring unknown
+fields. `terms_accepted`/`privacy_accepted` must both be `true` (checked by a Pydantic validator
+*and* the DB's `chk_camp_registrations_terms_accepted`/`..._privacy_accepted` — same
+defense-in-depth pattern as everywhere else in this schema). `photo_permission` may be `true` or
+`false`. `parent_email` is validated as a real email address (`EmailStr`).
+
+**Response** (`RegistrationCreated`, `201`) — only what a confirmation page or future payment
+flow needs, nothing internal:
+
+```json
+{
+  "registration_token": "f2956f69-4bdd-4f41-8341-579542b7464c",
+  "status": "registered",
+  "payment_status": "open"
+}
+```
+
+`registration_token` is generated by the database (`gen_random_uuid()` default on
+`camp_registrations.registration_token`) — never accepted from the client, never derivable from
+anything the client sent.
+
+### Server-side resolution (the whole point of this ticket)
+
+```
+organization_slug ──▶ get_tenant_context (same dependency as the read API) ──▶ TenantContext
+camp_slug + TenantContext.organization_id ──▶ get_registration_target ──▶ RegistrationTarget (has camp.id)
+```
+
+`app/repositories/registrations.py::get_registration_target` is the write-flow's own internal
+camp lookup — a sibling to (not a replacement for) `app/repositories/camps.py`'s public one. It
+uses the *same* `WHERE organization_id = %s AND slug = %s AND status = 'published'` shape, so an
+unknown `camp_slug`, a draft/closed/archived camp, and a camp belonging to a different tenant are
+all indistinguishable `None` results here too — all surface as the same 404 the read API already
+uses. The only reason this second function exists at all is that it additionally returns `id`
+(needed to write a `camp_registrations` row), which the public `CampPublic`-facing repository
+deliberately never does.
+
+Both `tenant.organization_id` and `camp.id` — the two values written into every new
+`camp_registrations` row — come exclusively from these two server-side lookups. `RegistrationCreate`
+has no field that could override either, even in principle. The database's composite FK
+(`camp_registrations_camp_org_fk`, see `docs/saas/database-schema.md` §3) is the second,
+independent layer underneath this.
+
+### Age check
+
+Validated against the **camp's `start_date`**, not today's date — a child registering months
+before a camp starts must be age-eligible *when the camp happens*, matching the legacy system's
+`backend/camp_config.py::validate_age_at_camp_start` intent (though against this specific camp's
+`age_min`/`age_max`, not a global constant). `app/utils.py::age_on_date` mirrors legacy's
+`dateutil.relativedelta`-based leap-year handling exactly (a child born Feb 29 turns a year older
+on Feb 28 in non-leap years). The check is inclusive on both ends: `age_min <= age_at_start <=
+age_max`. A violation is a **422** (see [HTTP status choice](#http-status-choice-for-age-and-window-violations) below).
+
+### Registration window
+
+Reuses `app/utils.py::is_registration_open` — the exact same function `CampPublic.registration_open`
+uses on the read side, so the two can never silently drift apart. A closed window is a **422**.
+
+### Capacity — and why a plain COUNT-then-INSERT isn't safe
+
+`app/repositories/registrations.py::create_registration` runs entirely inside **one transaction**
+(one borrowed connection):
+
+1. `SELECT capacity FROM camps WHERE id = %s FOR UPDATE` — locks this camp's row. A second,
+   concurrent request for the *same* camp blocks on this exact statement until the first
+   transaction commits or rolls back. Requests for a *different* camp are completely unaffected
+   — this is a plain row-level lock, not a distributed or advisory lock.
+2. Count non-`cancelled` registrations for this camp, inside the same transaction/lock.
+3. If capacity remains: `INSERT ... RETURNING registration_token, status, payment_status`. If
+   not: raise (which rolls back the transaction — no row written), mapped to **409** with
+   `{"detail": "Camp is fully booked"}`.
+
+Without step 1's lock, two concurrent requests could both read "1 spot left," both decide to
+insert, and both succeed — overbooking by one. With it, the second transaction's `FOR UPDATE`
+literally waits for the first to finish before it's even allowed to count, so it sees the
+now-taken spot. Verified under real concurrent load (see the CP-S405 report): 8 simultaneous
+requests against a capacity-1, zero-registration camp produced exactly one `201` and seven
+`409`s, with exactly one row in the database afterward.
+
+`cancelled` registrations never count against capacity — cancelling one frees the spot for a
+later request. There is **no waitlist** in CP-S405: once a camp is full, registration is
+rejected outright. Automating a waitlist is an explicit later ticket, not attempted here.
+
+### HTTP status choice for age and window violations
+
+Both an age-ineligible child and a closed registration window return **422 Unprocessable
+Content** — the request is syntactically valid JSON matching the schema, but fails a business
+rule given the *current state of the referenced camp*. This is deliberately the same status
+Pydantic itself uses for schema-validation failures (missing/malformed fields), giving API
+consumers one consistent "this request can't be processed as given" signal. Capacity is
+different on purpose: **409 Conflict**, because it's a conflict with existing *state* (the
+resource is full) rather than a property of the request itself.
+
+### Duplicate registrations — deliberately not restricted
+
+There is **no** `parent_email UNIQUE` constraint or equivalent duplicate check. A family can
+register multiple children, or the same child for multiple camps, without restriction. Whether
+some form of duplicate detection is ever wanted is an open **product** decision for a later
+ticket — CP-S405 does not pre-empt it with a technical constraint that would be hard to relax
+later.
+
+### PII and logging
+
+This is the first endpoint handling real personal data about a child. The rule, enforced
+throughout `app/routers/registrations.py` and everything it calls:
+
+- **Never logged, anywhere:** the request body, any name, email address, phone number,
+  `medical_notes`, or `allergies`.
+- **Safe to log:** `organization_slug`, `camp_slug`, the event type (rejected-for-X /
+  created), and the technical exception class. Every log line in the registration flow follows
+  this shape — see `create_registration`'s `logger.info(...)` calls for the pattern.
+- A raw `psycopg2`/PostgreSQL exception is never returned to the client (a catch-all maps any
+  unexpected DB error to a generic 500); it's logged server-side via `logger.exception(...)`
+  instead, which includes the exception's own message/traceback but never the request payload
+  that triggered it.
 
 ## Relationship to `backend/`
 
@@ -140,13 +291,20 @@ directly. **No test in this suite ever contacts the KSV database, or any real da
 | `test_organizations_api.py` | `GET /api/v1/organizations/{slug}` — active/pilot/unknown/suspended/cancelled, field allowlist |
 | `test_camps_api.py` | Camp collection + detail endpoints, 404 cases, `registration_open` derivation |
 | `test_camps_repository.py` | Camp SQL is parametrized and always scoped by `organization_id` |
+| `test_utils.py` | `age_on_date` (incl. Feb-29 leap-year edge cases) and `is_registration_open` in isolation |
+| `test_registrations_repository.py` | `get_registration_target` scoping, window/age validators, `create_registration`'s `FOR UPDATE` lock + capacity count SQL, tenant/camp values never taken from request data |
+| `test_registrations_api.py` | Full registration endpoint: happy path, tenant/camp 404s, window, age boundaries, consent, capacity 409, `extra="forbid"` rejecting injected `organization_id`/`camp_id` |
 
-Real, non-mocked verification (local Supabase stack, not part of the automated `pytest` run —
-see the CP-S404 report for the full transcript) additionally confirmed cross-tenant isolation
-end-to-end: two organizations with the same `camp_slug` never leak into each other's responses.
-If a future ticket wants this as an automated integration test, it must run against the local
-Supabase stack or an equally isolated test configuration — never KSV, and never without being
-clearly labeled as an integration test.
+Real, non-mocked verification against the local Supabase stack (not part of the automated
+`pytest` run — see the CP-S404/CP-S405 reports for the full transcripts) additionally confirmed:
+cross-tenant isolation end-to-end (two organizations with the same `camp_slug` never leak into
+each other's responses, verified at both the HTTP and raw-DB level), the sequential capacity
+flow (2 registrations succeed on a capacity-2 camp, a 3rd is rejected with 409, cancelling one
+frees the spot for a retry), and the concurrency guarantee under real load (8 simultaneous
+requests against a capacity-1 camp produced exactly one `201`). If a future ticket wants any of
+this as an automated integration test, it must run against the local Supabase stack or an
+equally isolated test configuration — never KSV, and never without being clearly labeled as an
+integration test.
 
 ## DB connection principle
 

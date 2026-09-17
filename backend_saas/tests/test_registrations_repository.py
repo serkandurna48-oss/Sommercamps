@@ -1,0 +1,341 @@
+from __future__ import annotations
+
+from contextlib import contextmanager
+from datetime import date
+from uuid import uuid4
+
+import pytest
+
+from app import db
+from app.repositories import registrations
+from app.repositories.registrations import (
+    CampFullyBookedError,
+    CampNotAvailableError,
+    ChildAgeNotEligibleError,
+    RegistrationTarget,
+    RegistrationWindowClosedError,
+)
+from app.schemas import RegistrationCreate
+from app.tenancy import TenantContext
+from app.utils import age_on_date
+
+
+def _tenant(organization_id=None, slug: str = "demo-fc") -> TenantContext:
+    return TenantContext(
+        organization_id=organization_id or uuid4(),
+        slug=slug,
+        name="Demo FC",
+        plan_status="active",
+    )
+
+
+def _target(organization_id, **overrides) -> RegistrationTarget:
+    base = dict(
+        id=uuid4(),
+        organization_id=organization_id,
+        slug="summer-1",
+        start_date=date(2027, 7, 5),
+        end_date=date(2027, 7, 9),
+        registration_start=None,
+        registration_end=None,
+        age_min=6,
+        age_max=12,
+        capacity=2,
+        status="published",
+    )
+    base.update(overrides)
+    return RegistrationTarget(**base)
+
+
+def _registration_data(**overrides) -> RegistrationCreate:
+    base = dict(
+        parent_first_name="Max",
+        parent_last_name="Mustermann",
+        parent_email="max@example.com",
+        parent_phone="+49 123 456789",
+        child_first_name="Lena",
+        child_last_name="Mustermann",
+        child_birth_date=date(2019, 5, 10),
+        emergency_contact_name="Anna Mustermann",
+        emergency_contact_phone="+49 987 654321",
+        medical_notes=None,
+        allergies=None,
+        photo_permission=False,
+        terms_accepted=True,
+        privacy_accepted=True,
+    )
+    base.update(overrides)
+    return RegistrationCreate(**base)
+
+
+class _FakeCursor:
+    def __init__(self, results: list):
+        # `results` is a queue of return values, one per execute() call,
+        # popped in order — lets a test script exactly what each
+        # statement in the transaction should "find".
+        self._results = list(results)
+        self.executed: list[tuple[str, tuple]] = []
+
+    def execute(self, query, params):
+        self.executed.append((query, params))
+
+    def fetchone(self):
+        return self._results.pop(0)
+
+
+def _patch_cursor(monkeypatch, fake_cursor: _FakeCursor) -> None:
+    @contextmanager
+    def fake_get_cursor():
+        yield fake_cursor
+
+    monkeypatch.setattr(db, "get_cursor", fake_get_cursor)
+
+
+# --------------------------------------------------------------------------
+# get_registration_target
+# --------------------------------------------------------------------------
+
+
+def test_get_registration_target_is_scoped_by_organization_id_and_slug(monkeypatch):
+    tenant = _tenant()
+    row = {
+        "id": uuid4(),
+        "organization_id": tenant.organization_id,
+        "slug": "summer-1",
+        "start_date": date(2027, 7, 5),
+        "end_date": date(2027, 7, 9),
+        "registration_start": None,
+        "registration_end": None,
+        "age_min": 6,
+        "age_max": 12,
+        "capacity": 2,
+        "status": "published",
+    }
+
+    class _Cur:
+        def execute(self, query, params):
+            self.query, self.params = query, params
+
+        def fetchone(self):
+            return row
+
+    fake_cursor = _Cur()
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    target = registrations.get_registration_target(tenant, "summer-1")
+
+    assert fake_cursor.params == (tenant.organization_id, "summer-1")
+    assert "organization_id = %s" in fake_cursor.query
+    assert "slug = %s" in fake_cursor.query
+    assert "status = 'published'" in fake_cursor.query
+    assert "summer-1" not in fake_cursor.query
+    assert target.id == row["id"]
+
+
+def test_get_registration_target_returns_none_when_missing(monkeypatch):
+    class _Cur:
+        def execute(self, query, params):
+            pass
+
+        def fetchone(self):
+            return None
+
+    _patch_cursor(monkeypatch, _Cur())
+
+    assert registrations.get_registration_target(_tenant(), "missing") is None
+
+
+# --------------------------------------------------------------------------
+# validate_registration_window / validate_child_age
+# --------------------------------------------------------------------------
+
+
+def test_validate_registration_window_raises_when_closed():
+    from datetime import datetime, timedelta, timezone
+
+    tenant_org = uuid4()
+    camp = _target(tenant_org, registration_end=datetime.now(timezone.utc) - timedelta(days=1))
+
+    with pytest.raises(RegistrationWindowClosedError):
+        registrations.validate_registration_window(camp)
+
+
+def test_validate_registration_window_passes_when_open():
+    camp = _target(uuid4())
+    registrations.validate_registration_window(camp)  # must not raise
+
+
+@pytest.mark.parametrize(
+    "birth_year,expected_age,expected_ok",
+    [
+        (2022, 5, False),  # too young
+        (2021, 6, True),  # exactly age_min
+        (2018, 9, True),  # comfortably within range
+        (2015, 12, True),  # exactly age_max
+        (2014, 13, False),  # too old
+    ],
+)
+def test_validate_child_age_boundaries(birth_year, expected_age, expected_ok):
+    # camp start_date 2027-07-05, age_min=6, age_max=12
+    camp = _target(uuid4())
+    birth_date = date(birth_year, 7, 5)  # exact-birthday edge case
+    assert age_on_date(birth_date, camp.start_date) == expected_age
+    if expected_ok:
+        registrations.validate_child_age(camp, birth_date)  # must not raise
+    else:
+        with pytest.raises(ChildAgeNotEligibleError):
+            registrations.validate_child_age(camp, birth_date)
+
+
+def test_validate_child_age_exactly_age_min_is_allowed():
+    camp = _target(uuid4(), age_min=6, age_max=12)
+    birth_date = date(camp.start_date.year - 6, camp.start_date.month, camp.start_date.day)
+    registrations.validate_child_age(camp, birth_date)  # must not raise
+
+
+def test_validate_child_age_exactly_age_max_is_allowed():
+    camp = _target(uuid4(), age_min=6, age_max=12)
+    birth_date = date(camp.start_date.year - 12, camp.start_date.month, camp.start_date.day)
+    registrations.validate_child_age(camp, birth_date)  # must not raise
+
+
+def test_validate_child_age_one_day_too_young_rejected():
+    camp = _target(uuid4(), age_min=6, age_max=12)
+    # turns 6 the day AFTER camp start -> only 5 at start
+    birth_date = date(camp.start_date.year - 6, camp.start_date.month, camp.start_date.day + 1)
+    with pytest.raises(ChildAgeNotEligibleError):
+        registrations.validate_child_age(camp, birth_date)
+
+
+def test_validate_child_age_one_day_too_old_rejected():
+    camp = _target(uuid4(), age_min=6, age_max=12)
+    # turned 13 the day BEFORE camp start
+    birth_date = date(camp.start_date.year - 13, camp.start_date.month, camp.start_date.day - 1)
+    with pytest.raises(ChildAgeNotEligibleError):
+        registrations.validate_child_age(camp, birth_date)
+
+
+# --------------------------------------------------------------------------
+# create_registration — locking, capacity, parametrization, tenant safety
+# --------------------------------------------------------------------------
+
+
+def test_create_registration_locks_camp_row_for_update(monkeypatch):
+    org_id = uuid4()
+    camp = _target(org_id, capacity=5)
+    fake_cursor = _FakeCursor(
+        results=[
+            {"capacity": 5},  # locked camp row
+            {"active_count": 0},  # count query
+            {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},
+        ]
+    )
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    registrations.create_registration(_tenant(org_id), camp, _registration_data())
+
+    lock_query, lock_params = fake_cursor.executed[0]
+    assert "for update" in lock_query.lower()
+    assert lock_params == (camp.id,)
+
+
+def test_create_registration_counts_only_non_cancelled_for_this_camp_and_org(monkeypatch):
+    org_id = uuid4()
+    camp = _target(org_id, capacity=5)
+    fake_cursor = _FakeCursor(
+        results=[
+            {"capacity": 5},
+            {"active_count": 0},
+            {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},
+        ]
+    )
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    registrations.create_registration(_tenant(org_id), camp, _registration_data())
+
+    count_query, count_params = fake_cursor.executed[1]
+    assert count_params == (camp.id, org_id)
+    assert "status <> 'cancelled'" in count_query
+    assert "organization_id = %s" in count_query
+    assert "camp_id = %s" in count_query
+
+
+def test_create_registration_inserts_when_capacity_available(monkeypatch):
+    org_id = uuid4()
+    camp = _target(org_id, capacity=2)
+    token = uuid4()
+    fake_cursor = _FakeCursor(
+        results=[
+            {"capacity": 2},
+            {"active_count": 1},  # 1 of 2 spots taken
+            {"registration_token": token, "status": "registered", "payment_status": "open"},
+        ]
+    )
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    result = registrations.create_registration(_tenant(org_id), camp, _registration_data())
+
+    assert result["registration_token"] == token
+    insert_query, insert_params = fake_cursor.executed[2]
+    assert insert_params[0] == org_id  # organization_id from tenant
+    assert insert_params[1] == camp.id  # camp_id from server-resolved camp
+    assert "insert into camp_registrations" in insert_query.lower()
+
+
+def test_create_registration_raises_fully_booked_when_capacity_reached(monkeypatch):
+    org_id = uuid4()
+    camp = _target(org_id, capacity=2)
+    fake_cursor = _FakeCursor(
+        results=[
+            {"capacity": 2},
+            {"active_count": 2},  # already at capacity
+        ]
+    )
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    with pytest.raises(CampFullyBookedError):
+        registrations.create_registration(_tenant(org_id), camp, _registration_data())
+
+    # no INSERT attempted
+    assert len(fake_cursor.executed) == 2
+
+
+def test_create_registration_raises_not_available_when_camp_row_vanished(monkeypatch):
+    org_id = uuid4()
+    camp = _target(org_id)
+    fake_cursor = _FakeCursor(results=[None])  # locked SELECT finds nothing
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    with pytest.raises(CampNotAvailableError):
+        registrations.create_registration(_tenant(org_id), camp, _registration_data())
+
+
+def test_create_registration_ignores_any_id_like_data_on_the_request_object(monkeypatch):
+    """
+    RegistrationCreate has no organization_id/camp_id fields at all (see
+    schemas.py, extra="forbid") — this test proves create_registration
+    never reads such attributes even if someone tried to smuggle them onto
+    the object; only `tenant`/`camp` (both server-resolved) determine the
+    written organization_id/camp_id.
+    """
+    org_id = uuid4()
+    other_org_id = uuid4()
+    camp = _target(org_id, capacity=5)
+    fake_cursor = _FakeCursor(
+        results=[
+            {"capacity": 5},
+            {"active_count": 0},
+            {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},
+        ]
+    )
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    data = _registration_data()
+    assert not hasattr(data, "organization_id")
+    assert not hasattr(data, "camp_id")
+
+    registrations.create_registration(_tenant(org_id), camp, data)
+
+    insert_params = fake_cursor.executed[2][1]
+    assert insert_params[0] == org_id
+    assert insert_params[0] != other_org_id

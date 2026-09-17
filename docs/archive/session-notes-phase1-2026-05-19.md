@@ -1,7 +1,14 @@
-# Session Notes — Phase 1 ABGESCHLOSSEN
+# Session Notes — Phase 1 ABGESCHLOSSEN (archiviert)
 
-> Finales Protokoll. Phase 1 Foundation Hardening vollständig abgeschlossen.
-> Kann in der nächsten Session gelöscht oder archiviert werden.
+> **Archiviert.** Ursprünglich `SESSION_NOTES.md` im Repo-Root, dort selbst als löschbar markiert
+> nach Abschluss von Phase 1. Hierher verschoben statt gelöscht, da der Inhalt (B1–B3 Fixes)
+> historisch belegt, was in [`TODO.md`](../../TODO.md) inzwischen als erledigt markiert ist.
+>
+> **Hinweis zum letzten Abschnitt unten ("Nächste Session: Phase 2 Planung"):** Diese Phase-2-Planung
+> (Shared-Schema-`organizations`-Tabelle) hat so nicht stattgefunden — siehe
+> [`docs/archive/multi-tenant-roadmap-legacy.md`](multi-tenant-roadmap-legacy.md) für die
+> überholte Vision und [`docs/architecture/system-overview.md`](../architecture/system-overview.md)
+> für den tatsächlich eingeschlagenen Weg (isolierte Infrastruktur pro Kunde, JK-102).
 
 ---
 

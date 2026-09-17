@@ -4,7 +4,7 @@ Online-Anmeldesystem für Fußball-Feriencamps. Aktuell Single-Tenant für **KSV
 (produktiv), im Umbau Richtung Multi-Tenant-fähiger Plattform für weitere Vereine —
 **JK Performance Academy** ist als zweiter Kunde in Vorbereitung (Draft-Status).
 
-Details zu Architektur, Konventionen und Roadmap: siehe [`CLAUDE.md`](./CLAUDE.md).
+Details zu Architektur, Konventionen und Sicherheitspflichten: siehe [`CLAUDE.md`](./CLAUDE.md).
 
 ## Status
 
@@ -13,8 +13,8 @@ Details zu Architektur, Konventionen und Roadmap: siehe [`CLAUDE.md`](./CLAUDE.m
 | KSV Baunatal | Produktiv live | [`docs/customers/ksv.md`](docs/customers/ksv.md) |
 | JK Performance Academy | Draft/Preview, kein produktiver Schreibpfad | [`docs/customers/jk-performance.md`](docs/customers/jk-performance.md) |
 
-Wie beide Kunden technisch zusammenhängen (ein Repository, zwei Vercel-Projekte, ein
-geteiltes Backend): [`docs/architecture/system-overview.md`](docs/architecture/system-overview.md).
+Wie beide Kunden technisch zusammenhängen (ein Repository, zwei Vercel-Projekte, seit JK-102
+zwei vollständig getrennte Backend/DB-Instanzen): [`docs/architecture/system-overview.md`](docs/architecture/system-overview.md).
 
 ## Tech-Stack
 
@@ -85,8 +85,10 @@ laufen bis dahin manuell.
 
 | Dokument | Inhalt |
 |---|---|
-| [`CLAUDE.md`](./CLAUDE.md) | Architektur, Datenfluss, Konventionen, bekannte Bugs, Roadmap |
+| [`CLAUDE.md`](./CLAUDE.md) | Architektur-Kurzfassung, Konventionen, Sicherheitspflichten, Fallstricke (kanonisch für KI-Assistenten) |
 | [`DEPLOYMENT.md`](./DEPLOYMENT.md) | Supabase/Render/Vercel-Setup, Env-Vars, Backup, Rollback, Kosten |
-| [`docs/architecture/system-overview.md`](docs/architecture/system-overview.md) | Wie KSV und JK technisch zusammenhängen |
+| [`docs/architecture/system-overview.md`](docs/architecture/system-overview.md) | Wie KSV und JK technisch zusammenhängen (IST-Zustand) |
 | [`docs/customers/`](docs/customers/) | Kundenkontexte KSV und JK Performance Academy |
 | [`TODO.md`](./TODO.md) | Priorisierte offene Aufgaben |
+| [`.claude/rules/`](.claude/rules/) | Frontend-/Backend-spezifische Code-Konventionen |
+| [`docs/archive/`](docs/archive/) | Historische Dokumente (überholte Roadmap, Phase-1-Protokoll) — kein aktueller Stand |

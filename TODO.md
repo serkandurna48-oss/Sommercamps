@@ -10,75 +10,47 @@
 
 ## Kritische Bugs (zuerst!)
 
-### T01 — Altersgrenze-Inkonsistenz beheben
-**Priorität: Hoch | Dateien: `backend/main.py`, `frontend/app/components/RegistrationForm.tsx`, `backend/schema.sql`**
+### T01 — Altersgrenze-Inkonsistenz beheben ✅ ERLEDIGT (siehe `docs/archive/session-notes-phase1-2026-05-19.md`)
 
-Problem: Drei widersprüchliche Grenzen.
-- Frontend `validate()`: max. 12 Jahre (Zeile 107–113 in RegistrationForm.tsx)
-- Landing Page: "5–12 Jahre" (page.tsx Zeile 100, 122, 233)
-- DB-Schema `chk_birth_date_range`: max. 18 Jahre (schema.sql Zeile 24–27)
-
-Entscheid nötig (bitte bestätigen bevor ich ändere):
-- [ ] Soll das Camp für 5–12 Jahre sein (wie Landing Page sagt)?
-- [ ] Oder 5–18 Jahre (wie DB erlaubt)?
-
-Wenn 5–12: Frontend und DB-Constraint müssen alignt werden + Migration.
-Wenn 5–18: Alle Texte in Frontend anpassen.
+Entschieden: 5–12 Jahre. Umgesetzt und production-verifiziert (2026-05-19): DB-Constraint
+`chk_birth_date_plausible` ersetzt `chk_birth_date_range`, Backend validiert über
+`camp_config.py` (`CAMP_AGE_MIN`/`CAMP_AGE_MAX`, `validate_age_at_camp_start()`) gegen den
+Camp-Startdatum, Frontend über `campConfig.ts` (`isAgeValidAtCampStart()`, schaltjahressicher
+via `date-fns`). Alle drei Seiten sind seitdem konsistent bei 5–12 Jahren.
 
 ---
 
-### T02 — Camp-Preis alignen (CAMP_PRICE_DISPLAY)
-**Priorität: Hoch | Dateien: `frontend/app/page.tsx`, `backend/.env.example`**
+### T02 — Camp-Preis alignen (CAMP_PRICE_DISPLAY) ✅ ERLEDIGT (siehe `docs/archive/session-notes-phase1-2026-05-19.md`)
 
-Problem: `const CAMP_PRICE = '149 €'` (page.tsx:53, TODO-Kommentar) ist hardcoded
-und unabhängig von `STRIPE_PRICE_CENTS`. Wenn der Preis auf Stripe geändert wird,
-stimmt die Landing Page nicht mehr.
-
-Lösung:
-- Backend-Endpunkt `GET /config` (öffentlich) liefert `camp_price_display` aus Env-Var
-- Frontend lädt den Preis beim SSR oder per ISR
-- Alternativ (einfacher): `NEXT_PUBLIC_CAMP_PRICE_DISPLAY` als Frontend-Env-Var,
-  aligned mit `STRIPE_PRICE_CENTS` dokumentieren
+`GET /config` liefert `price_cents` aus `STRIPE_PRICE_CENTS`, Frontend zeigt den Preis darüber
+an statt über eine hartkodierte Konstante. Production-verifiziert (2026-05-19).
 
 ---
 
-### T03 — CAMP_WEEKS DRY machen
-**Priorität: Hoch | Dateien: `backend/main.py`, `frontend/app/components/RegistrationForm.tsx`, `frontend/app/page.tsx`**
+### T03 — CAMP_WEEKS DRY machen ⚠️ TEILWEISE ERLEDIGT
 
-Problem: Identische Camp-Wochen-Daten an 3 Stellen hardcodiert.
-Änderung an einer Stelle → Bug an den anderen zwei.
+Validierungsseitig gelöst: Camp-Wochen leben zentral in `backend/camp_config.py`
+(`CAMP_WEEKS`) und werden über `GET /config` (`weeks[]`) ans Frontend geliefert
+(`campConfig.ts` → `fetchCampConfig()`), genutzt für Preis/Altersvalidierung in `page.tsx`.
 
-Lösung:
-- Backend: `GET /config` Endpunkt (öffentlich) liefert `allowed_camp_weeks[]`
-- Frontend: Lädt die Liste einmalig und übergibt sie an Form + Termine-Section
-- Verhindert, dass Frontend ungültige Wochen zeigt / akzeptiert
+**Weiterhin offen:** `frontend/app/lib/clubConfig.tsx` (`DEFAULT_CAMPS`) pflegt dieselben
+Datums-Strings (Label, Anzeige-Datum, Tag) für die Landingpage-Darstellung noch einmal
+separat und manuell synchron zum Backend — kein Fetch, reines Literal. Ändert sich ein
+Camp-Termin nur in `camp_config.py`, driftet die Anzeige in `clubConfig.tsx` unbemerkt
+auseinander. Verbleibende Arbeit: `DEFAULT_CAMPS`-Anzeige ebenfalls aus `GET /config`
+speisen oder zumindest einen Konsistenz-Test zwischen beiden Quellen ergänzen.
 
 ---
 
 ## Config-Externalisierung
 
-### T04 — Vereinsname + Campjahr konfigurierbar machen
-**Priorität: Mittel | Dateien: `backend/main.py`**
+### T04 — Vereinsname + Campjahr konfigurierbar machen ✅ ERLEDIGT
 
-Problem: `"KSV Baunatal"`, `"Fußballschule"`, `"2026"` sind im E-Mail-Template,
-im Stripe-Produktnamen und im FastAPI-App-Titel hardcodiert.
-
-Neue Env-Vars einführen:
-```
-CLUB_NAME=KSV Baunatal
-CLUB_SUBTITLE=Fußballschule
-CAMP_YEAR=2026
-```
-
-Betrifft:
-- `main.py:44` EMAIL_FROM_NAME default
-- `main.py:192` FastAPI app title
-- `main.py:335-336` E-Mail HTML Header
-- `main.py:346,348` E-Mail HTML Body
-- `main.py:440` E-Mail HTML Footer "© 2026"
-- `main.py:487` E-Mail Text Footer
-- `main.py:518` E-Mail Betreff
-- `main.py:949` Stripe Produkt-Name
+`CLUB_NAME`, `CLUB_SUBTITLE`, `CAMP_YEAR` (und `CLUB_LEGAL_NAME`) sind als Env-Vars mit
+KSV-Defaults in `backend/main.py` eingeführt und werden im FastAPI-App-Titel, E-Mail-Template
+(Header, Body, Footer, Betreff) und Stripe-Produktnamen verwendet. Seit JK-102 laufen KSV und
+JK zusätzlich auf getrennten Backend-Instanzen mit jeweils eigenem Wertesatz dieser Env-Vars —
+siehe `docs/architecture/system-overview.md`.
 
 ---
 
@@ -161,27 +133,11 @@ die vor Phase 1 angelegt wurden.
 
 ---
 
-### T12 — API-Endpunkt GET /config implementieren
-**Priorität: Hoch | Dateien: `backend/main.py`**
+### T12 — API-Endpunkt GET /config implementieren ✅ ERLEDIGT
 
-Öffentlicher Endpunkt, der alle dynamischen Frontend-Konfigurationen liefert.
-Löst T03 (CAMP_WEEKS), T05 (JERSEY_SIZES) und T02 (Preis) auf einmal.
-
-```
-GET /config
-Response:
-{
-  "club_name": "KSV Baunatal",
-  "club_subtitle": "Fußballschule",
-  "camp_year": 2026,
-  "camp_price_display": "149 €",
-  "allowed_camp_weeks": ["29.06.–02.07.2026", ...],
-  "allowed_jersey_sizes": ["6XS–5XS (104–116)", ...]
-}
-```
-
-**Abhängigkeiten:** T04 (Env-Vars einführen) muss vorher erledigt sein.
-**Danach:** T03, T05, T02 können auf diesen Endpunkt umgestellt werden.
+`GET /config` existiert (`backend/main.py`, `ConfigResponse`) und liefert `club_name`,
+`club_subtitle`, `camp_year`, Preis (`price_cents`) und `weeks[]` (Label + Start-/Enddatum).
+**Noch nicht enthalten:** `allowed_jersey_sizes` — siehe T05, weiterhin offen.
 
 ---
 
@@ -251,14 +207,14 @@ werden müssen. Jede Stelle ist im Code mit `// TODO(multi-tenant): ...` markier
 ## Empfohlene Reihenfolge
 
 ```
-T01 (Bug: Alter)       ← Entscheid nötig, erst nach Rücksprache
-T12 (GET /config)      ← Enabler für T02, T03, T05
-T03 (CAMP_WEEKS DRY)   ← Nach T12
-T02 (Preis alignen)    ← Nach T12
-T04 (Club-Config)      ← Unabhängig, kann parallel zu T03
+T01 (Bug: Alter)       ← ✅ erledigt
+T12 (GET /config)      ← ✅ erledigt
+T02 (Preis alignen)    ← ✅ erledigt
+T04 (Club-Config)      ← ✅ erledigt
 T06 (render.yaml)      ← ✅ erledigt
-T05 (JERSEY_SIZES DRY) ← Nach T12
-T07 (Kontaktdaten)     ← Unabhängig
+T03 (CAMP_WEEKS DRY)   ← ⚠️ teilweise erledigt (Anzeige-Duplikat in clubConfig.tsx offen)
+T05 (JERSEY_SIZES DRY) ← Noch offen, Enabler (T12) existiert bereits
+T07 (Kontaktdaten)     ← Unabhängig, weiterhin offen
 T09 (Tests)            ← Kontinuierlich, parallel zu allem
 T08 (Daten prüfen)     ← Zeitkritisch, vor nächster Camp-Saison
 T10 (Migration Docs)   ← Kleinstes Todo

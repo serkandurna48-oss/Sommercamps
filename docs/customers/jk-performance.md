@@ -19,26 +19,25 @@ sind im internen Umsetzungsplan festgehalten (siehe unten).
 
 Wie das technisch mit KSV zusammenhängt: [`docs/architecture/system-overview.md`](../architecture/system-overview.md).
 
-## Kein eigener Backend-Schreibpfad (Stand heute)
-
-Die JK-Seite ist **reine Vorschau** — es gibt kein Formular, das Daten an das Backend sendet.
-"Trainingsanfrage stellen" und "Interesse an Mitgliedschaft" sind `mailto:`-Links. Der einzige
-Backend-Kontakt ist ein lesender `GET /config`-Aufruf (geteilt mit KSV). Es entstehen keine
-JK-Datensätze in der Datenbank.
 
 ## Geplant: Registration & Admin MVP
 
 Folgeticket **CP-JK-101 ("Training Inquiry Flow")**: ein echtes Anfrageformular
 (Training/Camp/Mitgliedschaftsinteresse), interne Benachrichtigung an eine noch zu klärende
 E-Mail-Adresse. Danach ein Admin-Dashboard analog zu `frontend/app/admin/page.tsx` für JK.
-Voraussetzung laut Umsetzungsplan: Paket und Preis mit Jan final bestätigt, bevor bezahlte
-Infrastruktur aufgesetzt wird.
+Es gibt weiterhin **kein** Anmelde- oder Anfrageformular, das Daten an das Backend sendet —
+"Trainingsanfrage stellen" und "Interesse an Mitgliedschaft" sind `mailto:`-Links, keine
+API-Calls. Es entstehen dadurch keine JK-Datensätze.
 
-## Geplant: getrennte Infrastruktur
+## Abgeschlossen: getrennte Infrastruktur (JK-102)
 
-Sobald der echte Anfrage-Flow ansteht, ist eine **von KSV vollständig isolierte**
-Infrastruktur vorgesehen (eigenes Supabase-Projekt, eigener Render-Service) — kein geteilter
-Tenant-Zustand wie heute. Diese Trennung existiert noch nicht.
+Paket und Preis sind mit Jan final bestätigt. JK läuft jetzt auf **von KSV vollständig
+isolierter** Infrastruktur: eigenes Supabase-Projekt, eigener Render-Service
+(`sommercamps-1`) — kein geteilter Tenant-Zustand mehr. Verifiziert über `/health` (200, DB
+erreichbar) und `/config` (200, liefert JK-eigene Werte, z.B.
+`club_name: "JK Performance Academy"`). Der einzige Backend-Kontakt von JK aus bleibt der
+lesende `GET /config`-Aufruf — jetzt gegen den eigenen, isolierten JK-Service statt gegen KSV.
+Details inkl. Rollback: [`docs/onboarding/jk-infrastructure-setup.md`](../onboarding/jk-infrastructure-setup.md).
 
 Vollständiger Plan inkl. Phasenschätzungen: `docs/onboarding/jk-implementation-plan-after-yes.md`.
 Weitere Onboarding-Dokumente unter `docs/onboarding/`. Beide liegen aktuell nur auf Branch

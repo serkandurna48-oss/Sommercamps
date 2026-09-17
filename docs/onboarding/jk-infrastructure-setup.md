@@ -20,30 +20,42 @@
 
 ### 1. Supabase — eigenes JK-Projekt
 
-- [ ] Neues Supabase-Projekt anlegen (eigener Projektname, z.B. `jk-performance-academy`),
+- [x] Neues Supabase-Projekt anlegen (eigener Projektname, z.B. `jk-performance-academy`),
       Region **Frankfurt/EU** wählen (DSGVO)
-- [ ] `backend/schema.sql` im SQL Editor des **neuen** Projekts ausführen
-- [ ] Migrationen in Reihenfolge ausführen (falls seit `schema.sql` neue Spalten
-      dazugekommen sind): `migration_phase1.sql` → `migration_phase2.sql` →
-      `migration_phase3.sql` → `migration_jersey_sizes.sql` → weitere `migration_*.sql`,
-      die im Repo existieren
-- [ ] **Keine produktiven KSV-Daten kopieren** — das neue Projekt bleibt leer, keine
+- [x] **`schema.sql` allein reicht nicht** — es ist veraltet gegenüber dem, was `main.py`
+      braucht (fehlende Spalten `photo_permission`/`paid_at`, fehlender `'cancelled'`-Wert bei
+      `payment_status`, veraltete `birth_date`-Constraint). Im SQL Editor des **neuen** Projekts
+      in genau dieser Reihenfolge ausführen:
+      1. `backend/schema.sql`
+      2. `backend/migration_phase1.sql` (redundant, `schema.sql` hat die Spalten schon —
+         schadet wegen `IF NOT EXISTS` nicht, hält aber die Reihenfolge konsistent mit der
+         echten Migrationshistorie)
+      3. `backend/migration_phase2.sql` (**notwendig** — ergänzt `photo_permission`,
+         `paid_at` und `'cancelled'` als erlaubten `payment_status`-Wert; ohne das schlagen
+         Insert bzw. Admin-Storno fehl)
+      4. `backend/migration_phase3.sql` (redundant, gleicher Grund wie Schritt 2)
+      5. `backend/migration_jersey_sizes.sql` (redundant, `schema.sql` hat bereits die
+         finalen Trikotgrößen-Werte)
+      6. `backend/migration_fix_age_constraint.sql` (**notwendig** — ersetzt die veraltete
+         `chk_birth_date_range`-Constraint (5–18 Jahre) durch die aktuelle
+         `chk_birth_date_plausible`-Plausibilitätsprüfung)
+- [x] **Keine produktiven KSV-Daten kopieren** — das neue Projekt bleibt leer, keine
       `camp_registrations`-Zeilen aus der KSV-DB übertragen
-- [ ] Connection String holen: `Settings → Database → Connection string → URI
+- [x] Connection String holen: `Settings → Database → Connection string → URI
       (Transaction Pooler, Port 6543)` — **nicht** Session Pooler (Port 5432), siehe
       `CLAUDE.md` Fallstrick #2
 - [ ] RLS-Status prüfen: Insert public, Select/Update nur Service-Role-Key (wie bei KSV)
 
 ### 2. Render — eigener JK-Service
 
-- [ ] Neuen Web Service anlegen, **eigener Name** (z.B. `jk-performance-backend`) — nicht den
+- [x] Neuen Web Service anlegen, **eigener Name** (z.B. `jk-performance-backend`) — nicht den
       bestehenden `ksv-baunatal-backend`-Service wiederverwenden oder umbenennen
-- [ ] Root Directory: `backend/`
-- [ ] Build Command: `pip install -r requirements.txt`
-- [ ] Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-- [ ] Region: Frankfurt (EU)
-- [ ] Env-Vars setzen (Werte siehe Tabelle unten)
-- [ ] Deployen, Render-URL merken (z.B. `https://jk-performance-backend.onrender.com`)
+- [x] Root Directory: `backend/`
+- [x] Build Command: `pip install -r requirements.txt`
+- [x] Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- [x] Region: Frankfurt (EU)
+- [x] Env-Vars setzen (Werte siehe Tabelle unten)
+- [x] Deployen, Render-URL merken (z.B. `https://jk-performance-backend.onrender.com`)
 
 #### Env-Vars für den JK-Render-Service
 
@@ -68,11 +80,11 @@
 
 ### 3. Vercel — `jkperformance`-Projekt umstellen
 
-- [ ] Im bestehenden `jkperformance`-Vercel-Projekt: `NEXT_PUBLIC_API_URL` von der
+- [x] Im bestehenden `jkperformance`-Vercel-Projekt: `NEXT_PUBLIC_API_URL` von der
       **geteilten KSV-Render-URL** auf die **neue JK-Render-URL** (Schritt 2) ändern
-- [ ] `NEXT_PUBLIC_ACTIVE_CLUB=jk` bleibt unverändert gesetzt
-- [ ] Redeploy triggern, damit die neue Env-Var eingebettet wird
-- [ ] **KSV-Vercel-Projekt bleibt unverändert** — zeigt weiterhin auf `ksv-baunatal-backend`
+- [x] `NEXT_PUBLIC_ACTIVE_CLUB=jk` bleibt unverändert gesetzt
+- [x] Redeploy triggern, damit die neue Env-Var eingebettet wird
+- [x] **KSV-Vercel-Projekt bleibt unverändert** — zeigt weiterhin auf `ksv-baunatal-backend`
 
 ### 4. Verifikation (Health Check & Verbindungstest)
 
@@ -86,9 +98,9 @@ curl https://jk-performance-backend.onrender.com/config
 # erwartet: club_name = "JK Performance Academy", nicht "KSV Baunatal"
 ```
 
-- [ ] `jkperformance.vercel.app` im Browser öffnen, Netzwerk-Tab prüfen: Requests gehen an die
+- [x] `jkperformance.vercel.app` im Browser öffnen, Netzwerk-Tab prüfen: Requests gehen an die
       **neue** JK-Render-URL, nicht mehr an die KSV-Render-URL
-- [ ] KSV-Produktivseite (`main`-Branch-Deployment) unverändert erreichbar, unverändertes
+- [x] KSV-Produktivseite (`main`-Branch-Deployment) unverändert erreichbar, unverändertes
       Verhalten — kurzer Smoke-Test genügt (Formular lädt, `/config` liefert weiter KSV-Werte)
 
 ## Akzeptanzkriterien-Check
@@ -116,9 +128,13 @@ curl https://jk-performance-backend.onrender.com/config
 
 ## Nach Abschluss
 
-- [ ] `docs/customers/jk-performance.md` aktualisieren: Abschnitt "Kein eigener
+- [x] `docs/customers/jk-performance.md` aktualisieren: Abschnitt "Kein eigener
       Backend-Schreibpfad" entfällt, sobald der Verbindungstest steht (auch wenn JK-104 den
       echten Formular-Flow erst später liefert)
-- [ ] `docs/architecture/system-overview.md` aktualisieren: Abschnitt „Geplant: isolierte
+- [x] `docs/architecture/system-overview.md` aktualisieren: Abschnitt „Geplant: isolierte
       JK-Infrastruktur (Track B)" von Planungsstand auf umgesetzt setzen
-- [ ] Render-/Supabase-Projektnamen und finale JK-Render-URL hier ergänzen, sobald bekannt
+- [x] Render-/Supabase-Projektnamen und finale JK-Render-URL hier ergänzen, sobald bekannt
+      https://sommercamps-1.onrender.com
+      https://yuapavqkmcuktendprik.supabase.co
+      https://jkperformance.vercel.app/
+      

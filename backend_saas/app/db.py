@@ -26,6 +26,21 @@ _pool: psycopg2.pool.ThreadedConnectionPool | None = None
 
 _LOCAL_HOSTNAMES = {"127.0.0.1", "localhost", "::1"}
 
+# Without this, psycopg2 reads a `uuid` column back as a plain str (not a
+# uuid.UUID) and — the sharper edge — can't adapt an actual uuid.UUID
+# object as a query parameter at all ("can't adapt type 'UUID'"). That was
+# latent and harmless through CP-S405 (every UUID-typed value in this
+# codebase originated from a previous psycopg2 read, i.e. was already a
+# str, and Pydantic coerces str -> UUID at the API boundary regardless).
+# CP-S406 introduces internal functions meant for a future admin endpoint
+# (cancel_registration_and_promote_next(tenant, registration_id: UUID)) —
+# FastAPI parses a `UUID`-typed path parameter into a real uuid.UUID
+# object, which would hit exactly this gap. Registering the adapter once,
+# globally, here makes every uuid.UUID <-> `uuid` column round-trip work
+# consistently, matching the type hints already used throughout (
+# TenantContext.organization_id, RegistrationTarget.id, etc.).
+psycopg2.extras.register_uuid()
+
 
 def _dsn_with_sslmode(database_url: str) -> str:
     """

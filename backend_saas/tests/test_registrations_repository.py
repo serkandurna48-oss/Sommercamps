@@ -7,11 +7,12 @@ from uuid import uuid4
 import pytest
 
 from app import db
+from app.registration_lifecycle import CAPACITY_COUNTING_STATUSES, InvalidStatusTransitionError
 from app.repositories import registrations
 from app.repositories.registrations import (
-    CampFullyBookedError,
     CampNotAvailableError,
     ChildAgeNotEligibleError,
+    RegistrationNotFoundError,
     RegistrationTarget,
     RegistrationWindowClosedError,
 )
@@ -239,7 +240,7 @@ def test_create_registration_locks_camp_row_for_update(monkeypatch):
     assert lock_params == (camp.id,)
 
 
-def test_create_registration_counts_only_non_cancelled_for_this_camp_and_org(monkeypatch):
+def test_create_registration_counts_only_capacity_counting_statuses_for_this_camp_and_org(monkeypatch):
     org_id = uuid4()
     camp = _target(org_id, capacity=5)
     fake_cursor = _FakeCursor(
@@ -254,13 +255,17 @@ def test_create_registration_counts_only_non_cancelled_for_this_camp_and_org(mon
     registrations.create_registration(_tenant(org_id), camp, _registration_data())
 
     count_query, count_params = fake_cursor.executed[1]
-    assert count_params == (camp.id, org_id)
-    assert "status <> 'cancelled'" in count_query
+    assert count_params[0] == camp.id
+    assert count_params[1] == org_id
+    assert set(count_params[2]) == CAPACITY_COUNTING_STATUSES
+    assert "status = any(%s)" in count_query
     assert "organization_id = %s" in count_query
     assert "camp_id = %s" in count_query
+    # the pre-CP-S406 approach must not have crept back in
+    assert "cancelled" not in count_query
 
 
-def test_create_registration_inserts_when_capacity_available(monkeypatch):
+def test_create_registration_inserts_registered_when_capacity_available(monkeypatch):
     org_id = uuid4()
     camp = _target(org_id, capacity=2)
     token = uuid4()
@@ -279,25 +284,34 @@ def test_create_registration_inserts_when_capacity_available(monkeypatch):
     insert_query, insert_params = fake_cursor.executed[2]
     assert insert_params[0] == org_id  # organization_id from tenant
     assert insert_params[1] == camp.id  # camp_id from server-resolved camp
+    assert insert_params[2] == "registered"  # capacity was available
     assert "insert into camp_registrations" in insert_query.lower()
 
 
-def test_create_registration_raises_fully_booked_when_capacity_reached(monkeypatch):
+def test_create_registration_inserts_waitlist_when_capacity_reached(monkeypatch):
+    """
+    Since CP-S406, a full camp no longer raises — it still inserts a row,
+    just with status='waitlist', and the function still succeeds (201 at
+    the API layer). The old 409/CampFullyBookedError behavior is gone.
+    """
     org_id = uuid4()
     camp = _target(org_id, capacity=2)
+    token = uuid4()
     fake_cursor = _FakeCursor(
         results=[
             {"capacity": 2},
             {"active_count": 2},  # already at capacity
+            {"registration_token": token, "status": "waitlist", "payment_status": "open"},
         ]
     )
     _patch_cursor(monkeypatch, fake_cursor)
 
-    with pytest.raises(CampFullyBookedError):
-        registrations.create_registration(_tenant(org_id), camp, _registration_data())
+    result = registrations.create_registration(_tenant(org_id), camp, _registration_data())
 
-    # no INSERT attempted
-    assert len(fake_cursor.executed) == 2
+    assert result["status"] == "waitlist"
+    insert_query, insert_params = fake_cursor.executed[2]
+    assert insert_params[2] == "waitlist"
+    assert "insert into camp_registrations" in insert_query.lower()
 
 
 def test_create_registration_raises_not_available_when_camp_row_vanished(monkeypatch):
@@ -339,3 +353,195 @@ def test_create_registration_ignores_any_id_like_data_on_the_request_object(monk
     insert_params = fake_cursor.executed[2][1]
     assert insert_params[0] == org_id
     assert insert_params[0] != other_org_id
+
+
+# --------------------------------------------------------------------------
+# promote_next_waitlisted_registration
+# --------------------------------------------------------------------------
+
+
+def test_promote_next_waitlisted_locks_camp_row_first(monkeypatch):
+    org_id = uuid4()
+    camp_id = uuid4()
+    fake_cursor = _FakeCursor(results=[{"capacity": 2}, {"active_count": 2}])
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    registrations.promote_next_waitlisted_registration(_tenant(org_id), camp_id)
+
+    lock_query, lock_params = fake_cursor.executed[0]
+    assert "for update" in lock_query.lower()
+    assert lock_params == (camp_id,)
+
+
+def test_promote_next_waitlisted_returns_none_when_no_capacity(monkeypatch):
+    org_id = uuid4()
+    camp_id = uuid4()
+    fake_cursor = _FakeCursor(results=[{"capacity": 2}, {"active_count": 2}])
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    result = registrations.promote_next_waitlisted_registration(_tenant(org_id), camp_id)
+
+    assert result is None
+    assert len(fake_cursor.executed) == 2  # never reached the waitlist SELECT
+
+
+def test_promote_next_waitlisted_returns_none_when_no_waitlist(monkeypatch):
+    org_id = uuid4()
+    camp_id = uuid4()
+    fake_cursor = _FakeCursor(
+        results=[{"capacity": 2}, {"active_count": 1}, None]  # capacity free, nobody waiting
+    )
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    result = registrations.promote_next_waitlisted_registration(_tenant(org_id), camp_id)
+
+    assert result is None
+    assert len(fake_cursor.executed) == 3  # never reached the UPDATE
+
+
+def test_promote_next_waitlisted_promotes_oldest_entry(monkeypatch):
+    org_id = uuid4()
+    camp_id = uuid4()
+    oldest_id = uuid4()
+    token = uuid4()
+    fake_cursor = _FakeCursor(
+        results=[
+            {"capacity": 2},
+            {"active_count": 1},
+            {"id": oldest_id},
+            {"registration_token": token, "status": "registered", "payment_status": "open"},
+        ]
+    )
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    result = registrations.promote_next_waitlisted_registration(_tenant(org_id), camp_id)
+
+    assert result["registration_token"] == token
+    assert result["status"] == "registered"
+
+    select_query, select_params = fake_cursor.executed[2]
+    assert select_params == (camp_id, org_id)
+    assert "status = 'waitlist'" in select_query
+    assert "order by created_at asc, id asc" in select_query
+    assert "camp_id = %s" in select_query
+    assert "organization_id = %s" in select_query
+
+    update_query, update_params = fake_cursor.executed[3]
+    assert update_params == (oldest_id, org_id)  # tenant-scoped update
+    assert "set status = 'registered'" in update_query
+
+
+def test_promote_next_waitlisted_returns_none_when_camp_row_vanished(monkeypatch):
+    fake_cursor = _FakeCursor(results=[None])
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    result = registrations.promote_next_waitlisted_registration(_tenant(), uuid4())
+
+    assert result is None
+
+
+# --------------------------------------------------------------------------
+# cancel_registration_and_promote_next
+# --------------------------------------------------------------------------
+
+
+def test_cancel_registration_not_found_raises(monkeypatch):
+    org_id = uuid4()
+    fake_cursor = _FakeCursor(results=[None])
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    with pytest.raises(RegistrationNotFoundError):
+        registrations.cancel_registration_and_promote_next(_tenant(org_id), uuid4())
+
+
+def test_cancel_registration_load_query_is_tenant_scoped(monkeypatch):
+    org_id = uuid4()
+    reg_id = uuid4()
+    fake_cursor = _FakeCursor(results=[None])
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    with pytest.raises(RegistrationNotFoundError):
+        registrations.cancel_registration_and_promote_next(_tenant(org_id), reg_id)
+
+    load_query, load_params = fake_cursor.executed[0]
+    assert load_params == (reg_id, org_id)
+    assert "organization_id = %s" in load_query
+    assert "for update" in load_query.lower()
+
+
+def test_cancel_already_cancelled_raises_without_updating(monkeypatch):
+    org_id = uuid4()
+    reg_id = uuid4()
+    camp_id = uuid4()
+    fake_cursor = _FakeCursor(results=[{"id": reg_id, "camp_id": camp_id, "status": "cancelled"}])
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    with pytest.raises(InvalidStatusTransitionError):
+        registrations.cancel_registration_and_promote_next(_tenant(org_id), reg_id)
+
+    assert len(fake_cursor.executed) == 1  # only the load — no UPDATE attempted
+
+
+@pytest.mark.parametrize("starting_status", ["registered", "confirmed"])
+def test_cancel_registered_or_confirmed_promotes_next_waitlisted(monkeypatch, starting_status):
+    org_id = uuid4()
+    reg_id = uuid4()
+    camp_id = uuid4()
+    oldest_waitlist_id = uuid4()
+    promoted_token = uuid4()
+    fake_cursor = _FakeCursor(
+        results=[
+            {"id": reg_id, "camp_id": camp_id, "status": starting_status},  # load+lock
+            {"id": reg_id, "registration_token": uuid4(), "status": "cancelled", "payment_status": "open"},  # update to cancelled
+            {"capacity": 2},  # promotion: lock camp
+            {"active_count": 1},  # promotion: count (the just-cancelled one no longer counts)
+            {"id": oldest_waitlist_id},  # promotion: oldest waitlisted
+            {"registration_token": promoted_token, "status": "registered", "payment_status": "open"},  # promoted
+        ]
+    )
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    result = registrations.cancel_registration_and_promote_next(_tenant(org_id), reg_id)
+
+    assert result["cancelled"]["status"] == "cancelled"
+    assert result["promoted"]["registration_token"] == promoted_token
+    assert result["promoted"]["status"] == "registered"
+    assert len(fake_cursor.executed) == 6
+
+
+def test_cancel_waitlist_does_not_promote(monkeypatch):
+    org_id = uuid4()
+    reg_id = uuid4()
+    camp_id = uuid4()
+    fake_cursor = _FakeCursor(
+        results=[
+            {"id": reg_id, "camp_id": camp_id, "status": "waitlist"},
+            {"id": reg_id, "registration_token": uuid4(), "status": "cancelled", "payment_status": "open"},
+        ]
+    )
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    result = registrations.cancel_registration_and_promote_next(_tenant(org_id), reg_id)
+
+    assert result["cancelled"]["status"] == "cancelled"
+    assert result["promoted"] is None
+    assert len(fake_cursor.executed) == 2  # load+update only — no promotion attempted
+
+
+def test_cancel_registration_update_is_tenant_scoped(monkeypatch):
+    org_id = uuid4()
+    reg_id = uuid4()
+    camp_id = uuid4()
+    fake_cursor = _FakeCursor(
+        results=[
+            {"id": reg_id, "camp_id": camp_id, "status": "waitlist"},
+            {"id": reg_id, "registration_token": uuid4(), "status": "cancelled", "payment_status": "open"},
+        ]
+    )
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    registrations.cancel_registration_and_promote_next(_tenant(org_id), reg_id)
+
+    update_query, update_params = fake_cursor.executed[1]
+    assert update_params == ("cancelled", reg_id, org_id)
+    assert "organization_id = %s" in update_query

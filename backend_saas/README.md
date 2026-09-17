@@ -6,7 +6,7 @@ FastAPI backend for the new, parallel CampsPilot multi-tenant SaaS — built ind
 [`docs/saas/database-schema.md`](../docs/saas/database-schema.md) for the database this service
 talks to.
 
-## Scope (CP-S403 + CP-S404 + CP-S405)
+## Scope (CP-S403 + CP-S404 + CP-S405 + CP-S406)
 
 This is a foundation with a first real (if narrow) product slice on top, not a finished product.
 What exists:
@@ -17,14 +17,20 @@ What exists:
   `app/deps.py::get_tenant_context` (CP-S404).
 - Read-only, tenant-scoped public endpoints for organizations and published camps (CP-S404).
 - The first **write** endpoint: parents can register a child for a published camp without an
-  account (CP-S405) — with server-side age/window/capacity enforcement and a
-  concurrency-safe capacity check. See [Public API](#public-api) below.
+  account (CP-S405) — with server-side age/window/capacity enforcement.
+- A complete registration status lifecycle (CP-S406): a full camp waitlists instead of
+  rejecting, cancelling a registered/confirmed spot automatically promotes the next waitlisted
+  registration (FIFO), and every status change is validated against a small, central set of
+  allowed transitions. See [Public API](#public-api) and
+  [Registration lifecycle](#registration-lifecycle) below.
 
 What does **not** exist yet (deliberately out of scope): Organizations/Camps **admin** CRUD (no
-POST/PATCH/DELETE for organizations or camps), automatic waitlisting, Stripe/payments, Brevo/
-email (no confirmation mail is sent), a confirmation page, JK onboarding, KSV migration, Supabase
-Auth, `organization_members`, admin login, a frontend, or any deployment config (Render/Vercel).
-Don't build against this expecting any of that to exist.
+POST/PATCH/DELETE for organizations or camps), any HTTP endpoint for cancellation or promotion
+(both exist only as internal repository functions — see
+[Registration lifecycle](#registration-lifecycle)), a waitlist position/number API, waitlist
+email, Stripe/payments, Brevo/email (no confirmation mail is sent at all), a confirmation page,
+JK onboarding, KSV migration, Supabase Auth, `organization_members`, admin login, a frontend, or
+any deployment config (Render/Vercel). Don't build against this expecting any of that to exist.
 
 ## Public API
 
@@ -174,31 +180,33 @@ uses on the read side, so the two can never silently drift apart. A closed windo
    concurrent request for the *same* camp blocks on this exact statement until the first
    transaction commits or rolls back. Requests for a *different* camp are completely unaffected
    — this is a plain row-level lock, not a distributed or advisory lock.
-2. Count non-`cancelled` registrations for this camp, inside the same transaction/lock.
-3. If capacity remains: `INSERT ... RETURNING registration_token, status, payment_status`. If
-   not: raise (which rolls back the transaction — no row written), mapped to **409** with
-   `{"detail": "Camp is fully booked"}`.
+2. Count `registered`/`confirmed` registrations for this camp (`CAPACITY_COUNTING_STATUSES`, see
+   [Registration lifecycle](#registration-lifecycle) — **not** `status <> 'cancelled'`, which
+   since CP-S406 would wrongly count waitlisted rows against capacity too), inside the same
+   transaction/lock.
+3. `INSERT ... RETURNING registration_token, status, payment_status` with
+   `status='registered'` if capacity remains, else `status='waitlist'`. Either way this always
+   succeeds — see [Registration lifecycle](#registration-lifecycle) for why a full camp is no
+   longer a rejection.
 
 Without step 1's lock, two concurrent requests could both read "1 spot left," both decide to
-insert, and both succeed — overbooking by one. With it, the second transaction's `FOR UPDATE`
-literally waits for the first to finish before it's even allowed to count, so it sees the
-now-taken spot. Verified under real concurrent load (see the CP-S405 report): 8 simultaneous
-requests against a capacity-1, zero-registration camp produced exactly one `201` and seven
-`409`s, with exactly one row in the database afterward.
-
-`cancelled` registrations never count against capacity — cancelling one frees the spot for a
-later request. There is **no waitlist** in CP-S405: once a camp is full, registration is
-rejected outright. Automating a waitlist is an explicit later ticket, not attempted here.
+insert as `registered`, and both succeed — overbooking by one. With it, the second transaction's
+`FOR UPDATE` literally waits for the first to finish before it's even allowed to count, so it
+correctly falls back to `waitlist`. Verified under real concurrent load (see the CP-S405 and
+CP-S406 reports): 8 simultaneous requests against a capacity-1, zero-registration camp produced
+exactly one `registered` and seven `waitlist`, with exactly one capacity-counting row in the
+database afterward.
 
 ### HTTP status choice for age and window violations
 
-Both an age-ineligible child and a closed registration window return **422 Unprocessable
+An age-ineligible child and a closed registration window both return **422 Unprocessable
 Content** — the request is syntactically valid JSON matching the schema, but fails a business
 rule given the *current state of the referenced camp*. This is deliberately the same status
 Pydantic itself uses for schema-validation failures (missing/malformed fields), giving API
-consumers one consistent "this request can't be processed as given" signal. Capacity is
-different on purpose: **409 Conflict**, because it's a conflict with existing *state* (the
-resource is full) rather than a property of the request itself.
+consumers one consistent "this request can't be processed as given" signal. There is no longer a
+409 anywhere in the public registration flow (see
+[Registration lifecycle](#registration-lifecycle) — a full camp waitlists instead of being
+rejected, since CP-S406).
 
 ### Duplicate registrations — deliberately not restricted
 
@@ -222,6 +230,154 @@ throughout `app/routers/registrations.py` and everything it calls:
   unexpected DB error to a generic 500); it's logged server-side via `logger.exception(...)`
   instead, which includes the exception's own message/traceback but never the request payload
   that triggered it.
+
+## Registration lifecycle
+
+Everything below is CP-S406. **None of it has an HTTP endpoint yet** — promotion and
+cancellation exist only as internal repository functions in
+`app/repositories/registrations.py`, ready for a future admin ticket to expose. No DB schema
+change was needed: `camp_registrations.status`'s four values (`registered`, `confirmed`,
+`waitlist`, `cancelled`) already existed since CP-S402.
+
+### Status model — the single source of truth
+
+`app/registration_lifecycle.py` is the **only** place either of the two rules below is allowed
+to be defined. Nothing else in the codebase hardcodes a capacity-counting status list or a
+transition rule — `create_registration`, `promote_next_waitlisted_registration`, and
+`cancel_registration_and_promote_next` all import from it.
+
+| Status | Counts against capacity? | Meaning |
+|---|---|---|
+| `registered` | **yes** | A reserved spot. |
+| `confirmed` | **yes** | A confirmed spot (e.g. after payment, in a later ticket — not reachable via any code path yet). |
+| `waitlist` | no | No spot reserved; waiting for one to free up. |
+| `cancelled` | no | No active participation. Terminal — see transitions below. |
+
+```python
+CAPACITY_COUNTING_STATUSES = frozenset({"registered", "confirmed"})
+```
+
+Every capacity query in `app/repositories/registrations.py` filters `status = any(%s)` against
+this exact set (via a parametrized Postgres array, not a hand-written `IN (...)` string) — this
+replaced the pre-CP-S406 `status <> 'cancelled'`, which would have wrongly counted `waitlist`
+rows against capacity once that status started being used.
+
+### Allowed status transitions
+
+```python
+ALLOWED_TRANSITIONS = {
+    "registered": {"confirmed", "cancelled"},
+    "confirmed":  {"cancelled"},
+    "waitlist":   {"registered", "cancelled"},
+    "cancelled":  set(),  # terminal
+}
+```
+
+`app/registration_lifecycle.py::validate_transition(current_status, new_status)` raises
+`InvalidStatusTransitionError` for anything not listed above — including a status "transitioning"
+to itself (e.g. `cancelled -> cancelled`), which is deliberately **not** treated as a harmless
+no-op. This is what makes `cancel_registration_and_promote_next` reject a second cancellation of
+an already-cancelled registration instead of silently succeeding (and potentially triggering a
+second, incorrect promotion).
+
+### Public registration: waitlist instead of 409
+
+Since CP-S406, `POST .../registrations` on a full camp no longer returns 409 — it creates the
+registration with `status='waitlist'`, still `201 Created`:
+
+```json
+{
+  "registration_token": "...",
+  "status": "waitlist",
+  "payment_status": "open"
+}
+```
+
+`payment_status` stays `open` for a waitlisted registration, same as a registered one — **no
+payment flow exists yet at all** (CP-S405/406 scope). This is flagged explicitly for whoever
+builds Stripe/payment next: **a future checkout must not be enabled for a `waitlist` registration
+until it has been promoted to `registered`** — paying for a spot that doesn't exist yet would be
+a real, user-facing bug, not just a modeling inconsistency. No DB change was needed to say this;
+it's an application-layer rule the payment ticket must implement.
+
+No waitlist position/number is returned or computed (`ORDER BY created_at ASC, id ASC` — see
+below — determines order internally, but that ordering is not exposed to the client), and no
+waitlist email is sent — both explicitly out of scope.
+
+### FIFO waitlist promotion
+
+`app/repositories/registrations.py::promote_next_waitlisted_registration(tenant, camp_id)` —
+standalone, callable on its own (opens its own transaction). Algorithm, all inside one
+transaction:
+
+1. `SELECT capacity FROM camps WHERE id = %s FOR UPDATE` — the same camp lock
+   `create_registration` uses. This is the single synchronization point every capacity-affecting
+   function in this module shares.
+2. Count `CAPACITY_COUNTING_STATUSES` registrations for this camp. If capacity is already full,
+   return `None` — nothing to do.
+3. `SELECT id FROM camp_registrations WHERE camp_id = %s AND organization_id = %s AND
+   status = 'waitlist' ORDER BY created_at ASC, id ASC LIMIT 1` — the oldest waitlisted entry,
+   strictly scoped to **both** `camp_id` and `organization_id` (redundant with the fact that a
+   `camp_id` only ever belongs to one organization, but explicit on purpose — see
+   [Registration lookup](#registration-lookup-uuid-is-an-identifier-not-an-authorization) below).
+   Returns `None` if there's no waitlist.
+4. Promote it to `registered`, return its public fields.
+
+Verified under real concurrent load (CP-S406 report): 6 simultaneous promotion attempts against
+a camp with exactly one free spot and 7 waitlisted entries produced exactly one promotion — the
+camp lock serializes all of them, so only the first to acquire it sees (and takes) the free spot;
+the rest re-count after acquiring the lock and correctly find it already taken.
+
+### Cancellation + promotion
+
+`app/repositories/registrations.py::cancel_registration_and_promote_next(tenant, registration_id)`
+— also standalone, also internal-only. One transaction:
+
+1. `SELECT id, camp_id, status FROM camp_registrations WHERE id = %s AND organization_id = %s
+   FOR UPDATE` — loads **and locks** the registration, strictly tenant-scoped. Never a bare
+   `id`-only lookup: a UUID is an identifier, not an authorization (see
+   [Registration lookup](#registration-lookup-uuid-is-an-identifier-not-an-authorization)).
+2. `validate_transition(current_status, "cancelled")` — raises `InvalidStatusTransitionError` if
+   not allowed (including "already cancelled").
+3. Update the registration to `cancelled`.
+4. **Only if** the registration was previously `registered` or `confirmed` (i.e. it actually
+   freed a capacity-counting spot): call the same locked promotion algorithm as
+   `promote_next_waitlisted_registration`, within this same transaction. A registration that was
+   already `waitlist` frees nothing, so nothing is promoted.
+
+Returns `{"cancelled": {...}, "promoted": {...} | None}`.
+
+**Why the registration row is locked first, then the camp row (and why that ordering is safe):**
+every *other* capacity-affecting function here only ever locks the camp row — none of them lock
+a specific registration row and then request the camp lock. That asymmetry means a lock-ordering
+deadlock (two transactions each holding a lock the other wants) can't occur: nothing here ever
+holds a registration lock while waiting on a camp lock that some *other* transaction is holding
+while waiting on that same registration lock. Two concurrent cancellations of *different*
+registrations on the same camp just queue on the camp lock after each securing its own
+(non-conflicting) registration lock — serialization, not deadlock.
+
+The registration lock also closes a correctness gap, not just a deadlock one: without it, two
+concurrent cancel attempts on the *same* registration could both read `status='registered'`
+before either commits (plain reads don't block under Postgres's default read-committed
+isolation), and both would incorrectly trigger a promotion. With the lock, the second
+transaction's read blocks until the first commits, then sees the now-`cancelled` status and
+raises `InvalidStatusTransitionError` — cleanly rejected, no double promotion.
+
+Verified end-to-end against the local Supabase stack (CP-S406 report): a capacity-2 camp with 4
+registrations (2 `registered`, 2 `waitlist`) — cancelling registration 1 promotes registration 3
+(oldest waitlisted); cancelling registration 2 promotes registration 4. Active
+(`registered`+`confirmed`) count never exceeded 2 at any point. A cross-tenant promotion attempt
+(tenant A's context, tenant B's real `camp_id`) safely returned `None` and left tenant B's data
+untouched.
+
+### Registration lookup (UUID is an identifier, not an authorization)
+
+Every *mutating* registration operation is tenant-scoped (`WHERE ... AND organization_id = %s`),
+never a bare `WHERE id = %s`. This is the same principle applied throughout this service since
+CP-S403 (`TenantContext`, `get_tenant_context`) — a UUID being hard to guess doesn't make it a
+substitute for checking it belongs to the caller's tenant. `cancel_registration_and_promote_next`
+takes a `tenant: TenantContext` and a `registration_id: UUID`, in that order, specifically so
+this can never be forgotten.
 
 ## Relationship to `backend/`
 
@@ -292,16 +448,20 @@ directly. **No test in this suite ever contacts the KSV database, or any real da
 | `test_camps_api.py` | Camp collection + detail endpoints, 404 cases, `registration_open` derivation |
 | `test_camps_repository.py` | Camp SQL is parametrized and always scoped by `organization_id` |
 | `test_utils.py` | `age_on_date` (incl. Feb-29 leap-year edge cases) and `is_registration_open` in isolation |
-| `test_registrations_repository.py` | `get_registration_target` scoping, window/age validators, `create_registration`'s `FOR UPDATE` lock + capacity count SQL, tenant/camp values never taken from request data |
-| `test_registrations_api.py` | Full registration endpoint: happy path, tenant/camp 404s, window, age boundaries, consent, capacity 409, `extra="forbid"` rejecting injected `organization_id`/`camp_id` |
+| `test_registration_lifecycle.py` | Every allowed and disallowed status transition (incl. `cancelled -> cancelled`), `CAPACITY_COUNTING_STATUSES` content |
+| `test_registrations_repository.py` | `get_registration_target` scoping, window/age validators, `create_registration`'s `FOR UPDATE` lock + capacity-status-scoped count SQL (registered/waitlist outcomes), `promote_next_waitlisted_registration`'s lock/count/FIFO-select/update sequence, `cancel_registration_and_promote_next`'s tenant-scoped load-and-lock + conditional promotion, tenant/camp values never taken from request data |
+| `test_registrations_api.py` | Full registration endpoint: happy path (`registered` and `waitlist`, both 201), tenant/camp 404s, window, age boundaries, consent, `extra="forbid"` rejecting injected `organization_id`/`camp_id` |
 
 Real, non-mocked verification against the local Supabase stack (not part of the automated
-`pytest` run — see the CP-S404/CP-S405 reports for the full transcripts) additionally confirmed:
-cross-tenant isolation end-to-end (two organizations with the same `camp_slug` never leak into
-each other's responses, verified at both the HTTP and raw-DB level), the sequential capacity
-flow (2 registrations succeed on a capacity-2 camp, a 3rd is rejected with 409, cancelling one
-frees the spot for a retry), and the concurrency guarantee under real load (8 simultaneous
-requests against a capacity-1 camp produced exactly one `201`). If a future ticket wants any of
+`pytest` run — see the CP-S404/CP-S405/CP-S406 reports for the full transcripts) additionally
+confirmed: cross-tenant isolation end-to-end (two organizations with the same `camp_slug` never
+leak into each other's responses, verified at both the HTTP and raw-DB level); the exact 4
+registration / 2 cancellation sequence from the CP-S406 ticket (2 `registered`, 2 `waitlist` →
+cancel #1 promotes #3 → cancel #2 promotes #4, active count never exceeding capacity); a
+cross-tenant promotion attempt safely returning `None` without touching the other tenant's data;
+and two concurrency guarantees under real load — 8 simultaneous registration requests against a
+capacity-1 camp produced exactly one `registered`, and 6 simultaneous promotion attempts against
+a camp with exactly one free spot produced exactly one promotion. If a future ticket wants any of
 this as an automated integration test, it must run against the local Supabase stack or an
 equally isolated test configuration — never KSV, and never without being clearly labeled as an
 integration test.

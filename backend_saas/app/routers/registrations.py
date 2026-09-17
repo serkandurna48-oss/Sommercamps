@@ -6,6 +6,11 @@ child. See README.md "PII and logging" — this module (and everything it
 calls) must never log the request body, a name, an email address, a phone
 number, or medical_notes/allergies. Only slugs, event types, and technical
 exception classes are safe to log.
+
+Since CP-S406: a full camp no longer rejects the request with 409 — the
+registration is created with status='waitlist' instead, still HTTP 201.
+See app/registration_lifecycle.py and
+app/repositories/registrations.py::create_registration.
 """
 
 from __future__ import annotations
@@ -17,7 +22,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from ..deps import get_tenant_context
 from ..repositories import registrations as registrations_repo
 from ..repositories.registrations import (
-    CampFullyBookedError,
     CampNotAvailableError,
     ChildAgeNotEligibleError,
     RegistrationWindowClosedError,
@@ -78,13 +82,6 @@ def create_registration(
 
     try:
         row = registrations_repo.create_registration(tenant, camp, data)
-    except CampFullyBookedError as exc:
-        logger.info(
-            "Registration rejected: camp fully booked (organization_slug=%s, camp_slug=%s)",
-            tenant.slug,
-            camp_slug,
-        )
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Camp is fully booked") from exc
     except CampNotAvailableError as exc:
         # Practically unreachable today (nothing can delete/unpublish a
         # camp between the two lookups yet) — kept defensive, not dead
@@ -108,8 +105,9 @@ def create_registration(
         raise HTTPException(status_code=500, detail="Registration could not be processed") from None
 
     logger.info(
-        "Registration created (organization_slug=%s, camp_slug=%s)",
+        "Registration created (organization_slug=%s, camp_slug=%s, status=%s)",
         tenant.slug,
         camp_slug,
+        row["status"],
     )
     return RegistrationCreated.model_validate(row)

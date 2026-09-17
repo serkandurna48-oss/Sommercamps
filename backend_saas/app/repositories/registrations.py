@@ -1,12 +1,27 @@
 """
-Registration write-flow — internal camp lookup, eligibility checks, and the
-atomic capacity-safe insert.
+Registration write-flow — internal camp lookup, eligibility checks, the
+capacity-safe create (with waitlist fallback), and the internal (not yet
+publicly exposed) lifecycle operations: FIFO waitlist promotion and
+cancel-and-promote.
 
 Separate from app/repositories/camps.py on purpose: the public camps
 repository deliberately never returns an internal `id` (see its docstring),
-but the write-flow needs one to insert a `camp_registrations` row. This
-module is that one narrowly-scoped exception, not a general-purpose "camps
-with more fields" repository — see get_registration_target's docstring.
+but the write-flow needs one to insert/update `camp_registrations` rows.
+This module is that one narrowly-scoped exception, not a general-purpose
+"camps with more fields" repository — see get_registration_target's
+docstring.
+
+Concurrency invariant (read this before touching any function below): every
+function that mutates camp_registrations in a way that affects capacity
+(create_registration, promote_next_waitlisted_registration,
+cancel_registration_and_promote_next) begins by acquiring
+`SELECT ... FOR UPDATE` on the camp's row, via _LOCK_CAMP_CAPACITY, before
+doing anything capacity-sensitive. That single lock is the one
+synchronization point all of them share — bypassing it anywhere would
+reopen the overselling/double-promotion race window. See
+cancel_registration_and_promote_next's docstring for why it *additionally*
+locks the registration row first, and why that ordering (registration, then
+camp — never the reverse) can't deadlock against the other functions here.
 """
 
 from __future__ import annotations
@@ -17,14 +32,16 @@ from typing import Optional
 from uuid import UUID
 
 from .. import db
+from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES, validate_transition
 from ..schemas import RegistrationCreate
 from ..tenancy import TenantContext
 from ..utils import age_on_date, is_registration_open
 
 
 class RegistrationRejectedError(Exception):
-    """Base class for registration write-flow failures that map to a
-    client-facing HTTP error in the router."""
+    """Base class for registration-lifecycle failures — mapped to an HTTP
+    error by whichever endpoint (public write-flow today; an internal/admin
+    one later) surfaces them."""
 
 
 class CampNotAvailableError(RegistrationRejectedError):
@@ -32,9 +49,10 @@ class CampNotAvailableError(RegistrationRejectedError):
     The camp doesn't exist, isn't published, or belongs to a different
     organization than the resolved tenant — maps to 404, identical to an
     unknown camp_slug on the public read API. Practically only raised by
-    the locked re-check in create_registration(); get_registration_target()
-    itself returns None for the same conditions rather than raising, since
-    "not found yet" and "vanished mid-request" are different call sites.
+    the locked re-check in create_registration()/promotion; the initial
+    get_registration_target() call returns None for the same conditions
+    rather than raising, since "not found yet" and "vanished mid-request"
+    are different call sites.
     """
 
 
@@ -55,8 +73,14 @@ class ChildAgeNotEligibleError(RegistrationRejectedError):
         )
 
 
-class CampFullyBookedError(RegistrationRejectedError):
-    """No capacity remaining for this camp — maps to 409."""
+class RegistrationNotFoundError(RegistrationRejectedError):
+    """No registration with this id exists for this tenant — a tenant-scoped
+    lookup miss. Deliberately indistinguishable from "exists but belongs to
+    a different tenant"; see this module's docstring re: tenant scoping."""
+
+    def __init__(self, registration_id: UUID):
+        self.registration_id = registration_id
+        super().__init__(f"No registration found for id '{registration_id}' in this organization")
 
 
 @dataclass(frozen=True)
@@ -96,24 +120,31 @@ _GET_TARGET = f"""
 
 _LOCK_CAMP_CAPACITY = "select capacity from camps where id = %s for update"
 
+# Capacity is defined as "how many registered/confirmed rows exist for this
+# camp" — CAPACITY_COUNTING_STATUSES (app/registration_lifecycle.py) is the
+# only place those two status values are decided; passed in as a parameter
+# (`= any(%s)`) rather than hardcoded here, so this query can never drift
+# from that definition. Pre-CP-S406 this was `status <> 'cancelled'`, which
+# would have wrongly counted waitlist rows against capacity — see
+# docs/saas/database-schema.md / README.md for why that changed.
 _COUNT_ACTIVE_REGISTRATIONS = """
     select count(*) as active_count
     from camp_registrations
     where camp_id = %s
       and organization_id = %s
-      and status <> 'cancelled'
+      and status = any(%s)
 """
 
 _INSERT_REGISTRATION = """
     insert into camp_registrations (
-        organization_id, camp_id,
+        organization_id, camp_id, status,
         parent_first_name, parent_last_name, parent_email, parent_phone,
         child_first_name, child_last_name, child_birth_date,
         emergency_contact_name, emergency_contact_phone,
         medical_notes, allergies, photo_permission,
         terms_accepted, privacy_accepted
     ) values (
-        %s, %s,
+        %s, %s, %s,
         %s, %s, %s, %s,
         %s, %s, %s,
         %s, %s,
@@ -121,6 +152,40 @@ _INSERT_REGISTRATION = """
         %s, %s
     )
     returning registration_token, status, payment_status
+"""
+
+_SELECT_OLDEST_WAITLISTED = """
+    select id
+    from camp_registrations
+    where camp_id = %s
+      and organization_id = %s
+      and status = 'waitlist'
+    order by created_at asc, id asc
+    limit 1
+"""
+
+_PROMOTE_TO_REGISTERED = """
+    update camp_registrations
+    set status = 'registered'
+    where id = %s
+      and organization_id = %s
+    returning registration_token, status, payment_status
+"""
+
+_LOAD_AND_LOCK_REGISTRATION = """
+    select id, camp_id, status
+    from camp_registrations
+    where id = %s
+      and organization_id = %s
+    for update
+"""
+
+_UPDATE_STATUS = """
+    update camp_registrations
+    set status = %s
+    where id = %s
+      and organization_id = %s
+    returning id, registration_token, status, payment_status
 """
 
 
@@ -158,22 +223,29 @@ def create_registration(
     data: RegistrationCreate,
 ) -> dict:
     """
-    The one place capacity is enforced. Runs entirely inside a single
-    transaction (one borrowed connection via db.get_cursor):
+    Since CP-S406, a full camp no longer rejects the request — it inserts
+    the registration as `status='waitlist'` instead (still HTTP 201; see
+    app/routers/registrations.py). Capacity itself is still fully enforced:
+    a `registered` row is only ever created while capacity remains.
+
+    Runs entirely inside a single transaction (one borrowed connection via
+    db.get_cursor):
 
     1. `SELECT capacity FROM camps WHERE id = %s FOR UPDATE` — locks this
        camp's row. A concurrent request for the *same* camp blocks here
        until this transaction commits or rolls back; requests for
        *different* camps are unaffected (no cross-camp contention).
-    2. Count active (non-cancelled) registrations for this camp, inside
-       the same transaction/lock.
-    3. If capacity remains, INSERT and return the new row's public fields;
-       otherwise raise CampFullyBookedError, which rolls back the
-       transaction (see db.get_cursor) — no row is written.
+    2. Count active (registered/confirmed — CAPACITY_COUNTING_STATUSES)
+       registrations for this camp, inside the same transaction/lock.
+    3. INSERT with status='registered' if capacity remains, else
+       status='waitlist'. Either way this function always succeeds (no
+       exception for "full") — only CampNotAvailableError remains, for the
+       practically-unreachable "camp vanished mid-transaction" case.
 
     This prevents two concurrent requests from both reading "1 spot left"
-    and both inserting: the second transaction's FOR UPDATE blocks until
-    the first commits, then re-counts and sees the now-taken spot.
+    and both inserting as 'registered': the second transaction's FOR UPDATE
+    blocks until the first commits, then re-counts and correctly falls
+    back to 'waitlist'.
 
     `organization_id` comes from `tenant` (server-resolved), `camp_id`
     from `camp.id` (server-resolved via get_registration_target) — never
@@ -185,17 +257,20 @@ def create_registration(
         if locked is None:
             raise CampNotAvailableError(f"Camp '{camp.slug}' no longer available")
 
-        cur.execute(_COUNT_ACTIVE_REGISTRATIONS, (camp.id, tenant.organization_id))
+        cur.execute(
+            _COUNT_ACTIVE_REGISTRATIONS,
+            (camp.id, tenant.organization_id, list(CAPACITY_COUNTING_STATUSES)),
+        )
         active_count = cur.fetchone()["active_count"]
 
-        if active_count >= locked["capacity"]:
-            raise CampFullyBookedError(f"Camp '{camp.slug}' is fully booked")
+        new_status = "registered" if active_count < locked["capacity"] else "waitlist"
 
         cur.execute(
             _INSERT_REGISTRATION,
             (
                 tenant.organization_id,
                 camp.id,
+                new_status,
                 data.parent_first_name,
                 data.parent_last_name,
                 str(data.parent_email),
@@ -213,3 +288,120 @@ def create_registration(
             ),
         )
         return cur.fetchone()
+
+
+def _lock_and_promote_next_waitlisted(
+    cur,
+    tenant: TenantContext,
+    camp_id: UUID,
+) -> Optional[dict]:
+    """
+    Must be called with a cursor that is inside an already-open
+    transaction. Locks the camp row (idempotent/reentrant if the caller
+    already holds it earlier in the same transaction), and — only if
+    capacity actually remains — promotes the single oldest ('created_at
+    asc, id asc': FIFO) waitlisted registration for this exact
+    (camp_id, organization_id) to 'registered'.
+
+    Returns the promoted registration's public fields, or None if there
+    was no free capacity or no one on the waitlist. Never touches a
+    registration outside this camp_id/organization_id pair — see this
+    module's docstring for the shared camp-lock invariant that makes this
+    safe under concurrent promotion attempts.
+    """
+    cur.execute(_LOCK_CAMP_CAPACITY, (camp_id,))
+    locked = cur.fetchone()
+    if locked is None:
+        return None
+
+    cur.execute(
+        _COUNT_ACTIVE_REGISTRATIONS,
+        (camp_id, tenant.organization_id, list(CAPACITY_COUNTING_STATUSES)),
+    )
+    active_count = cur.fetchone()["active_count"]
+    if active_count >= locked["capacity"]:
+        return None
+
+    cur.execute(_SELECT_OLDEST_WAITLISTED, (camp_id, tenant.organization_id))
+    next_in_line = cur.fetchone()
+    if next_in_line is None:
+        return None
+
+    cur.execute(_PROMOTE_TO_REGISTERED, (next_in_line["id"], tenant.organization_id))
+    return cur.fetchone()
+
+
+def promote_next_waitlisted_registration(tenant: TenantContext, camp_id: UUID) -> Optional[dict]:
+    """
+    Standalone entry point for future internal/admin use — not exposed via
+    any HTTP endpoint in CP-S406. See _lock_and_promote_next_waitlisted for
+    the actual algorithm; this just wraps it in its own transaction for
+    callers that aren't already inside one (unlike
+    cancel_registration_and_promote_next, which calls the same helper
+    within its own transaction to keep cancel+promote atomic).
+    """
+    with db.get_cursor() as cur:
+        return _lock_and_promote_next_waitlisted(cur, tenant, camp_id)
+
+
+def cancel_registration_and_promote_next(tenant: TenantContext, registration_id: UUID) -> dict:
+    """
+    Standalone entry point for future internal/admin use — not exposed via
+    any HTTP endpoint in CP-S406.
+
+    Cancels one registration (strictly tenant-scoped: `WHERE id = %s AND
+    organization_id = %s`, never a bare id lookup — a UUID is an
+    identifier, not an authorization) and, only if that registration was
+    previously counted against capacity (registered/confirmed), promotes
+    the next waitlisted registration for the same camp in the same
+    transaction. A registration that was already 'waitlist' is simply
+    cancelled — nothing was freed, so nothing is promoted.
+
+    Lock ordering: this function locks the REGISTRATION row first (`FOR
+    UPDATE`), then the CAMP row (via _lock_and_promote_next_waitlisted).
+    Every other capacity-affecting function here (create_registration,
+    promote_next_waitlisted_registration) only ever locks the camp row — none
+    of them lock a specific registration row first and then request the
+    camp lock. That asymmetry is what makes this ordering deadlock-safe:
+    a cycle requires two transactions each holding a lock the other one
+    wants, and no other function in this module can end up holding a
+    registration lock while waiting on this transaction's camp lock (they
+    never take a registration lock at all). Two concurrent cancellations
+    of *different* registrations on the same camp simply queue on the camp
+    lock after each securing its own (non-conflicting) registration lock —
+    not a deadlock, just serialization.
+
+    The registration-row lock also closes a correctness gap, not just a
+    deadlock one: without it, two concurrent cancel attempts on the *same*
+    registration could both read status='registered' before either
+    commits (Postgres read-committed snapshots don't block plain reads),
+    and both would then (incorrectly) trigger a promotion. With the lock,
+    the second transaction's read blocks until the first commits, then
+    sees the now-'cancelled' status and raises InvalidStatusTransitionError
+    via validate_transition("cancelled", "cancelled") — cleanly rejected,
+    no double promotion.
+
+    Raises RegistrationNotFoundError if no such registration exists for
+    this tenant, or InvalidStatusTransitionError (from
+    app.registration_lifecycle) if the registration's current status
+    doesn't allow a transition to 'cancelled' — this includes an
+    already-cancelled registration, which is rejected rather than treated
+    as a harmless no-op (see registration_lifecycle.validate_transition).
+    """
+    with db.get_cursor() as cur:
+        cur.execute(_LOAD_AND_LOCK_REGISTRATION, (registration_id, tenant.organization_id))
+        registration = cur.fetchone()
+        if registration is None:
+            raise RegistrationNotFoundError(registration_id)
+
+        current_status = registration["status"]
+        validate_transition(current_status, "cancelled")
+
+        cur.execute(_UPDATE_STATUS, ("cancelled", registration_id, tenant.organization_id))
+        cancelled = cur.fetchone()
+
+        promoted = None
+        if current_status in CAPACITY_COUNTING_STATUSES:
+            promoted = _lock_and_promote_next_waitlisted(cur, tenant, registration["camp_id"])
+
+        return {"cancelled": cancelled, "promoted": promoted}

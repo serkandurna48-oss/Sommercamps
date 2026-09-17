@@ -9,10 +9,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.repositories import organizations
 from app.repositories import registrations as registrations_repo
-from app.repositories.registrations import (
-    CampFullyBookedError,
-    RegistrationTarget,
-)
+from app.repositories.registrations import RegistrationTarget
 from app.tenancy import TenantContext
 
 ORG_SLUG = "demo-fc"
@@ -369,33 +366,62 @@ def test_photo_permission_false_is_allowed(monkeypatch):
 # --------------------------------------------------------------------------
 
 
-def test_capacity_available_inserts(monkeypatch):
+def test_capacity_available_creates_registered(monkeypatch):
     _patch_org(monkeypatch)
     monkeypatch.setattr(registrations_repo, "get_registration_target", lambda tenant, slug: _target())
     monkeypatch.setattr(
-        registrations_repo, "create_registration", lambda tenant, camp, data: _fake_created_row()
+        registrations_repo,
+        "create_registration",
+        lambda tenant, camp, data: _fake_created_row(status="registered"),
     )
 
     with TestClient(app) as client:
         response = _post(client, _valid_payload())
 
     assert response.status_code == 201
+    assert response.json()["status"] == "registered"
 
 
-def test_capacity_reached_returns_409(monkeypatch):
+def test_capacity_full_creates_waitlist_with_201(monkeypatch):
+    """
+    Since CP-S406, a full camp no longer produces a 409 in the public
+    flow — create_registration itself decides 'registered' vs 'waitlist'
+    (see app/repositories/registrations.py); the router just returns
+    whatever it got, still as 201. This test simulates the "full" case the
+    same way the real repository would signal it: by returning a row with
+    status='waitlist' rather than raising.
+    """
     _patch_org(monkeypatch)
     monkeypatch.setattr(registrations_repo, "get_registration_target", lambda tenant, slug: _target())
-
-    def raise_fully_booked(tenant, camp, data):
-        raise CampFullyBookedError("full")
-
-    monkeypatch.setattr(registrations_repo, "create_registration", raise_fully_booked)
+    monkeypatch.setattr(
+        registrations_repo,
+        "create_registration",
+        lambda tenant, camp, data: _fake_created_row(status="waitlist"),
+    )
 
     with TestClient(app) as client:
         response = _post(client, _valid_payload())
 
-    assert response.status_code == 409
-    assert response.json() == {"detail": "Camp is fully booked"}
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "waitlist"
+    assert body["payment_status"] == "open"
+
+
+def test_repeated_requests_when_full_all_return_waitlist(monkeypatch):
+    _patch_org(monkeypatch)
+    monkeypatch.setattr(registrations_repo, "get_registration_target", lambda tenant, slug: _target())
+    monkeypatch.setattr(
+        registrations_repo,
+        "create_registration",
+        lambda tenant, camp, data: _fake_created_row(status="waitlist"),
+    )
+
+    with TestClient(app) as client:
+        responses = [_post(client, _valid_payload()) for _ in range(3)]
+
+    assert all(r.status_code == 201 for r in responses)
+    assert all(r.json()["status"] == "waitlist" for r in responses)
 
 
 # --------------------------------------------------------------------------

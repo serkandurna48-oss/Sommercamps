@@ -10,9 +10,6 @@ from app.main import app
 
 
 def test_health_ok_when_database_reachable(monkeypatch):
-    monkeypatch.setattr(db, "init_pool", lambda: None)
-    monkeypatch.setattr(db, "close_pool", lambda: None)
-
     @contextmanager
     def fake_get_cursor():
         yield MagicMock()
@@ -31,9 +28,6 @@ def test_health_ok_when_database_reachable(monkeypatch):
 
 
 def test_health_returns_503_when_database_unreachable(monkeypatch):
-    monkeypatch.setattr(db, "init_pool", lambda: None)
-    monkeypatch.setattr(db, "close_pool", lambda: None)
-
     @contextmanager
     def failing_get_cursor():
         # Deliberately includes connection-string-shaped text to prove it
@@ -53,9 +47,6 @@ def test_health_returns_503_when_database_unreachable(monkeypatch):
 
 
 def test_health_response_never_leaks_connection_details(monkeypatch):
-    monkeypatch.setattr(db, "init_pool", lambda: None)
-    monkeypatch.setattr(db, "close_pool", lambda: None)
-
     @contextmanager
     def failing_get_cursor():
         raise RuntimeError("connection to server failed: postgresql://user:s3cr3t@host/db")

@@ -1,0 +1,40 @@
+# ============================================================
+# CampsPilot SaaS API — Render service reference config.
+#
+# Same convention as backend/render.yaml (KSV): this documents the intended
+# Render settings, but production deployment for this repo is currently
+# done via manual Render Dashboard configuration, not an auto-applied
+# Blueprint — see README.md "Deployment" for the exact manual steps.
+# (Render only auto-detects render.yaml from the repo root; this file
+# lives next to the service it describes for discoverability. If you ever
+# do want to drive this as a real Blueprint, it needs to be referenced
+# from a repo-root render.yaml — rootDir below already anticipates that.)
+#
+# This is a COMPLETELY SEPARATE Render service from backend/render.yaml's
+# ksv-baunatal-backend — different name, different rootDir, different
+# database, no shared env vars. Creating/editing this file does not touch
+# the KSV service or its configuration in any way.
+# ============================================================
+
+services:
+  - type: web
+    name: campspilot-saas-backend
+    runtime: python
+    region: frankfurt          # physically close to the Supabase eu-central-1 project
+    plan: free                 # same caveat as KSV: free tier sleeps when idle (cold start)
+    rootDir: backend_saas
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: APP_ENV
+        value: staging
+      - key: APP_NAME
+        value: CampsPilot SaaS API
+      - key: LOG_LEVEL
+        value: INFO
+      - key: DATABASE_URL
+        sync: false           # set manually in Render Dashboard — CampsPilot SaaS project
+                               # (ref wkmckfbzhmihyfwiekct) ONLY. Never Sommercamps/KSV, never JK.
+      - key: CORS_ORIGINS_EXTRA
+        sync: false           # comma-separated extra allowed origins; empty until a real
+                               # frontend exists — see README.md "CORS"

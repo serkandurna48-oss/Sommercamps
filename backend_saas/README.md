@@ -6,7 +6,7 @@ FastAPI backend for the new, parallel CampsPilot multi-tenant SaaS — built ind
 [`docs/saas/database-schema.md`](../docs/saas/database-schema.md) for the database this service
 talks to.
 
-## Scope (CP-S403 + CP-S404 + CP-S405 + CP-S406)
+## Scope (CP-S403 + CP-S404 + CP-S405 + CP-S406 + CP-S407)
 
 This is a foundation with a first real (if narrow) product slice on top, not a finished product.
 What exists:
@@ -23,6 +23,9 @@ What exists:
   registration (FIFO), and every status change is validated against a small, central set of
   allowed transitions. See [Public API](#public-api) and
   [Registration lifecycle](#registration-lifecycle) below.
+- Deployable as its own Render service against the Cloud `CampsPilot SaaS` Supabase project
+  (CP-S407) — a staging-safe CORS baseline, production start command, and no secrets committed
+  anywhere. See [Deployment](#deployment-render-staging) below.
 
 What does **not** exist yet (deliberately out of scope): Organizations/Camps **admin** CRUD (no
 POST/PATCH/DELETE for organizations or camps), any HTTP endpoint for cancellation or promotion
@@ -30,7 +33,8 @@ POST/PATCH/DELETE for organizations or camps), any HTTP endpoint for cancellatio
 [Registration lifecycle](#registration-lifecycle)), a waitlist position/number API, waitlist
 email, Stripe/payments, Brevo/email (no confirmation mail is sent at all), a confirmation page,
 JK onboarding, KSV migration, Supabase Auth, `organization_members`, admin login, a frontend, or
-any deployment config (Render/Vercel). Don't build against this expecting any of that to exist.
+a Vercel deployment (only this backend is deployed as of CP-S407). Don't build against this
+expecting any of that to exist.
 
 ## Public API
 
@@ -388,6 +392,10 @@ this can never be forgotten.
 - Talks to a **separate** Supabase project (`CampsPilot SaaS`, ref `wkmckfbzhmihyfwiekct`,
   `eu-central-1`) — never the KSV `Sommercamps` project, and never the KSV database, in any
   environment (local, test, or cloud).
+- Own `render.yaml` and own Render service (`campspilot-saas-backend`, since CP-S407) —
+  completely separate from `backend/render.yaml`'s `ksv-baunatal-backend`. Different root
+  directory, different env vars, different database. See
+  [Deployment](#deployment-render-staging).
 - `backend/` is not modified by this ticket, or by anything in this directory.
 
 ## Setup
@@ -406,13 +414,33 @@ copy .env.example .env        # Windows; `cp .env.example .env` on macOS/Linux
 | Variable | Required | Default | Notes |
 |---|---|---|---|
 | `DATABASE_URL` | **yes** | — | PostgreSQL connection string. App fails to start with a clear error if missing. See `.env.example` for local vs. Cloud values. |
-| `APP_ENV` | no | `development` | Free-form label, currently only used in startup logging. |
+| `APP_ENV` | no | `development` | Free-form label (`development`, `staging`, ...), currently only used in startup logging — nothing branches on it. |
 | `LOG_LEVEL` | no | `INFO` | Passed to `logging.basicConfig`. |
 | `APP_NAME` | no | `CampsPilot SaaS API` | Used as the FastAPI app title. |
+| `CORS_ORIGINS_EXTRA` | no | `""` | Comma-separated extra allowed CORS origins, appended to the built-in `http://localhost:3000`. See [CORS](#cors). |
 
 No Stripe/Brevo/JWT/admin-password variables exist here — none of that is in scope yet. No
 Supabase service-role key is needed either: this service connects directly to Postgres and does
 not need to bypass RLS via the API layer.
+
+## CORS
+
+`app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, ...)` in `app/main.py`,
+backed by `Settings.cors_origins` in `app/config.py`. The default allow-list is exactly
+`["http://localhost:3000"]` — **no wildcard**, ever, regardless of environment. There is no
+frontend deployed against this service yet, so there is nothing to add beyond local dev: per the
+CP-S407 ticket, this deliberately does *not* pre-emptively open broad access "just in case" —
+that would be the wrong default to inherit once real auth/credentialed requests exist.
+
+`allow_credentials` is left at its FastAPI default (`False`) — this API has no cookie/session
+auth, so there's no CSRF-via-CORS surface to protect against yet. If a future ticket adds
+cookie-based auth, revisit this together with the origin list at the same time, not separately.
+
+**When a real frontend exists:** set `CORS_ORIGINS_EXTRA` (Render Dashboard → Environment) to its
+origin(s), comma-separated, e.g. `https://campspilot.vercel.app`. For Vercel preview deployments
+(unpredictable per-branch URLs), the KSV service's pattern
+(`backend/main.py`'s `CORS_ORIGIN_REGEX`) is the model to follow — not built here since there's no
+frontend project yet to derive a real regex from.
 
 ## Running locally
 
@@ -540,9 +568,67 @@ suspended organization's endpoints all return the same 404 as a nonexistent one.
 inactive tenant like an active one. This is a deliberately simple binary split for CP-S403; no
 plan-tier or billing nuance beyond "usable vs. not" is modeled here.
 
-## Cloud smoke test
+## Deployment (Render, staging)
 
-Once local tests pass, this service may be pointed at the `CampsPilot SaaS` Supabase Cloud
-project (ref `wkmckfbzhmihyfwiekct`, `eu-central-1`) for a connectivity smoke test — connection +
-`SELECT 1` + `/health` only. Never point it at the `Sommercamps`/KSV project. No real
-organizations are written during this smoke test.
+`render.yaml` in this directory documents the intended Render service configuration — same
+convention as `backend/render.yaml` for KSV: it's a **reference**, not an auto-applied Blueprint
+(Render only auto-detects `render.yaml` from the repo root). Actual deployment is manual
+Dashboard configuration, exactly like the existing KSV service.
+
+**This is a completely separate Render service from KSV's `ksv-baunatal-backend`** — different
+name, different root directory, different database, zero shared configuration. Creating or
+editing it cannot affect the KSV service in any way.
+
+### Creating the service
+
+1. Render Dashboard → **New → Web Service** → connect this repo.
+2. **Root Directory:** `backend_saas`
+3. **Runtime:** Python
+4. **Region:** Frankfurt (physically closest to the Supabase `eu-central-1` project)
+5. **Build Command:** `pip install -r requirements.txt`
+6. **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   (no `--reload` — that's a dev-only flag and must never run in production/staging)
+7. **Plan:** Free is fine for staging (same cold-start-after-idle caveat as the KSV service)
+
+### Environment variables to set in the Render Dashboard
+
+| Variable | Value |
+|---|---|
+| `APP_ENV` | `staging` |
+| `APP_NAME` | `CampsPilot SaaS API` |
+| `LOG_LEVEL` | `INFO` |
+| `DATABASE_URL` | **CampsPilot SaaS** Supabase project connection string (ref `wkmckfbzhmihyfwiekct`, `eu-central-1`) — Supabase Dashboard → Settings → Database → Connection string → URI, Transaction Pooler recommended. **Never** the `Sommercamps`/KSV project's connection string, never JK's. |
+| `CORS_ORIGINS_EXTRA` | leave empty until a real frontend exists (see [CORS](#cors)) |
+
+No value here is committed anywhere in this repo — `.env.example` only ever contains
+placeholders, and `render.yaml` marks every secret-shaped variable `sync: false` (Render's way of
+saying "set this manually in the Dashboard, never store it in the Blueprint file").
+
+### Smoke tests after deploy
+
+No real personal data is written during any of these — registration payload testing (if any) is
+limited to confirming the endpoint exists and validates input, never an actual submission with
+fabricated child/parent data left sitting in the staging DB. That's explicitly deferred to a
+later ticket (CP-S408) that owns cleanup/isolation for real test data in Cloud.
+
+```bash
+BASE_URL=https://<your-render-service>.onrender.com
+
+curl -s -w '\n%{http_code}\n' "$BASE_URL/health"
+# expect: {"status":"ok","database":"ok","service":"campspilot-saas-api"}  200
+
+curl -s -w '\n%{http_code}\n' "$BASE_URL/api/v1/organizations/does-not-exist"
+# expect: {"detail":"Organization not found"}  404
+# (this is the CORRECT result if the Cloud DB has no organizations yet — see below)
+
+curl -s -o /dev/null -w '%{http_code}\n' "$BASE_URL/docs"
+# expect: 200 (OpenAPI/Swagger UI)
+```
+
+**If the Cloud `CampsPilot SaaS` database has no `organizations` row yet** (likely — CP-S402's
+migration creates the schema, not data; the local-only `seed.sql` never runs against Cloud), a
+404 on every organization/camp/registration lookup is the *expected, correct* result — it proves
+the API booted, connected to the right database, and the tenant-resolution/404 path works, not
+that something is broken. This ticket does not write a real `organizations` row to Cloud (no
+`INSERT` anywhere in its scope) — that's for whichever ticket actually onboards a Cloud tenant
+(JK, per the migration-strategy doc).

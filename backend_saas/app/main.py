@@ -4,6 +4,9 @@ CampsPilot SaaS API — FastAPI entrypoint.
 CP-S403: DB pool, tenant resolution, /health.
 CP-S404: read-only, tenant-scoped Organization and Camp endpoints.
 CP-S405: the first write endpoint — public camp registration.
+CP-S406: waitlist + registration lifecycle.
+CP-S407: staging-ready CORS baseline (see README.md "CORS"); deployment
+config lives in backend_saas/render.yaml.
 No admin CRUD, auth, payments, or email yet — see README.md.
 """
 
@@ -14,6 +17,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from . import db
@@ -44,6 +48,17 @@ app = FastAPI(
     title=settings.app_name,
     version="0.1.0",
     lifespan=lifespan,
+)
+
+# No wildcard, no allow_credentials (this API has no cookie/session auth to
+# protect against CSRF via CORS anyway) — just an explicit, staging-safe
+# origin list. See config.Settings.cors_origins / README.md "CORS" for the
+# reasoning and how to add a real frontend origin later.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
 )
 
 app.include_router(organizations_router)

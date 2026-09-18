@@ -8,10 +8,17 @@ one clear, readable error instead of a bare KeyError.
 
 from __future__ import annotations
 
+import re
 from functools import lru_cache
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Matches Supabase's connection-string template placeholder, e.g.
+# "[YOUR-PASSWORD]" — copied verbatim instead of being replaced with the
+# real password. Case-insensitive, tolerant of spaces/hyphens/underscores
+# inside the brackets (covers "[YOUR PASSWORD]", "[your_password]", etc.).
+_PLACEHOLDER_PASSWORD_RE = re.compile(r"\[[a-z0-9 _-]*password[a-z0-9 _-]*\]", re.IGNORECASE)
 
 
 class Settings(BaseSettings):
@@ -41,6 +48,21 @@ class Settings(BaseSettings):
     def _database_url_not_blank(cls, value: str) -> str:
         if not value or not value.strip():
             raise ValueError("DATABASE_URL must not be blank")
+        if _PLACEHOLDER_PASSWORD_RE.search(value):
+            # Without this check, a URL like postgresql://postgres:[YOUR-
+            # PASSWORD]@host/... fails much later, inside urllib.parse.urlsplit
+            # (app/db.py::_dsn_with_sslmode), with a cryptic
+            # "'<host>' does not appear to be an IPv4 or IPv6 address" —
+            # caused by the literal '[...]' confusing netloc parsing, not by
+            # anything IPv6-related. Caught here instead, at startup, with an
+            # actionable message pointing at the actual mistake.
+            raise ValueError(
+                "DATABASE_URL still contains a Supabase placeholder like "
+                "'[YOUR-PASSWORD]' instead of the real password. Copy the "
+                "connection string again from Supabase Dashboard → Settings → "
+                "Database and replace the bracketed placeholder with the "
+                "actual database password."
+            )
         return value
 
     @property

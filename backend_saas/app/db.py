@@ -9,6 +9,7 @@ independent implementation — no imports from backend/, no shared state.
 from __future__ import annotations
 
 import logging
+import re
 from contextlib import contextmanager
 from typing import Generator
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -25,6 +26,16 @@ logger = logging.getLogger(__name__)
 _pool: psycopg2.pool.ThreadedConnectionPool | None = None
 
 _LOCAL_HOSTNAMES = {"127.0.0.1", "localhost", "::1"}
+
+# Supabase's "Direct connection" hostname (db.<project-ref>.supabase.co)
+# resolves IPv6-only unless the IPv4 add-on is purchased. Hit for real on
+# CP-S407: Render (like many PaaS free tiers) has no outbound IPv6 route,
+# so connecting to this host fails with "Network is unreachable" — not a
+# credentials or firewall problem. The "Transaction pooler" hostname
+# (aws-<n>-<region>.pooler.supabase.com) is IPv4-compatible and is what
+# should be used instead on a platform like this. See README.md
+# "Deployment" for the exact host format.
+_SUPABASE_DIRECT_CONNECTION_HOST_RE = re.compile(r"^db\.[a-z0-9]+\.supabase\.co$", re.IGNORECASE)
 
 # Without this, psycopg2 reads a `uuid` column back as a plain str (not a
 # uuid.UUID) and — the sharper edge — can't adapt an actual uuid.UUID
@@ -64,10 +75,24 @@ def _dsn_with_sslmode(database_url: str) -> str:
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
 
+def _warn_if_ipv6_only_supabase_host(database_url: str) -> None:
+    hostname = urlsplit(database_url).hostname or ""
+    if _SUPABASE_DIRECT_CONNECTION_HOST_RE.match(hostname):
+        logger.warning(
+            "DATABASE_URL uses Supabase's direct-connection host (%s), which is "
+            "IPv6-only unless the IPv4 add-on is purchased. If the connection "
+            "below fails with 'Network is unreachable', switch to the "
+            "Transaction Pooler connection string instead (Supabase Dashboard -> "
+            "Settings -> Database -> Connection string -> Transaction pooler).",
+            hostname,
+        )
+
+
 def init_pool() -> None:
     """Creates the connection pool. Called once from the FastAPI lifespan."""
     global _pool
     settings = get_settings()
+    _warn_if_ipv6_only_supabase_host(settings.database_url)
     dsn = _dsn_with_sslmode(settings.database_url)
     _pool = psycopg2.pool.ThreadedConnectionPool(
         minconn=1,

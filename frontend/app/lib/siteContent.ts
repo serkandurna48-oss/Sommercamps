@@ -21,6 +21,9 @@ const ACTIVE_CLUB = process.env.NEXT_PUBLIC_ACTIVE_CLUB === 'jk' ? 'jk' : 'ksv'
 
 /** Alle Sektionen, die die Startseite kennt. Header und Footer sind kein Teil der Liste. */
 export type SectionId =
+  | 'hero'
+  | 'trustBar'
+  | 'coreOffers'
   | 'slideshow'
   | 'featuredCamps'
   | 'otherOffers'
@@ -57,10 +60,28 @@ export interface StepSpec {
   text: string
 }
 
+export interface CoreOfferSpec {
+  number: string
+  title: string
+  text: string
+}
+
 export interface SiteContent {
+  /**
+   * 'classic'   — die bisherige helle Gestaltung (KSV, unveraendert).
+   * 'editorial' — Richtung B: dunkel dominant, kondensierte Typografie,
+   *               nummerierte Felder statt Karten (CP-JK-105).
+   *
+   * Das Theme waehlt die Bauteile, nicht den Mandanten. Ein dritter Kunde
+   * bekommt 'editorial' ueber einen Eintrag hier, ohne Codeaenderung.
+   */
+  theme: 'classic' | 'editorial'
+
   // Kopfzeile
   navCtaShort: string
   navCtaLong: string
+  /** Navigationslinks (nur Theme 'editorial'). */
+  navItems: { label: string; href: string }[]
 
   // Hero
   heroBadge: string
@@ -72,8 +93,31 @@ export interface SiteContent {
   heroTertiaryCtaHref?: string
   heroFootnote?: string
   heroFacts: FactSpec[]
-  /** Engere Paddings und schmalere Textspalte. */
+  /** Engere Paddings und schmalere Textspalte (nur Theme 'classic'). */
   heroCompact: boolean
+  /** Ueberzeile ueber der Headline (nur 'editorial'). */
+  heroEyebrow: string
+  /** Alternativtext des Heromotivs. Leer = dekorativ. */
+  heroImageAlt: string
+
+  // Vertrauensleiste (nur 'editorial')
+  trustBarLabel: string
+  trustBarPartners: string[]
+  /** Sichtbar markierte, nicht erfindbare Angabe. Leer = keine Markierung. */
+  trustBarPendingNote: string
+
+  // Kernangebote (nur 'editorial')
+  coreOffersEyebrow: string
+  coreOffersHeading: string
+  coreOffersIntro: string
+  coreOffers: CoreOfferSpec[]
+
+  // Campliste im Theme 'editorial'
+  campsEyebrow: string
+  campsHeading: string
+  campsMeta: string
+  campsAvailabilityLabel: string
+  campsCtaLabel: string
 
   // Highlights / Warum wir
   highlightsEyebrow: string
@@ -174,6 +218,7 @@ export function fill(template: string, vars: TemplateVars): string {
 // ---------------------------------------------------------------------------
 
 const DEFAULT_SECTION_ORDER: SectionId[] = [
+  'hero',
   'highlights',
   'process',
   'campDates',
@@ -182,8 +227,11 @@ const DEFAULT_SECTION_ORDER: SectionId[] = [
 ]
 
 const DEFAULT_SITE_CONTENT: SiteContent = {
+  theme: 'classic',
+
   navCtaShort: 'Anmelden',
   navCtaLong: 'Jetzt anmelden',
+  navItems: [],
 
   heroBadge: 'Sommercamps 2026 · {clubName}',
   heroHeadlineLines: [
@@ -201,6 +249,22 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
     { value: '{venueName}', label: 'Standort' },
   ],
   heroCompact: false,
+  heroEyebrow: '',
+  heroImageAlt: '',
+
+  // Theme 'classic' nutzt diese Sektionen nicht.
+  trustBarLabel: '',
+  trustBarPartners: [],
+  trustBarPendingNote: '',
+  coreOffersEyebrow: '',
+  coreOffersHeading: '',
+  coreOffersIntro: '',
+  coreOffers: [],
+  campsEyebrow: '',
+  campsHeading: '',
+  campsMeta: '',
+  campsAvailabilityLabel: '',
+  campsCtaLabel: '',
 
   highlightsEyebrow: 'Das erwartet euch',
   highlightsHeading: 'Warum unser Camp?',

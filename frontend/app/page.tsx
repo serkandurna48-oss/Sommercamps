@@ -23,8 +23,14 @@ import {
   type SectionId,
   type TemplateVars,
 } from './lib/siteContent'
+import { THEME_TOKENS } from './lib/themeTokens'
 import SiteHeader from './sections/SiteHeader'
 import HeroSection, { type HeroFact } from './sections/HeroSection'
+import SiteHeaderB from './sections/b/SiteHeaderB'
+import HeroB from './sections/b/HeroB'
+import TrustBar from './sections/b/TrustBar'
+import CoreOffers from './sections/b/CoreOffers'
+import CampListB from './sections/b/CampListB'
 import FeaturedCampsSection from './sections/FeaturedCampsSection'
 import OtherOffersSection from './sections/OtherOffersSection'
 import WhyUsSection from './sections/WhyUsSection'
@@ -140,8 +146,76 @@ export default async function Page() {
     return value ? [{ value, label: fill(f.label, vars) }] : []
   })
 
+  const heroHeadlineText = c.heroHeadlineLines.map(l => fill(l.text, vars)).join(' ')
+
   function renderSection(id: SectionId): ReactNode {
     switch (id) {
+      case 'hero':
+        if (c.theme === 'editorial') {
+          return (
+            <HeroB
+              eyebrow={fill(c.heroEyebrow, vars)}
+              headline={heroHeadlineText}
+              subline={fill(c.heroSubline, vars)}
+              primaryCta={{ href: '#anmeldung', label: fill(c.heroPrimaryCtaLabel, vars) }}
+              secondaryCta={{ href: '#camps', label: fill(c.heroSecondaryCtaLabel, vars) }}
+              footnote={c.heroFootnote ? fill(c.heroFootnote, vars) : undefined}
+              imageSrc={CLUB_CONFIG.heroImageSrc}
+              imageAlt={fill(c.heroImageAlt, vars)}
+            />
+          )
+        }
+        return (
+          <HeroSection
+            imageSrc={CLUB_CONFIG.heroImageSrc}
+            badgeText={fill(c.heroBadge, vars)}
+            headline={
+              <>
+                {c.heroHeadlineLines.map((line, i) => (
+                  <Fragment key={line.text}>
+                    {i > 0 && <br />}
+                    {line.accent ? (
+                      <span className="text-[var(--brand-accent)]">{fill(line.text, vars)}</span>
+                    ) : (
+                      fill(line.text, vars)
+                    )}
+                  </Fragment>
+                ))}
+              </>
+            }
+            subline={fill(c.heroSubline, vars)}
+            primaryCta={{ href: '#anmeldung', label: fill(c.heroPrimaryCtaLabel, vars) }}
+            secondaryCta={{ href: '#termine', label: fill(c.heroSecondaryCtaLabel, vars) }}
+            tertiaryCta={
+              c.heroTertiaryCtaLabel && c.heroTertiaryCtaHref
+                ? { href: c.heroTertiaryCtaHref, label: fill(c.heroTertiaryCtaLabel, vars) }
+                : undefined
+            }
+            footnote={c.heroFootnote ? fill(c.heroFootnote, vars) : undefined}
+            facts={heroFacts}
+            compact={c.heroCompact}
+          />
+        )
+
+      case 'trustBar':
+        return (
+          <TrustBar
+            label={fill(c.trustBarLabel, vars)}
+            partners={c.trustBarPartners}
+            pendingNote={c.trustBarPendingNote || undefined}
+          />
+        )
+
+      case 'coreOffers':
+        return (
+          <CoreOffers
+            eyebrow={fill(c.coreOffersEyebrow, vars)}
+            heading={fill(c.coreOffersHeading, vars)}
+            intro={c.coreOffersIntro ? fill(c.coreOffersIntro, vars) : undefined}
+            offers={c.coreOffers}
+          />
+        )
+
       case 'slideshow':
         if (SLIDESHOW_ITEMS.length === 0) return null
         return (
@@ -153,6 +227,20 @@ export default async function Page() {
         )
 
       case 'featuredCamps':
+        if (c.theme === 'editorial') {
+          return (
+            <CampListB
+              eyebrow={fill(c.campsEyebrow, vars)}
+              heading={fill(c.campsHeading, vars)}
+              meta={c.campsMeta ? fill(c.campsMeta, vars) : undefined}
+              programs={featuredPrograms}
+              ctaLabel={fill(c.campsCtaLabel, vars)}
+              ctaHref="#anmeldung"
+              availabilityLabel={fill(c.campsAvailabilityLabel, vars)}
+              venueInfoText={VENUE_INFO_TEXT}
+            />
+          )
+        }
         return (
           <FeaturedCampsSection
             programs={featuredPrograms}
@@ -280,9 +368,20 @@ export default async function Page() {
 
   return (
     <div
-      className="min-h-screen bg-white text-gray-900 flex flex-col"
-      style={{ '--brand-accent': CLUB_CONFIG.accentColor ?? '#CC0000' } as CSSProperties}
+      className={`min-h-screen flex flex-col ${
+        c.theme === 'editorial'
+          ? 'font-body bg-[var(--surface-inverse)] text-[var(--text-on-dark)]'
+          : 'bg-white text-gray-900'
+      }`}
+      // Das vollständige Token-Set des Mandanten. Die Sektionen lesen es über
+      // var(--…); --brand-accent bleibt für die Bauteile im Theme 'classic'.
+      style={{
+        ...THEME_TOKENS,
+        '--brand-accent': CLUB_CONFIG.accentColor ?? THEME_TOKENS['--brand-accent'],
+      } as CSSProperties}
     >
+      <a href="#anmeldung" className="skip-link">Zum Anfrageformular springen</a>
+
       {/* Strukturierte Daten für Suchmaschinen — Werte kommen ausschließlich aus
           der Konfiguration, keine Nutzereingaben. */}
       <script
@@ -298,45 +397,25 @@ export default async function Page() {
         }}
       />
 
-      <SiteHeader
-        clubName={CLUB_CONFIG.name}
-        subtitle={CLUB_CONFIG.subtitle}
-        ctaHref="#anmeldung"
-        ctaLabelShort={fill(c.navCtaShort, vars)}
-        ctaLabelLong={fill(c.navCtaLong, vars)}
-      />
+      {c.theme === 'editorial' ? (
+        <SiteHeaderB
+          clubName={CLUB_CONFIG.name}
+          logoSrc={CLUB_CONFIG.logoSrc}
+          navItems={c.navItems}
+          ctaLabel={fill(c.navCtaLong, vars)}
+          ctaHref="#anmeldung"
+        />
+      ) : (
+        <SiteHeader
+          clubName={CLUB_CONFIG.name}
+          subtitle={CLUB_CONFIG.subtitle}
+          ctaHref="#anmeldung"
+          ctaLabelShort={fill(c.navCtaShort, vars)}
+          ctaLabelLong={fill(c.navCtaLong, vars)}
+        />
+      )}
 
       <main className="flex-1">
-        <HeroSection
-          imageSrc={CLUB_CONFIG.heroImageSrc}
-          badgeText={fill(c.heroBadge, vars)}
-          headline={
-            <>
-              {c.heroHeadlineLines.map((line, i) => (
-                <Fragment key={line.text}>
-                  {i > 0 && <br />}
-                  {line.accent ? (
-                    <span className="text-[var(--brand-accent)]">{fill(line.text, vars)}</span>
-                  ) : (
-                    fill(line.text, vars)
-                  )}
-                </Fragment>
-              ))}
-            </>
-          }
-          subline={fill(c.heroSubline, vars)}
-          primaryCta={{ href: '#anmeldung', label: fill(c.heroPrimaryCtaLabel, vars) }}
-          secondaryCta={{ href: '#termine', label: fill(c.heroSecondaryCtaLabel, vars) }}
-          tertiaryCta={
-            c.heroTertiaryCtaLabel && c.heroTertiaryCtaHref
-              ? { href: c.heroTertiaryCtaHref, label: fill(c.heroTertiaryCtaLabel, vars) }
-              : undefined
-          }
-          footnote={c.heroFootnote ? fill(c.heroFootnote, vars) : undefined}
-          facts={heroFacts}
-          compact={c.heroCompact}
-        />
-
         {inMain.map(id => (
           <Fragment key={id}>{renderSection(id)}</Fragment>
         ))}

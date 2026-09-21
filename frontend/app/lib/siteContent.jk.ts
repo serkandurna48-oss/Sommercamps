@@ -1,76 +1,114 @@
 // ---------------------------------------------------------------------------
-// JK Performance Academy — Seiteninhalt und Sektionsreihenfolge (CP-JK-104).
+// JK Performance Academy — Seiteninhalt und Sektionsreihenfolge.
 //
-// Die Werte hier sind wortgleich aus der bisherigen PROGRAMS-Fallunterscheidung
-// in page.tsx übernommen. Diese Datei ersetzt sie, sie ändert sie nicht.
+// Stand: Richtung B (Performance Editorial), freigegeben am 21.09.2026.
+// Designreferenz: docs/design/jk-redesign-b-handoff.md.
 //
-// Achtung beim Redesign nach Richtung B: Laut Designfreigabe entfallen die
-// Mitgliedschafts-Sektion, die Slideshow und die Hero-Kennzahlen von der
-// Startseite (siehe docs/design/jk-redesign-b-handoff.md, Abschnitt 11). Das
-// ist dann eine Änderung an JK_SECTION_ORDER und heroFacts hier — nicht an
-// page.tsx und nicht an einer Sektionskomponente.
+// Was hier gegenüber der alten Fassung entfällt und warum (Handoff, Abschnitt 11):
+//   • slideshow    — bildschirmfüllendes Karussell direkt nach dem Hero,
+//                    unterbrach den Fluss genau dort, wo das Angebot stehen muss
+//   • membership   — "in Vorbereitung" darf nicht mit der Hauptkonversion
+//                    konkurrieren; bleibt als FAQ-Antwort erhalten
+//   • heroFacts    — "5 Programme · 2 Camps · Flexibel" zählte das eigene
+//                    Inventar, nicht Kompetenz; ersetzt durch die Partnerleiste
+//   • dritte Hero-CTA — drei gleichrangige Buttons bedeuten keine Priorität
 // ---------------------------------------------------------------------------
 
 import type { SectionId, SiteContent } from './siteContent'
 
 export const JK_SECTION_ORDER: SectionId[] = [
-  'slideshow',
+  'hero',
+  'trustBar',
+  'coreOffers',
   'featuredCamps',
-  'otherOffers',
   'whyUs',
-  'compactProcess',
-  'membership',
+  'otherOffers',
   'registration',
   'faq',
 ]
 
 export const JK_SITE_CONTENT: SiteContent = {
-  navCtaShort: 'Anfrage',
-  navCtaLong: 'Trainingsanfrage stellen',
+  theme: 'editorial',
 
-  heroBadge: 'Aktuelle Sommercamps · {clubName}',
-  heroHeadlineLines: [{ text: '{heroTagline}' }],
-  heroSubline: 'Individuelles Training. Starke Camps. Dein nächstes Level.',
-  heroPrimaryCtaLabel: 'Trainingsanfrage stellen',
-  heroSecondaryCtaLabel: 'Aktuelle Sommercamps ansehen',
-  heroTertiaryCtaLabel: 'Mitgliedschaft',
-  heroTertiaryCtaHref: '#mitgliedschaft',
-  heroFootnote: 'Für Spielerinnen und Spieler · Individuelle Spielerentwicklung · Training in deiner Region',
-  // Bewusst ohne Preis: campPrice stammt aus dem Backend und hat keinen Bezug
-  // zu JKs gestaffelten Camp-Preisen (149 €/169 € je Camp, sonst auf Anfrage).
-  heroFacts: [
-    { value: '{programCount}', label: 'Programme & Formate' },
-    { value: '{featuredCount}', label: 'Aktuelle Camps' },
-    { value: 'Flexibel', label: 'Trainingsformate' },
-    { value: '{venueName}', label: 'Standort' },
+  navCtaShort: 'Anfragen',
+  navCtaLong: 'Training anfragen',
+  navItems: [
+    { label: 'Training', href: '#training' },
+    { label: 'Camps', href: '#camps' },
+    { label: 'Anfrage', href: '#anmeldung' },
+    { label: 'FAQ', href: '#faq' },
   ],
-  heroCompact: true,
 
-  highlightsEyebrow: 'Warum JK?',
-  highlightsHeading: 'Für Spieler, die mehr wollen',
+  heroEyebrow: 'Region Kassel',
+  heroBadge: '',
+  heroHeadlineLines: [{ text: 'Individuelles Fußballtraining für ambitionierte Spieler' }],
+  heroSubline: 'Technik, Spielverständnis und persönliche Entwicklung — ergänzend zu deinem Vereinstraining.',
+  heroPrimaryCtaLabel: 'Training anfragen',
+  heroSecondaryCtaLabel: 'Aktuelle Camps ansehen',
+  heroFootnote: 'Für Spielerinnen und Spieler · Einzel, Kleingruppe und Team · Training in deiner Region',
+  heroFacts: [],
+  heroCompact: true,
+  heroImageAlt: 'Spielerinnen und Spieler der JK Performance Academy mit ihrem Trainer',
+
+  trustBarLabel: 'Unsere Partnervereine',
+  trustBarPartners: ['FSK Vollmarshausen', 'TSV Wolfsanger'],
+  // Sichtbar markiert statt erfunden. Sobald eine belegbare Qualifikation
+  // vorliegt, ersetzt sie diesen Hinweis.
+  trustBarPendingNote: 'Content benötigt: Trainerlizenz / Qualifikation',
+
+  coreOffersEyebrow: 'Was wir anbieten',
+  coreOffersHeading: 'Drei Wege, besser zu werden',
+  coreOffersIntro: 'Jedes Format ergänzt dein Vereinstraining — es ersetzt es nicht.',
+  coreOffers: [
+    // Weiche Trennstellen (­) an der Wortfuge: Deutsche Komposita in
+    // kondensierten Versalien sind breit. Ohne sie bricht der Browser
+    // irgendwo mitten im Wort, sobald die Spalte eng wird.
+    {
+      number: '01',
+      title: 'Individual­training',
+      text: 'Einzeltraining mit klarem Fokus: Technik, Abschluss, Beidfüßigkeit, Handlungsschnelligkeit. Du bekommst nach jeder Einheit persönliches Feedback.',
+    },
+    {
+      number: '02',
+      title: 'Kleingruppen­training',
+      text: 'Kleine Gruppen mit ähnlichem Niveau. Echte Spielsituationen, hohe Wiederholungszahl — und trotzdem sieht der Trainer jeden Ball.',
+    },
+    {
+      number: '03',
+      title: 'Camps & Events',
+      text: 'Dreitägige Feriencamps bei unseren Partnervereinen. Stationstraining, Wettbewerbe, Videoanalyse und Verpflegung vor Ort.',
+    },
+  ],
+
+  campsEyebrow: 'Jetzt buchbar',
+  campsHeading: 'Aktuelle Camps 2026',
+  campsMeta: 'Beide Camps: 6–14 Jahre · 9–15 Uhr',
+  campsAvailabilityLabel: 'Begrenzte Plätze',
+  campsCtaLabel: 'Platz anfragen',
+
+  highlightsEyebrow: 'Warum JK',
+  highlightsHeading: 'Was ein Vereinstraining selten leisten kann',
 
   processEyebrow: '',
   processHeading: '',
   processSteps: [],
-  compactProcessEyebrow: 'So einfach geht’s',
-  compactProcessSteps: [
-    { step: '1', title: 'Anfrage stellen', text: 'Sag uns, was dich interessiert.' },
-    { step: '2', title: 'Wir melden uns', text: 'Persönlich, meist innerhalb weniger Tage.' },
-    { step: '3', title: 'Loslegen', text: 'Training, Camp oder Event vereinbaren.' },
-  ],
+  compactProcessEyebrow: '',
+  compactProcessSteps: [],
 
   campDatesEyebrow: '',
   campDatesHeading: '',
   campDatesMetaParts: [],
 
+  // Bleibt befüllt, damit die Sektion jederzeit zurück in JK_SECTION_ORDER
+  // kann, sobald eine echte Warteliste existiert.
   membershipHeading: 'Mitgliedschaft in Vorbereitung',
   membershipText:
     'Du möchtest Teil der JK Performance Academy werden? Die Mitgliedschaft ist aktuell in Vorbereitung. Schreib uns bei Interesse – wir informieren dich, sobald der Prozess startet.',
   membershipCtaLabel: 'Interesse an Mitgliedschaft melden',
   membershipMailSubject: 'Interesse an Mitgliedschaft',
 
-  registrationEyebrow: 'Trainingsanfrage',
-  registrationHeading: 'Anfrage stellen',
+  registrationEyebrow: 'Anfrage',
+  registrationHeading: 'Training anfragen',
   registrationIntro: 'Schreib uns, welches Programm dich interessiert – wir melden uns bei dir.',
   // CP-JK-101: echtes Anfrageformular gegen POST /inquiries.
   // Auf 'inquiry' zurückstellen, falls der JK-Service die Route noch nicht
@@ -88,10 +126,10 @@ export const JK_SITE_CONTENT: SiteContent = {
     'Messday',
     'Spieleranalyse',
   ],
-  registrationContactHeading: 'Fragen zu unseren Programmen?',
+  registrationContactHeading: 'Lieber direkt?',
   registrationContactLines: [
-    { text: '{contactName}' },
-    { text: 'Kontakt per Instagram/WhatsApp in Vorbereitung' },
+    { text: 'Content benötigt: E-Mail, Telefon, WhatsApp und Instagram.' },
+    { text: 'Bis dahin bleibt das Formular der einzige Weg.' },
   ],
   registrationSidebarHeading: 'So geht’s weiter',
   registrationSidebarSteps: [
@@ -112,11 +150,11 @@ export const JK_SITE_CONTENT: SiteContent = {
   footerDescription: '{subtitle} der {clubName} — individuelle Spielerentwicklung für Kinder und Jugendliche.',
   footerContactLines: [
     '{clubName}',
-    'Kontakt per Instagram/WhatsApp in Vorbereitung',
+    'Content benötigt: E-Mail, Telefon, Instagram',
   ],
   footerPrivacyPurpose: 'deiner Anfrage',
   footerCopyrightName: '{clubName}',
 
   metaTitle: '{subtitle} – {clubName}',
-  metaDescription: 'Events & Programme der {subtitle} {clubName} – individuelle Spielerentwicklung für Kinder und Jugendliche.',
+  metaDescription: 'Individuelles Fußballtraining für ambitionierte Spielerinnen und Spieler in der Region Kassel. Technik, Spielverständnis und persönliche Entwicklung — ergänzend zum Vereinstraining.',
 }

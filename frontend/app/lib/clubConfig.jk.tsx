@@ -47,6 +47,17 @@ export const JK_OVERRIDES: {
     // Ein dunkler Chip macht den schwarzen Hintergrund zu einem bewussten Badge statt
     // einem Bildfehler; passt zur navy/gold-Flyer-Optik.
     logoChipColor: '#0F172A',
+
+    // Sektionsspezifische Werte (CP-JK-103). Diese Pfade und Überschriften
+    // standen bis dahin direkt in page.tsx — in der Datei, die auch KSV in
+    // Produktion rendert. Sie gehören hierher, weil sie ausschließlich JK
+    // betreffen.
+    campsBackgroundSrc: '/jk/camp.jpg',
+    whyUsEyebrow: 'Warum JK?',
+    whyUsHeading: 'Für Spieler, die mehr wollen',
+    whyUsImageSrc: '/jk/team.jpg',
+    // Trotz Dateiname ein Portrait des Trainers, keine Trainingsszene.
+    coachPortraitSrc: '/jk/training.jpg',
   },
 
   // Leer: JK zeigt statt der Termine-Sektion die PROGRAMS-basierte

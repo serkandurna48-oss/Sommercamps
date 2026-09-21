@@ -19,6 +19,28 @@ export interface ClubIdentity {
   heroTagline?: string
   /** Optionale Chip-Hintergrundfarbe (Hex) hinter dem Logo — für Logos mit dunklem/eigenem Hintergrund, die sonst auf Weiß hart wirken. */
   logoChipColor?: string
+
+  // -------------------------------------------------------------------------
+  // Sektionsspezifische Werte (CP-JK-103)
+  //
+  // Diese Felder existieren, damit im geteilten Renderer keine mandanten-
+  // spezifischen Bildpfade und Überschriften mehr stehen. Vorher waren
+  // "/jk/camp.jpg", "/jk/team.jpg", "/jk/training.jpg" und "Warum JK?" direkt
+  // in page.tsx einkompiliert — also in derselben Datei, die KSV in Produktion
+  // rendert. Alle Felder sind optional; ohne Wert entfällt das jeweilige
+  // Element, KSV verhält sich dadurch unverändert.
+  // -------------------------------------------------------------------------
+
+  /** Hintergrundmotiv der Camp-Sektion. */
+  campsBackgroundSrc?: string
+  /** Überzeile der "Warum wir"-Sektion, z. B. "Warum JK?". */
+  whyUsEyebrow?: string
+  /** Überschrift der "Warum wir"-Sektion. */
+  whyUsHeading?: string
+  /** Begleitfoto der "Warum wir"-Sektion. */
+  whyUsImageSrc?: string
+  /** Trainerportrait, u. a. im Mitgliedschafts-Teaser. */
+  coachPortraitSrc?: string
 }
 
 export interface CampEntry {

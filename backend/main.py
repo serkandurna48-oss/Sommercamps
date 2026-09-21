@@ -36,6 +36,8 @@ from camp_config import (
     validate_age_at_camp_start,
 )
 
+from inquiries import create_inquiries_router
+
 load_dotenv()
 
 # ---------------------------------------------------------------------------
@@ -87,6 +89,19 @@ CLUB_SUBTITLE:    str = os.getenv("CLUB_SUBTITLE", "Fußballschule")
 CAMP_YEAR:        str = os.getenv("CAMP_YEAR", "2026")
 # Eingetragener Vereinsname für die Copyright-Zeile — kann von CLUB_NAME abweichen (z. B. "e.V.").
 CLUB_LEGAL_NAME:  str = os.getenv("CLUB_LEGAL_NAME", "KSV Baunatal e.V.")
+
+# ── Trainingsanfragen (CP-JK-101) ────────────────────────────
+# Nur der JK-Service setzt INQUIRIES_ENABLED. Ohne die Variable registriert
+# create_inquiries_router() keine einzige Route — auf dem KSV-Service existiert
+# /inquiries damit gar nicht, und die fehlende Tabelle kann nichts auslösen.
+INQUIRIES_ENABLED: bool = os.getenv("INQUIRIES_ENABLED", "").strip().lower() in ("1", "true", "yes")
+
+# Zieladresse der Benachrichtigung bei neuer Anfrage.
+INQUIRY_NOTIFY_EMAIL: str = os.getenv("INQUIRY_NOTIFY_EMAIL", "")
+
+# Optionale Allowlist der Themen, kommagetrennt. Leer = keine Allowlist, damit
+# eine neue Programmauswahl im Frontend kein Backend-Deployment erzwingt.
+INQUIRY_TOPICS: list[str] = [t.strip() for t in os.getenv("INQUIRY_TOPICS", "").split(",") if t.strip()]
 
 logger = logging.getLogger(__name__)
 
@@ -404,6 +419,22 @@ app.add_middleware(
     allow_origin_regex=CORS_ORIGIN_REGEX,
     allow_methods=["GET", "POST", "DELETE", "PATCH"],
     allow_headers=["*"],
+)
+
+# Trainingsanfragen (CP-JK-101). Abgeschaltet liefert die Factory einen leeren
+# Router — dann ändert sich an dieser App nichts, auch nicht in /docs.
+app.include_router(
+    create_inquiries_router(
+        enabled=INQUIRIES_ENABLED,
+        notify_email=INQUIRY_NOTIFY_EMAIL,
+        club_name=CLUB_NAME,
+        allowed_topics=INQUIRY_TOPICS,
+        brevo_api_key=BREVO_API_KEY,
+        email_from=EMAIL_FROM,
+        email_from_name=EMAIL_FROM_NAME,
+        db_cursor=db_cursor,
+        http_client=http_client,
+    )
 )
 
 # ---------------------------------------------------------------------------

@@ -736,3 +736,95 @@ waitlist-position API, no cancellation endpoint (exists only as an internal repo
 see [Registration lifecycle](#registration-lifecycle)). The pilot frontend route is local-dev-only
 by design (CP-S408 does not deploy a frontend anywhere) — reachable only via
 `npm run dev` + `NEXT_PUBLIC_SAAS_API_URL` pointed at this service.
+
+## First two real-customer pilots: KSV Baunatal + JK Performance Academy (CP-S410)
+
+Replaces the synthetic `campspilot-pilot` tenant above with the two actual customers, using
+real values pulled from the existing `backend/` codebase (`camp_config.py`, `clubConfig.tsx`,
+`clubConfig.jk.tsx`, `impressum/page.tsx`) — **not invented data**. Two fields are explicitly
+estimates, not facts, and are marked as such below; everything else is sourced from a specific
+file. This does **not** touch or migrate any row in the KSV/JK `backend/` databases — it only
+adds rows to the separate CampsPilot SaaS project, exactly like the `campspilot-pilot` insert
+above.
+
+**Not yet run against Cloud** — no `DATABASE_URL` for the CampsPilot SaaS project is available
+in this environment. Run this once, manually, in the Supabase Dashboard → SQL Editor for the
+Cloud `CampsPilot SaaS` project (ref `wkmckfbzhmihyfwiekct`), the same way as the block above.
+Idempotent (`on conflict ... do nothing`), safe to re-run.
+
+```sql
+-- KSV Baunatal — source: frontend/app/lib/clubConfig.tsx (name, accentColor, contactPhone,
+-- logoSrc), frontend/app/impressum/page.tsx (legal_name, contact_email).
+insert into public.organizations (slug, name, legal_name, contact_email, contact_phone, logo_url, primary_color, plan_status)
+values (
+    'ksv-baunatal', 'KSV Baunatal', 'KSV Baunatal e.V.',
+    'info@ksv-baunatal.de', '0170 9927281',
+    '/logo.svg',      -- served by the same Next.js app as /pilot/[org], see frontend/public/logo.svg
+    '#CC0000',        -- KSV red, clubConfig.tsx default accentColor
+    'pilot'
+)
+on conflict (slug) do nothing;
+
+-- Three camp weeks — source: backend/camp_config.py CAMP_WEEKS + CAMP_AGE_MIN/MAX (5-12).
+-- capacity: NOT a real figure from anywhere in backend/ (the legacy system enforces no cap) —
+-- 40 is a placeholder pending a real number from the club; adjust before this matters operationally.
+-- price_cents: backend/.env.example's STRIPE_PRICE_CENTS example (14900 = 149 EUR).
+insert into public.camps (organization_id, slug, title, start_date, end_date, age_min, age_max, capacity, price_cents, currency, status)
+select id, v.slug, v.title, v.start_date, v.end_date, 5, 12, 40, 14900, 'EUR', 'published'
+from public.organizations, (values
+    ('ksv-sommercamp-2026-06-29', 'Sommercamp', date '2026-06-29', date '2026-07-02'),
+    ('ksv-sommercamp-2026-08-03', 'Sommercamp', date '2026-08-03', date '2026-08-06'),
+    ('ksv-sommercamp-2026-10-05', 'Sommercamp', date '2026-10-05', date '2026-10-08')
+) as v(slug, title, start_date, end_date)
+where organizations.slug = 'ksv-baunatal'
+on conflict (organization_id, slug) do nothing;
+
+-- JK Performance Academy — source: frontend/app/lib/clubConfig.jk.tsx.
+-- contact_email is a KNOWN PLACEHOLDER in clubConfig.jk.tsx itself ("platzhalter@..."), not
+-- invented here — replace once Jan confirms a real address (see clubConfig.jk.tsx L7, L32-35).
+insert into public.organizations (slug, name, contact_email, logo_url, primary_color, plan_status)
+values (
+    'jk-performance-academy', 'JK Performance Academy',
+    'platzhalter@jk-performance-academy.example',
+    '/jk/logo.jpg',   -- served by the same Next.js app, see frontend/public/jk/logo.jpg
+    '#B8912B',        -- clubConfig.jk.tsx accentColor
+    'pilot'
+)
+on conflict (slug) do nothing;
+
+-- JK's two real camps run at PARTNER clubs with two-tier pricing (member/external) —
+-- clubConfig.jk.tsx PROGRAMS entries "Sommercamp bei FSK Vollmarshausen" / "... TSV Wolfsanger".
+-- This schema has one price_cents field, not two — using the MEMBER rate (149 EUR) as the
+-- displayed price is a simplification, not a real decision about what to charge externals;
+-- revisit before any real payment collection goes live (backend_saas has no Stripe integration
+-- yet regardless, so payment_status stays 'open' either way for now).
+-- capacity: not stated anywhere for these partner-club camps — 30 is a placeholder.
+insert into public.camps (organization_id, slug, title, start_date, end_date, age_min, age_max, capacity, price_cents, currency, status)
+select id, v.slug, v.title, v.start_date, v.end_date, v.age_min, v.age_max, 30, 14900, 'EUR', 'published'
+from public.organizations, (values
+    ('fsk-vollmarshausen-2026-07-08', 'Sommercamp bei FSK Vollmarshausen', date '2026-07-08', date '2026-07-10', 6, 14),
+    ('tsv-wolfsanger-2026-07-29', 'Sommercamp bei TSV Wolfsanger', date '2026-07-29', date '2026-07-31', 8, 14)
+) as v(slug, title, start_date, end_date, age_min, age_max)
+where organizations.slug = 'jk-performance-academy'
+on conflict (organization_id, slug) do nothing;
+```
+
+### Verify
+
+```bash
+BASE_URL=https://<your-render-service>.onrender.com
+curl -s "$BASE_URL/api/v1/organizations/ksv-baunatal/camps"
+curl -s "$BASE_URL/api/v1/organizations/jk-performance-academy/camps"
+```
+
+### Known gaps in this seed (flagged, not silently decided)
+
+- KSV and JK camp `capacity` are placeholders (40 / 30) — no real limit exists anywhere in
+  `backend/` to source from.
+- JK's member-vs-external two-tier pricing is collapsed to a single `price_cents` (member rate)
+  — the schema does not model tiered pricing per registrant.
+- JK `contact_email` is still the placeholder from `clubConfig.jk.tsx` — not a real address.
+- `logo_url` values are relative paths (`/logo.svg`, `/jk/logo.jpg`) that only resolve because
+  `/pilot/[org]` currently happens to be served by the same Next.js deployment as the legacy
+  KSV/JK site. A logically separate SaaS frontend deployment would need these as absolute URLs
+  (e.g. uploaded to Supabase Storage) — fine for this pilot, a real gap for anything beyond it.

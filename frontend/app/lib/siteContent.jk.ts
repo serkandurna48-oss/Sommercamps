@@ -85,7 +85,10 @@ export const JK_SITE_CONTENT: SiteContent = {
 
   campsEyebrow: 'Jetzt buchbar',
   campsHeading: 'Aktuelle Camps 2026',
-  campsMeta: 'Beide Camps: 6–14 Jahre · 9–15 Uhr',
+  // Keine gemeinsame Altersangabe: Die beiden Camps haben unterschiedliche
+  // Spannen (6–14 bzw. 8–14). Das Alter steht als Badge auf der jeweiligen
+  // Karte, wo es stimmt.
+  campsMeta: 'Beide Camps: 9–15 Uhr',
   campsAvailabilityLabel: 'Begrenzte Plätze',
   campsCtaLabel: 'Platz anfragen',
 

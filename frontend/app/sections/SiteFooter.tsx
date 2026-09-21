@@ -42,7 +42,7 @@ export default function SiteFooter({
           <div>
             <p className="text-white font-semibold mb-3 text-sm">Rechtliches</p>
             <p className="text-sm leading-relaxed" id="datenschutz">
-              Deine Daten werden ausschließlich zur Bearbeitung {privacyPurpose} genutzt.
+              Deine Daten werden ausschließlich zur Bearbeitung {privacyPurpose}{' '}genutzt.
               Rechtsgrundlage: Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;b DSGVO.
             </p>
             <div className="mt-3 flex flex-wrap gap-3">

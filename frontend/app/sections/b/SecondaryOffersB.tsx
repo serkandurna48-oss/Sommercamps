@@ -60,9 +60,9 @@ export default function SecondaryOffersB({
               <div className="grow" />
               <a
                 href={ctaHref}
-                className="self-start text-[15px] font-semibold text-[var(--accent-ink)] border-b border-[var(--accent-ink)] pb-0.5 hover:border-b-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ink)] focus-visible:ring-offset-2"
+                className="self-start inline-flex items-center min-h-[44px] text-[15px] font-semibold text-[var(--accent-ink)] rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ink)] focus-visible:ring-offset-2"
               >
-                {ctaLabel}
+                <span className="border-b border-[var(--accent-ink)] pb-0.5">{ctaLabel}</span>
               </a>
             </article>
           ))}

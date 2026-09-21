@@ -496,7 +496,8 @@ export default async function Page() {
           clubName={CLUB_CONFIG.name}
           logoSrc={CLUB_CONFIG.logoSrc}
           navItems={c.navItems}
-          ctaLabel={fill(c.navCtaLong, vars)}
+          ctaLabelShort={fill(c.navCtaShort, vars)}
+          ctaLabelLong={fill(c.navCtaLong, vars)}
           ctaHref="#anmeldung"
         />
       ) : (

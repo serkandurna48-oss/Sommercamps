@@ -72,9 +72,22 @@ export const JK_SITE_CONTENT: SiteContent = {
   registrationEyebrow: 'Trainingsanfrage',
   registrationHeading: 'Anfrage stellen',
   registrationIntro: 'Schreib uns, welches Programm dich interessiert – wir melden uns bei dir.',
-  // Es gibt noch kein echtes Anfrageformular. Der reale Flow ist als CP-JK-101
-  // vorgesehen; bis dahin ist E-Mail der ehrliche Interims-CTA.
-  registrationMode: 'inquiry',
+  // CP-JK-101: echtes Anfrageformular gegen POST /inquiries.
+  // Auf 'inquiry' zurückstellen, falls der JK-Service die Route noch nicht
+  // ausliefert (INQUIRIES_ENABLED nicht gesetzt oder Migration nicht
+  // eingespielt) — dann greift wieder der mailto-Interimsblock.
+  registrationMode: 'inquiry-form',
+  // Muss zur Allowlist INQUIRY_TOPICS im Backend passen, falls dort eine
+  // gesetzt ist. Ohne Allowlist im Backend ist diese Liste allein maßgeblich.
+  registrationTopics: [
+    'Individualtraining',
+    'Kleingruppentraining',
+    'Camp bei FSK Vollmarshausen',
+    'Camp bei TSV Wolfsanger',
+    '5 Freunde',
+    'Messday',
+    'Spieleranalyse',
+  ],
   registrationContactHeading: 'Fragen zu unseren Programmen?',
   registrationContactLines: [
     { text: '{contactName}' },

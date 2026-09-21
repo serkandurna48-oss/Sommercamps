@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Suspense } from 'react'
 import RegistrationForm from '../components/RegistrationForm'
+import InquiryForm from '../components/InquiryForm'
 import type { CampConfig } from '../lib/campConfig'
 
 export interface RegistrationSidebarStep {
@@ -12,11 +13,15 @@ interface RegistrationSectionProps {
   heading: string
   intro: string
   /**
-   * 'camp'    — echtes Anmeldeformular (KSV): schreibt in das Backend.
-   * 'inquiry' — Interims-Zustand ohne Formular (JK): mailto als ehrlicher CTA,
-   *             bis CP-JK-101 den realen Anfragefluss liefert.
+   * 'camp'         — Anmeldeformular mit Zahlung (KSV): schreibt nach /registrations.
+   * 'inquiry-form' — Anfrageformular (JK, CP-JK-101): schreibt nach /inquiries.
+   * 'inquiry'      — Interims-Zustand ohne Formular: mailto als ehrlicher CTA.
+   *                  Bleibt erhalten als Rückfallebene, wenn ein Mandant den
+   *                  Anfragefluss noch nicht deployt hat.
    */
-  mode: 'camp' | 'inquiry'
+  mode: 'camp' | 'inquiry' | 'inquiry-form'
+  /** Auswahlmöglichkeiten für 'inquiry-form'. */
+  inquiryTopics: string[]
   /** Nur für mode 'camp'. Fehlt sie, zeigt die Sektion den Störungshinweis. */
   config: CampConfig | null
   contactEmail: string
@@ -42,6 +47,7 @@ export default function RegistrationSection({
   heading,
   intro,
   mode,
+  inquiryTopics,
   config,
   contactEmail,
   contactHeading,
@@ -68,7 +74,9 @@ export default function RegistrationSection({
               <Suspense fallback={<div className="py-10 text-center text-sm text-gray-400">Lädt …</div>}>
                 <RegistrationForm config={config} />
               </Suspense>
-                        ) : mode === 'inquiry' ? (
+            ) : mode === 'inquiry-form' ? (
+              <InquiryForm topics={inquiryTopics} />
+            ) : mode === 'inquiry' ? (
               <div className="text-center py-4">
                 <div className="w-14 h-14 rounded-2xl bg-[var(--brand-accent)]/10 text-[var(--brand-accent)] flex items-center justify-center mx-auto mb-5">
                   <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

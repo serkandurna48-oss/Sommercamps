@@ -102,7 +102,9 @@ export interface SiteContent {
   registrationEyebrow: string
   registrationHeading: string
   registrationIntro: string
-  registrationMode: 'camp' | 'inquiry'
+  registrationMode: 'camp' | 'inquiry' | 'inquiry-form'
+  /** Auswahl für „Worum geht es?" im Anfrageformular (nur 'inquiry-form'). */
+  registrationTopics: string[]
   registrationContactHeading: string
   registrationContactLines: ContactLine[]
   registrationSidebarHeading: string
@@ -238,6 +240,7 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
   registrationHeading: 'Platz sichern',
   registrationIntro: 'Direkt nach der Anmeldung erhältst du eine Bestätigungs-E-Mail mit allen Zahlungsinformationen.',
   registrationMode: 'camp',
+  registrationTopics: [],
   registrationContactHeading: 'Fragen zur Anmeldung?',
   registrationContactLines: [
     { text: '{contactName} – Leiter {subtitle}' },

@@ -234,6 +234,7 @@ export default async function Page() {
             heading={fill(c.registrationHeading, vars)}
             intro={fill(c.registrationIntro, vars)}
             mode={c.registrationMode}
+            inquiryTopics={c.registrationTopics}
             config={config}
             contactEmail={CLUB_CONFIG.contactEmail}
             contactHeading={fill(c.registrationContactHeading, vars)}

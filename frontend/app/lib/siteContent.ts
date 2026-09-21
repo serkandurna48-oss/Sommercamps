@@ -28,6 +28,9 @@ export type SectionId =
   | 'featuredCamps'
   | 'otherOffers'
   | 'whyUs'
+  | 'coachProfile'
+  | 'developmentProcess'
+  | 'closingCta'
   | 'highlights'
   | 'compactProcess'
   | 'process'
@@ -122,11 +125,36 @@ export interface SiteContent {
   // Highlights / Warum wir
   highlightsEyebrow: string
   highlightsHeading: string
+  /** Argumente im Theme 'editorial' (statt der Icon-Karten aus HIGHLIGHTS). */
+  whyUsPoints: { title: string; text: string }[]
+  whyUsImageAlt: string
 
-  // Ablauf
+  // Trainerprofil (nur 'editorial')
+  coachEyebrow: string
+  coachName: string
+  coachIntro: string
+  coachPortraitAlt: string
+  /** Fehlende, nicht erfindbare Angaben zum Trainer. */
+  coachPendingFields: string[]
+
+  // Ablauf / Entwicklungsprozess
   processEyebrow: string
   processHeading: string
   processSteps: StepSpec[]
+  /** Nur 'editorial': Einleitung und markierte Lücke unter den Schritten. */
+  processIntro: string
+  processPendingNote: string
+
+  // Weitere Formate (nur 'editorial')
+  secondaryOffersEyebrow: string
+  secondaryOffersHeading: string
+  secondaryOffersIntro: string
+  secondaryOffersCtaLabel: string
+
+  // Abschluss-CTA (nur 'editorial')
+  closingCtaHeading: string
+  closingCtaText: string
+  closingCtaLabel: string
   compactProcessEyebrow: string
   compactProcessSteps: StepSpec[]
 
@@ -151,6 +179,8 @@ export interface SiteContent {
   registrationTopics: string[]
   registrationContactHeading: string
   registrationContactLines: ContactLine[]
+  /** Nur 'editorial': fehlende Kontaktwege, sichtbar markiert. */
+  registrationContactPending: string[]
   registrationSidebarHeading: string
   registrationSidebarSteps: string[]
   registrationInquirySteps: StepSpec[]
@@ -163,6 +193,8 @@ export interface SiteContent {
   footerDisplayName: string
   footerDescription: string
   footerContactLines: string[]
+  /** Nur 'editorial': fehlende Kontaktwege im Footer, sichtbar markiert. */
+  footerContactPending: string
   footerPrivacyPurpose: string
   footerCopyrightName: string
 
@@ -268,7 +300,26 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
 
   highlightsEyebrow: 'Das erwartet euch',
   highlightsHeading: 'Warum unser Camp?',
+  whyUsPoints: [],
+  whyUsImageAlt: '',
 
+  coachEyebrow: '',
+  coachName: '',
+  coachIntro: '',
+  coachPortraitAlt: '',
+  coachPendingFields: [],
+
+  secondaryOffersEyebrow: '',
+  secondaryOffersHeading: '',
+  secondaryOffersIntro: '',
+  secondaryOffersCtaLabel: '',
+
+  closingCtaHeading: '',
+  closingCtaText: '',
+  closingCtaLabel: '',
+
+  processIntro: '',
+  processPendingNote: '',
   processEyebrow: 'Einfach & unkompliziert',
   processHeading: 'So läuft die Anmeldung ab',
   processSteps: [
@@ -306,6 +357,7 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
   registrationMode: 'camp',
   registrationTopics: [],
   registrationContactHeading: 'Fragen zur Anmeldung?',
+  registrationContactPending: [],
   registrationContactLines: [
     { text: '{contactName} – Leiter {subtitle}' },
     { text: '{contactEmail}', link: 'email' },
@@ -324,6 +376,7 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
 
   footerDisplayName: '{clubName}',
   footerDescription: '{subtitle} des {clubName} e.V. — qualifiziertes Training[[ für Kinder von {ageFrom} bis {ageTo} Jahren]].',
+  footerContactPending: '',
   footerContactLines: [
     '{clubName} e.V.',
     'Leiter {subtitle}: {contactName}',

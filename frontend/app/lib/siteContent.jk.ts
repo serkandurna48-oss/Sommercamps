@@ -22,9 +22,12 @@ export const JK_SECTION_ORDER: SectionId[] = [
   'coreOffers',
   'featuredCamps',
   'whyUs',
+  'coachProfile',
+  'developmentProcess',
   'otherOffers',
   'registration',
   'faq',
+  'closingCta',
 ]
 
 export const JK_SITE_CONTENT: SiteContent = {
@@ -87,11 +90,66 @@ export const JK_SITE_CONTENT: SiteContent = {
   campsCtaLabel: 'Platz anfragen',
 
   highlightsEyebrow: 'Warum JK',
-  highlightsHeading: 'Was ein Vereinstraining selten leisten kann',
+  highlightsHeading: 'Was ein Vereins\u00ADtraining selten leisten kann',
+  whyUsImageAlt: 'Trainingsgruppe der JK Performance Academy',
+  whyUsPoints: [
+    {
+      title: 'Individuelle Förderung',
+      text: 'Wir arbeiten an deinen Themen — nicht am Durchschnitt der Mannschaft.',
+    },
+    {
+      title: 'Kleine Gruppen',
+      text: 'Mehr Ballkontakte pro Einheit und ein Trainer, der jeden Fehler sieht.',
+    },
+    {
+      title: 'Persönliches Feedback',
+      text: 'Nach jeder Einheit weißt du, woran du bis zum nächsten Mal arbeitest.',
+    },
+    {
+      title: 'Ergänzung, kein Ersatz',
+      text: 'Dein Verein bleibt dein Zuhause. Wir arbeiten an dem, wofür dort die Zeit fehlt.',
+    },
+  ],
 
-  processEyebrow: '',
-  processHeading: '',
-  processSteps: [],
+  // Der Trainer war bisher auf mehreren Fotos zu sehen, wurde aber nirgends
+  // benannt. Nachname, Lizenz und Philosophie fehlen weiterhin und stehen
+  // deshalb als markierte Lücken im UI.
+  coachEyebrow: 'Dein Trainer',
+  coachName: 'Jan',
+  coachIntro:
+    'Gründer der JK Performance Academy. Er trainiert jede Einheit selbst — deshalb kennt er jeden Spieler, den er betreut, persönlich.',
+  coachPortraitAlt: 'Jan, Trainer der JK Performance Academy',
+  coachPendingFields: [
+    'Content benötigt: Nachname',
+    'Content benötigt: Trainerlizenz (z. B. DFB B-Lizenz), Jahre Erfahrung, bisherige Stationen',
+    'Content benötigt: Trainingsphilosophie in zwei bis drei Sätzen, von Jan selbst formuliert',
+  ],
+
+  // Steht an der Stelle, an der sonst Testimonials stünden. Es gibt keine
+  // echten Stimmen, und erfundene kommen nicht in Frage.
+  processEyebrow: 'So arbeiten wir',
+  processHeading: 'Entwicklung ist ein Prozess, kein Versprechen',
+  processIntro:
+    'Wir versprechen keine Karrieren. Wir zeigen, wie wir arbeiten — und du entscheidest, ob das zu dir passt.',
+  processSteps: [
+    { step: 'SCHRITT 01', title: 'Standort bestimmen', text: 'Erste Einheit mit Beobachtung: Was kannst du schon, was fehlt?' },
+    { step: 'SCHRITT 02', title: 'Ziele festlegen', text: 'Zwei bis drei konkrete Schwerpunkte statt einer langen Wunschliste.' },
+    { step: 'SCHRITT 03', title: 'Wiederholen', text: 'Regelmäßige Einheiten mit hoher Wiederholungszahl an genau diesen Punkten.' },
+    { step: 'SCHRITT 04', title: 'Überprüfen', text: 'Videoanalyse und Gespräch: Was hat sich verändert, was kommt als Nächstes?' },
+  ],
+  processPendingNote:
+    'Content benötigt: Sobald echte Eltern- und Spielerstimmen mit Einverständnis vorliegen, ersetzt eine Stimmen-Sektion diesen Prozessblock oder ergänzt ihn. Keine erfundenen Testimonials.',
+
+  secondaryOffersEyebrow: 'Auf Anfrage',
+  secondaryOffersHeading: 'Weitere Formate',
+  secondaryOffersIntro:
+    'Diese Angebote laufen nach Absprache und sind bewusst kleiner gehalten als die drei Kernformate.',
+  secondaryOffersCtaLabel: 'Angebot anfragen',
+
+  closingCtaHeading: 'Bereit für den nächsten Schritt?',
+  closingCtaText: 'Eine Anfrage kostet dich zwei Minuten — und verpflichtet zu nichts.',
+  closingCtaLabel: 'Training anfragen',
+
   compactProcessEyebrow: '',
   compactProcessSteps: [],
 
@@ -127,6 +185,9 @@ export const JK_SITE_CONTENT: SiteContent = {
     'Spieleranalyse',
   ],
   registrationContactHeading: 'Lieber direkt?',
+  registrationContactPending: [
+    'Content benötigt: E-Mail-Adresse, Telefonnummer, WhatsApp-Nummer und Instagram-Profil. Bis dahin bleibt das Formular der einzige Weg.',
+  ],
   registrationContactLines: [
     { text: 'Content benötigt: E-Mail, Telefon, WhatsApp und Instagram.' },
     { text: 'Bis dahin bleibt das Formular der einzige Weg.' },
@@ -148,10 +209,8 @@ export const JK_SITE_CONTENT: SiteContent = {
 
   footerDisplayName: '{clubName}',
   footerDescription: '{subtitle} der {clubName} — individuelle Spielerentwicklung für Kinder und Jugendliche.',
-  footerContactLines: [
-    '{clubName}',
-    'Content benötigt: E-Mail, Telefon, Instagram',
-  ],
+  footerContactLines: ['{clubName}'],
+  footerContactPending: 'Content benötigt: E-Mail, Telefon, Instagram',
   footerPrivacyPurpose: 'deiner Anfrage',
   footerCopyrightName: '{clubName}',
 

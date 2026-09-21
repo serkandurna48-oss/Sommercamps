@@ -31,6 +31,14 @@ import HeroB from './sections/b/HeroB'
 import TrustBar from './sections/b/TrustBar'
 import CoreOffers from './sections/b/CoreOffers'
 import CampListB from './sections/b/CampListB'
+import WhyUsB from './sections/b/WhyUsB'
+import CoachProfile from './sections/b/CoachProfile'
+import DevelopmentProcess from './sections/b/DevelopmentProcess'
+import SecondaryOffersB from './sections/b/SecondaryOffersB'
+import RegistrationSectionB from './sections/b/RegistrationSectionB'
+import FaqB from './sections/b/FaqB'
+import ClosingCta from './sections/b/ClosingCta'
+import SiteFooterB from './sections/b/SiteFooterB'
 import FeaturedCampsSection from './sections/FeaturedCampsSection'
 import OtherOffersSection from './sections/OtherOffersSection'
 import WhyUsSection from './sections/WhyUsSection'
@@ -56,12 +64,16 @@ import SiteFooter from './sections/SiteFooter'
 // ---------------------------------------------------------------------------
 
 /**
- * Sektionen außerhalb von <main>. Bildet das bestehende DOM ab: Die FAQ stand
- * schon vorher hinter </main>. Semantisch gehörte sie hinein — das zu ändern
- * wäre eine echte DOM-Änderung und damit ein eigener Schritt, kein Nebeneffekt
- * dieser Umstellung.
+ * Sektionen außerhalb von <main>. Bildet für 'classic' das bestehende DOM ab:
+ * Die FAQ stand dort schon vorher hinter </main>. Semantisch gehörte sie
+ * hinein — das zu ändern wäre eine echte DOM-Änderung und damit ein eigener
+ * Schritt, kein Nebeneffekt dieser Umstellung.
+ *
+ * Im Theme 'editorial' gibt es kein Alt-DOM zu erhalten, und die FAQ steht dort
+ * nicht am Ende, sondern vor der Abschluss-CTA. Sie bleibt deshalb in <main>.
  */
-const SECTIONS_OUTSIDE_MAIN: SectionId[] = ['faq']
+const SECTIONS_OUTSIDE_MAIN: SectionId[] =
+  SITE_CONTENT.theme === 'editorial' ? [] : ['faq']
 
 async function loadConfig(): Promise<CampConfig | null> {
   try {
@@ -252,9 +264,35 @@ export default async function Page() {
         )
 
       case 'otherOffers':
+        if (c.theme === 'editorial') {
+          return (
+            <SecondaryOffersB
+              eyebrow={fill(c.secondaryOffersEyebrow, vars)}
+              heading={fill(c.secondaryOffersHeading, vars)}
+              intro={fill(c.secondaryOffersIntro, vars)}
+              programs={otherPrograms}
+              ctaLabel={fill(c.secondaryOffersCtaLabel, vars)}
+              ctaHref="#anmeldung"
+            />
+          )
+        }
         return <OtherOffersSection programs={otherPrograms} ctaHref="#anmeldung" />
 
       case 'whyUs':
+        if (c.theme === 'editorial') {
+          return (
+            <WhyUsB
+              eyebrow={fill(c.highlightsEyebrow, vars)}
+              heading={fill(c.highlightsHeading, vars)}
+              points={c.whyUsPoints.map(p => ({
+                title: fill(p.title, vars),
+                text: fill(p.text, vars),
+              }))}
+              imageSrc={CLUB_CONFIG.whyUsImageSrc}
+              imageAlt={fill(c.whyUsImageAlt, vars)}
+            />
+          )
+        }
         return (
           <WhyUsSection
             eyebrow={fill(c.highlightsEyebrow, vars)}
@@ -270,6 +308,39 @@ export default async function Page() {
             eyebrow={fill(c.highlightsEyebrow, vars)}
             heading={fill(c.highlightsHeading, vars)}
             highlights={HIGHLIGHTS}
+          />
+        )
+
+      case 'coachProfile':
+        return (
+          <CoachProfile
+            eyebrow={fill(c.coachEyebrow, vars)}
+            name={fill(c.coachName, vars)}
+            intro={fill(c.coachIntro, vars)}
+            portraitSrc={CLUB_CONFIG.coachPortraitSrc}
+            portraitAlt={fill(c.coachPortraitAlt, vars)}
+            pendingFields={c.coachPendingFields}
+          />
+        )
+
+      case 'developmentProcess':
+        return (
+          <DevelopmentProcess
+            eyebrow={fill(c.processEyebrow, vars)}
+            heading={fill(c.processHeading, vars)}
+            intro={fill(c.processIntro, vars)}
+            steps={c.processSteps}
+            pendingNote={c.processPendingNote || undefined}
+          />
+        )
+
+      case 'closingCta':
+        return (
+          <ClosingCta
+            heading={fill(c.closingCtaHeading, vars)}
+            text={fill(c.closingCtaText, vars)}
+            ctaLabel={fill(c.closingCtaLabel, vars)}
+            ctaHref="#anmeldung"
           />
         )
 
@@ -316,6 +387,20 @@ export default async function Page() {
         )
 
       case 'registration':
+        if (c.theme === 'editorial') {
+          return (
+            <RegistrationSectionB
+              eyebrow={fill(c.registrationEyebrow, vars)}
+              heading={fill(c.registrationHeading, vars)}
+              intro={fill(c.registrationIntro, vars)}
+              topics={c.registrationTopics}
+              sidebarHeading={fill(c.registrationSidebarHeading, vars)}
+              sidebarSteps={c.registrationSidebarSteps.map(s => fill(s, vars))}
+              contactHeading={fill(c.registrationContactHeading, vars)}
+              contactPending={c.registrationContactPending}
+            />
+          )
+        }
         return (
           <RegistrationSection
             eyebrow={fill(c.registrationEyebrow, vars)}
@@ -353,6 +438,15 @@ export default async function Page() {
         )
 
       case 'faq':
+        if (c.theme === 'editorial') {
+          return (
+            <FaqB
+              eyebrow={fill(c.faqEyebrow, vars)}
+              heading={fill(c.faqHeading, vars)}
+              items={FAQ_ITEMS}
+            />
+          )
+        }
         return (
           <FaqSection
             eyebrow={fill(c.faqEyebrow, vars)}
@@ -425,19 +519,31 @@ export default async function Page() {
         <Fragment key={id}>{renderSection(id)}</Fragment>
       ))}
 
-      <SiteFooter
-        displayName={fill(c.footerDisplayName, vars)}
-        description={fill(c.footerDescription, vars)}
-        contactLines={
-          <>
-            {c.footerContactLines.map(line => (
-              <li key={line}>{fill(line, vars)}</li>
-            ))}
-          </>
-        }
-        privacyPurpose={fill(c.footerPrivacyPurpose, vars)}
-        copyrightName={fill(c.footerCopyrightName, vars)}
-      />
+      {c.theme === 'editorial' ? (
+        <SiteFooterB
+          clubName={fill(c.footerDisplayName, vars)}
+          logoSrc={CLUB_CONFIG.logoSrc}
+          description={fill(c.footerDescription, vars)}
+          contactLines={c.footerContactLines.map(line => fill(line, vars))}
+          contactPending={c.footerContactPending || undefined}
+          privacyPurpose={fill(c.footerPrivacyPurpose, vars)}
+          copyrightName={fill(c.footerCopyrightName, vars)}
+        />
+      ) : (
+        <SiteFooter
+          displayName={fill(c.footerDisplayName, vars)}
+          description={fill(c.footerDescription, vars)}
+          contactLines={
+            <>
+              {c.footerContactLines.map(line => (
+                <li key={line}>{fill(line, vars)}</li>
+              ))}
+            </>
+          }
+          privacyPurpose={fill(c.footerPrivacyPurpose, vars)}
+          copyrightName={fill(c.footerCopyrightName, vars)}
+        />
+      )}
     </div>
   )
 }

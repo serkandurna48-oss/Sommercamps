@@ -632,3 +632,107 @@ the API booted, connected to the right database, and the tenant-resolution/404 p
 that something is broken. This ticket does not write a real `organizations` row to Cloud (no
 `INSERT` anywhere in its scope) — that's for whichever ticket actually onboards a Cloud tenant
 (JK, per the migration-strategy doc).
+
+## Staging E2E Pilot (CP-S408)
+
+Proves the full parent-facing flow — org resolution → camp discovery → registration →
+persistence → capacity/waitlist — works end-to-end against this deployed Render service and the
+real Cloud `CampsPilot SaaS` database. Not a new system: no new infrastructure, no admin, no
+Stripe, no email. Two small additions on top of CP-S403–407:
+
+- **Frontend:** an isolated route, `frontend/app/pilot/[org]/`, talks to this API via a new,
+  distinctly-named env var `NEXT_PUBLIC_SAAS_API_URL` (see `frontend/.env.local.example`). It is
+  **not** wired into `/`, `RegistrationForm.tsx`, or `clubConfig.tsx` in any way — the KSV/JK
+  flow keeps using `NEXT_PUBLIC_API_URL` against the legacy `backend/` unchanged. A new client
+  module, `frontend/app/lib/saasApi.ts`, mirrors this service's schemas
+  (`OrganizationPublic`/`CampPublic`/`RegistrationCreate`/`RegistrationCreated`) — it is a
+  pilot-specific client, not a generic abstraction.
+- **Staging pilot data:** one organization + one tiny-capacity camp, inserted directly into the
+  Cloud database (below) — clearly not real customer data.
+
+### One-time staging pilot data
+
+Run **once**, manually, in the Supabase Dashboard → SQL Editor for the Cloud `CampsPilot SaaS`
+project (ref `wkmckfbzhmihyfwiekct`) — **never** against the `Sommercamps`/KSV project, never
+JK's. Idempotent (`on conflict ... do nothing`), safe to re-run. Deliberately **not** added to
+`supabase/migrations/` (that's schema, applied to every environment including local) or
+`supabase/seed.sql` (that's local-dev-only, per its own header) — this is Cloud-staging-only,
+one-off pilot data, inserted the same deliberate, manual way the Render service itself was
+configured.
+
+```sql
+insert into public.organizations (slug, name, contact_email, plan_status)
+values ('campspilot-pilot', 'CampsPilot Staging Pilot', 'staging-pilot@campspilot.example', 'pilot')
+on conflict (slug) do nothing;
+
+-- capacity = 1 on purpose: the second registration below is expected to
+-- land on the waitlist, proving CP-S406's capacity/waitlist logic against
+-- a real deployment, not just the test suite.
+insert into public.camps (
+    organization_id, slug, title, start_date, end_date,
+    age_min, age_max, capacity, price_cents, currency, status
+)
+select id, 'staging-smoke-camp', 'Staging Smoke Test Camp',
+       (current_date + interval '30 days')::date, (current_date + interval '32 days')::date,
+       5, 12, 1, 100, 'EUR', 'published'
+from public.organizations
+where slug = 'campspilot-pilot'
+on conflict (organization_id, slug) do nothing;
+```
+
+### Smoke-test procedure
+
+```bash
+BASE_URL=https://<your-render-service>.onrender.com
+
+curl -s "$BASE_URL/api/v1/organizations/campspilot-pilot"
+# expect: 200, {"slug":"campspilot-pilot","name":"CampsPilot Staging Pilot", ...}
+
+curl -s "$BASE_URL/api/v1/organizations/campspilot-pilot/camps"
+# expect: 200, one camp, "registration_open": true
+
+# First registration — expect status "registered" (capacity 1, 0 taken):
+curl -s -X POST "$BASE_URL/api/v1/organizations/campspilot-pilot/camps/staging-smoke-camp/registrations" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "parent_first_name": "Staging", "parent_last_name": "Pilot",
+    "parent_email": "pilot-test-1@campspilot.example", "parent_phone": "+49 0000000",
+    "child_first_name": "Test", "child_last_name": "ChildOne",
+    "child_birth_date": "2018-05-10",
+    "photo_permission": false, "terms_accepted": true, "privacy_accepted": true
+  }'
+# expect: 201, "status": "registered", "payment_status": "open"
+
+# Second registration for the SAME camp — expect status "waitlist" (capacity now full):
+curl -s -X POST "$BASE_URL/api/v1/organizations/campspilot-pilot/camps/staging-smoke-camp/registrations" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "parent_first_name": "Staging", "parent_last_name": "Pilot",
+    "parent_email": "pilot-test-2@campspilot.example", "parent_phone": "+49 0000000",
+    "child_first_name": "Test", "child_last_name": "ChildTwo",
+    "child_birth_date": "2018-05-10",
+    "photo_permission": false, "terms_accepted": true, "privacy_accepted": true
+  }'
+# expect: 201, "status": "waitlist" — proves capacity enforcement + waitlist fallback
+# against the real Cloud database, not just the test suite.
+```
+
+UI equivalent: with `NEXT_PUBLIC_SAAS_API_URL` set to this service's URL, run the frontend
+locally (`npm run dev`) and open `http://localhost:3000/pilot/campspilot-pilot` — submit the form
+twice with different child names to see the same registered → waitlist transition in the browser.
+No CORS change is needed for local frontend dev against the deployed staging backend:
+`http://localhost:3000` is already in the default allow-list (`app/config.py::cors_origins`).
+
+### Currently verified functionality
+
+Tenant resolution, published-camp read API, registration write flow, and capacity/waitlist
+fallback — all confirmed against the real Cloud database via the flow above, in addition to the
+141 unit/integration tests (SQLite-independent — these hit the actual staging Postgres).
+
+### Remaining limitations
+
+No confirmation email, no payment, no admin UI to view/manage the pilot registration, no
+waitlist-position API, no cancellation endpoint (exists only as an internal repository function,
+see [Registration lifecycle](#registration-lifecycle)). The pilot frontend route is local-dev-only
+by design (CP-S408 does not deploy a frontend anywhere) — reachable only via
+`npm run dev` + `NEXT_PUBLIC_SAAS_API_URL` pointed at this service.

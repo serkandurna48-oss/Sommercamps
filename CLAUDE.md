@@ -1,23 +1,43 @@
-# CLAUDE.md — Sommercamp Anmeldesystem
+# CLAUDE.md — CampsPilot
 
-> Dieses Dokument ist die Single Source of Truth für KI-Assistenten und neue Entwickler.
-> Bei Widersprüchen zum Code gilt: **Code schlägt dieses Dokument** — dann bitte hier updaten.
+> Kompakte Projektsteuerungsdatei für KI-Assistenten. Bei Widersprüchen zum Code gilt: **Code
+> schlägt dieses Dokument** — dann bitte hier updaten. Ausführliche Hintergründe stehen in den
+> verlinkten Dokumenten unter `docs/`, nicht hier.
+>
+> **Kanonisch für alle Agenten/Tools ist diese Datei.** `AGENTS.md` ist nur eine Weiterleitung
+> hierher (für Tools, die per Konvention `AGENTS.md` statt `CLAUDE.md` lesen).
 
 ---
 
-## Projektübersicht
+## Projektüberblick & aktueller Kurs
 
-Online-Anmeldesystem für Fußball-Feriencamps. Dieses Repository enthält aktuell das
-Single-Tenant-System für **KSV Baunatal** (`backend/` + `frontend/`, siehe unten).
+CampsPilot ist ein Online-Anmeldesystem für Fußball-Feriencamps. **KSV Baunatal** ist der
+erste, produktive Kunde (`backend/` + `frontend/`, eigenes Supabase-Projekt). **JK Performance
+Academy** ist der zweite Kunde — aktuell auf **isolierter Einzel-Infrastruktur** (eigenes
+Supabase-Projekt, eigener Render-Service `sommercamps-1`, dieselbe `backend/`-Codebase wie KSV,
+siehe [`docs/customers/jk-performance.md`](docs/customers/jk-performance.md)) mit einem ersten
+echten Schreibpfad (Trainingsanfragen, CP-JK-101).
 
-**Multi-Tenant SaaS ("CampsPilot"):** Wird **nicht** durch einen In-Place-Umbau dieses Systems
-erreicht, sondern als paralleles, isoliertes System aufgebaut (`backend_saas/` + eigenes
-Supabase-Projekt + eigenes Deployment). KSV Baunatal bleibt in `backend/` + dem bestehenden
-KSV-Supabase-Projekt unverändert bestehen; eine KSV-Migration in das neue System ist ein
-späterer, separat zu entscheidender Schritt. **Source of Truth für die Multi-Tenant-Architektur
-sind ab jetzt [`docs/saas/architecture.md`](docs/saas/architecture.md) und
-[`docs/saas/migration-strategy.md`](docs/saas/migration-strategy.md)** — nicht die ältere
-Roadmap weiter unten in diesem Dokument (siehe dort für den historischen Hintergrund).
+**Zielarchitektur (verbindlich, Stand CP-S409B): Shared-Multi-Tenant-SaaS.** CampsPilot wird
+als eigenständiges, paralleles System weitergebaut (`backend_saas/` + eigenes
+Supabase-Projekt „CampsPilot SaaS" + eigenes Render-Deployment) mit Shared-Schema
+(`organizations` → `camps` → `camp_registrations`) statt Infrastruktur-Isolation pro Kunde.
+Ein erster funktionierender Staging-Pilot läuft bereits gegen die echte Cloud-DB
+(`frontend/app/pilot/[org]/`, CP-S408). **Source of Truth für die Zielarchitektur:**
+[`docs/saas/architecture.md`](docs/saas/architecture.md) und
+[`docs/saas/migration-strategy.md`](docs/saas/migration-strategy.md).
+
+Die isolierte Pro-Kunde-Infrastruktur aus JK-102 (technischer IST-Zustand:
+[`docs/architecture/system-overview.md`](docs/architecture/system-overview.md)) ist damit ein
+**Übergangszustand, kein Zielbild**: JK läuft dort produktiv (inkl. echter
+Trainingsanfragen) — **nicht anfassen**, bis eine bewusste Migration nach `backend_saas/`
+entschieden und geplant ist (siehe `docs/saas/migration-strategy.md`). KSV Baunatal bleibt
+unabhängig davon vorerst in `backend/` + seinem bestehenden Supabase-Projekt; eine
+KSV-Migration ist weiterhin ein separater, späterer Schritt. Die frühere Einschätzung, die
+Shared-Schema-Vision sei überholt (siehe
+[`docs/archive/multi-tenant-roadmap-legacy.md`](docs/archive/multi-tenant-roadmap-legacy.md)),
+ist mit dieser Entscheidung selbst überholt — das Archiv-Dokument beschreibt weiterhin
+korrekt den *damaligen* Ansatz, nicht mehr den aktuellen Stand seiner eigenen Gültigkeit.
 
 **Produktionsstatus:** KSV Baunatal läuft live. Änderungen dürfen den Betrieb nicht
 unterbrechen. Datenschutz ist kritisch — das System verarbeitet Kinderdaten (DSGVO Art. 9).
@@ -37,316 +57,153 @@ unterbrechen. Datenschutz ist kritisch — das System verarbeitet Kinderdaten (D
 | DB Client | psycopg2-binary | ≥ 2.9.10 | — |
 | Validation | Pydantic v2 | ≥ 2.9.0 | — |
 | Auth | PyJWT (HS256) | ≥ 2.8.0 | — |
-| Database | Supabase / PostgreSQL | — | Supabase (EU) |
+| Database | Supabase / PostgreSQL | — | Supabase (EU) — je Kunde ein Projekt (`backend/`, JK-102) **plus** ein separates „CampsPilot SaaS"-Projekt für die Zielarchitektur (`backend_saas/`) |
 | E-Mail | Brevo (API v3) | via requests | — |
 | Zahlungen | Stripe (Checkout + Webhook) | ≥ 8.0.0 | — |
 
----
-
-## Verzeichnisstruktur
-
-```
-Sommercamps/
-├── CLAUDE.md                 ← dieses Dokument
-├── DEPLOYMENT.md             ← Schritt-für-Schritt Deployment-Anleitung
-├── TODO.md                   ← Priorisierte Aufgabenliste (Phase 1+)
-├── start-dev.ps1             ← Windows-Skript: Backend + Frontend starten
-│
-├── backend/
-│   ├── main.py               ← FastAPI-Monolith (alle Routes, Models, E-Mail-Logic)
-│   ├── schema.sql            ← Initiales DB-Schema (einmalig in Supabase ausführen)
-│   ├── migration_phase1.sql  ← +registration_token, +email_sent_at, +stripe_session_id
-│   ├── migration_phase2.sql  ← +photo_permission, +paid_at, 'cancelled' payment_status
-│   ├── migration_phase3.sql  ← Sicherheits-Migration (dupliziert stripe_session_id; IF NOT EXISTS)
-│   ├── migration_jersey_sizes.sql ← Constraint-Update für neue Trikotnummern-Werte
-│   ├── requirements.txt      ← Python-Abhängigkeiten
-│   ├── render.yaml           ← Render.com Deployment-Config
-│   ├── .env                  ← Lokale Secrets (nie ins Repo!)
-│   ├── .env.example          ← Template ohne Secrets (im Repo)
-│   └── test_db.py            ← Minimaler DB-Verbindungstest
-│
-├── frontend/
-│   ├── app/
-│   │   ├── page.tsx          ← Landing Page: Hero, Highlights, Termine, Formular, FAQ, Footer
-│   │   ├── layout.tsx        ← Root Layout, Vercel Analytics
-│   │   ├── globals.css       ← Tailwind-Basis
-│   │   ├── admin/
-│   │   │   └── page.tsx      ← Admin-Dashboard: Login, Tabelle, Zahlungsstatus, CSV-Export
-│   │   ├── components/
-│   │   │   ├── ClubLogo.tsx          ← SVG-Logo (KSV-spezifisch)
-│   │   │   └── RegistrationForm.tsx  ← Formular, Validierung, Bestätigungsansicht, Stripe-Button
-│   │   ├── datenschutz/
-│   │   │   └── page.tsx      ← DSGVO-Datenschutzerklärung (hardcodiert KSV-spezifisch)
-│   │   ├── impressum/
-│   │   │   └── page.tsx      ← Impressum (hardcodiert KSV-spezifisch)
-│   │   └── lib/
-│   │       ├── config.ts     ← bankPurpose()-Helper (wird nicht mehr für API-Pfad genutzt)
-│   │       └── formatDate.ts ← Datum-Formatter für Admin-Tabelle
-│   ├── .env.local            ← Lokale Vars (nie ins Repo!)
-│   ├── .env.local.example    ← Template (NEXT_PUBLIC_API_URL, NEXT_PUBLIC_STRIPE_ENABLED)
-│   └── package.json
-│
-└── Doku/
-    └── Abschluss_Sommercamp_Phase2.docx  ← Projektdokumentation Phase 2
-```
+Frontend-/Backend-spezifische Code-Konventionen liegen nicht hier, sondern in
+[`.claude/rules/frontend.md`](.claude/rules/frontend.md) und
+[`.claude/rules/backend.md`](.claude/rules/backend.md).
 
 ---
 
-## Architektur
-
-### Datenfluss
+## Architektur (Kurzfassung)
 
 ```
-Browser → Next.js Frontend (Vercel)
-              ↓ fetch POST /registrations
-         FastAPI Backend (Render)
+Browser → Next.js Frontend (Vercel, Club-Auswahl via NEXT_PUBLIC_ACTIVE_CLUB zur Build-Zeit)
+              ↓ fetch POST /registrations (KSV) bzw. POST /inquiries (JK, CP-JK-101)
+         FastAPI Backend (Render — seit JK-102 EIN Service PRO Kunde, nicht mehr geteilt)
               ↓ psycopg2 (Transaction Pooler Port 6543, SSL)
-         Supabase PostgreSQL
-              ↑ Service-Role-Key (umgeht RLS)
+         Supabase PostgreSQL (seit JK-102 EIN Projekt PRO Kunde)
 
-Stripe → POST /stripe/webhook
-              ↓ signature verify + DB update
-         FastAPI Backend
+Stripe → POST /stripe/webhook → Signatur-Verifikation + DB-Update → FastAPI Backend
 ```
 
-### Auth-Modell (Single-Tenant, Stand heute)
+KSV und JK teilen sich **dieselbe Codebase** (`backend/` + `frontend/`), aber seit JK-102
+**keine** Infrastruktur mehr (kein gemeinsames Backend, keine gemeinsame DB). Details:
+[`docs/architecture/system-overview.md`](docs/architecture/system-overview.md).
 
-- Ein globales `ADMIN_PASSWORD` (Env-Var auf Render)
-- Login via `POST /admin/login` → JWT (HS256, 24h TTL)
-- JWT im `Authorization: Bearer ...` Header bei allen Admin-Endpunkten
-- Token im `localStorage` des Browsers gespeichert
+**Komplett getrennt davon: `backend_saas/` + `frontend/app/pilot/[org]/`.** Eigene Codebase,
+eigenes Supabase-Projekt, eigenes Render-Deployment, eigene Env-Var-Namespaces
+(`NEXT_PUBLIC_SAAS_API_URL` statt `NEXT_PUBLIC_API_URL`). Das ist die Zielarchitektur, nicht
+Teil des obigen KSV/JK-Diagramms. Details: [`docs/saas/architecture.md`](docs/saas/architecture.md).
 
-### DB-Schema (Kerntabelle)
+**Auth-Modell:** Ein `ADMIN_PASSWORD` pro Kunde/Backend-Instanz (Env-Var auf Render). Login via
+`POST /admin/login` → JWT (HS256, 24h TTL), Header `Authorization: Bearer ...`.
 
-`camp_registrations` — einzige Tabelle, enthält alle Anmeldungen für KSV Baunatal.
+**DB-Schema (Kerntabelle `camp_registrations`):** wichtigste Spalten `id` (intern),
+`registration_token` (öffentlich, für Payment-Links/E-Mails), `status`, `payment_status`,
+`stripe_session_id`, `email_sent_at` (Idempotenz-Guard), `photo_permission`
+(DSGVO-Einwilligung). Kein `organization_id`/`club_id` — die Kunden-Trennung ist
+Infrastruktur-Isolation, kein Multi-Tenant-Datenmodell.
 
-> **Überholt:** Hier stand früher, dass für Multi-Tenant eine `organization_id`-FK in *diese*
-> Tabelle ergänzt werden müsse. Das ist nicht mehr der Plan — `organization_id` (und `camp_id`)
-> entstehen in einem neuen `camp_registrations`-Schema im separaten `backend_saas/`-System, nicht
-> als Migration gegen diese KSV-Tabelle. Siehe [`docs/saas/architecture.md`](docs/saas/architecture.md#43-camp_registrations).
+**Row Level Security (`backend/`):** Public INSERT erlaubt; SELECT/UPDATE nur über
+Service-Role-Key (Backend) — kein Browser-Direktzugriff auf Daten.
 
-Wichtige Spalten:
-- `id` — UUID, intern
-- `registration_token` — UUID, öffentlich (Payment-Links, E-Mail-Bestätigung)
-- `status` — `registered | confirmed | cancelled | waitlist`
-- `payment_status` — `open | paid | refunded | waived | cancelled`
-- `stripe_session_id` — gesetzt beim Checkout, genutzt vom Webhook
-- `email_sent_at` — Idempotenz-Guard für Mailversand
-- `photo_permission` — DSGVO-relevantes Einwilligungs-Feld
-
-### Row Level Security
-
-- **public INSERT**: Jeder darf neue Anmeldungen einreichen
-- **SELECT/UPDATE**: Nur Service-Role-Key (Backend) — kein Browser-Direktzugriff auf Daten
+**Anderes Schema in `backend_saas/`:** Die Zielarchitektur hat ein eigenes,
+`organization_id`-bewusstes `camp_registrations`-Schema (`organizations` → `camps` →
+`camp_registrations`) im separaten CampsPilot-SaaS-Supabase-Projekt — das ist **keine**
+Migration der obigen KSV/JK-Tabelle, sondern ein komplett neues Schema. Details:
+[`docs/saas/architecture.md`](docs/saas/architecture.md#43-camp_registrations). RLS ist dort
+bereits aktiviert, aber noch ohne Policies (Schutz aktuell rein applikatorisch über
+`organization_id`-Filter).
 
 ---
 
 ## Wichtige Konventionen
 
-### Code-Stil
-
-- **Frontend**: TypeScript strict, Tailwind utility classes, keine externen UI-Libraries
-- **Backend**: Python, snake_case für Variablen/Funktionen, Klassen PascalCase
-- **Kommentare**: Englisch im Code, Deutsch in CLAUDE.md/TODO.md/Commit-Messages
-- **Migrations**: Immer `IF NOT EXISTS` / `IF EXISTS` Guards — Migrations müssen idempotent sein
-
-### Commit-Disziplin
-
+- **Kommentare:** Englisch im Code, Deutsch in CLAUDE.md/TODO.md/Commit-Messages
+- **Migrations:** immer `IF NOT EXISTS`/`IF EXISTS`-Guards, idempotent; vor riskanten
+  Migrationen Backup ziehen (siehe [`DEPLOYMENT.md`](DEPLOYMENT.md#backup--restore))
 - **Nichts committen ohne Bestätigung** des Entwicklers
-- **Ein Thema, ein Commit** — keine Massen-Refactorings
-- Tests schreiben für jeden neuen Code-Pfad, der DB oder externe Services anfasst
+- **Ein Thema, ein Commit** — keine Massen-Refactorings; **keine direkte Arbeit auf `main`**
+- **Ein klarer Auftrag/ein Issue pro Branch** — kein Sammel-Branch für mehrere unabhängige Themen
+- **Vor jedem Merge beide Club-Konfigurationen prüfen** (`NEXT_PUBLIC_ACTIVE_CLUB` unset/`ksv`
+  **und** `jk`) — geteilter Code kann Regressionen auf der jeweils anderen Seite verursachen.
+  Dafür gibt es den Subagenten `club-regression-check`
+  ([`.claude/agents/club-regression-check.md`](.claude/agents/club-regression-check.md)).
+- **DB-Migrationen und neue Dependencies im PR ausdrücklich melden**, nicht stillschweigend
+  mitschleifen (siehe [`.github/pull_request_template.md`](.github/pull_request_template.md))
+- **Club-spezifische Werte** (Name, Preise, Kontakt, Texte) gehören in
+  `frontend/app/lib/clubConfig*.tsx` bzw. Backend-Env-Vars (`CLUB_NAME`, `CLUB_SUBTITLE`,
+  `CAMP_YEAR`, ...) — nie als Literal in Komponenten/Routen
+- **API-Grundregeln:** alle Admin-Endpunkte verlangen `Authorization: Bearer <jwt>`,
+  ausschließlich parameterisierte Queries, `registration_token` (nie `id`) als öffentlicher
+  Identifier, Stripe-Webhook immer signaturgeprüft und idempotent
 
-### Sicherheitspflichten (DSGVO!)
+---
+
+## Sicherheitspflichten (DSGVO!)
 
 - Das System verarbeitet **Kinderdaten** (Vorname, Nachname, Geburtsdatum, Allergien)
 - Allergien fallen unter Art. 9 DSGVO (besondere Kategorien) → besondere Sorgfalt
-- Keine Kinderdaten in Logs ausgeben
-- Keine Daten an Dritte ohne explizite Rechtsgrundlage
+- Keine Kinderdaten in Logs ausgeben; keine Daten an Dritte ohne explizite Rechtsgrundlage
 - Bei DB-Schema-Änderungen: Auswirkung auf Datenschutzerklärung prüfen
+- **Keine produktiven Datenbanken für Tests verwenden** — niemals gegen die echte, in
+  `DATABASE_URL` konfigurierte Produktions-DB testen (betrifft `backend/test_db.py` und
+  `backend_saas/tests/test_db.py` gleichermaßen)
 
-### Hardcoded-Strings während Phase 1
-
-Jeder neu eingeführte hardcoded String, der sich auf einen spezifischen Verein bezieht
-(Name, E-Mail, Adresse, Bankdaten, Telefon, etc.), wird mit einem Kommentar markiert:
-
-```ts
-// TODO(multi-tenant): replace with organization.email
-```
-
-Und in `TODO.md` unter **„Phase 1 Hardcoded-Schulden"** erfasst.
-
-**Begründung:** In Phase 1 entfernen wir alte hardcoded Strings. Damit wir keine neuen
-unsichtbar einführen, wird jede Ausnahme explizit dokumentiert und nachverfolgbar gemacht.
-
-### API-Konventionen
-
-- Alle Admin-Endpunkte: `Authorization: Bearer <jwt>` erforderlich
-- Parameterisierte Queries überall (keine String-Interpolation in SQL)
-- `registration_token` (UUID) als öffentlicher Identifier, nie `id` extern exponieren
-- Stripe Webhook: immer Signatur-Verifikation, immer idempotent (AND payment_status != 'paid')
-
----
-
-## Bekannte Bugs & Inkonsistenzen
-
-> Diese Bugs existieren im aktuellen Produktionscode und müssen in Phase 1 behoben werden.
-> Siehe TODO.md für die priorisierte Reihenfolge.
-
-| ID | Schwere | Problem | Fundort |
-|----|---------|---------|---------|
-| B1 | Mittel | **Altersgrenze-Split-Brain**: Frontend max. 12 Jahre, DB-Schema max. 18 Jahre, Landing Page sagt "5–12 Jahre" | `RegistrationForm.tsx:107-113` vs `schema.sql:24-27` |
-| B2 | Mittel | **Preis-Split-Brain**: `CAMP_PRICE = '149 €'` im Frontend (TODO-Kommentar!), Stripe nutzt `STRIPE_PRICE_CENTS` Env-Var — könnten auseinanderlaufen | `page.tsx:53` |
-| ~~B3~~ | ~~Niedrig~~ | ✅ **Behoben** (Commit `3413173`): `render.yaml` nutzt jetzt `ADMIN_PASSWORD` | `render.yaml:12` |
-| B4 | Mittel | **CAMP_WEEKS dupliziert**: Identische 3 Daten in Backend + Frontend — Änderung muss an 2 Stellen erfolgen | `main.py:70-74`, `RegistrationForm.tsx:25-29` |
-| B5 | Niedrig | **JERSEY_SIZES dupliziert**: Identisch in Backend + Frontend | `main.py:69`, `RegistrationForm.tsx:31` |
-
----
-
-## Aktuelle Limitationen (Single-Tenant Hardcoding)
-
-Das System enthält viele KSV-Baunatal-spezifische Strings. Für Multi-Tenant SaaS müssen
-diese in Datenbank-Konfigurationen oder Env-Vars extrahiert werden.
-
-### Hardcoded: E-Mail-Templates (backend/main.py)
-
-- Vereinsname im E-Mail-Header: `"KSV Baunatal"` / `"Fußballschule"` (L335–336)
-- Betreffzeile: `"Anmeldebestätigung Fußballschule KSV Baunatal"` (L518)
-- Jahreszahl `"2026"` im Mailtext und Stripe-Produktname (L346, L949)
-- Footer: `"© 2026 KSV Baunatal e.V."` (L440)
-- Kontakt-E-Mail Default: `"info@ksv-baunatal.de"` (L45, L48)
-- Absendername Default: `"Fußballschule KSV Baunatal"` (L44)
-
-### Hardcoded: Backend-Konfiguration (backend/main.py)
-
-- FastAPI app title: `"KSV Baunatal Sommercamp API"` (L192)
-- Camp-Wochen: `ALLOWED_CAMP_WEEKS` Set mit 3 fixen Daten (L70–74)
-- `bank_purpose()` Prefix: `"Sommercamp"` (L165)
-
-### Hardcoded: Frontend Marketing (frontend/app/page.tsx)
-
-- SEO-Metadata, Hero, Highlights, Ablauf-Texte — alle KSV-spezifisch
-- Kontaktdaten (Ergün Ünal, E-Mail, Telefon) an 3 Stellen (L311–315, L387–389)
-- Preis `CAMP_PRICE = '149 €'` mit TODO-Kommentar (L53)
-- Camp-Daten Array `CAMPS` (L55–59)
-- Veranstaltungsort: Parkstadion Baunatal (L206–208)
-
-### Hardcoded: Rechtliche Seiten
-
-- `impressum/page.tsx`: Vereinsadresse, Registernummer, Vorstandsnamen, Kontaktdaten
-- `datenschutz/page.tsx`: Vereinsname, Kontakt-E-Mail, Zuständige Behörde (Hessen)
-
----
-
-## Roadmap: 5 Phasen Richtung Multi-Tenant SaaS (historisch, Phase 2–5 überholt)
-
-### Phase 1 — Foundation Hardening ✅ ERLEDIGT
-**Ziel:** Alle Bugs fix, alle Hardcodings in Config extrahiert. KSV läuft stabil.
-Keine Multi-Tenant-Änderungen an DB oder Auth.
-
-- Bugs B1–B5 beheben
-- `ALLOWED_CAMP_WEEKS` und `ALLOWED_JERSEY_SIZES` als API-Endpunkt exponieren (DRY)
-- `CAMP_PRICE_DISPLAY` Env-Var (aligned mit `STRIPE_PRICE_CENTS`)
-- Alle E-Mail-Template-Strings in Env-Vars (`CLUB_NAME`, `CAMP_YEAR`, etc.)
-- `render.yaml` korrigieren
-- Minimale Test-Coverage für alle Endpunkte
-
-Diese Phase ist abgeschlossen (siehe `SESSION_NOTES.md`) und bleibt gültig — sie war reines
-KSV-Hardening ohne Multi-Tenant-Bezug und widerspricht der neuen SaaS-Architektur nicht.
-
-> **Phase 2–5 unten sind überholt (Stand CP-S401A) und beschreiben bewusst nicht mehr den
-> aktuellen Plan.** Sie gingen von einer **In-Place-Evolution** von `backend/` aus (dieselbe
-> Codebasis und dasselbe KSV-Supabase-Projekt bekommen `organizations`/`tenant_id`, RLS,
-> Path-Routing, Stripe Connect direkt draufgesetzt). Der aktuelle Plan ist stattdessen ein
-> **paralleler Neubau**: ein neues `backend_saas/` mit eigenem Supabase-Projekt und eigenem
-> Deployment, in das JK Performance Academy als erster Tenant einzieht — KSV bleibt in
-> `backend/` + seinem bestehenden Supabase-Projekt unverändert, eine KSV-Migration in das neue
-> System ist frühestens ein späterer, separat zu entscheidender Schritt (nicht automatisch
-> "Phase 2" von hier). Verbindlich sind jetzt ausschließlich
-> [`docs/saas/architecture.md`](docs/saas/architecture.md) und
-> [`docs/saas/migration-strategy.md`](docs/saas/migration-strategy.md). Der folgende Text bleibt
-> nur als historischer Kontext stehen, keine der folgenden Aussagen ist noch eine aktive Anweisung.
-
-<details>
-<summary>Historisch — Phase 2–5 (überholt, nicht mehr befolgen)</summary>
-
-### Phase 2 — Tenant Data Model
-**Ziel:** DB unterstützt mehrere Vereine, KSV weiter als einziger Tenant.
-
-- Neue Tabelle `organizations` (id, slug, name, config jsonb, ...)
-- `tenant_id` FK in `camp_registrations`
-- RLS-Policies per Tenant
-- Per-Tenant Config: club_name, email, bank_details, camp_weeks, camp_price
-- Migration: KSV als erster Tenant anlegen, alle bestehenden Registrierungen migrieren
-
-### Phase 3 — Multi-Tenant Auth & Admin
-**Ziel:** Jeder Verein hat eigene Admin-Credentials.
-
-- `admin_users` Tabelle (oder Supabase Auth)
-- Per-Tenant JWT-Ausstellung oder Supabase Auth mit Tenant-Kontext
-- Tenant-Isolation in allen Admin-Endpunkten erzwingen
-- Onboarding-Flow: Neuen Verein anlegen
-
-### Phase 4 — Path-basiertes Routing
-**Ziel:** `/[org-slug]/...` im Frontend, dynamische Landing Pages.
-
-- Next.js Dynamic Routes: `app/[slug]/page.tsx`, `app/[slug]/admin/page.tsx`
-- Org-Config via API laden (camp_weeks, prices, contact, logo)
-- Impressum/Datenschutz per Tenant dynamisch oder Template-basiert
-- Redirect: `/` → Tenant-Auswahl oder Default-Tenant
-
-### Phase 5 — Stripe Connect
-**Ziel:** Jeder Verein bekommt Zahlungen direkt auf sein Konto.
-
-- Stripe Connect Express (Onboarding-Flow per Verein)
-- `stripe_account_id` in `organizations`
-- Checkout Sessions mit `stripe_account` Parameter
-- Platform-Gebühr konfigurierbar
-- Payout-Dashboard im Admin
-
-</details>
+Bugs/Hardcoded-Strings-Historie von `backend/`: [`TODO.md`](TODO.md). Die frühere
+Shared-Schema-Roadmap (Phasen 1–5, Stand vor JK-102) steht — mit Vorbehalt laut obigem
+Abschnitt "Projektüberblick & aktueller Kurs" — in
+[`docs/archive/multi-tenant-roadmap-legacy.md`](docs/archive/multi-tenant-roadmap-legacy.md).
+Der aktuelle Bauplan für die Zielarchitektur ist nicht diese alte Roadmap, sondern
+[`docs/saas/architecture.md`](docs/saas/architecture.md) +
+[`docs/saas/migration-strategy.md`](docs/saas/migration-strategy.md) +
+`backend_saas/README.md` (dortiger Implementierungsstand, laufend aktualisiert).
 
 ---
 
 ## Lokale Entwicklung
 
+Kurzreferenz — vollständige Anleitung: [`README.md`](README.md#lokale-einrichtung),
+Env-Var-Referenz: [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
 ```bash
-# Backend (Voraussetzung: Python venv aktiv)
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload
-# API-Docs: http://localhost:8000/docs
-
-# Frontend (neues Terminal)
-cd frontend
-npm install
-npm run dev
-# App: http://localhost:3000
-# Admin: http://localhost:3000/admin
+cd backend && pip install -r requirements.txt && uvicorn main:app --reload   # http://localhost:8000/docs
+cd frontend && npm install && npm run dev                                   # http://localhost:3000
 ```
-
-Env-Vars: `backend/.env` (Vorlage: `backend/.env.example`),
-`frontend/.env.local` (Vorlage: `frontend/.env.local.example`).
 
 ---
 
 ## Nicht-offensichtliche Fallstricke
 
-1. **Stripe-Webhook muss Raw Body erhalten** — kein JSON-Parsing vor Signatur-Verifikation.
-   FastAPI liest den Body via `await request.body()` — das ist korrekt und darf nicht geändert werden.
+1. **Stripe-Webhook muss Raw Body erhalten** — kein JSON-Parsing vor Signatur-Verifikation
+   (`await request.body()` in `main.py` — nicht ändern).
+2. **Supabase Transaction Pooler (Port 6543)**: psycopg2 mit `sslmode=require`. Session Pooler
+   (Port 5432) funktioniert nicht mit prepared statements.
+3. **`registration_token` vs. `id`**: `id` ist intern, `registration_token` ist der öffentliche
+   Identifier. Nie `id` in URLs oder E-Mails exponieren.
+4. **`email_sent_at` als Idempotenz-Guard**: Mailversand-Fehler brechen die Registrierung nicht
+   ab (best-effort).
+5. **DB-Constraint vs. Pydantic**: Validierung erfolgt doppelt. Bei CheckViolation liefert
+   `CONSTRAINT_MESSAGES` lesbare deutsche Fehlermeldungen.
+6. **CORS**: `localhost:3000` immer erlaubt, Produktions-Frontend-URL per `CORS_ORIGINS_EXTRA`.
+7. **Zwei getrennte Backends seit JK-102**: `ksv-baunatal-backend` und `sommercamps-1` laufen
+   von derselben `main.py`, aber mit eigenen Env-Vars/DBs — ein Fix für KSV muss ggf. auch im
+   JK-Service deployed werden und umgekehrt, sonst laufen beide Seiten auseinander.
+8. **`backend_saas/` ist ein drittes, komplett unabhängiges System** — nicht mit den beiden
+   obigen verwechseln. Eigene Codebase, eigenes Supabase-Projekt, eigener Render-Service,
+   eigene Tests (`backend_saas/tests/`, `venv/` lokal, nicht das Root-`venv/`). Ein Fix in
+   `backend/main.py` betrifft `backend_saas/` nie, und umgekehrt.
 
-2. **Supabase Transaction Pooler (Port 6543)**: psycopg2 mit `sslmode=require`.
-   Session Pooler (Port 5432) funktioniert nicht mit prepared statements.
+---
 
-3. **registration_token vs. id**: `id` ist intern. `registration_token` ist der öffentliche
-   Identifier für Payment-Links. Nie `id` in URLs oder E-Mails exponieren.
+## Weiterführende Dokumentation
 
-4. **email_sent_at als Idempotenz-Guard**: Vor dem Mailversand wird geprüft, ob `email_sent_at`
-   bereits gesetzt ist. Mailversand-Fehler brechen die Registrierung nicht ab (best-effort).
-
-5. **DB-Constraint vs. Pydantic**: Validierung erfolgt doppelt (Pydantic + DB-Constraint).
-   Bei CheckViolation liefert `CONSTRAINT_MESSAGES` lesbare deutsche Fehlermeldungen.
-
-6. **CORS**: `localhost:3000` immer erlaubt. Produktions-Frontend-URL per `CORS_ORIGINS_EXTRA`.
-
-7. **frontend/CLAUDE.md**: Enthält nur `@AGENTS.md` Redirect und eine Next.js-Version-Warnung.
-   Relevante Infos stehen in diesem Root-CLAUDE.md.
+| Thema | Datei |
+|---|---|
+| Technischer IST-Zustand KSV/JK-Trennung (`backend/`, Übergangszustand) | [`docs/architecture/system-overview.md`](docs/architecture/system-overview.md) |
+| Kundenkontext KSV | [`docs/customers/ksv.md`](docs/customers/ksv.md) |
+| Kundenkontext JK | [`docs/customers/jk-performance.md`](docs/customers/jk-performance.md) |
+| **Zielarchitektur Shared-Multi-Tenant-SaaS (verbindlich)** | [`docs/saas/architecture.md`](docs/saas/architecture.md) |
+| **Migrationsstrategie in die Zielarchitektur** | [`docs/saas/migration-strategy.md`](docs/saas/migration-strategy.md) |
+| Implementierungsstand `backend_saas/` (laufend aktualisiert) | [`backend_saas/README.md`](backend_saas/README.md) |
+| Deployment, Env-Vars, Backup, Rollback, Kosten (`backend/`) | [`DEPLOYMENT.md`](DEPLOYMENT.md) |
+| Priorisierte offene Aufgaben (`backend/`) | [`TODO.md`](TODO.md) |
+| Frontend-Konventionen | [`.claude/rules/frontend.md`](.claude/rules/frontend.md) |
+| Backend-Konventionen | [`.claude/rules/backend.md`](.claude/rules/backend.md) |
+| Dual-Club-Regressionscheck (Subagent, `backend/`) | [`.claude/agents/club-regression-check.md`](.claude/agents/club-regression-check.md) |
+| Neuen Verein onboarden (Subagent, Plan-only, `backend/`-Ansatz — vor Nutzung gegen die neue Zielarchitektur prüfen) | [`.claude/agents/customer-onboarding.md`](.claude/agents/customer-onboarding.md) |
+| Frühere Shared-Schema-Roadmap, Stand vor JK-102 (historischer Ansatz — inhaltlich wieder relevant als Vorstufe der jetzigen Zielarchitektur, siehe Vorbehalt oben) | [`docs/archive/multi-tenant-roadmap-legacy.md`](docs/archive/multi-tenant-roadmap-legacy.md) |
+| Archiviertes Phase-1-Abschlussprotokoll | [`docs/archive/session-notes-phase1-2026-05-19.md`](docs/archive/session-notes-phase1-2026-05-19.md) |

@@ -24,7 +24,7 @@
 -- searches implicitly regardless of search_path.
 -- ------------------------------------------------------------
 
-create function public.set_updated_at()
+create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
 set search_path = ''

@@ -193,11 +193,11 @@ export const JK_OVERRIDES: {
     },
     {
       q: 'Kann ich bei JK Mitglied werden?',
-      a: 'Eine Mitgliedschaft bei JK Performance Academy ist aktuell in Vorbereitung. Interesse an Mitgliedschaft? Schreib uns – wir melden uns, sobald es so weit ist.',
+      a: 'Eine Mitgliedschaft bei JK Performance Academy ist aktuell in Vorbereitung. Interesse? Schick uns eine Anfrage – wir melden uns, sobald es so weit ist.',
     },
     {
       q: 'An wen wende ich mich bei Fragen?',
-      a: 'Kontakt per Instagram/WhatsApp ist in Vorbereitung. Nutze bis dahin gerne die Trainingsanfrage oder das Interesse-Formular oben auf der Seite.',
+      a: 'Kontakt per Instagram/WhatsApp ist in Vorbereitung. Nutze bis dahin bitte das Anfrageformular auf dieser Seite – wir antworten per E-Mail.',
     },
   ],
 

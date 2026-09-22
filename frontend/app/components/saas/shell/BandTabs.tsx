@@ -31,8 +31,8 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
   return (
     <nav
       ref={containerRef}
-      className="relative flex gap-6 overflow-x-auto"
-      style={{ borderTop: '1px solid var(--cp-band-line)' }}
+      className="relative flex gap-6 overflow-x-auto max-md:fixed max-md:right-0 max-md:bottom-0 max-md:left-0 max-md:z-20 max-md:justify-around max-md:gap-0 max-md:px-2"
+      style={{ borderTop: '1px solid var(--cp-band-line)', background: 'var(--cp-band)' }}
       aria-label="Bereiche"
     >
       {tabs.map(tab => {
@@ -43,7 +43,7 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
             href={tab.href}
             data-active={active}
             aria-current={active ? 'page' : undefined}
-            className="cp-subheading shrink-0 whitespace-nowrap pt-3 pb-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            className="cp-subheading shrink-0 pt-3 pb-3 whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 max-md:px-2 max-md:text-center max-md:text-[12px]"
             style={{
               color: active ? 'var(--cp-on-band)' : 'var(--cp-on-band-2)',
               outlineColor: brandColor,
@@ -56,7 +56,7 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
       {underline && (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute bottom-0 left-0 h-0.5 w-px transition-transform motion-reduce:transition-none"
+          className="pointer-events-none absolute bottom-0 left-0 h-0.5 w-px transition-transform motion-reduce:transition-none max-md:hidden"
           style={{
             background: brandColor,
             transform: `translateX(${underline.left}px) scaleX(${underline.width})`,

@@ -5,7 +5,7 @@ import { de } from '../../../lib/i18n/de'
  * Platzhalter statt eines toten oder deaktivierten Tabs. */
 export default function ComingSoon() {
   return (
-    <main className="mx-auto max-w-[920px] px-6 py-16 text-center">
+    <main className="mx-auto max-w-[920px] px-4 py-16 pb-24 text-center md:px-8 md:pb-16 xl:px-6">
       <p className="cp-title" style={{ color: 'var(--cp-ink)' }}>
         {de.comingSoon.title}
       </p>

@@ -41,16 +41,16 @@ export default function ParticipantList({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex flex-col gap-2 xl:flex-row xl:items-center">
         <input
           type="search"
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder={de.command.searchPlaceholder}
-          className="cp-subheading min-h-[44px] flex-1 rounded-[var(--cp-r-field)] border px-4"
+          className="cp-subheading min-h-[44px] w-full rounded-[var(--cp-r-field)] border px-4 xl:flex-1"
           style={{ borderColor: 'var(--cp-field-line)', fontSize: '16px', minWidth: '220px' }}
         />
-        <div className="flex gap-2 overflow-x-auto">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           <FilterButton
             label={de.command.filterPaymentOpen}
             count={counts['payment-open']}

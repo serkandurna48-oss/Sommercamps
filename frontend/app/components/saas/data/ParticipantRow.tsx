@@ -35,49 +35,54 @@ export default function ParticipantRow({
 
   return (
     <div className="border-t" style={{ borderColor: 'var(--cp-line-2)' }}>
-      <div className="flex flex-wrap items-center gap-4 px-5 py-4">
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={onToggleSelect}
-          aria-label={`${registration.child_first_name} ${registration.child_last_name} auswählen`}
-          className="h-5 w-5 shrink-0"
-          style={{ accentColor: brandColor }}
-        />
+      <div className="flex flex-col gap-2 px-5 py-4 md:flex-row md:flex-wrap md:items-center md:gap-4">
+        <div className="flex items-center gap-4">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            aria-label={`${registration.child_first_name} ${registration.child_last_name} auswählen`}
+            className="h-5 w-5 shrink-0"
+            style={{ accentColor: brandColor }}
+          />
 
-        <div className="min-w-0 flex-1">
-          <p className="cp-subheading" style={{ color: 'var(--cp-ink)' }}>
+          <p className="cp-subheading min-w-0 flex-1" style={{ color: 'var(--cp-ink)' }}>
             {registration.child_first_name} {registration.child_last_name}
             <span className="cp-num ml-1.5" style={{ color: 'var(--cp-muted)' }}>
               ({birthYear(registration.child_birth_date)})
             </span>
           </p>
-          <p className="cp-chip mt-0.5" style={{ color: 'var(--cp-muted)' }}>
-            {registration.parent_first_name} {registration.parent_last_name} · {registration.parent_email}
-          </p>
+
+          <StatusChip
+            tone={PAYMENT_TONE[registration.payment_status] ?? 'neutral'}
+            label={paymentStatusLabel[registration.payment_status] ?? registration.payment_status}
+          />
+
+          <button
+            type="button"
+            onClick={() => setOpen(v => !v)}
+            aria-expanded={open}
+            aria-controls={detailId}
+            aria-label={open ? 'Details schließen' : 'Details öffnen'}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--cp-r-chip)] transition-transform motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 md:order-last"
+            style={{ transform: open ? 'rotate(180deg)' : 'none', outlineColor: brandColor }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M4 6l4 4 4-4" stroke="var(--cp-ink-2)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
         </div>
 
-        {hasNotes(registration) && (
-          <span className="cp-chip" style={{ color: 'var(--cp-info)' }} title="Allergien oder Hinweise hinterlegt">
-            Hinweis
-          </span>
-        )}
-
-        <StatusChip tone={PAYMENT_TONE[registration.payment_status] ?? 'neutral'} label={paymentStatusLabel[registration.payment_status] ?? registration.payment_status} />
-
-        <button
-          type="button"
-          onClick={() => setOpen(v => !v)}
-          aria-expanded={open}
-          aria-controls={detailId}
-          aria-label={open ? 'Details schließen' : 'Details öffnen'}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--cp-r-chip)] transition-transform motion-reduce:transition-none focus-visible:outline focus-visible:outline-2"
-          style={{ transform: open ? 'rotate(180deg)' : 'none', outlineColor: brandColor }}
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M4 6l4 4 4-4" stroke="var(--cp-ink-2)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+        <div className="flex min-w-0 flex-wrap items-center gap-2 pl-9 md:flex-1 md:pl-0">
+          <p className="cp-chip min-w-0 truncate" style={{ color: 'var(--cp-muted)' }}>
+            {registration.parent_first_name} {registration.parent_last_name} · {registration.parent_email}
+          </p>
+          {hasNotes(registration) && (
+            <span className="cp-chip shrink-0" style={{ color: 'var(--cp-info)' }} title="Allergien oder Hinweise hinterlegt">
+              Hinweis
+            </span>
+          )}
+        </div>
       </div>
 
       <div id={detailId} className={`cp-collapse cp-collapse-m3 motion-reduce:transition-none ${open ? 'cp-collapse-expanded' : ''}`}>

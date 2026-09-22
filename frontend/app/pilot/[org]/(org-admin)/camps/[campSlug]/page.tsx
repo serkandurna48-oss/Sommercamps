@@ -61,8 +61,8 @@ export default async function CampCommandCenterPage({
         brandColor={brand.brand}
       />
 
-      <main className="mx-auto max-w-[1080px] px-6 py-10">
-        <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+      <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+        <div className="mb-8 grid grid-cols-2 gap-4 xl:grid-cols-4">
           <StatCard label="Belegung" value={`${stats.registeredCount}/${camp.capacity}`} />
           <StatCard label="Eingegangen / Offen" value={`${formatEuro(money.collectedCents)} / ${formatEuro(money.openCents)}`} />
           <StatCard label={de.dashboard.waitlistLabel} value={String(stats.waitlistCount)} />

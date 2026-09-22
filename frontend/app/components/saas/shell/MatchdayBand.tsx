@@ -60,7 +60,7 @@ export default function MatchdayBand({
 
   return (
     <header
-      className="sticky top-0 z-10 px-6 pt-5"
+      className="sticky top-0 z-10 px-4 pt-5 pb-5 md:px-6"
       style={{ background: 'var(--cp-band)', borderTop: `3px solid ${brandColor}`, color: 'var(--cp-on-band)' }}
     >
       <div className="mx-auto flex max-w-[1080px] flex-col">
@@ -79,8 +79,8 @@ export default function MatchdayBand({
                 </p>
               )}
               <div className="flex flex-wrap items-end justify-between gap-6">
-                <div>
-                  <h1 className="cp-band-hero">{title}</h1>
+                <div className="min-w-0">
+                  <h1 className="cp-band-hero break-words">{title}</h1>
                   {subtitle && (
                     <p className="cp-body mt-1.5" style={{ color: 'var(--cp-on-band-2)' }}>
                       {subtitle}
@@ -88,9 +88,11 @@ export default function MatchdayBand({
                   )}
                 </div>
                 {metrics.length > 0 && (
-                  <div className="flex flex-wrap gap-8">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3 xl:flex xl:flex-nowrap xl:gap-8">
                     {metrics.map(m => (
-                      <BandMetric key={m.label} {...m} size="band" />
+                      <div key={m.label} className={m.bar || metrics.length === 1 ? undefined : 'hidden md:block'}>
+                        <BandMetric {...m} size="band" />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -119,7 +121,9 @@ export default function MatchdayBand({
           {metrics.length > 0 && (
             <div className="flex flex-wrap gap-5">
               {metrics.map(m => (
-                <BandMetric key={m.label} {...m} size="inline" />
+                <div key={m.label} className={m.bar || metrics.length === 1 ? undefined : 'hidden md:block'}>
+                  <BandMetric {...m} size="inline" />
+                </div>
               ))}
             </div>
           )}

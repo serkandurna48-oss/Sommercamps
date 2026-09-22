@@ -73,7 +73,7 @@ export default async function OrgDashboardPage({ params }: { params: Promise<{ o
         brandColor={brand.brand}
       />
 
-      <main className="mx-auto max-w-[920px] px-6 py-10">
+      <main className="mx-auto max-w-[920px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
         <section className="mb-12">
           <h2 className="cp-title mb-4">{de.dashboard.upNext}</h2>
           {firstTask ? (

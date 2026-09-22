@@ -85,6 +85,18 @@
   font-stretch: 110%;
   font-weight: 700;
 }
+/* Statische Haltepunkt-Anpassung, kein Tween — Abschnitt 6: unter 768px ist
+ * für 52/38px kein Platz mehr (siehe Verifikation bei 390px), unabhängig
+ * von den Motion-Regeln in Abschnitt 7 (die nur Übergänge betreffen). */
+@media (max-width: 767px) {
+  .cp-band-hero {
+    font-size: 34px;
+    letter-spacing: -0.8px;
+  }
+  .cp-band-metric {
+    font-size: 28px;
+  }
+}
 .cp-band-title {
   font-size: 18px;
   line-height: 1.2;

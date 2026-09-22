@@ -185,20 +185,23 @@ export default function SiteMotion() {
       mm.add('(min-width: 860px)', () => {
         const items = gsap.utils.toArray<HTMLElement>('#zList .z-item')
         const tl = gsap.timeline({
-          scrollTrigger: { trigger: '#zStage', start: 'top top', end: '+=1600', pin: true, scrub: 0.7, anticipatePin: 1 },
+          scrollTrigger: { trigger: '#zStage', start: 'top top', end: '+=1050', pin: true, scrub: 0.6, anticipatePin: 1 },
         })
-        tl.to('#zImg', { scale: 1.1, ease: 'none' }, 0)
-        tl.to('#zDim', { opacity: 0.62, ease: 'none' }, 0.08)
+        tl.to('#zImg', { scale: 1.24, ease: 'none' }, 0)
+        tl.to('#zDim', { opacity: 0.72, ease: 'none' }, 0.08)
         items.forEach((it, i) => {
           const at = 0.1 + i * 0.135
-          tl.to(it.querySelector('.strike'), { scaleX: 1, duration: 0.09, ease: 'power2.inOut' }, at)
-          tl.to(it.querySelector('.t'), { opacity: 0.34, duration: 0.09, ease: 'none' }, at + 0.02)
+          // Entschlossener Strich statt sanftem Ease-in-out — power4.out
+          // knallt fast sofort rein und bremst hart, wie ein echter
+          // Stiftstrich statt einer Blende.
+          tl.to(it.querySelector('.strike'), { scaleX: 1, duration: 0.07, ease: 'power4.out' }, at)
+          tl.to(it.querySelector('.t'), { opacity: 0.3, duration: 0.07, ease: 'none' }, at + 0.015)
           // Erledigte Punkte setzen sich zusammen, statt liegen zu bleiben —
           // macht sichtbar Platz für den Rest der Liste und die Auflösung,
           // statt überall pauschal weniger Abstand zu erzwingen.
-          tl.to(it, { paddingTop: 4, paddingBottom: 4, duration: 0.12, ease: 'power2.inOut' }, at + 0.03)
+          tl.to(it, { paddingTop: 4, paddingBottom: 4, duration: 0.1, ease: 'power3.out' }, at + 0.03)
         })
-        tl.from('#zResolve', { opacity: 0, y: 34, duration: 0.14, ease: 'expo.out' }, 0.8)
+        tl.from('#zResolve', { opacity: 0, y: 44, scale: 0.97, duration: 0.16, ease: 'expo.out' }, 0.8)
         return () => {
           tl.scrollTrigger?.kill()
           tl.kill()

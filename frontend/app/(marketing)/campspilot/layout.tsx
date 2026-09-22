@@ -12,10 +12,20 @@ const archivo = Archivo({
   variable: '--font-archivo',
 })
 
+const title = 'CampsPilot'
+const description = 'Anmeldung und Verwaltung für Fußballcamps. Ein System statt fünf.'
+
 export const metadata: Metadata = {
-  title: 'CampsPilot',
-  description: 'Anmeldung und Verwaltung für Fußballcamps. Ein System statt fünf.',
+  title,
+  description,
   icons: { icon: '/brand/campspilot-favicon.svg' },
+  openGraph: {
+    title,
+    description,
+    siteName: 'CampsPilot',
+    locale: 'de_DE',
+    type: 'website',
+  },
 }
 
 export default function CampsPilotLayout({ children }: { children: React.ReactNode }) {

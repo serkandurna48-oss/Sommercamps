@@ -367,10 +367,10 @@
   background: linear-gradient(105deg, rgba(10, 16, 19, 0.94) 0%, rgba(10, 16, 19, 0.86) 44%, rgba(10, 16, 19, 0.5) 100%);
 }
 .cp-scope .z-dim { position: absolute; inset: 0; z-index: 2; background: var(--night); opacity: 0; }
-.cp-scope .z-in { position: relative; z-index: 3; width: 100%; padding-block: clamp(72px, 12vh, 120px); }
-.cp-scope .z-head { display: flex; flex-direction: column; gap: 16px; max-width: 20ch; }
-.cp-scope .z-list { display: flex; flex-direction: column; gap: 2px; padding-top: 34px; max-width: 30ch; }
-.cp-scope .z-item { position: relative; display: flex; gap: 16px; align-items: baseline; padding-block: 13px; border-bottom: 1px solid var(--line-d); }
+.cp-scope .z-in { position: relative; z-index: 3; width: 100%; padding-block: clamp(20px, 3.5vh, 40px); }
+.cp-scope .z-head { display: flex; flex-direction: column; gap: 12px; max-width: 20ch; }
+.cp-scope .z-list { display: flex; flex-direction: column; gap: 2px; padding-top: 14px; max-width: 34ch; }
+.cp-scope .z-item { position: relative; display: flex; gap: 16px; align-items: baseline; padding-block: 7px; border-bottom: 1px solid var(--line-d); }
 .cp-scope .z-item span.t { font-size: clamp(16px, 1.9vw, 21px); font-weight: 500; line-height: 1.35; }
 .cp-scope .z-item .strike {
   position: absolute;
@@ -382,7 +382,7 @@
   transform: scaleX(0);
   transform-origin: left center;
 }
-.cp-scope .z-resolve { padding-top: 34px; max-width: 32ch; display: flex; flex-direction: column; gap: 14px; }
+.cp-scope .z-resolve { padding-top: 18px; max-width: 32ch; display: flex; flex-direction: column; gap: 10px; }
 .cp-scope .z-resolve .d3 { color: var(--fog); }
 .cp-scope .z-resolve p { color: var(--fog-2); font-size: 17px; line-height: 1.55; }
 

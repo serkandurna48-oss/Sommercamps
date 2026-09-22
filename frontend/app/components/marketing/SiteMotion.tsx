@@ -185,7 +185,7 @@ export default function SiteMotion() {
       mm.add('(min-width: 860px)', () => {
         const items = gsap.utils.toArray<HTMLElement>('#zList .z-item')
         const tl = gsap.timeline({
-          scrollTrigger: { trigger: '#zStage', start: 'top top', end: '+=2600', pin: true, scrub: 0.7, anticipatePin: 1 },
+          scrollTrigger: { trigger: '#zStage', start: 'top top', end: '+=1600', pin: true, scrub: 0.7, anticipatePin: 1 },
         })
         tl.to('#zImg', { scale: 1.1, ease: 'none' }, 0)
         tl.to('#zDim', { opacity: 0.62, ease: 'none' }, 0.08)

@@ -1,0 +1,8 @@
+/* CampsPilot marketing site — tokens and styles, scoped to .cp-scope.
+   Ported from reference/index.html (campspilot-website-paket). Values here
+   are load-bearing design decisions, not defaults — see the ticket before
+   changing anything. Filled in during Step 4. */
+
+.cp-scope {
+  font-family: var(--font-archivo), 'Helvetica Neue', system-ui, sans-serif;
+}

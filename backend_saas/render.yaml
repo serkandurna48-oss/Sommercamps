@@ -38,3 +38,7 @@ services:
       - key: CORS_ORIGINS_EXTRA
         sync: false           # comma-separated extra allowed origins; empty until a real
                                # frontend exists — see README.md "CORS"
+      - key: ADMIN_PASSWORD
+        sync: false           # platform-admin login — own value, never backend/'s ADMIN_PASSWORD
+      - key: JWT_SECRET
+        sync: false           # signs platform-admin tokens — own value, never backend/'s JWT_SECRET

@@ -7,7 +7,8 @@ CP-S405: the first write endpoint — public camp registration.
 CP-S406: waitlist + registration lifecycle.
 CP-S407: staging-ready CORS baseline (see README.md "CORS"); deployment
 config lives in backend_saas/render.yaml.
-No admin CRUD, auth, payments, or email yet — see README.md.
+Platform-admin auth + organization/camp CRUD (see app/routers/admin.py) —
+still no payments or email. See README.md.
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ from fastapi.responses import JSONResponse
 
 from . import db
 from .config import get_settings
-from .routers import camps_router, organizations_router, registrations_router
+from .routers import admin_router, camps_router, organizations_router, registrations_router
 
 logger = logging.getLogger(__name__)
 
@@ -54,16 +55,19 @@ app = FastAPI(
 # protect against CSRF via CORS anyway) — just an explicit, staging-safe
 # origin list. See config.Settings.cors_origins / README.md "CORS" for the
 # reasoning and how to add a real frontend origin later.
+# PATCH added for the admin organization-update endpoint (app/routers/
+# admin.py) — GET/POST alone were sufficient before it existed.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PATCH"],
     allow_headers=["*"],
 )
 
 app.include_router(organizations_router)
 app.include_router(camps_router)
 app.include_router(registrations_router)
+app.include_router(admin_router)
 
 
 @app.get("/health", tags=["System"])

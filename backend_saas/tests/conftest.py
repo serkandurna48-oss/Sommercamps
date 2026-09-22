@@ -15,6 +15,8 @@ os.environ.setdefault("DATABASE_URL", "postgresql://test:test@127.0.0.1:5432/tes
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("LOG_LEVEL", "WARNING")
 os.environ.setdefault("APP_NAME", "CampsPilot SaaS API (test)")
+os.environ.setdefault("ADMIN_PASSWORD", "test-admin-password")
+os.environ.setdefault("JWT_SECRET", "test-jwt-secret-not-a-real-one-but-32-bytes-plus")
 
 import pytest
 

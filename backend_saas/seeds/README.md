@@ -1,5 +1,21 @@
 # Cloud-staging tenant seeds — not migrations
 
+**New tenants should use `scripts/onboard_tenant.py` against the admin API
+(`POST /admin/organizations`, `POST /admin/organizations/{slug}/camps`) going
+forward** — see `backend_saas/README.md` "Admin / Onboarding". Copy
+`campspilot-pilot.json` as a starting template, fill in the new tenant's
+data, then run:
+
+```
+python scripts/onboard_tenant.py --config seeds/<new-tenant>.json --api-url <backend_saas URL>
+```
+
+No manual SQL required anymore. The `.sql` files below are kept as a
+historical record (they document real decisions already made about the
+KSV/JK field mappings) but are **superseded** as the onboarding path.
+
+---
+
 Manual, one-off `insert` scripts for specific organizations/camps in the Cloud `CampsPilot SaaS`
 Supabase project (ref `wkmckfbzhmihyfwiekct`). Run by pasting into the Supabase Dashboard →
 SQL Editor, or via `psql "$DATABASE_URL" -f backend_saas/seeds/<file>.sql` once a connection

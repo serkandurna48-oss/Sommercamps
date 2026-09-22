@@ -43,6 +43,16 @@ class Settings(BaseSettings):
     # frontend is wired up yet (see README.md "CORS").
     cors_origins_extra: str = Field(default="", alias="CORS_ORIGINS_EXTRA")
 
+    # Platform-admin auth (see app/admin_auth.py). Own namespace, own secret
+    # — never the same value as backend/'s ADMIN_PASSWORD/JWT_SECRET, even
+    # though the variable names match; this is a different Render service
+    # protecting a different (and much more powerful — cross-tenant) admin
+    # surface, so sharing a secret with the legacy KSV service would be a
+    # real credential-scope leak, not just a naming coincidence.
+    admin_password: str = Field(alias="ADMIN_PASSWORD")
+    jwt_secret: str = Field(alias="JWT_SECRET")
+    token_expire_hours: int = Field(default=24, alias="TOKEN_EXPIRE_HOURS")
+
     @field_validator("database_url")
     @classmethod
     def _database_url_not_blank(cls, value: str) -> str:

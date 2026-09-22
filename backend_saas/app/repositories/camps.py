@@ -1,21 +1,34 @@
 """
-Camp repository — read-only, published camps only.
+Camp repository — public reads (published camps only) plus platform-admin
+camp creation.
 
-Every query here is explicitly scoped by `tenant.organization_id`, sourced
-from an already-resolved TenantContext (see app/tenancy.py) — never from a
-raw client-supplied organization_id (see README.md "Tenant isolation"). This
-is what makes cross-tenant camp access structurally impossible at this
-layer, on top of the composite FK safeguard already enforced at the
-database level (supabase/migrations/20260917133748_create_saas_schema_v1.sql,
+Every *public* query here is explicitly scoped by `tenant.organization_id`,
+sourced from an already-resolved TenantContext (see app/tenancy.py) — never
+from a raw client-supplied organization_id (see README.md "Tenant
+isolation"). This is what makes cross-tenant camp access structurally
+impossible at this layer, on top of the composite FK safeguard already
+enforced at the database level
+(supabase/migrations/20260917133748_create_saas_schema_v1.sql,
 camp_registrations_camp_org_fk — not directly relevant to reads, but the
 same organization_id-scoping principle).
+
+create_camp is the one exception: it takes a raw organization_id because it
+exists only for the platform-admin surface (app/routers/admin.py, gated by
+app/admin_auth.py), which resolves that id itself via
+organizations.get_organization_by_slug — never from an untrusted client
+parameter either, just not from a TenantContext (an admin isn't "the
+tenant").
 """
 
 from __future__ import annotations
 
 from typing import Optional
+from uuid import UUID
+
+import psycopg2.errors
 
 from .. import db
+from ..admin_schemas import CampCreate
 from ..tenancy import TenantContext
 
 _CAMP_FIELDS = """
@@ -59,4 +72,64 @@ def get_published_camp_by_slug(tenant: TenantContext, camp_slug: str) -> Optiona
     """
     with db.get_cursor() as cur:
         cur.execute(_GET_PUBLISHED_BY_SLUG, (tenant.organization_id, camp_slug))
+        return cur.fetchone()
+
+
+class CampSlugConflictError(Exception):
+    """A camp with this slug already exists under this organization — maps
+    to 409 (camps.slug is unique per-organization, not globally — see
+    camps_organization_id_slug_key)."""
+
+    def __init__(self, organization_id: UUID, slug: str):
+        self.organization_id = organization_id
+        self.slug = slug
+        super().__init__(f"Camp slug '{slug}' already exists for organization '{organization_id}'")
+
+
+_ADMIN_CAMP_FIELDS = """
+    id, organization_id, slug, title, start_date, end_date,
+    registration_start, registration_end, age_min, age_max, capacity,
+    price_cents, currency, status
+"""
+
+_INSERT_CAMP = f"""
+    insert into camps (
+        organization_id, slug, title, start_date, end_date,
+        registration_start, registration_end, age_min, age_max, capacity,
+        price_cents, currency, status
+    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    returning {_ADMIN_CAMP_FIELDS}
+"""
+
+
+def create_camp(organization_id: UUID, data: CampCreate) -> dict:
+    """Platform-admin only. `organization_id` must already be resolved
+    server-side (see app/routers/admin.py — via
+    organizations.get_organization_by_slug, never a client-supplied id
+    directly). Raises CampSlugConflictError if this organization already has
+    a camp with this slug (DB-enforced via camps_organization_id_slug_key —
+    the authoritative check; CampCreate's format validator only catches
+    malformed slugs, not duplicates)."""
+    with db.get_cursor() as cur:
+        try:
+            cur.execute(
+                _INSERT_CAMP,
+                (
+                    organization_id,
+                    data.slug,
+                    data.title,
+                    data.start_date,
+                    data.end_date,
+                    data.registration_start,
+                    data.registration_end,
+                    data.age_min,
+                    data.age_max,
+                    data.capacity,
+                    data.price_cents,
+                    data.currency,
+                    data.status,
+                ),
+            )
+        except psycopg2.errors.UniqueViolation as exc:
+            raise CampSlugConflictError(organization_id, data.slug) from exc
         return cur.fetchone()

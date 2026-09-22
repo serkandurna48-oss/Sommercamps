@@ -26,13 +26,17 @@ What exists:
 - Deployable as its own Render service against the Cloud `CampsPilot SaaS` Supabase project
   (CP-S407) — a staging-safe CORS baseline, production start command, and no secrets committed
   anywhere. See [Deployment](#deployment-render-staging) below.
+- A platform-admin auth (password + JWT, ported from `backend/`'s pattern) and admin CRUD for
+  organizations and camps, plus a repeatable onboarding script — see
+  [Admin / Onboarding](#admin--onboarding) below. This is what replaces the old
+  "onboard a tenant by hand-writing SQL in `backend_saas/seeds/`" workflow.
 
-What does **not** exist yet (deliberately out of scope): Organizations/Camps **admin** CRUD (no
-POST/PATCH/DELETE for organizations or camps), any HTTP endpoint for cancellation or promotion
-(both exist only as internal repository functions — see
-[Registration lifecycle](#registration-lifecycle)), a waitlist position/number API, waitlist
+What does **not** exist yet (deliberately out of scope): `DELETE` for organizations or camps, any
+HTTP endpoint for cancellation or promotion (both exist only as internal repository functions —
+see [Registration lifecycle](#registration-lifecycle)), a waitlist position/number API, waitlist
 email, Stripe/payments, Brevo/email (no confirmation mail is sent at all), a confirmation page,
-JK onboarding, KSV migration, Supabase Auth, `organization_members`, admin login, a frontend, or
+per-tenant admin login (`organization_members` — today's admin is a single, platform-wide
+identity), actual KSV/JK production migration, Supabase Auth/RLS enforcement, a frontend, or
 a Vercel deployment (only this backend is deployed as of CP-S407). Don't build against this
 expecting any of that to exist.
 
@@ -398,6 +402,52 @@ this can never be forgotten.
   [Deployment](#deployment-render-staging).
 - `backend/` is not modified by this ticket, or by anything in this directory.
 
+## Admin / Onboarding
+
+A single, platform-wide admin (whoever knows `ADMIN_PASSWORD`) can create and edit organizations
+and create camps under them — see `app/routers/admin.py`, gated by
+`app/admin_auth.py::require_platform_admin` (password + JWT, same pattern as `backend/main.py`'s
+`verify_session_token`, just a separate secret namespace — see
+[Environment variables](#environment-variables)). There is no per-tenant admin yet
+(`organization_members` doesn't exist), so this token can manage every organization.
+
+**Log in and get a token:**
+
+```bash
+curl -X POST "$API_URL/admin/login" -H "Content-Type: application/json" \
+  -d '{"password": "'"$ADMIN_PASSWORD"'"}'
+```
+
+**Create an organization, then a camp under it:**
+
+```bash
+curl -X POST "$API_URL/admin/organizations" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"slug": "new-club", "name": "New Club", "contact_email": "hi@new-club.example"}'
+
+curl -X POST "$API_URL/admin/organizations/new-club/camps" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"slug": "summer-1", "title": "Summer Week 1", "start_date": "2027-07-05",
+       "end_date": "2027-07-09", "age_min": 6, "age_max": 12, "capacity": 20,
+       "price_cents": 14900, "status": "published"}'
+```
+
+A new camp defaults to `status: "draft"` if not given — it must be explicitly published before
+the public API (`GET /api/v1/organizations/{slug}/camps`) returns it. `PATCH
+/admin/organizations/{slug}` edits branding/contact/`plan_status` (slug itself is immutable —
+renaming it would break existing camp URLs).
+
+**Or use the onboarding script** (`scripts/onboard_tenant.py`) to do both steps from one JSON
+file — the recommended path for a brand-new tenant:
+
+```bash
+python scripts/onboard_tenant.py --config seeds/<tenant>.json --api-url "$API_URL"
+```
+
+Copy `seeds/campspilot-pilot.json` as a starting template. The script is idempotent: re-running
+it after a partial failure just logs "already exists, skipping" for whatever was already created
+(see `backend_saas/seeds/README.md`).
+
 ## Setup
 
 ```bash
@@ -418,6 +468,9 @@ copy .env.example .env        # Windows; `cp .env.example .env` on macOS/Linux
 | `LOG_LEVEL` | no | `INFO` | Passed to `logging.basicConfig`. |
 | `APP_NAME` | no | `CampsPilot SaaS API` | Used as the FastAPI app title. |
 | `CORS_ORIGINS_EXTRA` | no | `""` | Comma-separated extra allowed CORS origins, appended to the built-in `http://localhost:3000`. See [CORS](#cors). |
+| `ADMIN_PASSWORD` | **yes** | — | Platform-admin login password (see [Admin / Onboarding](#admin--onboarding)). Own namespace — never the same value as `backend/`'s `ADMIN_PASSWORD`. |
+| `JWT_SECRET` | **yes** | — | Signs platform-admin session tokens (HS256). Own namespace — never the same value as `backend/`'s `JWT_SECRET`. |
+| `TOKEN_EXPIRE_HOURS` | no | `24` | Platform-admin token lifetime. |
 
 No Stripe/Brevo/JWT/admin-password variables exist here — none of that is in scope yet. No
 Supabase service-role key is needed either: this service connects directly to Postgres and does

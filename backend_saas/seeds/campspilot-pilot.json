@@ -1,0 +1,23 @@
+{
+  "_comment": "Template for scripts/onboard_tenant.py. Copy this file, rename it after the new tenant, and fill in real values — see backend_saas/README.md 'Admin / Onboarding'.",
+  "organization": {
+    "slug": "campspilot-pilot",
+    "name": "CampsPilot Staging Pilot",
+    "contact_email": "staging-pilot@campspilot.example",
+    "plan_status": "pilot"
+  },
+  "camps": [
+    {
+      "slug": "staging-smoke-camp",
+      "title": "Staging Smoke Test Camp",
+      "start_date": "2026-10-22",
+      "end_date": "2026-10-24",
+      "age_min": 5,
+      "age_max": 12,
+      "capacity": 1,
+      "price_cents": 100,
+      "currency": "EUR",
+      "status": "published"
+    }
+  ]
+}

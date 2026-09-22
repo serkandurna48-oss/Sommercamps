@@ -64,6 +64,8 @@ export default function SiteMotion() {
 
     let lenis: Lenis | null = null
     const anchorCleanups: Array<() => void> = []
+    let introSafety: ReturnType<typeof setTimeout> | undefined
+    let revealSafety: ReturnType<typeof setTimeout> | undefined
 
     const ctx = gsap.context(() => {
       // ── Träger Scroll (Lenis) ────────────────────────────────────────
@@ -117,12 +119,32 @@ export default function SiteMotion() {
       }
 
       // ── Eröffnung: eine orchestrierte Bewegung, danach Ruhe ─────────
+      //
+      // fromTo statt from: from() lässt GSAP den "Zielwert" aus dem
+      // aktuellen berechneten Stil ableiten. Läuft dieser Effekt durch
+      // React Strict Mode zweimal (Dev-Modus) oder bleibt requestAnimationFrame
+      // kurz aus (Tab im Hintergrund beim Laden), kann das einen bereits
+      // halb-animierten Wert als "fertig" einfrieren — Held bleibt dauerhaft
+      // unsichtbar/verschoben statt sich zu zeigen. fromTo() legt Start UND
+      // Ziel explizit fest, keine Ableitung, kein Risiko.
       const heroTitle = document.getElementById('heroTitle')
       const heroWords = heroTitle ? splitWords(heroTitle) : []
+      const heroRiseEls = gsap.utils.toArray<HTMLElement>('.hero [data-rise]')
       const intro = gsap.timeline({ delay: 1.35, defaults: { ease: 'expo.out' } })
-      intro.from('#heroImg', { scale: 1.16, duration: 1.9 }, 0)
-      if (heroWords.length) intro.from(heroWords, { yPercent: 118, duration: 1.15, stagger: 0.055 }, 0.12)
-      intro.from('.hero [data-rise]', { y: 22, opacity: 0, duration: 1, stagger: 0.09 }, 0.42)
+      const heroImg = document.getElementById('heroImg')
+      if (heroImg) intro.fromTo(heroImg, { scale: 1.16 }, { scale: 1, duration: 1.9 }, 0)
+      if (heroWords.length) intro.fromTo(heroWords, { yPercent: 118 }, { yPercent: 0, duration: 1.15, stagger: 0.055 }, 0.12)
+      if (heroRiseEls.length) {
+        intro.fromTo(heroRiseEls, { y: 22, opacity: 0 }, { y: 0, opacity: 1, duration: 1, stagger: 0.09 }, 0.42)
+      }
+
+      // Sicherheitsnetz: requestAnimationFrame kann aussetzen (Tab im
+      // Hintergrund beim ersten Laden, gedrosselte Geräte) — dann bliebe der
+      // komplette Heldenbereich dauerhaft unsichtbar hängen, obwohl der
+      // Text im DOM längst da ist. setTimeout läuft unabhängig von rAF
+      // weiter und zwingt die Eröffnung spätestens nach 4s in ihren
+      // Endzustand — lieber sofort fertig als dauerhaft leer aussehend.
+      introSafety = setTimeout(() => intro.progress(1), 4000)
 
       // ── Parallaxe auf den ganzflächigen Bildern ─────────────────────
       function parallax(sel: string, amount: number) {
@@ -158,27 +180,58 @@ export default function SiteMotion() {
       })
 
       // ── Überschriften steigen zeilenweise auf ───────────────────────
+      //
+      // Gleiches Muster wie oben: paused erstellt, explizite fromTo-Ziele,
+      // und — weil ein Trigger, der schon beim Erstellen im sichtbaren
+      // Bereich liegt, sein once:true-onEnter nicht rückwirkend auslöst —
+      // hier selbst geprüft und sofort abgespielt statt auf ScrollTrigger
+      // zu warten. Jede gestartete Tween landet in playedTweens fürs
+      // globale Sicherheitsnetz weiter unten.
+      const playedTweens: gsap.core.Tween[] = []
+      function revealOnScroll(trigger: Element, startPercent: number, tween: gsap.core.Tween) {
+        const threshold = window.innerHeight * startPercent
+        if (trigger.getBoundingClientRect().top <= threshold) {
+          tween.play()
+          playedTweens.push(tween)
+          return
+        }
+        ScrollTrigger.create({
+          trigger,
+          start: `top ${startPercent * 100}%`,
+          once: true,
+          onEnter: () => {
+            tween.play()
+            playedTweens.push(tween)
+          },
+        })
+      }
+
       document.querySelectorAll('[data-split]').forEach((h) => {
         const words = splitWords(h)
         if (!words.length) return
-        gsap.from(words, {
-          yPercent: 118,
-          duration: 1.05,
-          ease: 'expo.out',
-          stagger: 0.05,
-          scrollTrigger: { trigger: h, start: 'top 84%', once: true },
-        })
+        const tween = gsap.fromTo(
+          words,
+          { yPercent: 118 },
+          { yPercent: 0, duration: 1.05, ease: 'expo.out', stagger: 0.05, paused: true },
+        )
+        revealOnScroll(h, 0.84, tween)
       })
       document.querySelectorAll('[data-rise]').forEach((el) => {
         if (el.closest('.hero')) return
-        gsap.from(el, {
-          y: 26,
-          opacity: 0,
-          duration: 0.95,
-          ease: 'expo.out',
-          scrollTrigger: { trigger: el, start: 'top 88%', once: true },
-        })
+        const tween = gsap.fromTo(
+          el,
+          { y: 26, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.95, ease: 'expo.out', paused: true },
+        )
+        revealOnScroll(el, 0.88, tween)
       })
+
+      // Gleiches Sicherheitsnetz wie bei der Eröffnung: jede bereits
+      // gestartete Einblendung wird spätestens nach 1,5s in ihren
+      // Endzustand gezwungen, falls rAF aussetzt.
+      revealSafety = setTimeout(() => {
+        playedTweens.forEach((t) => t.progress(1))
+      }, 1500)
 
       // ── Das Kapitel, das am Scrollrad hängt ──────────────────────────
       const mm = gsap.matchMedia()
@@ -224,11 +277,11 @@ export default function SiteMotion() {
         const pre = el.dataset.pre ?? ''
         const post = el.dataset.post ?? ''
         const o = { v: 0 }
-        gsap.to(o, {
+        const tween = gsap.to(o, {
           v: target,
           duration: 1.4,
           ease: 'power3.out',
-          scrollTrigger: { trigger: el, start: 'top 88%', once: true },
+          paused: true,
           onUpdate: () => {
             el.textContent = pre + Math.round(o.v) + post
           },
@@ -236,6 +289,7 @@ export default function SiteMotion() {
             el.textContent = pre + target + post
           },
         })
+        revealOnScroll(el, 0.88, tween)
       })
 
       ScrollTrigger.refresh()
@@ -244,6 +298,8 @@ export default function SiteMotion() {
     return () => {
       clearTimeout(bootGoneTimer)
       clearTimeout(bootRemoveTimer)
+      clearTimeout(introSafety)
+      clearTimeout(revealSafety)
       form?.removeEventListener('submit', onSubmit)
       anchorCleanups.forEach((fn) => fn())
       ctx.revert()

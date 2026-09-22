@@ -70,14 +70,8 @@ export default function MatchdayBand({
         </div>
 
         {/* Hero-Block — kollabiert per grid-rows (M1), nicht font-size. */}
-        <div
-          className="grid transition-[grid-template-rows] duration-[240ms] motion-reduce:transition-none"
-          style={{
-            gridTemplateRows: showHero ? '1fr' : '0fr',
-            transitionTimingFunction: 'cubic-bezier(.2,0,0,1)',
-          }}
-        >
-          <div className="overflow-hidden">
+        <div className={`cp-hero-collapse motion-reduce:transition-none ${showHero ? 'cp-hero-expanded' : ''}`}>
+          <div>
             <div className="pb-5">
               {eyebrow && (
                 <p className="cp-label mb-1" style={{ color: 'var(--cp-on-band-2)' }}>

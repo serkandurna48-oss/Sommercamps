@@ -43,16 +43,30 @@ export const de = {
     waitlistLabel: 'Warteliste',
   },
   tasks: {
-    paymentOverdue: (count: number) =>
-      count === 1
-        ? 'Eine Familie hat noch nicht bezahlt'
-        : `${count} Familien haben noch nicht bezahlt`,
-    paymentOverdueHint: 'Zahlungsfrist ist verstrichen — kurze Erinnerung schicken.',
-    waitlistPresent: (count: number) =>
-      count === 1 ? 'Eine Anmeldung wartet auf einen Platz' : `${count} Anmeldungen warten auf einen Platz`,
-    waitlistPresentHint: 'Wird ein Platz frei, informiere die Warteliste in Reihenfolge.',
+    payment: {
+      title: (count: number, campTitle: string) =>
+        count === 1
+          ? `Eine Familie hat für „${campTitle}" noch nicht bezahlt`
+          : `${count} Familien haben für „${campTitle}" noch nicht bezahlt`,
+      hint: 'Zahlung ist noch offen — kurze Erinnerung schicken.',
+    },
+    missingContact: {
+      title: (count: number, campTitle: string) =>
+        count === 1
+          ? `Ein Notfallkontakt fehlt bei „${campTitle}"`
+          : `${count} Notfallkontakte fehlen bei „${campTitle}"`,
+      hint: 'Vor Camp-Start nachfragen.',
+    },
+    waitlist: {
+      title: (count: number, campTitle: string) =>
+        count === 1
+          ? `Eine Anmeldung wartet bei „${campTitle}" auf einen Platz`
+          : `${count} Anmeldungen warten bei „${campTitle}" auf einen Platz`,
+      hint: 'Wird ein Platz frei, informiere die Warteliste in Reihenfolge.',
+    },
     review: 'Ansehen',
     markDone: 'Erledigt',
+    allDone: 'Alles erledigt — nichts steht gerade an.',
   },
   command: {
     participants: 'Teilnehmer',

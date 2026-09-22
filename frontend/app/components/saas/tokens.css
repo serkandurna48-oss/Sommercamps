@@ -137,6 +137,25 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* M1 (Abschnitt 7): der einzige sanktionierte Weg, eine Höhe zu animieren,
+ * ohne height/max-height direkt zu tweenen (verboten) — grid-template-rows
+ * 0fr <-> 1fr, mit explizitem min-height:0 auf dem Grid-Item, weil das
+ * automatische Minimum sonst den Inhalt (das große band-hero) nicht unter
+ * seine intrinsische Höhe schrumpfen lässt (CSS Sizing Level 3 "automatic
+ * minimum size" — overflow:hidden allein reichte hier nicht zuverlässig). */
+.cp-hero-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+.cp-hero-collapse.cp-hero-expanded {
+  grid-template-rows: 1fr;
+}
+.cp-hero-collapse > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
 /* Abschnitt 7, "Pflicht" — ohne diesen Block ist das Feature nicht fertig. */
 @media (prefers-reduced-motion: reduce) {
   .cp-scope,

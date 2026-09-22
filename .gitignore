@@ -18,3 +18,11 @@ build/
 .DS_Store
 Thumbs.db
 .claude/settings.local.json
+
+# Working materials — meeting notes, recordings, raw customer/camp photos.
+# Deliberately never version-controlled: JK-Bilder/ in particular holds
+# unprocessed camp photos (likely of children — DSGVO Art. 9), and none of
+# this is code other developers need. Keep it out of git history entirely,
+# not just accidentally untracked.
+Doku/
+JK-Bilder/

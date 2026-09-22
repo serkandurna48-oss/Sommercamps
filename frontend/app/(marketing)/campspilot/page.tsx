@@ -1,7 +1,9 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import BrandMark from '../../components/marketing/BrandMark'
 import BootCurtain from '../../components/marketing/BootCurtain'
 import Grain from '../../components/marketing/Grain'
+import { CP_IMAGES } from './images'
 
 export default function CampsPilotPage() {
   return (
@@ -34,11 +36,18 @@ export default function CampsPilotPage() {
 
       <header className="hero" id="top">
         <div className="hero-media">
-          <img
-            id="heroImg"
-            src="/images/campspilot/hero.webp"
-            alt="Leerer, vom Flutlicht beschienener Fußballplatz bei Nacht; das nasse Grün spiegelt die Lampen."
-          />
+          <div id="heroImg" className="cp-fill">
+            <Image
+              src={CP_IMAGES.hero.src}
+              alt="Leerer, vom Flutlicht beschienener Fußballplatz bei Nacht; das nasse Grün spiegelt die Lampen."
+              fill
+              sizes="100vw"
+              priority
+              fetchPriority="high"
+              placeholder="blur"
+              blurDataURL={CP_IMAGES.hero.blurDataURL}
+            />
+          </div>
         </div>
         <div className="hero-veil" />
         <div className="wrap hero-in">
@@ -58,11 +67,17 @@ export default function CampsPilotPage() {
       <section className="chapter-zettel" id="zettel">
         <div className="z-stage" id="zStage">
           <div className="z-bg">
-            <img
-              id="zImg"
-              src="/images/campspilot/zettel.webp"
-              alt="Ein regennasses Klemmbrett mit handschriftlicher Liste und Kugelschreiber auf einer Holzbank am Spielfeldrand."
-            />
+            <div id="zImg" className="cp-fill">
+              <Image
+                src={CP_IMAGES.zettel.src}
+                alt="Ein regennasses Klemmbrett mit handschriftlicher Liste und Kugelschreiber auf einer Holzbank am Spielfeldrand."
+                fill
+                sizes="100vw"
+                loading="lazy"
+                placeholder="blur"
+                blurDataURL={CP_IMAGES.zettel.blurDataURL}
+              />
+            </div>
           </div>
           <div className="z-veil" />
           <div className="z-dim" id="zDim" />
@@ -114,11 +129,17 @@ export default function CampsPilotPage() {
       </section>
 
       <div className="band">
-        <img
-          id="bandImg"
-          src="/images/campspilot/leibchen.webp"
-          alt="Ein sauber gefalteter Stapel oranger und dunkelblauer Trainingsleibchen auf einer Holzbank am Platzrand."
-        />
+        <div id="bandImg" className="cp-fill-tall">
+          <Image
+            src={CP_IMAGES.leibchen.src}
+            alt="Ein sauber gefalteter Stapel oranger und dunkelblauer Trainingsleibchen auf einer Holzbank am Platzrand."
+            fill
+            sizes="100vw"
+            loading="lazy"
+            placeholder="blur"
+            blurDataURL={CP_IMAGES.leibchen.blurDataURL}
+          />
+        </div>
       </div>
 
       <section id="vertrauen">
@@ -138,10 +159,17 @@ export default function CampsPilotPage() {
               </ul>
             </div>
             <figure className="trust-fig" data-rise="">
-              <img
+              <Image
                 id="netzImg"
-                src="/images/campspilot/netz.webp"
+                src={CP_IMAGES.netz.src}
                 alt="Nahaufnahme eines Tornetzes von hinten, gegen das Flutlicht; an jeder Masche hängen Wassertropfen."
+                width={CP_IMAGES.netz.width}
+                height={CP_IMAGES.netz.height}
+                sizes="(min-width: 900px) 38vw, 100vw"
+                loading="lazy"
+                placeholder="blur"
+                blurDataURL={CP_IMAGES.netz.blurDataURL}
+                style={{ width: '100%', height: 'auto' }}
               />
               <figcaption>Das Netz hält, weil jede Masche hält. Software für Vereinsdaten funktioniert genauso.</figcaption>
             </figure>
@@ -150,11 +178,17 @@ export default function CampsPilotPage() {
       </section>
 
       <div className="band">
-        <img
-          id="linieImg"
-          src="/images/campspilot/linie.webp"
-          alt="Nahaufnahme einer frisch gezogenen weißen Kalklinie im taunassen, dunkelgrünen Rasen."
-        />
+        <div id="linieImg" className="cp-fill-tall">
+          <Image
+            src={CP_IMAGES.linie.src}
+            alt="Nahaufnahme einer frisch gezogenen weißen Kalklinie im taunassen, dunkelgrünen Rasen."
+            fill
+            sizes="100vw"
+            loading="lazy"
+            placeholder="blur"
+            blurDataURL={CP_IMAGES.linie.blurDataURL}
+          />
+        </div>
       </div>
 
       <section style={{ position: 'relative', overflow: 'hidden' }}>
@@ -176,11 +210,17 @@ export default function CampsPilotPage() {
 
       <section className="close" id="pilot">
         <div className="close-media">
-          <img
-            id="closeImg"
-            src="/images/campspilot/flutlicht.webp"
-            alt="Ein Flutlichtmast und das flache Dach eines Vereinsheims vor tiefblauem Abendhimmel, die Lampen gerade eingeschaltet."
-          />
+          <div id="closeImg" className="cp-fill">
+            <Image
+              src={CP_IMAGES.flutlicht.src}
+              alt="Ein Flutlichtmast und das flache Dach eines Vereinsheims vor tiefblauem Abendhimmel, die Lampen gerade eingeschaltet."
+              fill
+              sizes="100vw"
+              loading="lazy"
+              placeholder="blur"
+              blurDataURL={CP_IMAGES.flutlicht.blurDataURL}
+            />
+          </div>
         </div>
         <div className="close-veil" />
         <div className="wrap close-in">

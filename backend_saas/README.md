@@ -30,6 +30,12 @@ What exists:
   organizations and camps, plus a repeatable onboarding script — see
   [Admin / Onboarding](#admin--onboarding) below. This is what replaces the old
   "onboard a tenant by hand-writing SQL in `backend_saas/seeds/`" workflow.
+- Admin *read* access to a tenant's own operational data (CampsPilot Richtung-C Auftrag): every
+  camp regardless of status (`GET /admin/organizations/{slug}/camps`) and every registration for
+  one camp regardless of status (`GET /admin/organizations/{slug}/camps/{camp_slug}/registrations`,
+  `RegistrationAdminOut` — includes PII the public API never returns). No aggregates computed
+  server-side; occupancy/open-payments/waitlist counts are derived from these raw rows in the
+  frontend.
 
 What does **not** exist yet (deliberately out of scope): `DELETE` for organizations or camps, any
 HTTP endpoint for cancellation or promotion (both exist only as internal repository functions —

@@ -102,6 +102,40 @@ _INSERT_CAMP = f"""
 """
 
 
+_LIST_ADMIN = f"""
+    select {_ADMIN_CAMP_FIELDS}
+    from camps
+    where organization_id = %s
+    order by start_date asc, slug asc
+"""
+
+_GET_ADMIN_BY_SLUG = f"""
+    select {_ADMIN_CAMP_FIELDS}
+    from camps
+    where organization_id = %s
+      and slug = %s
+"""
+
+
+def list_camps_for_organization(organization_id: UUID) -> list[dict]:
+    """Platform-admin only — every camp regardless of status (draft/
+    published/closed/archived), unlike list_published_camps. organization_id
+    must already be resolved server-side, same rule as create_camp."""
+    with db.get_cursor() as cur:
+        cur.execute(_LIST_ADMIN, (organization_id,))
+        return cur.fetchall()
+
+
+def get_camp_by_slug(organization_id: UUID, camp_slug: str) -> Optional[dict]:
+    """Platform-admin only — a single camp regardless of status. Deliberately
+    not get_published_camp_by_slug: an admin must be able to resolve a draft
+    or closed camp (e.g. to list its registrations), which that public-only
+    lookup would treat as not found."""
+    with db.get_cursor() as cur:
+        cur.execute(_GET_ADMIN_BY_SLUG, (organization_id, camp_slug))
+        return cur.fetchone()
+
+
 def create_camp(organization_id: UUID, data: CampCreate) -> dict:
     """Platform-admin only. `organization_id` must already be resolved
     server-side (see app/routers/admin.py — via

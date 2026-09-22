@@ -206,6 +206,44 @@ def get_registration_target(tenant: TenantContext, camp_slug: str) -> Optional[R
     return RegistrationTarget(**row)
 
 
+_ADMIN_REGISTRATION_FIELDS = """
+    id, registration_token, status, payment_status,
+    parent_first_name, parent_last_name, parent_email, parent_phone,
+    child_first_name, child_last_name, child_birth_date,
+    emergency_contact_name, emergency_contact_phone,
+    medical_notes, allergies, photo_permission, created_at
+"""
+
+_LIST_REGISTRATIONS_FOR_CAMP = f"""
+    select {_ADMIN_REGISTRATION_FIELDS}
+    from camp_registrations
+    where organization_id = %s
+      and camp_id = %s
+    order by created_at asc, id asc
+"""
+
+
+def list_registrations_for_camp(organization_id: UUID, camp_id: UUID) -> list[dict]:
+    """
+    Platform-admin only — every registration for this camp regardless of
+    status (registered/confirmed/cancelled/waitlist), unlike the public
+    write-flow which never reads registrations back at all. Both ids must
+    already be resolved server-side (organization via
+    organizations.get_organization_by_slug, camp via
+    camps.get_camp_by_slug — never a client-supplied id directly), same
+    rule as camps.create_camp. Occupancy, open-payment totals, and waitlist
+    counts are computed from this raw list in the frontend (Auftrag
+    Abschnitt 9.1) — this function returns rows, not aggregates.
+
+    Contains real personal/medical data about children (parent contact
+    info, allergies, medical_notes) — callers must apply the same no-PII-
+    in-logs discipline as app/routers/registrations.py.
+    """
+    with db.get_cursor() as cur:
+        cur.execute(_LIST_REGISTRATIONS_FOR_CAMP, (organization_id, camp_id))
+        return cur.fetchall()
+
+
 def validate_registration_window(camp: RegistrationTarget) -> None:
     if not is_registration_open(camp.registration_start, camp.registration_end):
         raise RegistrationWindowClosedError(f"Registration window closed for camp '{camp.slug}'")

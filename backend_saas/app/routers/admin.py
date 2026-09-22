@@ -1,16 +1,19 @@
 """
-Platform-admin endpoints — onboard and edit tenants.
+Platform-admin endpoints — onboard and edit tenants, and read (not write)
+what a tenant's organizer needs to run their camps: their camps regardless
+of status, and each camp's registrations.
 
 Everything here except /admin/login is gated by
 app/admin_auth.py::require_platform_admin. There is no per-tenant admin yet
 (no organization_members) — a valid token grants access to every
-organization, which is exactly why this surface stays deliberately small:
-create/update an organization, create a camp under it. No delete, no list,
-no registration access (that stays out of scope — see
-docs/saas/migration-strategy.md).
+organization. Still no delete, no registration *writes* (cancel/promote
+stay internal-only, see app/repositories/registrations.py) — those remain
+out of scope (see docs/saas/migration-strategy.md and the Richtung-C
+Auftrag Abschnitt 1).
 
 Never logs request bodies here beyond a slug — organization contact details
-are still personal/business data worth the same logging discipline as
+and registration data (parent contacts, allergies, medical notes) are
+personal data worth the same logging discipline as
 app/routers/registrations.py applies to child data.
 """
 
@@ -29,10 +32,12 @@ from ..admin_schemas import (
     OrganizationAdminOut,
     OrganizationCreate,
     OrganizationUpdate,
+    RegistrationAdminOut,
 )
 from ..config import get_settings
 from ..repositories import camps as camps_repo
 from ..repositories import organizations as organizations_repo
+from ..repositories import registrations as registrations_repo
 from ..repositories.camps import CampSlugConflictError
 from ..repositories.organizations import OrganizationSlugConflictError
 
@@ -126,3 +131,46 @@ def create_camp(organization_slug: str, data: CampCreate) -> CampAdminOut:
 
     logger.info("Camp created (organization_slug=%s, camp_slug=%s)", organization_slug, data.slug)
     return CampAdminOut.model_validate(row)
+
+
+@router.get(
+    "/organizations/{organization_slug}/camps",
+    response_model=list[CampAdminOut],
+    dependencies=[Depends(require_platform_admin)],
+)
+def list_camps(organization_slug: str) -> list[CampAdminOut]:
+    """Every camp for this org regardless of status — unlike the public
+    GET /api/v1/.../camps, which only ever returns published ones. Powers
+    the Organisation-Dashboard's "Alle Camps" block."""
+    organization = organizations_repo.get_organization_by_slug(organization_slug)
+    if organization is None:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    rows = camps_repo.list_camps_for_organization(organization["id"])
+    return [CampAdminOut.model_validate(row) for row in rows]
+
+
+@router.get(
+    "/organizations/{organization_slug}/camps/{camp_slug}/registrations",
+    response_model=list[RegistrationAdminOut],
+    dependencies=[Depends(require_platform_admin)],
+)
+def list_registrations(organization_slug: str, camp_slug: str) -> list[RegistrationAdminOut]:
+    """
+    Every registration for this camp regardless of status. No aggregates
+    here on purpose (Auftrag Abschnitt 9.1: Belegung, offene Zahlungen,
+    Warteliste-Anzahl werden im Frontend aus diesen Rohdaten berechnet, nicht
+    als eigene Backend-Felder geführt) — this is the raw list that both the
+    Organisation-Dashboard's Band-Kennzahlen and the Command Center's
+    Teilnehmerliste read from.
+    """
+    organization = organizations_repo.get_organization_by_slug(organization_slug)
+    if organization is None:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    camp = camps_repo.get_camp_by_slug(organization["id"], camp_slug)
+    if camp is None:
+        raise HTTPException(status_code=404, detail="Camp not found")
+
+    rows = registrations_repo.list_registrations_for_camp(organization["id"], camp["id"])
+    return [RegistrationAdminOut.model_validate(row) for row in rows]

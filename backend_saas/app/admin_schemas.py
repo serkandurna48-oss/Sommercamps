@@ -164,3 +164,33 @@ class CampAdminOut(BaseModel):
     price_cents: int
     currency: str
     status: str
+
+
+class RegistrationAdminOut(BaseModel):
+    """
+    Admin view of a registration — contains real personal/medical data about
+    a child and their parents (Auftrag Abschnitt 9.1, DSGVO Art. 9 für
+    allergies/medical_notes). Only ever reachable behind
+    require_platform_admin. Deliberately excludes organization_id/camp_id
+    (already implied by the URL the client called) and terms_accepted/
+    privacy_accepted (write-time consent flags, not operationally useful to
+    display — every stored row satisfies them by DB constraint already).
+    """
+
+    id: UUID
+    registration_token: UUID
+    status: str
+    payment_status: str
+    parent_first_name: str
+    parent_last_name: str
+    parent_email: str
+    parent_phone: str
+    child_first_name: str
+    child_last_name: str
+    child_birth_date: date
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    medical_notes: Optional[str] = None
+    allergies: Optional[str] = None
+    photo_permission: bool
+    created_at: datetime

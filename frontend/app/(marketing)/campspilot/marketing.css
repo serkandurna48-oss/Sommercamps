@@ -390,9 +390,8 @@
   left: 0;
   right: 0;
   top: calc(50% + 1px);
-  height: 2.5px;
+  height: 2px;
   background: var(--accent);
-  box-shadow: 0 0 10px 0 rgba(212, 88, 31, 0.55);
   transform: scaleX(0);
   transform-origin: left center;
 }

@@ -23,6 +23,10 @@ export interface OrganizationPublic {
   contact_phone: string | null
   logo_url: string | null
   primary_color: string | null
+  // Eltern-Flow-Auftrag §3.1/§3.2: bestimmt, welches der drei Themes serverseitig rendert.
+  theme: 'tradition' | 'akademie' | 'kompakt'
+  // Für die Zahlungsdaten auf der Bestätigungsseite (§6.4). null = kein Überweisungshinweis.
+  iban: string | null
 }
 
 export interface CampPublic {
@@ -38,6 +42,16 @@ export interface CampPublic {
   price_cents: number
   currency: string
   registration_open: boolean
+  // §6.2: Faktentabelle + Leistungsliste. null/leer = Abschnitt nicht anzeigen.
+  location: string | null
+  care_info: string | null
+  meals_info: string | null
+  includes: string[] | null
+  // §6.1/§6.2: Belegungsbalken + Wartelistenzahl.
+  registered_count: number
+  waitlist_count: number
+  spots_remaining: number
+  is_full: boolean
 }
 
 export interface RegistrationCreateInput {
@@ -48,10 +62,12 @@ export interface RegistrationCreateInput {
   child_first_name: string
   child_last_name: string
   child_birth_date: string // ISO date, e.g. "2018-05-10"
+  jersey_size?: string | null
   emergency_contact_name?: string | null
   emergency_contact_phone?: string | null
   medical_notes?: string | null
   allergies?: string | null
+  pickup_authorized?: string | null
   photo_permission: boolean
   terms_accepted: boolean
   privacy_accepted: boolean
@@ -61,6 +77,7 @@ export interface RegistrationCreated {
   registration_token: string
   status: string
   payment_status: string
+  payment_reference: string
 }
 
 /** Both a 404 (unknown slug) and an inactive org are indistinguishable by

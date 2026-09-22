@@ -49,6 +49,28 @@ class CampPublic(BaseModel):
     capacity: int
     price_cents: int
     currency: str
+    # §6.2: Faktentabelle + Leistungsliste. Alle drei optional — NULL/leer
+    # heißt "Abschnitt nicht anzeigen", nicht "Platzhaltertext anzeigen".
+    location: Optional[str] = None
+    care_info: Optional[str] = None
+    meals_info: Optional[str] = None
+    includes: Optional[list[str]] = None
+    # Eltern-Flow-Auftrag §6.1/§6.2: Belegungsbalken + Wartelistenzahl sind
+    # öffentlich. registered_count zählt dieselben Status wie die
+    # Kapazitätsprüfung beim Schreiben (CAPACITY_COUNTING_STATUSES) — kann
+    # nie von der tatsächlichen Kapazitätslogik abweichen.
+    registered_count: int
+    waitlist_count: int
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def spots_remaining(self) -> int:
+        return max(0, self.capacity - self.registered_count)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def is_full(self) -> bool:
+        return self.registered_count >= self.capacity
 
     @computed_field  # type: ignore[prop-decorator]
     @property

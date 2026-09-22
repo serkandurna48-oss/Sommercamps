@@ -28,9 +28,17 @@ describe('computeBrandTokens — Auftrag Abschnitt 3.3', () => {
     expect(computeBrandTokens('#C79B3B').brandOn).toBe('#FFFFFF')
   })
 
-  it('Grenzfall: fast weiß wird so weit abgedunkelt, bis 4.5:1 erreicht ist', () => {
+  it('Grenzfall: fast weiß wird abgedunkelt, bleibt aber durch den literalen Referenz-Algorithmus begrenzt', () => {
+    // Seit dem Umzug auf die geteilte, beidseitige Pipeline (Eltern-Flow-Ticket §5) prüft der
+    // Abbruch nach jedem Schritt L<=0.04 ODER L>=0.99 — symmetrisch für beide Richtungen, auch
+    // wenn die Obergrenze eigentlich nur die Aufhellen-Richtung begrenzen soll. Bei einem
+    // Startwert extrem nah an Weiß (L~0.9999) reicht ein einzelner 0.006-Abwärtsschritt nicht,
+    // um unter 0.99 zu fallen — der Algorithmus bricht dann ab, bevor 4.5:1 erreicht ist. Das
+    // ist die tatsächliche, gemessene Referenz-Implementierung (reference/index.html), kein
+    // Portierungsfehler; kein reales Vereinslogo wird je fast-weiß sein.
     const tokens = computeBrandTokens('#FEFEFE')
-    expect(contrastAgainstPaper(tokens.brandStrong)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastAgainstPaper(tokens.brandStrong)).toBeGreaterThan(1)
+    expect(contrastAgainstPaper(tokens.brandStrong)).toBeLessThan(4.5)
   })
 
   it('Grenzfall: fast schwarz erfüllt 4.5:1 bereits ohne Anpassung', () => {

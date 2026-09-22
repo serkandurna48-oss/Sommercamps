@@ -29,6 +29,7 @@ import psycopg2.errors
 
 from .. import db
 from ..admin_schemas import CampCreate
+from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES
 from ..tenancy import TenantContext
 
 _CAMP_FIELDS = """
@@ -36,27 +37,53 @@ _CAMP_FIELDS = """
     age_min, age_max, capacity, price_cents, currency
 """
 
+# Eltern-Flow-Auftrag §6.1/§6.2: Belegungsbalken und Wartelistenzahl sind
+# öffentlich (siehe CampPublic.registered_count/waitlist_count) — beide
+# Subqueries korrelieren zusätzlich über organization_id, nicht nur camp_id,
+# rein defensiv im selben Stil wie _COUNT_ACTIVE_REGISTRATIONS in
+# repositories/registrations.py, obwohl camps.id bereits eindeutig ist.
+# CAPACITY_COUNTING_STATUSES ist dieselbe Single-Source-of-Truth, die auch
+# die Kapazitätsprüfung beim Anlegen einer Anmeldung verwendet — kann nie
+# von deren Definition abweichen.
+_OCCUPANCY_SUBQUERIES = """
+    (select count(*) from camp_registrations r
+       where r.camp_id = c.id and r.organization_id = c.organization_id
+         and r.status = any(%s)) as registered_count,
+    (select count(*) from camp_registrations r
+       where r.camp_id = c.id and r.organization_id = c.organization_id
+         and r.status = 'waitlist') as waitlist_count
+"""
+
+_CAMP_FIELDS_WITH_OCCUPANCY = f"""
+    c.slug, c.title, c.start_date, c.end_date, c.registration_start, c.registration_end,
+    c.age_min, c.age_max, c.capacity, c.price_cents, c.currency,
+    c.location, c.care_info, c.meals_info, c.includes,
+    {_OCCUPANCY_SUBQUERIES}
+"""
+
 _LIST_PUBLISHED = f"""
-    select {_CAMP_FIELDS}
-    from camps
-    where organization_id = %s
-      and status = 'published'
-    order by start_date asc, slug asc
+    select {_CAMP_FIELDS_WITH_OCCUPANCY}
+    from camps c
+    where c.organization_id = %s
+      and c.status = 'published'
+    order by c.start_date asc, c.slug asc
 """
 
 _GET_PUBLISHED_BY_SLUG = f"""
-    select {_CAMP_FIELDS}
-    from camps
-    where organization_id = %s
-      and slug = %s
-      and status = 'published'
+    select {_CAMP_FIELDS_WITH_OCCUPANCY}
+    from camps c
+    where c.organization_id = %s
+      and c.slug = %s
+      and c.status = 'published'
 """
+
+_CAPACITY_COUNTING_STATUSES_LIST = list(CAPACITY_COUNTING_STATUSES)
 
 
 def list_published_camps(tenant: TenantContext) -> list[dict]:
     """All published camps for this tenant, soonest start_date first."""
     with db.get_cursor() as cur:
-        cur.execute(_LIST_PUBLISHED, (tenant.organization_id,))
+        cur.execute(_LIST_PUBLISHED, (_CAPACITY_COUNTING_STATUSES_LIST, tenant.organization_id))
         return cur.fetchall()
 
 
@@ -71,7 +98,10 @@ def get_published_camp_by_slug(tenant: TenantContext, camp_slug: str) -> Optiona
     accidentally leak which case actually happened.
     """
     with db.get_cursor() as cur:
-        cur.execute(_GET_PUBLISHED_BY_SLUG, (tenant.organization_id, camp_slug))
+        cur.execute(
+            _GET_PUBLISHED_BY_SLUG,
+            (_CAPACITY_COUNTING_STATUSES_LIST, tenant.organization_id, camp_slug),
+        )
         return cur.fetchone()
 
 
@@ -89,15 +119,15 @@ class CampSlugConflictError(Exception):
 _ADMIN_CAMP_FIELDS = """
     id, organization_id, slug, title, start_date, end_date,
     registration_start, registration_end, age_min, age_max, capacity,
-    price_cents, currency, status
+    price_cents, currency, location, care_info, meals_info, includes, status
 """
 
 _INSERT_CAMP = f"""
     insert into camps (
         organization_id, slug, title, start_date, end_date,
         registration_start, registration_end, age_min, age_max, capacity,
-        price_cents, currency, status
-    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        price_cents, currency, location, care_info, meals_info, includes, status
+    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     returning {_ADMIN_CAMP_FIELDS}
 """
 
@@ -161,6 +191,10 @@ def create_camp(organization_id: UUID, data: CampCreate) -> dict:
                     data.capacity,
                     data.price_cents,
                     data.currency,
+                    data.location,
+                    data.care_info,
+                    data.meals_info,
+                    data.includes,
                     data.status,
                 ),
             )

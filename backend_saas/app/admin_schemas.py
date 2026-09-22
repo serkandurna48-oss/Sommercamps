@@ -135,6 +135,12 @@ class CampCreate(BaseModel):
     capacity: int = Field(gt=0)
     price_cents: int = Field(ge=0)
     currency: str = "EUR"
+    # Eltern-Flow-Auftrag §6.2: Faktentabelle + Leistungsliste. Optional —
+    # NULL heißt "Abschnitt wird nicht angezeigt", kein Platzhaltertext.
+    location: Optional[str] = None
+    care_info: Optional[str] = None
+    meals_info: Optional[str] = None
+    includes: Optional[list[str]] = None
     # Defaults to draft, not published — an admin must explicitly publish a
     # camp before parents can see or register for it.
     status: CampStatus = "draft"
@@ -191,6 +197,10 @@ class CampAdminOut(BaseModel):
     capacity: int
     price_cents: int
     currency: str
+    location: Optional[str] = None
+    care_info: Optional[str] = None
+    meals_info: Optional[str] = None
+    includes: Optional[list[str]] = None
     status: str
 
 

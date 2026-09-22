@@ -37,6 +37,8 @@ def _camp_row(slug: str, **overrides) -> dict:
         "capacity": 20,
         "price_cents": 12900,
         "currency": "EUR",
+        "registered_count": 0,
+        "waitlist_count": 0,
     }
     base.update(overrides)
     return base

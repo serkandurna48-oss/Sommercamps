@@ -1,11 +1,21 @@
-import Image from 'next/image'
 import { notFound } from 'next/navigation'
+import { computeBrandSafe } from '../../lib/brandPipeline'
 import { fetchCamps, fetchOrganization } from '../../lib/saasApi'
-import { accentContrast, FALLBACK_ACCENT, INK, MUTED, PAPER } from '../theme'
-import PilotFlow from './PilotFlow'
+import GrainOverlay from './GrainOverlay'
+import ParentFlow from './ParentFlow'
+import { publicFontClassName } from './publicFonts'
+import './publicTheme.css'
+
+// Muss mit --surface je Theme in publicTheme.css übereinstimmen (Ticket §5:
+// Ground für die Kontrast-Pipeline ist --surface des aktiven Themes).
+const THEME_SURFACE: Record<string, string> = {
+  tradition: '#FFFFFF',
+  akademie: '#161C1A',
+  kompakt: '#FFFFFF',
+}
 
 /**
- * CP-S408 — isolated CampsPilot SaaS staging pilot flow.
+ * CP-S408/Eltern-Flow-Auftrag — CampsPilot SaaS staging pilot flow.
  *
  * Deliberately separate from `/` (KSV/JK legacy flow): different backend
  * (backend_saas via NEXT_PUBLIC_SAAS_API_URL, not NEXT_PUBLIC_API_URL),
@@ -15,6 +25,9 @@ import PilotFlow from './PilotFlow'
  * `cache: 'no-store'` in saasApi.ts keeps this route fully dynamic — no
  * network access at build time, and always reflects current capacity/
  * waitlist state.
+ *
+ * `data-theme` sitzt auf diesem Wrapper, nicht auf `<html>` (§3.2) — das
+ * Org-Admin-Dashboard unter (org-admin)/ bleibt davon unberührt.
  */
 export default async function PilotOrgPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params
@@ -22,55 +35,25 @@ export default async function PilotOrgPage({ params }: { params: Promise<{ org: 
   if (!org) notFound()
 
   const camps = await fetchCamps(orgSlug)
-  const accent = org.primary_color ?? FALLBACK_ACCENT
-  const onAccent = accentContrast(accent)
-  const initial = org.name.trim().charAt(0).toUpperCase()
+  const ground = THEME_SURFACE[org.theme] ?? THEME_SURFACE.tradition
+  const brand = computeBrandSafe(org.primary_color, ground)
 
   return (
-    <main className="min-h-screen" style={{ backgroundColor: PAPER }}>
-      <div className="mx-auto max-w-xl px-6 py-14">
-        <header className="flex items-start gap-4">
-          <span
-            className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg"
-            style={{ backgroundColor: accent }}
-          >
-            {org.logo_url ? (
-              <Image src={org.logo_url} alt={org.name} fill unoptimized className="object-contain p-1.5" />
-            ) : (
-              <span
-                className="text-2xl font-semibold [font-family:var(--font-pilot-display)]"
-                style={{ color: onAccent }}
-              >
-                {initial}
-              </span>
-            )}
-          </span>
-
-          <div className="min-w-0">
-            <p className="text-xs" style={{ color: MUTED }}>
-              CampsPilot
-            </p>
-            <h1
-              className="text-3xl leading-tight font-semibold [font-family:var(--font-pilot-display)]"
-              style={{ color: INK }}
-            >
-              {org.name}
-            </h1>
-            <p className="mt-1 text-sm" style={{ color: MUTED }}>
-              {org.contact_email}
-            </p>
-          </div>
-        </header>
-
-        <p className="mt-8 border-t pt-4 text-xs leading-relaxed" style={{ borderColor: MUTED + '33', color: MUTED }}>
-          Pilotbetrieb: Anmeldungen werden gespeichert, es geht aber noch keine Bestätigungsmail
-          und keine Zahlung raus.
-        </p>
-
-        <div className="mt-8">
-          <PilotFlow org={org} camps={camps} accent={accent} onAccent={onAccent} />
-        </div>
+    <div
+      className={`cp-public ${publicFontClassName(org.theme)}`}
+      data-theme={org.theme}
+      style={
+        {
+          '--brand': brand.brand,
+          '--brand-strong': brand.strong,
+          '--brand-on': brand.on,
+        } as React.CSSProperties
+      }
+    >
+      <GrainOverlay />
+      <div className="app">
+        <ParentFlow org={org} camps={camps} />
       </div>
-    </main>
+    </div>
   )
 }

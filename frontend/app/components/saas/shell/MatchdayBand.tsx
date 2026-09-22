@@ -70,7 +70,7 @@ export default function MatchdayBand({
         </div>
 
         {/* Hero-Block — kollabiert per grid-rows (M1), nicht font-size. */}
-        <div className={`cp-hero-collapse motion-reduce:transition-none ${showHero ? 'cp-hero-expanded' : ''}`}>
+        <div className={`cp-collapse motion-reduce:transition-none ${showHero ? 'cp-collapse-expanded' : ''}`}>
           <div>
             <div className="pb-5">
               {eyebrow && (

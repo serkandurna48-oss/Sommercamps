@@ -6,18 +6,11 @@ import TaskCard from '../../../../components/saas/tasks/TaskCard'
 import TaskRow from '../../../../components/saas/tasks/TaskRow'
 import CampRow from '../../../../components/saas/data/CampRow'
 import EmptyState from '../../../../components/saas/state/EmptyState'
+import { orgTabs } from '../../../../components/saas/navTabs'
 import { de, daysUntil } from '../../../../lib/i18n/de'
 import { getAdminToken } from '../../../../lib/adminSession'
 import { AdminAuthError, fetchCampsAdmin, fetchRegistrationsAdmin } from '../../../../lib/saasAdminApi'
 import { fetchOrganization } from '../../../../lib/saasApi'
-
-const ORG_TABS = [
-  { label: 'Übersicht', hrefSuffix: 'dashboard' },
-  { label: 'Zahlungen', hrefSuffix: 'zahlungen' },
-  { label: 'Warteliste', hrefSuffix: 'warteliste' },
-  { label: 'Aufgaben', hrefSuffix: 'aufgaben' },
-  { label: 'Konfiguration', hrefSuffix: 'konfiguration' },
-]
 
 export default async function OrgDashboardPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params
@@ -45,7 +38,7 @@ export default async function OrgDashboardPage({ params }: { params: Promise<{ o
   const [firstTask, ...restTasks] = tasks
 
   const brand = computeBrandTokens(org.primary_color)
-  const tabs = ORG_TABS.map(t => ({ label: t.label, href: `/pilot/${orgSlug}/${t.hrefSuffix}` }))
+  const tabs = orgTabs(orgSlug)
 
   return (
     <>

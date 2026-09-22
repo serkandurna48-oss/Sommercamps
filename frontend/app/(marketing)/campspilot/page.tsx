@@ -3,11 +3,13 @@ import Link from 'next/link'
 import BrandMark from '../../components/marketing/BrandMark'
 import BootCurtain from '../../components/marketing/BootCurtain'
 import Grain from '../../components/marketing/Grain'
+import SiteMotion from '../../components/marketing/SiteMotion'
 import { CP_IMAGES } from './images'
 
 export default function CampsPilotPage() {
   return (
     <div className="cp-scope">
+      <SiteMotion />
       <BootCurtain />
       <Grain />
 

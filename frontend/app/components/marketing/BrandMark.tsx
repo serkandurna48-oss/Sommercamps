@@ -6,8 +6,10 @@ type BrandMarkProps = {
 
 // Bildmarke als Inline-SVG statt <img>, damit die Linien currentColor
 // erben. Nur der Wimpel bleibt fest auf --accent (#D4581F) — siehe
-// public/brand/campspilot-mark.svg für die Referenzform.
-export default function BrandMark({ width = 21, height = 24, className }: BrandMarkProps) {
+// public/brand/campspilot-mark.svg für die Referenzform. width/height
+// weglassen (z. B. beim Wasserzeichen), damit die Größe rein über CSS
+// (.watermark) kommt statt über feste Pixelmaße.
+export default function BrandMark({ width, height, className }: BrandMarkProps) {
   return (
     <svg
       className={className}

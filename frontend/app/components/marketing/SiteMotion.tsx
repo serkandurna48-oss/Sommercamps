@@ -193,6 +193,10 @@ export default function SiteMotion() {
           const at = 0.1 + i * 0.135
           tl.to(it.querySelector('.strike'), { scaleX: 1, duration: 0.09, ease: 'power2.inOut' }, at)
           tl.to(it.querySelector('.t'), { opacity: 0.34, duration: 0.09, ease: 'none' }, at + 0.02)
+          // Erledigte Punkte setzen sich zusammen, statt liegen zu bleiben —
+          // macht sichtbar Platz für den Rest der Liste und die Auflösung,
+          // statt überall pauschal weniger Abstand zu erzwingen.
+          tl.to(it, { paddingTop: 4, paddingBottom: 4, duration: 0.12, ease: 'power2.inOut' }, at + 0.03)
         })
         tl.from('#zResolve', { opacity: 0, y: 34, duration: 0.14, ease: 'expo.out' }, 0.8)
         return () => {

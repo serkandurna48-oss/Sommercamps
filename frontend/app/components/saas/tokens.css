@@ -1,0 +1,149 @@
+/*
+ * Richtung C "Hybrid Matchday" — platform tokens (Auftrag Abschnitt 3.1) and
+ * the Archivo type scale (Abschnitt 3.2).
+ *
+ * Deliberately NOT on `:root` — this file is imported only by the new
+ * org-admin screens (frontend/app/pilot/[org]/(org-admin)/layout.tsx) and
+ * scoped under the `.cp-scope` class applied there, so it can never leak
+ * into the parent-facing /pilot/[org] flow or the legacy KSV/JK site, both
+ * of which keep their own tokens untouched (see pilot/theme.ts, globals.css).
+ *
+ * Mandant-specific tokens (--cp-brand, --cp-brand-strong, --cp-brand-on,
+ * --cp-brand-tint) are NOT defined here — they're computed server-side per
+ * organization (see components/saas/brandPipeline.ts) and merged into this
+ * same .cp-scope element via an inline style, mirroring the existing
+ * --accent pattern in PilotFlow.tsx.
+ */
+
+.cp-scope {
+  /* Flächen */
+  --cp-band: #131a17;
+  --cp-band-2: #26302c;
+  --cp-band-line: #2c3733;
+  --cp-paper: #f4f5f2;
+  --cp-surface: #ffffff;
+  --cp-surface-2: #fafbf9;
+  --cp-line: #d9ded7;
+  --cp-line-2: #e6e9e4;
+  --cp-field-line: #c9cfc7;
+
+  /* Text auf heller Fläche */
+  --cp-ink: #171c19;
+  --cp-ink-2: #3e4740;
+  --cp-muted: #5a625c;
+
+  /* Text auf dem Band */
+  --cp-on-band: #ffffff;
+  --cp-on-band-2: #b7c0b9;
+  --cp-on-band-3: #8d978f;
+
+  /* Status — nie vom Mandanten überschreibbar */
+  --cp-ok: #1c6b45;
+  --cp-ok-bg: #e3efe8;
+  --cp-ok-line: #a9cdbb;
+  --cp-pending: #9a5b0b;
+  --cp-pending-bg: #faf1e3;
+  --cp-pending-line: #e0c79b;
+  --cp-error: #a5271f;
+  --cp-error-bg: #fbeae8;
+  --cp-error-line: #e3b6b1;
+  --cp-info: #2b5391;
+  --cp-info-bg: #e7edf6;
+  --cp-info-line: #b4c6e0;
+
+  /* Radien */
+  --cp-r-bar: 0px;
+  --cp-r-chip: 4px;
+  --cp-r-field: 11px;
+  --cp-r-card: 14px;
+
+  background: var(--cp-paper);
+  color: var(--cp-ink);
+}
+
+/* ----------------------------------------------------------------------
+ * Typografie — eine Familie (Archivo), Hierarchie über Breite + Gewicht,
+ * nicht nur Größe. font-stretch braucht die variable Achse `wdth` aus
+ * components/saas/fonts.ts — className von dort muss auf einem Vorfahren
+ * dieser Klassen sitzen.
+ * ---------------------------------------------------------------------- */
+
+.cp-scope {
+  font-family: var(--font-cp), ui-sans-serif, system-ui, sans-serif;
+}
+
+.cp-band-hero {
+  font-size: 52px;
+  line-height: 1;
+  letter-spacing: -1.4px;
+  font-stretch: 118%;
+  font-weight: 700;
+}
+.cp-band-metric {
+  font-size: 38px;
+  line-height: 1;
+  font-stretch: 110%;
+  font-weight: 700;
+}
+.cp-band-title {
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+  font-stretch: 112%;
+  font-weight: 700;
+}
+.cp-title {
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -0.4px;
+  font-stretch: 112%;
+  font-weight: 700;
+}
+.cp-heading {
+  font-size: 21px;
+  line-height: 1.25;
+  letter-spacing: -0.3px;
+  font-stretch: 108%;
+  font-weight: 700;
+}
+.cp-subheading {
+  font-size: 17px;
+  line-height: 1.3;
+  font-stretch: 100%;
+  font-weight: 600;
+}
+.cp-body {
+  font-size: 15px;
+  line-height: 1.55;
+  font-stretch: 100%;
+  font-weight: 400;
+}
+.cp-label {
+  font-size: 13px;
+  line-height: 1.4;
+  font-stretch: 100%;
+  font-weight: 600;
+}
+.cp-chip {
+  font-size: 12px;
+  line-height: 1.2;
+  font-stretch: 100%;
+  font-weight: 600;
+}
+
+/* Für jede Zahl, die mit einer anderen in einer Spalte/Reihe steht —
+ * Preise, Plätze, Daten, Telefonnummern. Gezielt anwenden, nicht global. */
+.cp-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Abschnitt 7, "Pflicht" — ohne diesen Block ist das Feature nicht fertig. */
+@media (prefers-reduced-motion: reduce) {
+  .cp-scope,
+  .cp-scope *,
+  .cp-scope *::before,
+  .cp-scope *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

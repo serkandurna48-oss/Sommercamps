@@ -83,6 +83,23 @@ class RegistrationNotFoundError(RegistrationRejectedError):
         super().__init__(f"No registration found for id '{registration_id}' in this organization")
 
 
+class DuplicateRegistrationError(RegistrationRejectedError):
+    """
+    A registration for this exact child (first name + last name + birth
+    date, case-insensitive on the names) already exists for this camp and
+    isn't cancelled — maps to 409 (Eltern-Flow-Auftrag Abschnitt 11, "Doppelte
+    Anmeldung ... wird erkannt"). Deliberately application-level, not a DB
+    constraint (Auftrag Abschnitt 13 erlaubt außer der `theme`-Spalte keine
+    Schema-Änderung) — checked inside the same locked transaction as the
+    capacity count, so two near-simultaneous duplicate submissions can't
+    both slip through.
+    """
+
+    def __init__(self, camp_slug: str):
+        self.camp_slug = camp_slug
+        super().__init__(f"A non-cancelled registration for this child already exists for camp '{camp_slug}'")
+
+
 @dataclass(frozen=True)
 class RegistrationTarget:
     """
@@ -141,17 +158,33 @@ _INSERT_REGISTRATION = """
         parent_first_name, parent_last_name, parent_email, parent_phone,
         child_first_name, child_last_name, child_birth_date,
         emergency_contact_name, emergency_contact_phone,
-        medical_notes, allergies, photo_permission,
-        terms_accepted, privacy_accepted
+        medical_notes, allergies, jersey_size, pickup_authorized,
+        photo_permission, terms_accepted, privacy_accepted
     ) values (
         %s, %s, %s,
         %s, %s, %s, %s,
         %s, %s, %s,
         %s, %s,
-        %s, %s, %s,
-        %s, %s
+        %s, %s, %s, %s,
+        %s, %s, %s
     )
     returning registration_token, status, payment_status
+"""
+
+# Case-insensitive auf Vor-/Nachname, exaktes Geburtsdatum, gleicher Camp,
+# nicht storniert — siehe DuplicateRegistrationError. `for update` sperrt
+# keine Zeilen hier (kein Capacity-Bezug), dient nur der konsistenten
+# Sicht innerhalb derselben Transaktion wie die Kapazitätsprüfung.
+_FIND_DUPLICATE_CHILD = """
+    select id
+    from camp_registrations
+    where camp_id = %s
+      and organization_id = %s
+      and lower(child_first_name) = lower(%s)
+      and lower(child_last_name) = lower(%s)
+      and child_birth_date = %s
+      and status <> 'cancelled'
+    limit 1
 """
 
 _SELECT_OLDEST_WAITLISTED = """
@@ -211,7 +244,8 @@ _ADMIN_REGISTRATION_FIELDS = """
     parent_first_name, parent_last_name, parent_email, parent_phone,
     child_first_name, child_last_name, child_birth_date,
     emergency_contact_name, emergency_contact_phone,
-    medical_notes, allergies, photo_permission, created_at
+    medical_notes, allergies, jersey_size, pickup_authorized,
+    photo_permission, created_at
 """
 
 _LIST_REGISTRATIONS_FOR_CAMP = f"""
@@ -296,6 +330,13 @@ def create_registration(
             raise CampNotAvailableError(f"Camp '{camp.slug}' no longer available")
 
         cur.execute(
+            _FIND_DUPLICATE_CHILD,
+            (camp.id, tenant.organization_id, data.child_first_name, data.child_last_name, data.child_birth_date),
+        )
+        if cur.fetchone() is not None:
+            raise DuplicateRegistrationError(camp.slug)
+
+        cur.execute(
             _COUNT_ACTIVE_REGISTRATIONS,
             (camp.id, tenant.organization_id, list(CAPACITY_COUNTING_STATUSES)),
         )
@@ -320,6 +361,8 @@ def create_registration(
                 data.emergency_contact_phone,
                 data.medical_notes,
                 data.allergies,
+                data.jersey_size,
+                data.pickup_authorized,
                 data.photo_permission,
                 data.terms_accepted,
                 data.privacy_accepted,

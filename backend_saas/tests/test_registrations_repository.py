@@ -12,6 +12,7 @@ from app.repositories import registrations
 from app.repositories.registrations import (
     CampNotAvailableError,
     ChildAgeNotEligibleError,
+    DuplicateRegistrationError,
     RegistrationNotFoundError,
     RegistrationTarget,
     RegistrationWindowClosedError,
@@ -227,6 +228,7 @@ def test_create_registration_locks_camp_row_for_update(monkeypatch):
     fake_cursor = _FakeCursor(
         results=[
             {"capacity": 5},  # locked camp row
+            None,  # duplicate-child check: none found
             {"active_count": 0},  # count query
             {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},
         ]
@@ -240,12 +242,52 @@ def test_create_registration_locks_camp_row_for_update(monkeypatch):
     assert lock_params == (camp.id,)
 
 
+def test_create_registration_checks_for_duplicate_child_before_counting_capacity(monkeypatch):
+    org_id = uuid4()
+    camp = _target(org_id, capacity=5)
+    fake_cursor = _FakeCursor(
+        results=[
+            {"capacity": 5},
+            None,
+            {"active_count": 0},
+            {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},
+        ]
+    )
+    _patch_cursor(monkeypatch, fake_cursor)
+    data = _registration_data()
+
+    registrations.create_registration(_tenant(org_id), camp, data)
+
+    dup_query, dup_params = fake_cursor.executed[1]
+    assert dup_params == (camp.id, org_id, data.child_first_name, data.child_last_name, data.child_birth_date)
+    assert "lower(child_first_name) = lower(%s)" in dup_query
+    assert "status <> 'cancelled'" in dup_query
+
+
+def test_create_registration_raises_duplicate_error_and_never_inserts(monkeypatch):
+    org_id = uuid4()
+    camp = _target(org_id, capacity=5)
+    fake_cursor = _FakeCursor(
+        results=[
+            {"capacity": 5},
+            {"id": uuid4()},  # a matching, non-cancelled registration already exists
+        ]
+    )
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    with pytest.raises(DuplicateRegistrationError):
+        registrations.create_registration(_tenant(org_id), camp, _registration_data())
+
+    assert len(fake_cursor.executed) == 2  # never reached the count/insert
+
+
 def test_create_registration_counts_only_capacity_counting_statuses_for_this_camp_and_org(monkeypatch):
     org_id = uuid4()
     camp = _target(org_id, capacity=5)
     fake_cursor = _FakeCursor(
         results=[
             {"capacity": 5},
+            None,
             {"active_count": 0},
             {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},
         ]
@@ -254,7 +296,7 @@ def test_create_registration_counts_only_capacity_counting_statuses_for_this_cam
 
     registrations.create_registration(_tenant(org_id), camp, _registration_data())
 
-    count_query, count_params = fake_cursor.executed[1]
+    count_query, count_params = fake_cursor.executed[2]
     assert count_params[0] == camp.id
     assert count_params[1] == org_id
     assert set(count_params[2]) == CAPACITY_COUNTING_STATUSES
@@ -272,6 +314,7 @@ def test_create_registration_inserts_registered_when_capacity_available(monkeypa
     fake_cursor = _FakeCursor(
         results=[
             {"capacity": 2},
+            None,
             {"active_count": 1},  # 1 of 2 spots taken
             {"registration_token": token, "status": "registered", "payment_status": "open"},
         ]
@@ -281,7 +324,7 @@ def test_create_registration_inserts_registered_when_capacity_available(monkeypa
     result = registrations.create_registration(_tenant(org_id), camp, _registration_data())
 
     assert result["registration_token"] == token
-    insert_query, insert_params = fake_cursor.executed[2]
+    insert_query, insert_params = fake_cursor.executed[3]
     assert insert_params[0] == org_id  # organization_id from tenant
     assert insert_params[1] == camp.id  # camp_id from server-resolved camp
     assert insert_params[2] == "registered"  # capacity was available
@@ -300,6 +343,7 @@ def test_create_registration_inserts_waitlist_when_capacity_reached(monkeypatch)
     fake_cursor = _FakeCursor(
         results=[
             {"capacity": 2},
+            None,
             {"active_count": 2},  # already at capacity
             {"registration_token": token, "status": "waitlist", "payment_status": "open"},
         ]
@@ -309,7 +353,7 @@ def test_create_registration_inserts_waitlist_when_capacity_reached(monkeypatch)
     result = registrations.create_registration(_tenant(org_id), camp, _registration_data())
 
     assert result["status"] == "waitlist"
-    insert_query, insert_params = fake_cursor.executed[2]
+    insert_query, insert_params = fake_cursor.executed[3]
     assert insert_params[2] == "waitlist"
     assert "insert into camp_registrations" in insert_query.lower()
 
@@ -338,6 +382,7 @@ def test_create_registration_ignores_any_id_like_data_on_the_request_object(monk
     fake_cursor = _FakeCursor(
         results=[
             {"capacity": 5},
+            None,
             {"active_count": 0},
             {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},
         ]
@@ -350,7 +395,7 @@ def test_create_registration_ignores_any_id_like_data_on_the_request_object(monk
 
     registrations.create_registration(_tenant(org_id), camp, data)
 
-    insert_params = fake_cursor.executed[2][1]
+    insert_params = fake_cursor.executed[3][1]
     assert insert_params[0] == org_id
     assert insert_params[0] != other_org_id
 

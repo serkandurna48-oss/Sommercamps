@@ -27,6 +27,14 @@ class OrganizationPublic(BaseModel):
     contact_phone: Optional[str] = None
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
+    # Eltern-Flow-Auftrag Abschnitt 3.1/3.2: bestimmt, welches der drei
+    # Themes die öffentliche Strecke serverseitig rendert.
+    theme: str = "tradition"
+    # Für die Überweisungs-Zahlungsart auf der Bestätigungsseite (Abschnitt
+    # 6.4). Öffentlich absichtlich, nicht schützenswert — eine IBAN, die
+    # explizit zum Bezahlen herausgegeben wird, ist kein Geheimnis. NULL =
+    # kein Zahlungshinweis, nichts erfinden (siehe Abschnitt 9.1-Prinzip).
+    iban: Optional[str] = None
 
 
 class CampPublic(BaseModel):
@@ -88,12 +96,18 @@ class RegistrationCreate(BaseModel):
     medical_notes: Optional[str] = None
     allergies: Optional[str] = None
 
+    # Eltern-Flow-Auftrag Abschnitt 6.3. Beides Freitext, kein Sonderfeld —
+    # siehe Migration 20260922143506 für die Begründung.
+    jersey_size: Optional[str] = None
+    pickup_authorized: Optional[str] = None
+
     photo_permission: bool = False
     terms_accepted: bool
     privacy_accepted: bool
 
     @field_validator(
         "emergency_contact_name", "emergency_contact_phone", "medical_notes", "allergies",
+        "jersey_size", "pickup_authorized",
         mode="after",
     )
     @classmethod
@@ -132,3 +146,15 @@ class RegistrationCreated(BaseModel):
     registration_token: UUID
     status: str
     payment_status: str
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def payment_reference(self) -> str:
+        """
+        Verwendungszweck für die Überweisungs-Zahlungsart (Eltern-Flow-
+        Auftrag Abschnitt 6.4). Deterministisch aus registration_token
+        abgeleitet statt als eigene Spalte gespeichert — Bestätigungsseite
+        und (später) Bestätigungs-E-Mail berechnen exakt denselben Wert aus
+        demselben, unveränderlichen Token, können also nie auseinanderlaufen.
+        """
+        return f"CP-{str(self.registration_token)[:8].upper()}"

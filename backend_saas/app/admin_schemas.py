@@ -26,6 +26,8 @@ _SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 _HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 # Mirrors chk_camps_currency_format.
 _CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
+# Mirrors chk_organizations_iban_format (migration 20260922143506).
+_IBAN_RE = re.compile(r"^[A-Z]{2}[0-9A-Z]{13,32}$")
 
 PlanStatus = Literal["pilot", "active", "suspended", "cancelled"]
 CampStatus = Literal["draft", "published", "closed", "archived"]
@@ -62,6 +64,10 @@ class OrganizationCreate(BaseModel):
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
     plan_status: PlanStatus = "pilot"
+    # Für die Überweisungs-Zahlungsart im Eltern-Flow — settable hier (anders
+    # als `theme`, das ausdrücklich keinen Admin-Editor bekommt), damit das
+    # Onboarding-Skript sie ohne rohes SQL setzen kann.
+    iban: Optional[str] = None
 
     @field_validator("slug")
     @classmethod
@@ -73,6 +79,13 @@ class OrganizationCreate(BaseModel):
     def _primary_color_format(cls, value: Optional[str]) -> Optional[str]:
         if value is not None and not _HEX_COLOR_RE.match(value):
             raise ValueError("primary_color must be a hex color like '#1a2b3c'")
+        return value
+
+    @field_validator("iban")
+    @classmethod
+    def _iban_format(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and not _IBAN_RE.match(value):
+            raise ValueError("iban must look like a real IBAN, e.g. 'DE89370400440532013000'")
         return value
 
 
@@ -91,12 +104,20 @@ class OrganizationUpdate(BaseModel):
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
     plan_status: Optional[PlanStatus] = None
+    iban: Optional[str] = None
 
     @field_validator("primary_color")
     @classmethod
     def _primary_color_format(cls, value: Optional[str]) -> Optional[str]:
         if value is not None and not _HEX_COLOR_RE.match(value):
             raise ValueError("primary_color must be a hex color like '#1a2b3c'")
+        return value
+
+    @field_validator("iban")
+    @classmethod
+    def _iban_format(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and not _IBAN_RE.match(value):
+            raise ValueError("iban must look like a real IBAN, e.g. 'DE89370400440532013000'")
         return value
 
 
@@ -144,6 +165,13 @@ class OrganizationAdminOut(BaseModel):
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
     plan_status: str
+    # Nur lesend — "Kein Theme-Editor im Admin" (Eltern-Flow-Auftrag
+    # Abschnitt 1). Wird bewusst NICHT auf OrganizationCreate/Update
+    # geführt, damit es über diese API nicht setzbar ist. Default spiegelt
+    # den DB-Default, damit bestehende Test-Fixtures ohne 'theme'-Schlüssel
+    # nicht künstlich brechen.
+    theme: str = "tradition"
+    iban: Optional[str] = None
 
 
 class CampAdminOut(BaseModel):
@@ -192,5 +220,7 @@ class RegistrationAdminOut(BaseModel):
     emergency_contact_phone: Optional[str] = None
     medical_notes: Optional[str] = None
     allergies: Optional[str] = None
+    jersey_size: Optional[str] = None
+    pickup_authorized: Optional[str] = None
     photo_permission: bool
     created_at: datetime

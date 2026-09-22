@@ -21,7 +21,7 @@ from ..admin_schemas import OrganizationCreate, OrganizationUpdate
 
 _SELECT_BY_SLUG = """
     select id, slug, name, legal_name, contact_email, contact_phone,
-           logo_url, primary_color, plan_status
+           logo_url, primary_color, plan_status, theme, iban
     from organizations
     where slug = %s
 """
@@ -29,10 +29,10 @@ _SELECT_BY_SLUG = """
 _INSERT_ORGANIZATION = """
     insert into organizations (
         slug, name, legal_name, contact_email, contact_phone,
-        logo_url, primary_color, plan_status
-    ) values (%s, %s, %s, %s, %s, %s, %s, %s)
+        logo_url, primary_color, plan_status, iban
+    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     returning id, slug, name, legal_name, contact_email, contact_phone,
-              logo_url, primary_color, plan_status
+              logo_url, primary_color, plan_status, theme, iban
 """
 
 
@@ -83,6 +83,7 @@ def create_organization(data: OrganizationCreate) -> dict:
                     data.logo_url,
                     data.primary_color,
                     data.plan_status,
+                    data.iban,
                 ),
             )
         except psycopg2.errors.UniqueViolation as exc:
@@ -117,7 +118,7 @@ def update_organization(slug: str, data: OrganizationUpdate) -> Optional[dict]:
         set {set_clause}
         where slug = %s
         returning id, slug, name, legal_name, contact_email, contact_phone,
-                  logo_url, primary_color, plan_status
+                  logo_url, primary_color, plan_status, theme, iban
     """
     with db.get_cursor() as cur:
         cur.execute(query, (*fields.values(), slug))

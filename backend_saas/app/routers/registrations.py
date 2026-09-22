@@ -24,6 +24,7 @@ from ..repositories import registrations as registrations_repo
 from ..repositories.registrations import (
     CampNotAvailableError,
     ChildAgeNotEligibleError,
+    DuplicateRegistrationError,
     RegistrationWindowClosedError,
 )
 from ..schemas import RegistrationCreate, RegistrationCreated
@@ -82,6 +83,16 @@ def create_registration(
 
     try:
         row = registrations_repo.create_registration(tenant, camp, data)
+    except DuplicateRegistrationError as exc:
+        logger.info(
+            "Registration rejected: duplicate child (organization_slug=%s, camp_slug=%s)",
+            tenant.slug,
+            camp_slug,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Für dieses Kind liegt für dieses Camp bereits eine Anmeldung vor.",
+        ) from exc
     except CampNotAvailableError as exc:
         # Practically unreachable today (nothing can delete/unpublish a
         # camp between the two lookups yet) — kept defensive, not dead

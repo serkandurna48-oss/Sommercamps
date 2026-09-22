@@ -92,4 +92,6 @@ def test_get_organization_response_includes_only_declared_public_fields(monkeypa
         "contact_phone",
         "logo_url",
         "primary_color",
+        "theme",
+        "iban",
     }

@@ -114,9 +114,12 @@ def test_response_contains_only_token_status_payment_status(monkeypatch):
         response = _post(client, _valid_payload())
 
     body = response.json()
-    assert set(body.keys()) == {"registration_token", "status", "payment_status"}
+    assert set(body.keys()) == {"registration_token", "status", "payment_status", "payment_reference"}
     assert body["status"] == "registered"
     assert body["payment_status"] == "open"
+    # deterministisch aus dem Token abgeleitet (Eltern-Flow-Auftrag Abschnitt
+    # 6.4) — Bestätigungsseite und -mail können ihn unabhängig nachrechnen.
+    assert body["payment_reference"] == f"CP-{body['registration_token'][:8].upper()}"
 
 
 def test_response_contains_no_internal_ids(monkeypatch):

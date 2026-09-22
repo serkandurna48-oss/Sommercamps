@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 196 32" width="196" height="32" role="img" aria-label="CampsPilot">
+  <title>CampsPilot</title>
+  <path d="M3 4V29H26" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3 18A11 11 0 0 1 14 29" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M3.7 4.7L17 9L3.7 13.3Z" fill="#D4581F"/>
+  <!-- Wortmarke: Archivo, Gewicht 700, Breite 112 %, Laufweite -0.035em.
+       Fuer Produktion in Pfade wandeln, damit sie ohne Webfont stimmt. -->
+  <text x="38" y="24" font-family="Archivo, 'Helvetica Neue', sans-serif"
+        font-size="26" font-weight="700" font-stretch="112%"
+        letter-spacing="-0.9" fill="currentColor">CampsPilot</text>
+</svg>

@@ -8,21 +8,13 @@ import { CP_IMAGES } from './images'
 export default function CampsPilotPage() {
   return (
     <div className="cp-scope">
-      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" focusable="false">
-        <symbol id="cp-mark" viewBox="0 0 28 32">
-          <path d="M3 4V29H26" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M3 18A11 11 0 0 1 14 29" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
-          <path d="M3.7 4.7L17 9L3.7 13.3Z" fill="var(--accent)" />
-        </symbol>
-      </svg>
-
       <BootCurtain />
       <Grain />
 
       <nav className="nav" id="nav">
         <div className="wrap nav-in">
           <a className="brand" href="#top">
-            <BrandMark className="mark-svg" width={21} height={24} />
+            <BrandMark className="mark-svg" width={35} height={24} />
             CampsPilot<span className="sr"> — Startseite</span>
           </a>
           <div className="nav-links">
@@ -245,7 +237,7 @@ export default function CampsPilotPage() {
       <footer className="foot">
         <div className="wrap foot-in">
           <a className="brand" href="#top">
-            <BrandMark className="mark-svg" width={21} height={24} />
+            <BrandMark className="mark-svg" width={35} height={24} />
             CampsPilot
           </a>
           <span className="cl">Anmeldung und Verwaltung für Fußballcamps</span>

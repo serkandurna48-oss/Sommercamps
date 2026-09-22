@@ -1,6 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect width="32" height="32" rx="6" fill="#0A1013"/>
-  <path d="M8 7V25H25" fill="none" stroke="#EAEEEC" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M8 16.5A8.5 8.5 0 0 1 16.5 25" fill="none" stroke="#EAEEEC" stroke-width="2.8" stroke-linecap="round"/>
-  <path d="M8.8 7.6L19 11L8.8 14.4Z" fill="#D4581F"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="CampsPilot">
+  <title>CampsPilot</title>
+  <!-- Eigene Strichstärken: bei 32 px trägt die Normzeichnung nicht mehr. -->
+  <rect width="32" height="32" rx="7" fill="#0A1013"/>
+  <rect x="5" y="8.5" width="22" height="15" rx="3.6" fill="none" stroke="#EAEEEC" stroke-width="2"/>
+  <path d="M16 8.5V12.4M16 19.6V23.5" fill="none" stroke="#EAEEEC" stroke-width="2"/>
+  <circle cx="16" cy="16" r="4" fill="none" stroke="#EAEEEC" stroke-width="2"/>
+  <circle cx="16" cy="16" r="1.3" fill="#D4581F"/>
 </svg>

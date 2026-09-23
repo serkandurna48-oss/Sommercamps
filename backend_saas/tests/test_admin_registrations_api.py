@@ -6,9 +6,11 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.registration_lifecycle import InvalidStatusTransitionError
 from app.repositories import camps as camps_repo
 from app.repositories import organizations
 from app.repositories import registrations as registrations_repo
+from app.repositories.registrations import RegistrationNotFoundError
 
 
 def _org_row(slug: str = "demo-fc", plan_status: str = "pilot") -> dict:
@@ -177,3 +179,273 @@ def test_list_registrations_draft_camp_still_returns_data(monkeypatch):
 
     assert response.status_code == 200
     assert response.json() == []
+
+
+# ---------------------------------------------------------------------------
+# POST .../waitlist/promote
+# ---------------------------------------------------------------------------
+
+
+def test_promote_waitlist_success(monkeypatch):
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    promoted = {"registration_token": uuid4(), "status": "registered", "payment_status": "open"}
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+    monkeypatch.setattr(registrations_repo, "promote_next_waitlisted_registration", lambda tenant, camp_id: promoted)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.post("/admin/organizations/demo-fc/camps/summer-1/waitlist/promote", headers=headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["promoted"]["status"] == "registered"
+
+
+def test_promote_waitlist_nothing_to_promote_returns_null_not_error(monkeypatch):
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+    monkeypatch.setattr(registrations_repo, "promote_next_waitlisted_registration", lambda tenant, camp_id: None)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.post("/admin/organizations/demo-fc/camps/summer-1/waitlist/promote", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json() == {"promoted": None}
+
+
+def test_promote_waitlist_unknown_camp_returns_404(monkeypatch):
+    org = _org_row()
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: None)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.post("/admin/organizations/demo-fc/camps/does-not-exist/waitlist/promote", headers=headers)
+
+    assert response.status_code == 404
+
+
+def test_promote_waitlist_without_auth_returns_401():
+    with TestClient(app) as client:
+        response = client.post("/admin/organizations/demo-fc/camps/summer-1/waitlist/promote")
+
+    assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# POST .../registrations/{id}/cancel
+# ---------------------------------------------------------------------------
+
+
+def test_cancel_registration_success_with_promotion(monkeypatch):
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    registration_token = uuid4()
+    cancelled = {"id": uuid4(), "registration_token": registration_token, "status": "cancelled", "payment_status": "open"}
+    promoted = {"registration_token": uuid4(), "status": "registered", "payment_status": "open"}
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+
+    captured = {}
+
+    def _cancel(tenant, camp_id, reg_token):
+        captured["camp_id"] = camp_id
+        captured["reg_token"] = reg_token
+        return {"cancelled": cancelled, "promoted": promoted}
+
+    monkeypatch.setattr(registrations_repo, "cancel_registration_and_promote_next", _cancel)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.post(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{registration_token}/cancel", headers=headers
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["cancelled"]["status"] == "cancelled"
+    assert body["promoted"]["status"] == "registered"
+    assert captured["camp_id"] == camp["id"]
+    assert captured["reg_token"] == registration_token
+
+
+def test_cancel_registration_not_found_returns_404(monkeypatch):
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    registration_token = uuid4()
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+
+    def _raise(tenant, camp_id, reg_token):
+        raise RegistrationNotFoundError(reg_token)
+
+    monkeypatch.setattr(registrations_repo, "cancel_registration_and_promote_next", _raise)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.post(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{registration_token}/cancel", headers=headers
+        )
+
+    assert response.status_code == 404
+
+
+def test_cancel_registration_wrong_camp_returns_404(monkeypatch):
+    """The registration exists (same org) but under a different camp than
+    the URL names — the repository raises RegistrationNotFoundError
+    because its camp_id-scoped lookup finds nothing, and the endpoint must
+    not distinguish this from "doesn't exist at all"."""
+    org = _org_row()
+    camp = _camp_row(org["id"], slug="summer-1")
+    registration_token = uuid4()
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+
+    def _raise(tenant, camp_id, reg_token):
+        assert camp_id == camp["id"]
+        raise RegistrationNotFoundError(reg_token)
+
+    monkeypatch.setattr(registrations_repo, "cancel_registration_and_promote_next", _raise)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.post(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{registration_token}/cancel", headers=headers
+        )
+
+    assert response.status_code == 404
+
+
+def test_cancel_registration_already_cancelled_returns_409(monkeypatch):
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    registration_token = uuid4()
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+
+    def _raise(tenant, camp_id, reg_token):
+        raise InvalidStatusTransitionError("cancelled", "cancelled")
+
+    monkeypatch.setattr(registrations_repo, "cancel_registration_and_promote_next", _raise)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.post(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{registration_token}/cancel", headers=headers
+        )
+
+    assert response.status_code == 409
+
+
+def test_cancel_registration_without_auth_returns_401():
+    with TestClient(app) as client:
+        response = client.post(f"/admin/organizations/demo-fc/camps/summer-1/registrations/{uuid4()}/cancel")
+
+    assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# PATCH .../registrations/{id}/payment-status
+# ---------------------------------------------------------------------------
+
+
+def test_update_payment_status_success(monkeypatch):
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    registration_token = uuid4()
+    updated = _registration_row(registration_token=registration_token, payment_status="paid")
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+
+    captured = {}
+
+    def _update(org_id, camp_id, reg_token, status):
+        captured["camp_id"] = camp_id
+        captured["reg_token"] = reg_token
+        return updated
+
+    monkeypatch.setattr(registrations_repo, "update_payment_status", _update)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{registration_token}/payment-status",
+            json={"payment_status": "paid"},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    assert response.json()["payment_status"] == "paid"
+    assert captured["camp_id"] == camp["id"]
+    assert captured["reg_token"] == registration_token
+
+
+def test_update_payment_status_rejects_invalid_value(monkeypatch):
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{uuid4()}/payment-status",
+            json={"payment_status": "not-a-real-status"},
+            headers=headers,
+        )
+
+    assert response.status_code == 422
+
+
+def test_update_payment_status_rejects_cancelled(monkeypatch):
+    """'cancelled' is a valid DB value but deliberately not admin-settable
+    (see admin_schemas.PaymentStatusUpdate's docstring) — nothing currently
+    sets payment_status automatically on registration cancellation, so
+    manually typing 'cancelled' here would only ever be a confusing fake."""
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{uuid4()}/payment-status",
+            json={"payment_status": "cancelled"},
+            headers=headers,
+        )
+
+    assert response.status_code == 422
+
+
+def test_update_payment_status_unknown_registration_returns_404(monkeypatch):
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+    monkeypatch.setattr(registrations_repo, "update_payment_status", lambda org_id, camp_id, reg_token, status: None)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{uuid4()}/payment-status",
+            json={"payment_status": "paid"},
+            headers=headers,
+        )
+
+    assert response.status_code == 404
+
+
+def test_update_payment_status_without_auth_returns_401():
+    with TestClient(app) as client:
+        response = client.patch(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{uuid4()}/payment-status",
+            json={"payment_status": "paid"},
+        )
+
+    assert response.status_code == 401

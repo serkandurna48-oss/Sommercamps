@@ -158,6 +158,86 @@ class CampCreate(BaseModel):
         return value
 
 
+class CampUpdate(BaseModel):
+    """Same fields as CampCreate minus `slug` (immutable — a slug rename
+    would break every existing registration/parent-facing URL under it).
+    All fields optional; only provided fields are changed (see
+    repositories/camps.py::update_camp's exclude_unset handling, mirrors
+    organizations.update_organization)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    title: Optional[str] = Field(default=None, min_length=1)
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    registration_start: Optional[datetime] = None
+    registration_end: Optional[datetime] = None
+    age_min: Optional[int] = Field(default=None, ge=0)
+    age_max: Optional[int] = Field(default=None, ge=0)
+    capacity: Optional[int] = Field(default=None, gt=0)
+    price_cents: Optional[int] = Field(default=None, ge=0)
+    currency: Optional[str] = None
+    location: Optional[str] = None
+    care_info: Optional[str] = None
+    meals_info: Optional[str] = None
+    includes: Optional[list[str]] = None
+    status: Optional[CampStatus] = None
+
+    @field_validator("currency")
+    @classmethod
+    def _currency_format(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and not _CURRENCY_RE.match(value):
+            raise ValueError("currency must be a 3-letter uppercase ISO-4217-shaped code")
+        return value
+
+
+class RegistrationStatusOut(BaseModel):
+    """Minimal registration identity + lifecycle fields, returned by the
+    waitlist-promote and cancel admin actions — deliberately not the full
+    RegistrationAdminOut (an action confirmation doesn't need PII back;
+    the caller already has it from the list it acted on)."""
+
+    registration_token: UUID
+    status: str
+    payment_status: str
+
+
+class WaitlistPromoteResponse(BaseModel):
+    """`promoted` is null when there was no free capacity or no one
+    waitlisted — a no-op, not an error (mirrors
+    repositories.registrations.promote_next_waitlisted_registration's own
+    Optional[dict] return)."""
+
+    promoted: Optional[RegistrationStatusOut] = None
+
+
+class CancelRegistrationResponse(BaseModel):
+    """`promoted` is null when the cancelled registration was itself
+    waitlisted (nothing freed) or no one else was waiting."""
+
+    cancelled: RegistrationStatusOut
+    promoted: Optional[RegistrationStatusOut] = None
+
+
+class PaymentStatusUpdate(BaseModel):
+    """Manual payment bookkeeping — no Stripe/payment-provider integration
+    exists in backend_saas yet, so an organizer marks a registration's
+    payment_status by hand (e.g. cash/bank transfer received). The DB enum
+    (chk_camp_registrations_payment_status) has a fifth value, 'cancelled',
+    deliberately NOT offered here: cancel_registration_and_promote_next
+    does not currently touch payment_status at all (no DB trigger does
+    either — a cancelled registration keeps whatever payment_status it had
+    before), so 'cancelled' here would only ever be a confusing, purely
+    manual fake of "this payment is moot," never a real reflection of
+    cancellation. Reserved, not wired to anything — exclude it from what an
+    admin can type into this field until/unless cancellation is actually
+    made to set it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    payment_status: Literal["open", "paid", "refunded", "waived"]
+
+
 class OrganizationAdminOut(BaseModel):
     """Admin view of an organization — unlike OrganizationPublic, includes
     the internal id and plan_status an admin needs to operate the platform."""

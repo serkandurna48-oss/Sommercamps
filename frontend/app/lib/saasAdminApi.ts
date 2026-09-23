@@ -32,6 +32,10 @@ export interface CampAdmin {
   capacity: number
   price_cents: number
   currency: string
+  location: string | null
+  care_info: string | null
+  meals_info: string | null
+  includes: string[] | null
   status: 'draft' | 'published' | 'closed' | 'archived'
 }
 
@@ -51,13 +55,37 @@ export interface RegistrationAdmin {
   emergency_contact_phone: string | null
   medical_notes: string | null
   allergies: string | null
+  jersey_size: string | null
+  pickup_authorized: string | null
   photo_permission: boolean
   created_at: string
+}
+
+export class AdminActionError extends Error {
+  constructor(message = 'Aktion konnte nicht ausgeführt werden') {
+    super(message)
+    this.name = 'AdminActionError'
+  }
 }
 
 async function adminFetch(path: string, token: string): Promise<Response> {
   const res = await fetch(`${baseUrl()}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  })
+  if (res.status === 401) throw new AdminAuthError()
+  return res
+}
+
+/** Für alle mutierenden Admin-Aufrufe (POST/PATCH) — anders als adminFetch
+ * (nur GET) sendet dies einen JSON-Body. Ein 422 (z. B. ungültiger
+ * payment_status) wird wie jeder andere Fehlerstatus zu AdminActionError —
+ * die aufrufende Server Action entscheidet, was der Nutzer davon sieht. */
+async function adminMutate(path: string, token: string, method: 'POST' | 'PATCH', body?: unknown): Promise<Response> {
+  const res = await fetch(`${baseUrl()}${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
     cache: 'no-store',
   })
   if (res.status === 401) throw new AdminAuthError()
@@ -90,4 +118,121 @@ export async function fetchRegistrationsAdmin(
   if (res.status === 404) return []
   if (!res.ok) throw new Error(`GET admin registrations failed: ${res.status}`)
   return res.json() as Promise<RegistrationAdmin[]>
+}
+
+/** Alle Felder optional — nur mitgeschickte Felder werden geändert
+ * (PATCH /admin/organizations/{slug}, exclude_unset auf Backend-Seite).
+ * `theme` bewusst kein Feld: kein Theme-Editor im Admin. */
+export interface OrganizationConfigUpdate {
+  name?: string
+  legal_name?: string | null
+  contact_email?: string
+  contact_phone?: string | null
+  logo_url?: string | null
+  primary_color?: string | null
+  iban?: string | null
+}
+
+/** Alle Felder optional — nur mitgeschickte Felder werden geändert
+ * (PATCH .../camps/{campSlug}, exclude_unset auf Backend-Seite). `slug`
+ * bewusst kein Feld: unveränderlich, siehe Backend CampUpdate-Docstring. */
+export interface CampConfigUpdate {
+  title?: string
+  start_date?: string
+  end_date?: string
+  registration_start?: string | null
+  registration_end?: string | null
+  age_min?: number
+  age_max?: number
+  capacity?: number
+  price_cents?: number
+  currency?: string
+  location?: string | null
+  care_info?: string | null
+  meals_info?: string | null
+  includes?: string[] | null
+  status?: 'draft' | 'published' | 'closed' | 'archived'
+}
+
+/** What an admin may manually set via setPaymentStatusAdmin — deliberately
+ * excludes 'cancelled' even though RegistrationAdmin.payment_status can
+ * read that value; see backend_saas admin_schemas.PaymentStatusUpdate's
+ * docstring for why (nothing currently sets it automatically, so manually
+ * typing it in would only ever be a confusing fake). */
+export type PaymentStatus = Exclude<RegistrationAdmin['payment_status'], 'cancelled'>
+
+export interface RegistrationStatusResult {
+  registration_token: string
+  status: string
+  payment_status: string
+}
+
+async function mutateOrThrow(path: string, token: string, method: 'POST' | 'PATCH', body?: unknown): Promise<Response> {
+  const res = await adminMutate(path, token, method, body)
+  if (!res.ok) throw new AdminActionError()
+  return res
+}
+
+export async function updateOrganizationAdmin(
+  orgSlug: string,
+  token: string,
+  data: OrganizationConfigUpdate,
+): Promise<void> {
+  await mutateOrThrow(`/admin/organizations/${orgSlug}`, token, 'PATCH', data)
+}
+
+export async function updateCampAdmin(
+  orgSlug: string,
+  campSlug: string,
+  token: string,
+  data: CampConfigUpdate,
+): Promise<CampAdmin> {
+  const res = await mutateOrThrow(`/admin/organizations/${orgSlug}/camps/${campSlug}`, token, 'PATCH', data)
+  return res.json() as Promise<CampAdmin>
+}
+
+/** Rückt die eine älteste Warteliste-Anmeldung auf (FIFO) — nie eine vom
+ * Aufrufer gewählte. `promoted: null` ist kein Fehler, nur "nichts zu tun"
+ * (keine freie Kapazität oder niemand wartet). */
+export async function promoteWaitlistAdmin(
+  orgSlug: string,
+  campSlug: string,
+  token: string,
+): Promise<{ promoted: RegistrationStatusResult | null }> {
+  const res = await mutateOrThrow(`/admin/organizations/${orgSlug}/camps/${campSlug}/waitlist/promote`, token, 'POST')
+  return res.json() as Promise<{ promoted: RegistrationStatusResult | null }>
+}
+
+/** `registrationToken` — never the internal `id` — see root CLAUDE.md
+ * "registration_token vs. id: nie `id` in URLs ... exponieren". Also the
+ * boundary the backend actually enforces camp-scoping on, see
+ * backend_saas registrations_repo.cancel_registration_and_promote_next. */
+export async function cancelRegistrationAdmin(
+  orgSlug: string,
+  campSlug: string,
+  registrationToken: string,
+  token: string,
+): Promise<{ cancelled: RegistrationStatusResult; promoted: RegistrationStatusResult | null }> {
+  const res = await mutateOrThrow(
+    `/admin/organizations/${orgSlug}/camps/${campSlug}/registrations/${registrationToken}/cancel`,
+    token,
+    'POST',
+  )
+  return res.json() as Promise<{ cancelled: RegistrationStatusResult; promoted: RegistrationStatusResult | null }>
+}
+
+export async function setPaymentStatusAdmin(
+  orgSlug: string,
+  campSlug: string,
+  registrationToken: string,
+  token: string,
+  paymentStatus: PaymentStatus,
+): Promise<RegistrationAdmin> {
+  const res = await mutateOrThrow(
+    `/admin/organizations/${orgSlug}/camps/${campSlug}/registrations/${registrationToken}/payment-status`,
+    token,
+    'PATCH',
+    { payment_status: paymentStatus },
+  )
+  return res.json() as Promise<RegistrationAdmin>
 }

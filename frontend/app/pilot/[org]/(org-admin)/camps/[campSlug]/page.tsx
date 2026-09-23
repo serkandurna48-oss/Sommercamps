@@ -1,15 +1,12 @@
-import { notFound, redirect } from 'next/navigation'
 import { computeBrandTokens } from '../../../../../components/saas/brandPipeline'
 import { computeCampStats } from '../../../../../components/saas/dashboardLogic'
 import { computeMoneyStats } from '../../../../../components/saas/commandCenterLogic'
+import { loadCampAdminData } from '../../../../../components/saas/orgAdminData'
 import MatchdayBand from '../../../../../components/saas/shell/MatchdayBand'
 import StatCard from '../../../../../components/saas/data/StatCard'
 import ParticipantList from '../../../../../components/saas/data/ParticipantList'
 import { campTabs } from '../../../../../components/saas/navTabs'
 import { de, formatDateRange, formatEuro } from '../../../../../lib/i18n/de'
-import { getAdminToken } from '../../../../../lib/adminSession'
-import { AdminAuthError, fetchCampsAdmin, fetchRegistrationsAdmin } from '../../../../../lib/saasAdminApi'
-import { fetchOrganization } from '../../../../../lib/saasApi'
 
 export default async function CampCommandCenterPage({
   params,
@@ -17,24 +14,7 @@ export default async function CampCommandCenterPage({
   params: Promise<{ org: string; campSlug: string }>
 }) {
   const { org: orgSlug, campSlug } = await params
-  const token = await getAdminToken()
-  if (!token) redirect(`/pilot/${orgSlug}/login`)
-
-  const org = await fetchOrganization(orgSlug)
-  if (!org) redirect(`/pilot/${orgSlug}/login`)
-
-  let camps
-  let registrations
-  try {
-    camps = await fetchCampsAdmin(orgSlug, token)
-    registrations = await fetchRegistrationsAdmin(orgSlug, campSlug, token)
-  } catch (err) {
-    if (err instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
-    throw err
-  }
-
-  const camp = camps.find(c => c.slug === campSlug)
-  if (!camp) notFound()
+  const { org, camp, registrations } = await loadCampAdminData(orgSlug, campSlug)
 
   const stats = computeCampStats(camp, registrations)
   const money = computeMoneyStats(camp, registrations)
@@ -65,11 +45,11 @@ export default async function CampCommandCenterPage({
         <div className="mb-8 grid grid-cols-2 gap-4 xl:grid-cols-4">
           <StatCard label="Belegung" value={`${stats.registeredCount}/${camp.capacity}`} />
           <StatCard label="Eingegangen / Offen" value={`${formatEuro(money.collectedCents)} / ${formatEuro(money.openCents)}`} />
-          <StatCard label={de.dashboard.waitlistLabel} value={String(stats.waitlistCount)} />
-          <StatCard label="Aufgaben" value={String(openTaskCount)} />
+          <StatCard label={de.dashboard.waitlistLabel} value={String(stats.waitlistCount)} numericValue={stats.waitlistCount} />
+          <StatCard label="Aufgaben" value={String(openTaskCount)} numericValue={openTaskCount} />
         </div>
 
-        <ParticipantList registrations={registrations} brandColor={brand.brand} />
+        <ParticipantList registrations={registrations} brandColor={brand.brand} orgSlug={orgSlug} campSlug={campSlug} />
       </main>
     </>
   )

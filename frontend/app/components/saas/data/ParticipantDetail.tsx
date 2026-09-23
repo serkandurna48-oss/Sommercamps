@@ -1,19 +1,34 @@
 import { de } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
+import { cancelRegistrationAction } from '../actions/waitlistActions'
 import { hasMissingEmergencyContact, hasNotes } from '../commandCenterLogic'
+import ActionForm from '../ui/ActionForm'
 import Button from '../ui/Button'
 
 /**
  * Inline-Detail (Abschnitt 4.3) — kein Dialog, wächst an Ort und Stelle
  * (M3, gesteuert vom Elternteil ParticipantRow über .cp-collapse).
- * "Nächster Schritt" bietet nur Aktionen, die wirklich funktionieren
- * (mailto:/tel:) — keine Buttons für Zahlungsbestätigung oder
- * Warteliste-Verschieben, dafür existiert kein Endpunkt (Akzeptanzkriterium
- * "kein Element suggeriert eine nicht existierende Funktion").
+ * "Nächster Schritt" bot ursprünglich nur mailto:/tel: — "keine Buttons für
+ * ... Warteliste-Verschieben, dafür existiert kein Endpunkt". Der
+ * Stornieren-Endpunkt existiert inzwischen (backend_saas
+ * cancel_registration_and_promote_next, jetzt über POST .../cancel
+ * erreichbar), also ist der Button jetzt real, nicht vorgetäuscht. Nur für
+ * `status !== 'cancelled'` sichtbar — eine bereits stornierte Anmeldung
+ * hat keinen gültigen Übergang zurück zu "cancelled" (siehe
+ * registration_lifecycle.ALLOWED_TRANSITIONS).
  */
-export default function ParticipantDetail({ registration }: { registration: RegistrationAdmin }) {
+export default function ParticipantDetail({
+  registration,
+  orgSlug,
+  campSlug,
+}: {
+  registration: RegistrationAdmin
+  orgSlug: string
+  campSlug: string
+}) {
   const missingContact = hasMissingEmergencyContact(registration)
   const notes = hasNotes(registration)
+  const cancel = cancelRegistrationAction.bind(null, orgSlug, campSlug, registration.registration_token)
 
   return (
     <div className="grid grid-cols-1 gap-6 border-t px-5 py-5 md:grid-cols-2" style={{ borderColor: 'var(--cp-line-2)' }}>
@@ -60,6 +75,11 @@ export default function ParticipantDetail({ registration }: { registration: Regi
             <Button variant="secondary">Anrufen</Button>
           </a>
         </div>
+        {registration.status !== 'cancelled' && (
+          <div className="mt-4">
+            <ActionForm action={cancel} label="Anmeldung stornieren" pendingLabel="Wird storniert …" variant="quiet" />
+          </div>
+        )}
       </div>
     </div>
   )

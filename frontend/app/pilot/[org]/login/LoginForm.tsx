@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import { archivo } from '../../../components/saas/fonts'
+import GrainOverlay from '../../../components/saas/GrainOverlay'
 import '../../../components/saas/tokens.css'
 import { loginAction, type LoginState } from './actions'
 
@@ -13,6 +14,7 @@ export default function LoginForm({ orgSlug }: { orgSlug: string }) {
 
   return (
     <div className={`${archivo.variable} cp-scope flex min-h-screen items-center justify-center p-6`}>
+      <GrainOverlay />
       <form
         action={formAction}
         className="w-full max-w-sm rounded-[var(--cp-r-card)] border p-8"

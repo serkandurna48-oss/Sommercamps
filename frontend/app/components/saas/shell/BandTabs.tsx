@@ -3,10 +3,31 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { IconBoard, IconCoin, IconFlag, IconGear, IconHourglass, IconJersey } from '../icons'
+
+/**
+ * Icon kommt als Name (String), nicht als Komponentenreferenz — TabItem
+ * wird serverseitig in navTabs.ts gebaut und als Prop in dieses "use
+ * client"-Modul gereicht; eine Funktion (Icon-Komponente) ließe sich dort
+ * nicht über die Server/Client-Grenze serialisieren ("Functions cannot be
+ * passed directly to Client Components" — derselbe Fehler wie bei den
+ * Export-Spalten, siehe WaitlistExportBar.tsx). Ein String schon.
+ */
+export type TabIconName = 'board' | 'coin' | 'hourglass' | 'flag' | 'gear' | 'jersey'
+
+const ICONS: Record<TabIconName, typeof IconBoard> = {
+  board: IconBoard,
+  coin: IconCoin,
+  hourglass: IconHourglass,
+  flag: IconFlag,
+  gear: IconGear,
+  jersey: IconJersey,
+}
 
 export interface TabItem {
   label: string
   href: string
+  icon?: TabIconName
 }
 
 /**
@@ -37,18 +58,20 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
     >
       {tabs.map(tab => {
         const active = pathname === tab.href
+        const Icon = tab.icon ? ICONS[tab.icon] : undefined
         return (
           <Link
             key={tab.href}
             href={tab.href}
             data-active={active}
             aria-current={active ? 'page' : undefined}
-            className="cp-subheading shrink-0 pt-3 pb-3 whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 max-md:px-2 max-md:text-center max-md:text-[12px]"
+            className="cp-subheading inline-flex shrink-0 items-center gap-1.5 pt-3 pb-3 whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 max-md:px-2 max-md:text-center max-md:text-[12px]"
             style={{
               color: active ? 'var(--cp-on-band)' : 'var(--cp-on-band-2)',
               outlineColor: brandColor,
             }}
           >
+            {Icon && <Icon className="hidden md:inline-block" size={16} />}
             {tab.label}
           </Link>
         )

@@ -6,10 +6,12 @@ of status, and each camp's registrations.
 Everything here except /admin/login is gated by
 app/admin_auth.py::require_platform_admin. There is no per-tenant admin yet
 (no organization_members) — a valid token grants access to every
-organization. Still no delete, no registration *writes* (cancel/promote
-stay internal-only, see app/repositories/registrations.py) — those remain
-out of scope (see docs/saas/migration-strategy.md and the Richtung-C
-Auftrag Abschnitt 1).
+organization. Still no delete for organizations/camps. Registration
+lifecycle writes (waitlist promotion, cancellation, manual payment-status
+bookkeeping) are now exposed here too — see promote_waitlist,
+cancel_registration, update_registration_payment_status below — on top of
+the already-tested internal repository functions in
+app/repositories/registrations.py that predate this router surface.
 
 Never logs request bodies here beyond a slug — organization contact details
 and registration data (parent contacts, allergies, medical notes) are
@@ -24,22 +26,32 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ..admin_auth import create_admin_token, require_platform_admin, verify_admin_password
+from ..admin_resolve import require_camp, require_organization
+from uuid import UUID
+
 from ..admin_schemas import (
     AdminLoginRequest,
     AdminLoginResponse,
     CampAdminOut,
     CampCreate,
+    CampUpdate,
+    CancelRegistrationResponse,
     OrganizationAdminOut,
     OrganizationCreate,
     OrganizationUpdate,
+    PaymentStatusUpdate,
     RegistrationAdminOut,
+    WaitlistPromoteResponse,
 )
 from ..config import get_settings
+from ..registration_lifecycle import InvalidStatusTransitionError
 from ..repositories import camps as camps_repo
 from ..repositories import organizations as organizations_repo
 from ..repositories import registrations as registrations_repo
 from ..repositories.camps import CampSlugConflictError
 from ..repositories.organizations import OrganizationSlugConflictError
+from ..repositories.registrations import RegistrationNotFoundError
+from ..tenancy import TenantContext
 
 logger = logging.getLogger(__name__)
 
@@ -108,9 +120,7 @@ def create_camp(organization_slug: str, data: CampCreate) -> CampAdminOut:
     admin must be able to add a camp to a `suspended` organization too,
     which the tenant-resolution path would 404 on.
     """
-    organization = organizations_repo.get_organization_by_slug(organization_slug)
-    if organization is None:
-        raise HTTPException(status_code=404, detail="Organization not found")
+    organization = require_organization(organization_slug)
 
     try:
         row = camps_repo.create_camp(organization["id"], data)
@@ -133,6 +143,33 @@ def create_camp(organization_slug: str, data: CampCreate) -> CampAdminOut:
     return CampAdminOut.model_validate(row)
 
 
+@router.patch(
+    "/organizations/{organization_slug}/camps/{camp_slug}",
+    response_model=CampAdminOut,
+    dependencies=[Depends(require_platform_admin)],
+)
+def update_camp(organization_slug: str, camp_slug: str, data: CampUpdate) -> CampAdminOut:
+    """Mirrors update_organization's shape exactly — see CampUpdate's
+    docstring for why `slug` isn't a field here."""
+    organization = require_organization(organization_slug)
+
+    try:
+        row = camps_repo.update_camp(organization["id"], camp_slug, data)
+    except Exception:
+        logger.exception(
+            "Camp update failed unexpectedly (organization_slug=%s, camp_slug=%s)",
+            organization_slug,
+            camp_slug,
+        )
+        raise HTTPException(status_code=500, detail="Camp could not be updated") from None
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="Camp not found")
+
+    logger.info("Camp updated (organization_slug=%s, camp_slug=%s)", organization_slug, camp_slug)
+    return CampAdminOut.model_validate(row)
+
+
 @router.get(
     "/organizations/{organization_slug}/camps",
     response_model=list[CampAdminOut],
@@ -142,9 +179,7 @@ def list_camps(organization_slug: str) -> list[CampAdminOut]:
     """Every camp for this org regardless of status — unlike the public
     GET /api/v1/.../camps, which only ever returns published ones. Powers
     the Organisation-Dashboard's "Alle Camps" block."""
-    organization = organizations_repo.get_organization_by_slug(organization_slug)
-    if organization is None:
-        raise HTTPException(status_code=404, detail="Organization not found")
+    organization = require_organization(organization_slug)
 
     rows = camps_repo.list_camps_for_organization(organization["id"])
     return [CampAdminOut.model_validate(row) for row in rows]
@@ -164,13 +199,129 @@ def list_registrations(organization_slug: str, camp_slug: str) -> list[Registrat
     Organisation-Dashboard's Band-Kennzahlen and the Command Center's
     Teilnehmerliste read from.
     """
-    organization = organizations_repo.get_organization_by_slug(organization_slug)
-    if organization is None:
-        raise HTTPException(status_code=404, detail="Organization not found")
-
-    camp = camps_repo.get_camp_by_slug(organization["id"], camp_slug)
-    if camp is None:
-        raise HTTPException(status_code=404, detail="Camp not found")
+    organization = require_organization(organization_slug)
+    camp = require_camp(organization, camp_slug)
 
     rows = registrations_repo.list_registrations_for_camp(organization["id"], camp["id"])
     return [RegistrationAdminOut.model_validate(row) for row in rows]
+
+
+def _admin_tenant(organization: dict) -> TenantContext:
+    """
+    Builds a TenantContext directly from an already-resolved admin
+    organization row, deliberately WITHOUT going through
+    tenancy.resolve_tenant() — that helper 404s on a suspended/cancelled
+    organization, which is correct for the public API but wrong here: an
+    admin must still be able to promote/cancel registrations for a
+    suspended organization (same reasoning as create_camp's docstring for
+    why it resolves via organizations_repo directly). The registrations
+    repository functions this feeds (promote_next_waitlisted_registration,
+    cancel_registration_and_promote_next) only ever read `.organization_id`
+    off it, so the extra fields being copied from the same trusted row is
+    equivalent, not a weaker check.
+    """
+    return TenantContext(
+        organization_id=organization["id"],
+        slug=organization["slug"],
+        name=organization["name"],
+        plan_status=organization["plan_status"],
+    )
+
+
+@router.post(
+    "/organizations/{organization_slug}/camps/{camp_slug}/waitlist/promote",
+    response_model=WaitlistPromoteResponse,
+    dependencies=[Depends(require_platform_admin)],
+)
+def promote_waitlist(organization_slug: str, camp_slug: str) -> WaitlistPromoteResponse:
+    """
+    Exposes the existing, already-tested
+    registrations_repo.promote_next_waitlisted_registration (internal-only
+    since CP-S406) as the first HTTP entry point for it. Always promotes
+    the single oldest ('created_at asc, id asc') waitlisted registration
+    for this camp, never a caller-chosen one — the Warteliste screen shows
+    that same FIFO order, so "promote next" always matches what's visibly
+    first in the list. A `null` result (no free capacity, or no one
+    waitlisted) is a normal, non-error outcome — see
+    WaitlistPromoteResponse's docstring.
+    """
+    organization = require_organization(organization_slug)
+    camp = require_camp(organization, camp_slug)
+
+    promoted = registrations_repo.promote_next_waitlisted_registration(_admin_tenant(organization), camp["id"])
+    logger.info(
+        "Waitlist promotion attempted (organization_slug=%s, camp_slug=%s, promoted=%s)",
+        organization_slug,
+        camp_slug,
+        promoted is not None,
+    )
+    return WaitlistPromoteResponse(promoted=promoted)
+
+
+@router.post(
+    "/organizations/{organization_slug}/camps/{camp_slug}/registrations/{registration_token}/cancel",
+    response_model=CancelRegistrationResponse,
+    dependencies=[Depends(require_platform_admin)],
+)
+def cancel_registration(organization_slug: str, camp_slug: str, registration_token: UUID) -> CancelRegistrationResponse:
+    """
+    Exposes registrations_repo.cancel_registration_and_promote_next as an
+    HTTP entry point. Looked up by `registration_token` (the public
+    identifier), never the internal `id` — see root CLAUDE.md
+    "registration_token vs. id". `camp_id` (resolved from `camp_slug`
+    below) is passed into the repository call and is a real authorization
+    boundary there (see that function's docstring) — a URL naming the
+    wrong camp for a registration that exists under a *different* camp in
+    this same organization 404s, it does not silently act on it. (An
+    earlier version of this endpoint claimed that guarantee here without
+    the repository function actually enforcing it — fixed at the
+    repository layer, not just described here.)
+    """
+    organization = require_organization(organization_slug)
+    camp = require_camp(organization, camp_slug)
+
+    try:
+        result = registrations_repo.cancel_registration_and_promote_next(
+            _admin_tenant(organization), camp["id"], registration_token
+        )
+    except RegistrationNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Registration not found") from exc
+    except InvalidStatusTransitionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    logger.info(
+        "Registration cancelled (organization_slug=%s, camp_slug=%s, promoted=%s)",
+        organization_slug,
+        camp_slug,
+        result["promoted"] is not None,
+    )
+    return CancelRegistrationResponse(**result)
+
+
+@router.patch(
+    "/organizations/{organization_slug}/camps/{camp_slug}/registrations/{registration_token}/payment-status",
+    response_model=RegistrationAdminOut,
+    dependencies=[Depends(require_platform_admin)],
+)
+def update_registration_payment_status(
+    organization_slug: str, camp_slug: str, registration_token: UUID, data: PaymentStatusUpdate
+) -> RegistrationAdminOut:
+    """Manual payment bookkeeping — see
+    registrations_repo.update_payment_status's docstring for why this has
+    no state-machine transition rules (unlike `status`), why it's scoped by
+    `camp_id` too (not just organization_id), and why it's looked up by
+    `registration_token` rather than the internal `id`."""
+    organization = require_organization(organization_slug)
+    camp = require_camp(organization, camp_slug)
+
+    row = registrations_repo.update_payment_status(organization["id"], camp["id"], registration_token, data.payment_status)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Registration not found")
+
+    logger.info(
+        "Registration payment_status updated (organization_slug=%s, camp_slug=%s, payment_status=%s)",
+        organization_slug,
+        camp_slug,
+        data.payment_status,
+    )
+    return RegistrationAdminOut.model_validate(row)

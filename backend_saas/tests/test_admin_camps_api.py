@@ -128,3 +128,79 @@ def test_create_camp_without_auth_returns_401():
         response = client.post("/admin/organizations/demo-fc/camps", json=VALID_PAYLOAD)
 
     assert response.status_code == 401
+
+
+def test_update_camp_success_only_sends_changed_fields(monkeypatch):
+    org = _org_row()
+    updated = _camp_row(org["id"], capacity=25, status="published")
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+
+    captured = {}
+
+    def _update_camp(org_id, camp_slug, data):
+        captured["org_id"] = org_id
+        captured["camp_slug"] = camp_slug
+        captured["fields"] = data.model_dump(exclude_unset=True)
+        return updated
+
+    monkeypatch.setattr(camps_repo, "update_camp", _update_camp)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            "/admin/organizations/demo-fc/camps/summer-1",
+            json={"capacity": 25, "status": "published"},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    assert response.json()["capacity"] == 25
+    assert response.json()["status"] == "published"
+    assert captured["camp_slug"] == "summer-1"
+    assert captured["fields"] == {"capacity": 25, "status": "published"}
+
+
+def test_update_camp_unknown_organization_returns_404(monkeypatch):
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: None)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            "/admin/organizations/does-not-exist/camps/summer-1", json={"capacity": 25}, headers=headers
+        )
+
+    assert response.status_code == 404
+
+
+def test_update_camp_unknown_camp_returns_404(monkeypatch):
+    org = _org_row()
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "update_camp", lambda org_id, camp_slug, data: None)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            "/admin/organizations/demo-fc/camps/does-not-exist", json={"capacity": 25}, headers=headers
+        )
+
+    assert response.status_code == 404
+
+
+def test_update_camp_rejects_slug_field(monkeypatch):
+    org = _org_row()
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            "/admin/organizations/demo-fc/camps/summer-1", json={"slug": "new-slug"}, headers=headers
+        )
+
+    assert response.status_code == 422
+
+
+def test_update_camp_without_auth_returns_401():
+    with TestClient(app) as client:
+        response = client.patch("/admin/organizations/demo-fc/camps/summer-1", json={"capacity": 25})
+
+    assert response.status_code == 401

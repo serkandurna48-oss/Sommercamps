@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { archivo } from '../../../components/saas/fonts'
+import GrainOverlay from '../../../components/saas/GrainOverlay'
 import '../../../components/saas/tokens.css'
 import { getAdminToken } from '../../../lib/adminSession'
 
@@ -31,6 +32,7 @@ export default async function OrgAdminLayout({
 
   return (
     <div className={`${archivo.variable} cp-scope min-h-screen`}>
+      <GrainOverlay />
       {children}
     </div>
   )

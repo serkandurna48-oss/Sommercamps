@@ -1,6 +1,6 @@
-import { redirect } from 'next/navigation'
 import { computeBrandTokens } from '../../../../components/saas/brandPipeline'
 import { buildTasks, computeCampStats, pickNextCamp } from '../../../../components/saas/dashboardLogic'
+import { loadOrgAdminData } from '../../../../components/saas/orgAdminData'
 import MatchdayBand from '../../../../components/saas/shell/MatchdayBand'
 import TaskCard from '../../../../components/saas/tasks/TaskCard'
 import TaskRow from '../../../../components/saas/tasks/TaskRow'
@@ -8,29 +8,10 @@ import CampRow from '../../../../components/saas/data/CampRow'
 import EmptyState from '../../../../components/saas/state/EmptyState'
 import { orgTabs } from '../../../../components/saas/navTabs'
 import { de, daysUntil } from '../../../../lib/i18n/de'
-import { getAdminToken } from '../../../../lib/adminSession'
-import { AdminAuthError, fetchCampsAdmin, fetchRegistrationsAdmin } from '../../../../lib/saasAdminApi'
-import { fetchOrganization } from '../../../../lib/saasApi'
 
 export default async function OrgDashboardPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params
-  const token = await getAdminToken()
-  if (!token) redirect(`/pilot/${orgSlug}/login`)
-
-  const org = await fetchOrganization(orgSlug)
-  if (!org) redirect(`/pilot/${orgSlug}/login`)
-
-  let camps
-  try {
-    camps = await fetchCampsAdmin(orgSlug, token)
-  } catch (err) {
-    if (err instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
-    throw err
-  }
-
-  const registrationsByCamp = await Promise.all(
-    camps.map(camp => fetchRegistrationsAdmin(orgSlug, camp.slug, token)),
-  )
+  const { org, camps, registrationsByCamp } = await loadOrgAdminData(orgSlug)
 
   const campsWithStats = camps.map((camp, i) => computeCampStats(camp, registrationsByCamp[i]))
   const nextCamp = pickNextCamp(campsWithStats)
@@ -56,17 +37,20 @@ export default async function OrgDashboardPage({ params }: { params: Promise<{ o
         }
         metrics={
           nextCamp
-            ? [
-                { label: 'Tage', value: String(Math.max(0, daysUntil(nextCamp.camp.start_date))) },
-                {
-                  label: de.dashboard.spotsLabel,
-                  value: `${nextCamp.registeredCount}/${nextCamp.camp.capacity}`,
-                  bar: nextCamp.camp.capacity > 0 ? nextCamp.registeredCount / nextCamp.camp.capacity : 0,
-                  barColor: brand.brand,
-                },
-                { label: de.dashboard.openPaymentsLabel, value: String(nextCamp.openPaymentsCount) },
-                { label: de.dashboard.waitlistLabel, value: String(nextCamp.waitlistCount) },
-              ]
+            ? (() => {
+                const days = Math.max(0, daysUntil(nextCamp.camp.start_date))
+                return [
+                  { label: 'Tage', value: String(days), numericValue: days },
+                  {
+                    label: de.dashboard.spotsLabel,
+                    value: `${nextCamp.registeredCount}/${nextCamp.camp.capacity}`,
+                    bar: nextCamp.camp.capacity > 0 ? nextCamp.registeredCount / nextCamp.camp.capacity : 0,
+                    barColor: brand.brand,
+                  },
+                  { label: de.dashboard.openPaymentsLabel, value: String(nextCamp.openPaymentsCount), numericValue: nextCamp.openPaymentsCount },
+                  { label: de.dashboard.waitlistLabel, value: String(nextCamp.waitlistCount), numericValue: nextCamp.waitlistCount },
+                ]
+              })()
             : []
         }
         tabs={tabs}
@@ -97,7 +81,7 @@ export default async function OrgDashboardPage({ params }: { params: Promise<{ o
           {campsWithStats.length === 0 ? (
             <EmptyState title={de.dashboard.noCamps} />
           ) : (
-            <div className="rounded-[var(--cp-r-card)] border px-1" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
+            <div className="cp-roster" style={{ borderLeft: `3px solid ${brand.brand}` }}>
               {campsWithStats.map(c => (
                 <CampRow
                   key={c.camp.slug}

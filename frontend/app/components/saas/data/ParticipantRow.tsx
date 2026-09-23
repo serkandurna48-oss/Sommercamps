@@ -5,16 +5,8 @@ import { paymentStatusLabel } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { birthYear, hasNotes } from '../commandCenterLogic'
 import ParticipantDetail from './ParticipantDetail'
-import StatusChip from './StatusChip'
-import type { StatusTone } from './StatusChip'
-
-const PAYMENT_TONE: Record<string, StatusTone> = {
-  open: 'pending',
-  paid: 'ok',
-  refunded: 'info',
-  waived: 'info',
-  cancelled: 'neutral',
-}
+import StatusChip, { PAYMENT_STATUS_TONE } from './StatusChip'
+import { IconChevronDown } from '../icons'
 
 /** Steuert ihren eigenen offen/zu-Zustand (Abschnitt 5). M3: Inline-Detail
  * wächst per .cp-collapse (dieselbe Technik wie M1, siehe tokens.css),
@@ -24,18 +16,22 @@ export default function ParticipantRow({
   selected,
   onToggleSelect,
   brandColor,
+  orgSlug,
+  campSlug,
 }: {
   registration: RegistrationAdmin
   selected: boolean
   onToggleSelect: () => void
   brandColor: string
+  orgSlug: string
+  campSlug: string
 }) {
   const [open, setOpen] = useState(false)
   const detailId = useId()
 
   return (
-    <div className="border-t" style={{ borderColor: 'var(--cp-line-2)' }}>
-      <div className="flex flex-col gap-2 px-5 py-4 md:flex-row md:flex-wrap md:items-center md:gap-4">
+    <div className="cp-roster-row border-t" style={{ borderColor: 'var(--cp-line-2)' }}>
+      <div className="flex flex-col gap-2 px-5 py-3.5 md:flex-row md:flex-wrap md:items-center md:gap-4">
         <div className="flex items-center gap-4">
           <input
             type="checkbox"
@@ -54,7 +50,7 @@ export default function ParticipantRow({
           </p>
 
           <StatusChip
-            tone={PAYMENT_TONE[registration.payment_status] ?? 'neutral'}
+            tone={PAYMENT_STATUS_TONE[registration.payment_status] ?? 'neutral'}
             label={paymentStatusLabel[registration.payment_status] ?? registration.payment_status}
           />
 
@@ -67,9 +63,7 @@ export default function ParticipantRow({
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--cp-r-chip)] transition-transform motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 md:order-last"
             style={{ transform: open ? 'rotate(180deg)' : 'none', outlineColor: brandColor }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M4 6l4 4 4-4" stroke="var(--cp-ink-2)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <IconChevronDown className="text-[var(--cp-ink-2)]" />
           </button>
         </div>
 
@@ -91,7 +85,7 @@ export default function ParticipantRow({
             className="transition-opacity delay-[60ms] duration-150 motion-reduce:transition-none motion-reduce:delay-0"
             style={{ opacity: open ? 1 : 0 }}
           >
-            <ParticipantDetail registration={registration} />
+            <ParticipantDetail registration={registration} orgSlug={orgSlug} campSlug={campSlug} />
           </div>
         </div>
       </div>

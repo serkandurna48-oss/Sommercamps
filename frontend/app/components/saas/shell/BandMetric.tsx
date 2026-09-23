@@ -1,3 +1,5 @@
+import CountUpNumber from '../CountUpNumber'
+
 export interface BandMetricProps {
   label: string
   value: string
@@ -5,14 +7,23 @@ export interface BandMetricProps {
   bar?: number
   /** Vereinsfarbe für den Balken — eine der fünf erlaubten Stellen (3.3). */
   barColor?: string
-  size?: 'band' | 'inline'
+  size?: 'band' | 'inline' | 'hero'
+  /** Wenn gesetzt, zählt `value` beim Einblenden von 0 hoch — nur für
+   * reine Ganzzahlen (z. B. "Tage"), nicht für "3/3"-Belegung. */
+  numericValue?: number
 }
 
-export default function BandMetric({ label, value, bar, barColor, size = 'band' }: BandMetricProps) {
+const SIZE_CLASS: Record<NonNullable<BandMetricProps['size']>, string> = {
+  hero: 'cp-band-hero-metric',
+  band: 'cp-band-metric',
+  inline: 'cp-band-title',
+}
+
+export default function BandMetric({ label, value, bar, barColor, size = 'band', numericValue }: BandMetricProps) {
   return (
     <div className="flex flex-col gap-1">
-      <span className={`cp-num ${size === 'band' ? 'cp-band-metric' : 'cp-band-title'}`} style={{ color: 'var(--cp-on-band)' }}>
-        {value}
+      <span className={`cp-num ${SIZE_CLASS[size]}`} style={{ color: 'var(--cp-on-band)' }}>
+        {numericValue !== undefined ? <CountUpNumber value={numericValue} /> : value}
       </span>
       <span className="cp-label" style={{ color: 'var(--cp-on-band-2)' }}>
         {label}

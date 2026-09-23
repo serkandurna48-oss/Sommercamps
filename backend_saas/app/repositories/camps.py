@@ -28,7 +28,7 @@ from uuid import UUID
 import psycopg2.errors
 
 from .. import db
-from ..admin_schemas import CampCreate
+from ..admin_schemas import CampCreate, CampUpdate
 from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES
 from ..tenancy import TenantContext
 
@@ -200,4 +200,40 @@ def create_camp(organization_id: UUID, data: CampCreate) -> dict:
             )
         except psycopg2.errors.UniqueViolation as exc:
             raise CampSlugConflictError(organization_id, data.slug) from exc
+        return cur.fetchone()
+
+
+def update_camp(organization_id: UUID, camp_slug: str, data: CampUpdate) -> Optional[dict]:
+    """
+    Platform-admin only. Mirrors organizations.update_organization exactly:
+    only fields the caller actually set (`exclude_unset`) are written;
+    `slug` itself is immutable (not a field on CampUpdate) since renaming it
+    would break every existing registration/parent-facing URL under this
+    camp. `organization_id` must already be resolved server-side (same rule
+    as create_camp) — this function additionally scopes the WHERE clause by
+    it so an admin can never accidentally update a same-slug camp belonging
+    to a different organization (camps.slug is unique per-organization, not
+    globally — see camps_organization_id_slug_key). Returns None if no camp
+    with this slug exists for this organization.
+
+    The column list interpolated into `set_clause` comes only from
+    CampUpdate's own declared field names (a fixed set controlled by this
+    module, never by request data) — every actual value stays a
+    parametrized placeholder, same injection-safety argument as
+    update_organization.
+    """
+    fields = data.model_dump(exclude_unset=True)
+    if not fields:
+        return get_camp_by_slug(organization_id, camp_slug)
+
+    set_clause = ", ".join(f"{column} = %s" for column in fields)
+    query = f"""
+        update camps
+        set {set_clause}
+        where organization_id = %s
+          and slug = %s
+        returning {_ADMIN_CAMP_FIELDS}
+    """
+    with db.get_cursor() as cur:
+        cur.execute(query, (*fields.values(), organization_id, camp_slug))
         return cur.fetchone()

@@ -88,10 +88,10 @@ export default function MatchdayBand({
                   )}
                 </div>
                 {metrics.length > 0 && (
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-3 xl:flex xl:flex-nowrap xl:gap-8">
-                    {metrics.map(m => (
-                      <div key={m.label} className={m.bar || metrics.length === 1 ? undefined : 'hidden md:block'}>
-                        <BandMetric {...m} size="band" />
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3 xl:flex xl:flex-nowrap xl:items-end xl:gap-8">
+                    {metrics.map((m, i) => (
+                      <div key={m.label} className={i === 0 || m.bar || metrics.length === 1 ? undefined : 'hidden md:block'}>
+                        <BandMetric {...m} size={i === 0 && metrics.length > 1 ? 'hero' : 'band'} />
                       </div>
                     ))}
                   </div>

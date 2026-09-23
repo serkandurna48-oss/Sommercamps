@@ -1,26 +1,25 @@
 import { de } from '../../lib/i18n/de'
 import type { TabItem } from './shell/BandTabs'
 
-/** Org-Ebene (Dashboard-Band). Nur "Übersicht" hat echten Inhalt — die
- * übrigen sind Navigation ohne Inhalt (Abschnitt 1), führen zu ComingSoon. */
+/** Org-Ebene (Dashboard-Band). */
 export function orgTabs(orgSlug: string): TabItem[] {
   return [
-    { label: 'Übersicht', href: `/pilot/${orgSlug}/dashboard` },
-    { label: de.command.payments, href: `/pilot/${orgSlug}/zahlungen` },
-    { label: de.command.waitlist, href: `/pilot/${orgSlug}/warteliste` },
-    { label: de.command.tasks, href: `/pilot/${orgSlug}/aufgaben` },
-    { label: de.command.configuration, href: `/pilot/${orgSlug}/konfiguration` },
+    { label: 'Übersicht', href: `/pilot/${orgSlug}/dashboard`, icon: 'board' },
+    { label: de.command.payments, href: `/pilot/${orgSlug}/zahlungen`, icon: 'coin' },
+    { label: de.command.waitlist, href: `/pilot/${orgSlug}/warteliste`, icon: 'hourglass' },
+    { label: de.command.tasks, href: `/pilot/${orgSlug}/aufgaben`, icon: 'flag' },
+    { label: de.command.configuration, href: `/pilot/${orgSlug}/konfiguration`, icon: 'gear' },
   ]
 }
 
-/** Camp-Ebene (Command-Center-Band). Nur "Teilnehmer" hat echten Inhalt. */
+/** Camp-Ebene (Command-Center-Band). */
 export function campTabs(orgSlug: string, campSlug: string): TabItem[] {
   const base = `/pilot/${orgSlug}/camps/${campSlug}`
   return [
-    { label: de.command.participants, href: base },
-    { label: de.command.payments, href: `${base}/zahlungen` },
-    { label: de.command.waitlist, href: `${base}/warteliste` },
-    { label: de.command.tasks, href: `${base}/aufgaben` },
-    { label: de.command.configuration, href: `${base}/konfiguration` },
+    { label: de.command.participants, href: base, icon: 'jersey' },
+    { label: de.command.payments, href: `${base}/zahlungen`, icon: 'coin' },
+    { label: de.command.waitlist, href: `${base}/warteliste`, icon: 'hourglass' },
+    { label: de.command.tasks, href: `${base}/aufgaben`, icon: 'flag' },
+    { label: de.command.configuration, href: `${base}/konfiguration`, icon: 'gear' },
   ]
 }

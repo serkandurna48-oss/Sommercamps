@@ -74,13 +74,14 @@ class ChildAgeNotEligibleError(RegistrationRejectedError):
 
 
 class RegistrationNotFoundError(RegistrationRejectedError):
-    """No registration with this id exists for this tenant — a tenant-scoped
-    lookup miss. Deliberately indistinguishable from "exists but belongs to
-    a different tenant"; see this module's docstring re: tenant scoping."""
+    """No registration with this token exists for this tenant+camp — a
+    tenant-and-camp-scoped lookup miss. Deliberately indistinguishable from
+    "exists but belongs to a different tenant/camp"; see this module's
+    docstring re: tenant scoping."""
 
-    def __init__(self, registration_id: UUID):
-        self.registration_id = registration_id
-        super().__init__(f"No registration found for id '{registration_id}' in this organization")
+    def __init__(self, registration_token: UUID):
+        self.registration_token = registration_token
+        super().__init__(f"No registration found for token '{registration_token}' in this organization/camp")
 
 
 class DuplicateRegistrationError(RegistrationRejectedError):
@@ -208,8 +209,9 @@ _PROMOTE_TO_REGISTERED = """
 _LOAD_AND_LOCK_REGISTRATION = """
     select id, camp_id, status
     from camp_registrations
-    where id = %s
+    where registration_token = %s
       and organization_id = %s
+      and camp_id = %s
     for update
 """
 
@@ -276,6 +278,73 @@ def list_registrations_for_camp(organization_id: UUID, camp_id: UUID) -> list[di
     with db.get_cursor() as cur:
         cur.execute(_LIST_REGISTRATIONS_FOR_CAMP, (organization_id, camp_id))
         return cur.fetchall()
+
+
+_LIST_REGISTRATIONS_FOR_ORGANIZATION = f"""
+    select camp_id, {_ADMIN_REGISTRATION_FIELDS}
+    from camp_registrations
+    where organization_id = %s
+    order by camp_id asc, created_at asc, id asc
+"""
+
+
+def list_registrations_for_organization(organization_id: UUID) -> list[dict]:
+    """
+    Same rows as list_registrations_for_camp, but across every camp in the
+    organization in a single query (each row additionally carries `camp_id`
+    so callers can group them) — powers
+    app/routers/exports.py::export_organization_xlsx, which previously ran
+    one list_registrations_for_camp query per camp (N+1 on organizations
+    with many camps).
+    """
+    with db.get_cursor() as cur:
+        cur.execute(_LIST_REGISTRATIONS_FOR_ORGANIZATION, (organization_id,))
+        return cur.fetchall()
+
+
+_UPDATE_PAYMENT_STATUS = f"""
+    update camp_registrations
+    set payment_status = %s
+    where registration_token = %s
+      and organization_id = %s
+      and camp_id = %s
+    returning {_ADMIN_REGISTRATION_FIELDS}
+"""
+
+
+def update_payment_status(
+    organization_id: UUID, camp_id: UUID, registration_token: UUID, payment_status: str
+) -> Optional[dict]:
+    """
+    Platform-admin-only manual payment bookkeeping — no Stripe or other
+    payment-provider integration exists in backend_saas yet (see
+    README.md), so an organizer records a payment (cash, bank transfer)
+    by hand. Tenant-scoped by `organization_id` AND `camp_id` (both must
+    already be resolved server-side, same rule as
+    list_registrations_for_camp — never a bare `registration_token`-only
+    lookup, see this module's docstring) — the `camp_id` scoping closes a
+    gap the original single-camp-slug HTTP endpoint's own docstring
+    *claimed* but didn't actually enforce: without it, a registration
+    belonging to a different camp in the same organization could be
+    mutated through a URL naming the wrong camp. Looked up by
+    `registration_token` (the public identifier — see README.md "Tenant
+    isolation" / root CLAUDE.md "registration_token vs. id"), not the
+    internal `id`, so the internal primary key never has to appear in an
+    admin URL either. Returns None if no matching registration exists for
+    this organization+camp.
+
+    Deliberately independent of `status`'s ALLOWED_TRANSITIONS state
+    machine (app/registration_lifecycle.py) — `payment_status` is its own,
+    simpler five-value enum (chk_camp_registrations_payment_status) with no
+    transition rules of its own, since there is no payment provider yet
+    whose event order would need enforcing. `cancelled` is deliberately
+    excluded from what an admin can set here (see admin_schemas.
+    PaymentStatusUpdate) — it's a side effect of registration cancellation,
+    never a manual bookkeeping action.
+    """
+    with db.get_cursor() as cur:
+        cur.execute(_UPDATE_PAYMENT_STATUS, (payment_status, registration_token, organization_id, camp_id))
+        return cur.fetchone()
 
 
 def validate_registration_window(camp: RegistrationTarget) -> None:
@@ -425,14 +494,22 @@ def promote_next_waitlisted_registration(tenant: TenantContext, camp_id: UUID) -
         return _lock_and_promote_next_waitlisted(cur, tenant, camp_id)
 
 
-def cancel_registration_and_promote_next(tenant: TenantContext, registration_id: UUID) -> dict:
+def cancel_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, registration_token: UUID) -> dict:
     """
-    Standalone entry point for future internal/admin use — not exposed via
-    any HTTP endpoint in CP-S406.
+    Cancels one registration — strictly scoped by `WHERE registration_token
+    = %s AND organization_id = %s AND camp_id = %s`, looked up by the
+    public `registration_token` (never the internal `id` — see root
+    CLAUDE.md "registration_token vs. id: nie `id` in URLs ... exponieren")
+    and additionally by `camp_id` so a URL naming the wrong camp can never
+    reach a registration that belongs to a different camp in the same
+    organization, even though a UUID alone is "an identifier, not an
+    authorization" — camp_id is the authorization boundary this function
+    actually enforces. (Earlier version of this function/its HTTP endpoint
+    claimed this camp-scoping in the endpoint's docstring without actually
+    implementing it — fixed here, not just documented.)
 
-    Cancels one registration (strictly tenant-scoped: `WHERE id = %s AND
-    organization_id = %s`, never a bare id lookup — a UUID is an
-    identifier, not an authorization) and, only if that registration was
+    Only if the cancelled registration was previously counted against
+    capacity (registered/confirmed), promotes
     previously counted against capacity (registered/confirmed), promotes
     the next waitlisted registration for the same camp in the same
     transaction. A registration that was already 'waitlist' is simply
@@ -470,15 +547,17 @@ def cancel_registration_and_promote_next(tenant: TenantContext, registration_id:
     as a harmless no-op (see registration_lifecycle.validate_transition).
     """
     with db.get_cursor() as cur:
-        cur.execute(_LOAD_AND_LOCK_REGISTRATION, (registration_id, tenant.organization_id))
+        cur.execute(_LOAD_AND_LOCK_REGISTRATION, (registration_token, tenant.organization_id, camp_id))
         registration = cur.fetchone()
         if registration is None:
-            raise RegistrationNotFoundError(registration_id)
+            raise RegistrationNotFoundError(registration_token)
 
         current_status = registration["status"]
         validate_transition(current_status, "cancelled")
 
-        cur.execute(_UPDATE_STATUS, ("cancelled", registration_id, tenant.organization_id))
+        # Internal `id` from here on is fine — it never crosses back out of
+        # this function/module, only used for the same-transaction UPDATE.
+        cur.execute(_UPDATE_STATUS, ("cancelled", registration["id"], tenant.organization_id))
         cancelled = cur.fetchone()
 
         promoted = None

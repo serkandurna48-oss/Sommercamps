@@ -1,5 +1,17 @@
 export type StatusTone = 'ok' | 'pending' | 'error' | 'info' | 'neutral'
 
+/** Einzige Stelle für die payment_status -> Ton-Zuordnung (Cleanup nach
+ * Review-Fund: stand vorher wortgleich sowohl in ParticipantRow.tsx als
+ * auch in PaymentRow.tsx — zwei Kopien, die beim nächsten neuen Status
+ * garantiert auseinanderlaufen). */
+export const PAYMENT_STATUS_TONE: Record<string, StatusTone> = {
+  open: 'pending',
+  paid: 'ok',
+  refunded: 'info',
+  waived: 'info',
+  cancelled: 'neutral',
+}
+
 const TONE_VARS: Record<Exclude<StatusTone, 'neutral'>, { color: string; bg: string; line: string }> = {
   ok: { color: 'var(--cp-ok)', bg: 'var(--cp-ok-bg)', line: 'var(--cp-ok-line)' },
   pending: { color: 'var(--cp-pending)', bg: 'var(--cp-pending-bg)', line: 'var(--cp-pending-line)' },

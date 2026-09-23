@@ -496,33 +496,51 @@ def test_cancel_registration_not_found_raises(monkeypatch):
     _patch_cursor(monkeypatch, fake_cursor)
 
     with pytest.raises(RegistrationNotFoundError):
-        registrations.cancel_registration_and_promote_next(_tenant(org_id), uuid4())
+        registrations.cancel_registration_and_promote_next(_tenant(org_id), uuid4(), uuid4())
 
 
-def test_cancel_registration_load_query_is_tenant_scoped(monkeypatch):
+def test_cancel_registration_load_query_is_tenant_and_camp_scoped(monkeypatch):
     org_id = uuid4()
-    reg_id = uuid4()
+    camp_id = uuid4()
+    reg_token = uuid4()
     fake_cursor = _FakeCursor(results=[None])
     _patch_cursor(monkeypatch, fake_cursor)
 
     with pytest.raises(RegistrationNotFoundError):
-        registrations.cancel_registration_and_promote_next(_tenant(org_id), reg_id)
+        registrations.cancel_registration_and_promote_next(_tenant(org_id), camp_id, reg_token)
 
     load_query, load_params = fake_cursor.executed[0]
-    assert load_params == (reg_id, org_id)
+    assert load_params == (reg_token, org_id, camp_id)
     assert "organization_id = %s" in load_query
+    assert "camp_id = %s" in load_query
     assert "for update" in load_query.lower()
+
+
+def test_cancel_registration_wrong_camp_is_not_found(monkeypatch):
+    """A registration_token that exists, but under a different camp than
+    the one in the URL, must behave identically to a token that doesn't
+    exist at all — the camp_id filter in the WHERE clause is what makes
+    the DB return no row here, this test only pins the contract."""
+    org_id = uuid4()
+    camp_id = uuid4()
+    reg_token = uuid4()
+    fake_cursor = _FakeCursor(results=[None])
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    with pytest.raises(RegistrationNotFoundError):
+        registrations.cancel_registration_and_promote_next(_tenant(org_id), camp_id, reg_token)
 
 
 def test_cancel_already_cancelled_raises_without_updating(monkeypatch):
     org_id = uuid4()
     reg_id = uuid4()
     camp_id = uuid4()
+    reg_token = uuid4()
     fake_cursor = _FakeCursor(results=[{"id": reg_id, "camp_id": camp_id, "status": "cancelled"}])
     _patch_cursor(monkeypatch, fake_cursor)
 
     with pytest.raises(InvalidStatusTransitionError):
-        registrations.cancel_registration_and_promote_next(_tenant(org_id), reg_id)
+        registrations.cancel_registration_and_promote_next(_tenant(org_id), camp_id, reg_token)
 
     assert len(fake_cursor.executed) == 1  # only the load — no UPDATE attempted
 
@@ -546,7 +564,7 @@ def test_cancel_registered_or_confirmed_promotes_next_waitlisted(monkeypatch, st
     )
     _patch_cursor(monkeypatch, fake_cursor)
 
-    result = registrations.cancel_registration_and_promote_next(_tenant(org_id), reg_id)
+    result = registrations.cancel_registration_and_promote_next(_tenant(org_id), camp_id, uuid4())
 
     assert result["cancelled"]["status"] == "cancelled"
     assert result["promoted"]["registration_token"] == promoted_token
@@ -566,7 +584,7 @@ def test_cancel_waitlist_does_not_promote(monkeypatch):
     )
     _patch_cursor(monkeypatch, fake_cursor)
 
-    result = registrations.cancel_registration_and_promote_next(_tenant(org_id), reg_id)
+    result = registrations.cancel_registration_and_promote_next(_tenant(org_id), camp_id, uuid4())
 
     assert result["cancelled"]["status"] == "cancelled"
     assert result["promoted"] is None
@@ -585,7 +603,7 @@ def test_cancel_registration_update_is_tenant_scoped(monkeypatch):
     )
     _patch_cursor(monkeypatch, fake_cursor)
 
-    registrations.cancel_registration_and_promote_next(_tenant(org_id), reg_id)
+    registrations.cancel_registration_and_promote_next(_tenant(org_id), camp_id, uuid4())
 
     update_query, update_params = fake_cursor.executed[1]
     assert update_params == ("cancelled", reg_id, org_id)

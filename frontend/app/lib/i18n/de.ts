@@ -21,7 +21,15 @@ export const paymentStatusLabel: Record<string, string> = {
   cancelled: 'Storniert',
 }
 
-export const campStatusLabel: Record<string, string> = {
+/** Einzige Quelle für die vier Camp-Status (Cleanup nach Review-Fund: das
+ * gleiche Vierer-Array stand vorher wortgleich noch einmal in
+ * CampConfigForm.tsx (Dropdown-Optionen) und noch einmal als Set in
+ * configActions.ts (Server-seitige Validierung) — ein neuer Status hätte
+ * an einer der drei Stellen vergessen werden können, ohne dass TypeScript
+ * das gemerkt hätte. */
+export const CAMP_STATUSES = ['draft', 'published', 'closed', 'archived'] as const
+
+export const campStatusLabel: Record<(typeof CAMP_STATUSES)[number], string> = {
   draft: 'Entwurf',
   published: 'Veröffentlicht',
   closed: 'Geschlossen',
@@ -86,15 +94,105 @@ export const de = {
     missingEmergencyContact: 'Kein Notfallkontakt hinterlegt',
     hasAllergies: 'Allergien/Hinweise eingetragen — vor dem Camp prüfen',
   },
-  comingSoon: {
-    title: 'Noch nicht verfügbar',
-    body: 'Dieser Bereich ist als Navigation schon da, aber ohne Inhalt — kommt in einem späteren Schritt.',
-  },
   states: {
     loading: 'Wird geladen …',
     errorTitle: 'Das hat nicht geklappt',
     errorBody: 'Die Daten konnten nicht geladen werden. Versuch es gleich noch mal.',
     retry: 'Erneut versuchen',
+  },
+  tasksPage: {
+    heading: 'Aufgaben',
+    subtitleOrg: 'Über alle Camps',
+    filterAll: 'Alle',
+    filterPayment: 'Zahlung offen',
+    filterMissingContact: 'Notfallkontakt fehlt',
+    filterWaitlist: 'Warteliste',
+    emptyOrg: 'Alles erledigt — über alle Camps steht gerade nichts an.',
+    emptyCamp: 'Für dieses Camp steht gerade nichts an.',
+    emptyFiltered: 'Kein Ergebnis für diese Auswahl.',
+  },
+  waitlistPage: {
+    heading: 'Warteliste',
+    subtitleOrg: 'Über alle Camps',
+    position: (n: number) => `Platz ${n}`,
+    waitingSince: (days: number) => (days <= 0 ? 'wartet seit heute' : days === 1 ? 'wartet seit 1 Tag' : `wartet seit ${days} Tagen`),
+    familiesWaiting: (n: number) => (n === 1 ? '1 Familie wartet' : `${n} Familien warten`),
+    promote: 'Nächste Familie aufrücken',
+    promoting: 'Rückt auf …',
+    promoteNoCapacity: 'Kein freier Platz gerade — später erneut versuchen.',
+    promoteSuccess: (name: string) => `${name} ist jetzt angemeldet.`,
+    promoteError: 'Konnte nicht aufrücken — erneut versuchen.',
+    emptyOrg: 'Aktuell wartet niemand auf einen Platz.',
+    emptyCamp: 'Niemand wartet gerade auf einen Platz bei diesem Camp.',
+  },
+  paymentsPage: {
+    heading: 'Zahlungen',
+    subtitleOrg: 'Über alle Camps',
+    collected: 'Eingegangen',
+    open: 'Offen',
+    breakdown: 'Nach Status',
+    filterOpen: 'Offen',
+    filterPaid: 'Bezahlt',
+    filterAll: 'Alle',
+    markPaid: 'Als bezahlt markieren',
+    markWaived: 'Erlassen',
+    markRefunded: 'Als erstattet markieren',
+    markPaidSuccess: 'Als bezahlt gespeichert.',
+    markWaivedSuccess: 'Als erlassen gespeichert.',
+    markRefundedSuccess: 'Als erstattet gespeichert.',
+    updating: 'Wird gespeichert …',
+    updateError: 'Konnte nicht gespeichert werden — erneut versuchen.',
+    emptyOrg: 'Aktuell keine Zahlungen erfasst.',
+    emptyCamp: 'Für dieses Camp liegen noch keine Anmeldungen vor.',
+    emptyFiltered: 'Kein Ergebnis für diese Auswahl.',
+  },
+  configPage: {
+    orgHeading: 'Verein',
+    orgHint: 'Diese Angaben erscheinen im Anmelde-Formular der Eltern und auf der Bestätigungsseite.',
+    campHeading: 'Camp-Einstellungen',
+    campHint: 'Änderungen wirken sich sofort auf die öffentliche Anmeldeseite dieses Camps aus.',
+    section: {
+      branding: 'Verein',
+      contact: 'Kontakt',
+      payment: 'Zahlung',
+      facts: 'Steckbrief',
+      schedule: 'Termine & Kapazität',
+      parentInfo: 'Angaben für Eltern',
+      visibility: 'Sichtbarkeit',
+    },
+    field: {
+      name: 'Vereinsname',
+      legalName: 'Rechtsname (optional)',
+      contactEmail: 'Kontakt-E-Mail',
+      contactPhone: 'Kontakt-Telefon',
+      logoUrl: 'Logo-URL',
+      primaryColor: 'Vereinsfarbe',
+      iban: 'IBAN für Überweisungen',
+      title: 'Titel',
+      startDate: 'Beginn',
+      endDate: 'Ende',
+      registrationStart: 'Anmeldung ab',
+      registrationEnd: 'Anmeldung bis',
+      ageMin: 'Mindestalter',
+      ageMax: 'Höchstalter',
+      capacity: 'Plätze',
+      price: 'Preis (in Euro)',
+      currency: 'Währung',
+      location: 'Ort',
+      careInfo: 'Betreuung',
+      mealsInfo: 'Verpflegung',
+      includes: 'Enthaltene Leistungen (eine pro Zeile)',
+      status: 'Status',
+    },
+    hint: {
+      primaryColor: 'Hex-Code, z. B. #1c6b45 — bestimmt Balken, Tabs und Buttons.',
+      includes: 'Erscheint als Liste auf der öffentlichen Camp-Seite.',
+      slugLocked: 'Nicht änderbar — sonst brechen bestehende Links.',
+    },
+    save: 'Speichern',
+    saving: 'Wird gespeichert …',
+    saved: 'Gespeichert.',
+    saveError: 'Konnte nicht gespeichert werden — Angaben prüfen und erneut versuchen.',
   },
 } as const
 
@@ -111,6 +209,25 @@ export function daysUntil(isoDate: string): number {
   const target = new Date(`${isoDate}T00:00:00`)
   const targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate())
   return Math.round((targetDay.getTime() - today.getTime()) / 86_400_000)
+}
+
+/** Gegenstück zu daysUntil für einen Zeitpunkt in der Vergangenheit (z. B.
+ * `created_at` einer Warteliste-Anmeldung) — gleiche Kalendertag-Logik
+ * (Europe/Berlin), nur mit vertauschten Operanden.
+ *
+ * Bugfix (Review): `daysUntil`s `target` ist ein reines Datum ("2027-07-05"
+ * + "T00:00:00" angehängt) — da steckt keine Zeitzone drin, lokale
+ * Date-Getter sind also unproblematisch. `created_at` hier ist dagegen ein
+ * echter Zeitstempel MIT Zeitzone (z. B. "...+02:00" vom Server) — `target`
+ * ohne dieselbe Europe/Berlin-Konvertierung wie `today` zu lesen, gibt auf
+ * einem UTC-Server rund um Mitternacht deutscher Zeit einen Tag daneben. */
+export function daysSince(isoDateTime: string): number {
+  const now = new Date()
+  const berlinNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Berlin' }))
+  const today = new Date(berlinNow.getFullYear(), berlinNow.getMonth(), berlinNow.getDate())
+  const target = new Date(new Date(isoDateTime).toLocaleString('en-US', { timeZone: 'Europe/Berlin' }))
+  const targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate())
+  return Math.round((today.getTime() - targetDay.getTime()) / 86_400_000)
 }
 
 export function formatDateRange(startIso: string, endIso: string): string {

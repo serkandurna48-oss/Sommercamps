@@ -26,7 +26,7 @@ export default function CampRow({
   return (
     <Link
       href={`/pilot/${orgSlug}/camps/${camp.slug}`}
-      className="flex flex-wrap items-center justify-between gap-4 border-t px-1 py-5 transition-colors motion-reduce:transition-none hover:bg-[var(--cp-surface-2)] focus-visible:outline focus-visible:outline-2"
+      className="cp-roster-row flex flex-wrap items-center justify-between gap-4 border-t px-5 py-4 transition-colors motion-reduce:transition-none hover:bg-[var(--cp-surface-2)] focus-visible:outline focus-visible:outline-2"
       style={{ borderColor: 'var(--cp-line-2)', outlineColor: brandColor }}
     >
       <div className="min-w-0">

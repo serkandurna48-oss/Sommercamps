@@ -1,8 +1,26 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { archivo } from '../../../components/saas/fonts'
 import GrainOverlay from '../../../components/saas/GrainOverlay'
 import '../../../components/saas/tokens.css'
 import { getAdminToken } from '../../../lib/adminSession'
+import { fetchOrganization } from '../../../lib/saasApi'
+
+/**
+ * Gemeinsamer Titel-Fix für alle Org-Admin-Seiten (Dashboard, Teilnehmer,
+ * Zahlungen, Warteliste, Aufgaben, Konfiguration) — ohne dies erben sie
+ * alle den hart codierten KSV-Titel aus dem Root-Layout, siehe
+ * pilot/[org]/page.tsx's generateMetadata für die volle Begründung.
+ */
+export async function generateMetadata({ params }: { params: Promise<{ org: string }> }): Promise<Metadata> {
+  const { org: orgSlug } = await params
+  try {
+    const org = await fetchOrganization(orgSlug)
+    return { title: org ? `${org.name} – Verwaltung` : 'CampsPilot – Verwaltung' }
+  } catch {
+    return { title: 'CampsPilot – Verwaltung' }
+  }
+}
 
 /**
  * Auth-Gate für alle Vereins-Organisator-Screens (Richtung C). Prüft nur,

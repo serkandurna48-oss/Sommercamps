@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { computeBrandSafe } from '../../lib/brandPipeline'
 import { fetchCamps, fetchOrganization } from '../../lib/saasApi'
@@ -5,6 +6,23 @@ import GrainOverlay from './GrainOverlay'
 import ParentFlow from './ParentFlow'
 import { publicFontClassName } from './publicFonts'
 import './publicTheme.css'
+
+/**
+ * Ohne dies erbt jede /pilot/[org]-Seite den Titel aus dem geteilten
+ * Root-Layout (app/layout.tsx) — dort hart auf "KSV Baunatal –
+ * Fußballschule" gesetzt, weil dieses Layout ursprünglich nur für die
+ * KSV/JK-Seite existierte. Jeder SaaS-Verein zeigte dadurch bislang den
+ * KSV-Titel im Browser-Tab an, unabhängig vom tatsächlichen Verein.
+ */
+export async function generateMetadata({ params }: { params: Promise<{ org: string }> }): Promise<Metadata> {
+  const { org: orgSlug } = await params
+  try {
+    const org = await fetchOrganization(orgSlug)
+    return { title: org ? org.name : 'CampsPilot' }
+  } catch {
+    return { title: 'CampsPilot' }
+  }
+}
 
 // Muss mit --surface je Theme in publicTheme.css übereinstimmen (Ticket §5:
 // Ground für die Kontrast-Pipeline ist --surface des aktiven Themes).

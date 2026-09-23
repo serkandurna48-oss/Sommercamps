@@ -1,17 +1,18 @@
 """
 Organization repository — lookup-by-slug plus platform-admin writes.
 
-`list_organizations` is platform-admin-only (app/routers/admin.py, gated
-by app/admin_auth.py::require_platform_admin) — the public, tenant-scoped
+`list_organizations` is platform-owner-only (app/routers/admin.py, gated
+by app/auth_deps.py::require_platform_owner) — the public, tenant-scoped
 routers never call it and have no route that could return it. The original
 concern behind not having a list endpoint ("would leak the tenant list
-across tenants") is about the *public* API; it does not apply to the single
-platform operator, who by definition needs to see every tenant to run the
+across tenants") is about the *public* API; it does not apply to the
+platform owner, who by definition needs to see every tenant to run the
 platform (list them, onboard a new one). Keep it that way: never expose
-list_organizations through an unauthenticated route.
+list_organizations through an unauthenticated route, and never to an
+org_admin (see require_platform_owner vs. require_org_access).
 
 create_organization/update_organization exist only for the platform-admin
-surface (app/routers/admin.py, gated by app/admin_auth.py) — the public,
+surface (app/routers/admin.py, gated by app/auth_deps.py) — the public,
 tenant-scoped routers never call them.
 """
 
@@ -34,6 +35,12 @@ _SELECT_BY_SLUG = f"""
     select {_ORGANIZATION_FIELDS}
     from organizations
     where slug = %s
+"""
+
+_SELECT_BY_ID = f"""
+    select {_ORGANIZATION_FIELDS}
+    from organizations
+    where id = %s
 """
 
 _SELECT_ALL = f"""
@@ -81,6 +88,16 @@ def get_organization_by_slug(slug: str) -> Optional[dict]:
     """
     with db.get_cursor() as cur:
         cur.execute(_SELECT_BY_SLUG, (slug,))
+        return cur.fetchone()
+
+
+def get_organization_by_id(organization_id: str) -> Optional[dict]:
+    """Companion to get_organization_by_slug, for the one case where a
+    caller only has an organization_id — app/routers/admin.py's /admin/me,
+    resolving an org_admin's organization_members rows (which store
+    organization_id, not slug) back to slugs the frontend can route on."""
+    with db.get_cursor() as cur:
+        cur.execute(_SELECT_BY_ID, (organization_id,))
         return cur.fetchone()
 
 

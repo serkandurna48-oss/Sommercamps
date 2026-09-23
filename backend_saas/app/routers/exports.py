@@ -1,11 +1,12 @@
 """
 Platform-admin .xlsx exports (Richtung-C Auftrag "Export") — Teilnehmerliste,
 Zahlungen, and Warteliste as downloadable spreadsheets. Read-only, gated by
-require_platform_admin like every other admin route. Reuses the exact same
-repository functions and organization/camp resolution as app/routers/admin.py
-(never a client-supplied id) — this module only adds a different response
-format (.xlsx bytes instead of JSON) on top of data the admin API already
-exposes as JSON.
+app/auth_deps.py::require_org_access like every other org-scoped admin
+route (feat/platform-foundation). Reuses the exact same repository
+functions and organization/camp resolution as app/routers/admin.py (never
+a client-supplied id) — this module only adds a different response format
+(.xlsx bytes instead of JSON) on top of data the admin API already exposes
+as JSON.
 
 Column sets mirror what the corresponding frontend screen actually shows
 (ParticipantList, PaymentSection, WaitlistCard/Row) — see each _*_sheet
@@ -24,7 +25,7 @@ from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, Query, Response
 
-from ..admin_auth import require_platform_admin
+from ..auth_deps import AuthContext, require_org_access
 from ..admin_resolve import require_camp, require_organization
 from ..repositories import camps as camps_repo
 from ..repositories import registrations as registrations_repo
@@ -158,15 +159,13 @@ def _waitlist_sheet(camp_registrations: list[tuple[dict, list[dict]]], include_c
     return headers, rows
 
 
-@router.get(
-    "/organizations/{organization_slug}/camps/{camp_slug}/export.xlsx",
-    dependencies=[Depends(require_platform_admin)],
-)
+@router.get("/organizations/{organization_slug}/camps/{camp_slug}/export.xlsx")
 def export_camp_xlsx(
     organization_slug: str,
     camp_slug: str,
     view: Literal["participants", "payments", "waitlist"] = "participants",
     tokens: Optional[str] = Query(default=None, description="Comma-separated registration_token values to restrict to"),
+    auth: AuthContext = Depends(require_org_access),
 ) -> Response:
     organization = require_organization(organization_slug)
     camp = require_camp(organization, camp_slug)
@@ -184,14 +183,12 @@ def export_camp_xlsx(
     return _xlsx_response(headers, rows, sheet_name=view.capitalize(), filename=filename)
 
 
-@router.get(
-    "/organizations/{organization_slug}/export.xlsx",
-    dependencies=[Depends(require_platform_admin)],
-)
+@router.get("/organizations/{organization_slug}/export.xlsx")
 def export_organization_xlsx(
     organization_slug: str,
     view: Literal["payments", "waitlist"] = "payments",
     tokens: Optional[str] = Query(default=None, description="Comma-separated registration_token values to restrict to"),
+    auth: AuthContext = Depends(require_org_access),
 ) -> Response:
     """Org-wide variant, across every camp — Zahlungen and Warteliste both
     have an org-level view (unlike Teilnehmerliste, which only exists per

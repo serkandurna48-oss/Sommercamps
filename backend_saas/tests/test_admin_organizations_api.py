@@ -9,6 +9,8 @@ from app.main import app
 from app.repositories import organizations
 from app.repositories.organizations import OrganizationSlugConflictError
 
+from .auth_helpers import org_admin_headers, owner_headers as _auth_headers
+
 VALID_PAYLOAD = {
     "slug": "demo-fc",
     "name": "Demo Football Academy",
@@ -30,12 +32,6 @@ def _org_row(slug: str = "demo-fc", plan_status: str = "pilot", **overrides) -> 
     }
     base.update(overrides)
     return base
-
-
-def _auth_headers() -> dict:
-    with TestClient(app) as client:
-        token = client.post("/admin/login", json={"password": "test-admin-password"}).json()["token"]
-    return {"Authorization": f"Bearer {token}"}
 
 
 def test_create_organization_success_returns_201(monkeypatch):
@@ -200,3 +196,81 @@ def test_get_single_organization_without_auth_returns_401():
         response = client.get("/admin/organizations/demo-fc")
 
     assert response.status_code == 401
+
+
+def test_org_admin_can_read_own_organization(monkeypatch):
+    other_org_id = uuid4()
+    monkeypatch.setattr(
+        organizations, "get_organization_by_slug", lambda slug: _org_row(slug, id=other_org_id)
+    )
+    headers = org_admin_headers(organization_id=str(other_org_id))
+
+    with TestClient(app) as client:
+        response = client.get("/admin/organizations/demo-fc", headers=headers)
+
+    assert response.status_code == 200
+
+
+def test_org_admin_cannot_read_a_different_organization(monkeypatch):
+    """Paket A: 'org_admin A kann Org B weder lesen noch ändern noch
+    exportieren.' — this org_admin's membership names a different
+    organization_id than the one demo-fc actually resolves to."""
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: _org_row(slug, id=uuid4()))
+    headers = org_admin_headers(organization_id=str(uuid4()))
+
+    with TestClient(app) as client:
+        response = client.get("/admin/organizations/demo-fc", headers=headers)
+
+    assert response.status_code == 403
+
+
+def test_org_admin_cannot_update_a_different_organization(monkeypatch):
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: _org_row(slug, id=uuid4()))
+    monkeypatch.setattr(organizations, "update_organization", lambda slug, data: _org_row(slug))
+    headers = org_admin_headers(organization_id=str(uuid4()))
+
+    with TestClient(app) as client:
+        response = client.patch("/admin/organizations/demo-fc", json={"name": "Hijacked"}, headers=headers)
+
+    assert response.status_code == 403
+
+
+def test_org_admin_cannot_export_a_different_organization(monkeypatch):
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: _org_row(slug, id=uuid4()))
+    headers = org_admin_headers(organization_id=str(uuid4()))
+
+    with TestClient(app) as client:
+        response = client.get("/admin/organizations/demo-fc/export.xlsx", headers=headers)
+
+    assert response.status_code == 403
+
+
+def test_org_admin_cannot_list_all_organizations(monkeypatch):
+    """require_platform_owner, not require_org_access — an org_admin has no
+    legitimate reason to see the platform's tenant list at all."""
+    monkeypatch.setattr(organizations, "list_organizations", lambda: [_org_row("club-a")])
+    headers = org_admin_headers(organization_id=str(uuid4()))
+
+    with TestClient(app) as client:
+        response = client.get("/admin/organizations", headers=headers)
+
+    assert response.status_code == 403
+
+
+def test_org_admin_cannot_create_organizations(monkeypatch):
+    headers = org_admin_headers(organization_id=str(uuid4()))
+
+    with TestClient(app) as client:
+        response = client.post("/admin/organizations", json=VALID_PAYLOAD, headers=headers)
+
+    assert response.status_code == 403
+
+
+def test_platform_owner_can_read_any_organization(monkeypatch):
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: _org_row(slug))
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.get("/admin/organizations/demo-fc", headers=headers)
+
+    assert response.status_code == 200

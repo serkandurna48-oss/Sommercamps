@@ -6,9 +6,16 @@ backend_saas/seeds/*.sql.
 
 Usage:
     python scripts/onboard_tenant.py --config seeds/campspilot-pilot.json \\
-        --api-url http://localhost:8001 --admin-password campspilot-dev-admin
+        --api-url http://localhost:8001 --email owner@example.com --password ...
 
-    # or set ADMIN_PASSWORD in the environment instead of --admin-password
+    # or set CAMPSPILOT_EMAIL/CAMPSPILOT_PASSWORD in the environment instead
+
+Requires SUPABASE_URL and SUPABASE_ANON_KEY in the environment (same values
+backend_saas/.env uses) — this script signs in via Supabase Auth, same as
+the frontend's login (feat/platform-foundation replaced the old single
+ADMIN_PASSWORD scheme this script used to call directly). The signed-in
+account needs platform_owner or the right org_admin membership already —
+create one with scripts/create_platform_user.py first.
 
 Idempotent: if the organization or a camp already exists (409 from the API),
 this logs it and continues rather than aborting — re-running the same config
@@ -33,12 +40,27 @@ def _load_config(path: Path) -> dict:
         return json.load(f)
 
 
-def _login(client: httpx.Client, api_url: str, password: str) -> str:
-    response = client.post(f"{api_url}/admin/login", json={"password": password})
+def _login(email: str, password: str) -> str:
+    """Signs in via Supabase Auth directly (the password grant type of
+    GoTrue's token endpoint) — same mechanism the frontend's login server
+    actions use (see frontend/app/lib/supabaseServer.ts), just called from
+    a standalone script instead of Next.js."""
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_anon_key = os.environ.get("SUPABASE_ANON_KEY")
+    if not supabase_url or not supabase_anon_key:
+        print("SUPABASE_URL and SUPABASE_ANON_KEY must be set in the environment.", file=sys.stderr)
+        sys.exit(1)
+
+    response = httpx.post(
+        f"{supabase_url}/auth/v1/token?grant_type=password",
+        headers={"apikey": supabase_anon_key, "Content-Type": "application/json"},
+        json={"email": email, "password": password},
+        timeout=10.0,
+    )
     if response.status_code != 200:
         print(f"Login failed: HTTP {response.status_code} — {response.text}", file=sys.stderr)
         sys.exit(1)
-    return response.json()["token"]
+    return response.json()["access_token"]
 
 
 def _create_organization(client: httpx.Client, api_url: str, token: str, org: dict) -> bool:
@@ -78,15 +100,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", required=True, type=Path, help="Path to a tenant.json (see seeds/*.json for examples)")
     parser.add_argument("--api-url", default="http://localhost:8001", help="backend_saas base URL (default: local dev, port 8001)")
-    parser.add_argument(
-        "--admin-password",
-        default=os.environ.get("ADMIN_PASSWORD"),
-        help="Platform-admin password. Defaults to the ADMIN_PASSWORD env var.",
-    )
+    parser.add_argument("--email", default=os.environ.get("CAMPSPILOT_EMAIL"), help="Defaults to the CAMPSPILOT_EMAIL env var.")
+    parser.add_argument("--password", default=os.environ.get("CAMPSPILOT_PASSWORD"), help="Defaults to the CAMPSPILOT_PASSWORD env var.")
     args = parser.parse_args()
 
-    if not args.admin_password:
-        print("No admin password given (use --admin-password or set ADMIN_PASSWORD).", file=sys.stderr)
+    if not args.email or not args.password:
+        print("Email/password required (use --email/--password or set CAMPSPILOT_EMAIL/CAMPSPILOT_PASSWORD).", file=sys.stderr)
         sys.exit(1)
 
     config = _load_config(args.config)
@@ -94,8 +113,8 @@ def main() -> None:
     camps = config.get("camps", [])
 
     print(f"Onboarding '{org['slug']}' against {args.api_url} ...")
+    token = _login(args.email, args.password)
     with httpx.Client(timeout=10.0) as client:
-        token = _login(client, args.api_url, args.admin_password)
         _create_organization(client, args.api_url, token, org)
         for camp in camps:
             _create_camp(client, args.api_url, token, org["slug"], camp)

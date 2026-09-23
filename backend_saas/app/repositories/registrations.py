@@ -302,6 +302,50 @@ def list_registrations_for_organization(organization_id: UUID) -> list[dict]:
         return cur.fetchall()
 
 
+_LIST_REGISTRATIONS_GLOBAL_BASE = f"""
+    select
+        o.slug as organization_slug, o.name as organization_name,
+        c.slug as camp_slug, c.title as camp_title,
+        {', '.join('r.' + f.strip() for f in _ADMIN_REGISTRATION_FIELDS.strip().split(',') if f.strip())}
+    from camp_registrations r
+    join organizations o on o.id = r.organization_id
+    join camps c on c.id = r.camp_id
+"""
+
+
+def list_registrations_global(
+    *, organization_slug: Optional[str] = None, camp_slug: Optional[str] = None, status: Optional[str] = None
+) -> list[dict]:
+    """Platform-owner only (enforced by app/auth_deps.py::require_platform_owner
+    at the router, not here — this function itself applies no access
+    control, same convention as every other repository function in this
+    service). Powers the CEO console's cross-organization "Anmeldungen"
+    view. Filters are optional and combine with AND; each is still a
+    parametrized value, never string-interpolated, even though this
+    function is already owner-gated — defense in depth, same reasoning as
+    every tenant-scoped query elsewhere in this module."""
+    clauses = []
+    params: list[object] = []
+    if organization_slug:
+        clauses.append("o.slug = %s")
+        params.append(organization_slug)
+    if camp_slug:
+        clauses.append("c.slug = %s")
+        params.append(camp_slug)
+    if status:
+        clauses.append("r.status = %s")
+        params.append(status)
+
+    query = _LIST_REGISTRATIONS_GLOBAL_BASE
+    if clauses:
+        query += " where " + " and ".join(clauses)
+    query += " order by r.created_at desc limit 500"
+
+    with db.get_cursor() as cur:
+        cur.execute(query, tuple(params))
+        return cur.fetchall()
+
+
 _UPDATE_PAYMENT_STATUS = f"""
     update camp_registrations
     set payment_status = %s

@@ -15,8 +15,15 @@ os.environ.setdefault("DATABASE_URL", "postgresql://test:test@127.0.0.1:5432/tes
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("LOG_LEVEL", "WARNING")
 os.environ.setdefault("APP_NAME", "CampsPilot SaaS API (test)")
-os.environ.setdefault("ADMIN_PASSWORD", "test-admin-password")
-os.environ.setdefault("JWT_SECRET", "test-jwt-secret-not-a-real-one-but-32-bytes-plus")
+# Fake-but-well-formed Supabase settings (feat/platform-foundation) — no
+# test in this suite ever makes a real HTTP call to Supabase Auth; every
+# test that needs an authenticated request uses app.dependency_overrides
+# on get_auth_context (see _owner_headers/_org_admin_headers helpers in the
+# admin test files) rather than a real bearer token, so these values only
+# need to satisfy Settings() validation at import time, never resolve to
+# anything real.
+os.environ.setdefault("SUPABASE_URL", "https://test-project.supabase.co")
+os.environ.setdefault("SUPABASE_ANON_KEY", "test-anon-key-not-real")
 
 import pytest
 
@@ -35,3 +42,18 @@ def _no_real_db_pool(monkeypatch):
     """
     monkeypatch.setattr(db, "init_pool", lambda: None)
     monkeypatch.setattr(db, "close_pool", lambda: None)
+
+
+@pytest.fixture(autouse=True)
+def _clear_auth_dependency_overrides():
+    """
+    Tests authenticate by overriding app.auth_deps.get_auth_context via
+    FastAPI's app.dependency_overrides (see _owner_headers/_org_admin_headers
+    helpers in the admin test files) rather than a real Supabase token —
+    this guarantees no override set by one test ever leaks into the next,
+    regardless of whether that test remembers to clean up itself.
+    """
+    yield
+    from app.main import app
+
+    app.dependency_overrides.clear()

@@ -12,6 +12,8 @@ from app.repositories import camps as camps_repo
 from app.repositories import organizations
 from app.repositories import registrations as registrations_repo
 
+from .auth_helpers import owner_headers as _auth_headers
+
 
 def _org_row(slug: str = "demo-fc") -> dict:
     return {
@@ -70,12 +72,6 @@ def _registration_row(**overrides) -> dict:
     }
     base.update(overrides)
     return base
-
-
-def _auth_headers() -> dict:
-    with TestClient(app) as client:
-        token = client.post("/admin/login", json={"password": "test-admin-password"}).json()["token"]
-    return {"Authorization": f"Bearer {token}"}
 
 
 def _load(content: bytes):

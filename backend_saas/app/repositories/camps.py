@@ -14,7 +14,7 @@ same organization_id-scoping principle).
 
 create_camp is the one exception: it takes a raw organization_id because it
 exists only for the platform-admin surface (app/routers/admin.py, gated by
-app/admin_auth.py), which resolves that id itself via
+app/auth_deps.py::require_org_access), which resolves that id itself via
 organizations.get_organization_by_slug — never from an untrusted client
 parameter either, just not from a TenantContext (an admin isn't "the
 tenant").

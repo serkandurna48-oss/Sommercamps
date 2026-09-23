@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
+from typing import Optional
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -43,15 +44,24 @@ class Settings(BaseSettings):
     # frontend is wired up yet (see README.md "CORS").
     cors_origins_extra: str = Field(default="", alias="CORS_ORIGINS_EXTRA")
 
-    # Platform-admin auth (see app/admin_auth.py). Own namespace, own secret
-    # — never the same value as backend/'s ADMIN_PASSWORD/JWT_SECRET, even
-    # though the variable names match; this is a different Render service
-    # protecting a different (and much more powerful — cross-tenant) admin
-    # surface, so sharing a secret with the legacy KSV service would be a
-    # real credential-scope leak, not just a naming coincidence.
-    admin_password: str = Field(alias="ADMIN_PASSWORD")
-    jwt_secret: str = Field(alias="JWT_SECRET")
-    token_expire_hours: int = Field(default=24, alias="TOKEN_EXPIRE_HOURS")
+    # Platform accounts (see app/supabase_auth.py). Replaces the previous
+    # single-password ADMIN_PASSWORD/JWT_SECRET scheme (feat/platform-
+    # foundation) — every admin request now carries a real Supabase Auth
+    # access token, verified against this project's own Supabase instance.
+    # Required at boot: every admin request needs these to verify who's
+    # calling. Get them from Supabase Dashboard → Settings → API, for the
+    # "CampsPilot SaaS" project (ref wkmckfbzhmihyfwiekct) — never KSV's or
+    # JK's Supabase project.
+    supabase_url: str = Field(alias="SUPABASE_URL")
+    supabase_anon_key: str = Field(alias="SUPABASE_ANON_KEY")
+    # Only needed for user-management actions (creating the first
+    # platform_owner, looking a user up by email to assign them as an
+    # org_admin) — NOT for verifying a request's token, so a missing value
+    # here degrades only those specific endpoints (they return a clear 503),
+    # not the whole app's ability to boot and serve already-authenticated
+    # requests. Never expose this key to the frontend — full-DB-bypass
+    # power, unlike supabase_anon_key.
+    supabase_service_role_key: Optional[str] = Field(default=None, alias="SUPABASE_SERVICE_ROLE_KEY")
 
     @field_validator("database_url")
     @classmethod

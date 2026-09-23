@@ -9,6 +9,8 @@ from app.repositories import camps as camps_repo
 from app.repositories import organizations
 from app.repositories.camps import CampSlugConflictError
 
+from .auth_helpers import owner_headers as _auth_headers
+
 VALID_PAYLOAD = {
     "slug": "summer-1",
     "title": "Summer Camp Week 1",
@@ -54,12 +56,6 @@ def _camp_row(organization_id, slug: str = "summer-1", **overrides) -> dict:
     }
     base.update(overrides)
     return base
-
-
-def _auth_headers() -> dict:
-    with TestClient(app) as client:
-        token = client.post("/admin/login", json={"password": "test-admin-password"}).json()["token"]
-    return {"Authorization": f"Bearer {token}"}
 
 
 def test_create_camp_success_defaults_to_draft(monkeypatch):

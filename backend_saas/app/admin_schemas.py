@@ -4,8 +4,8 @@ Platform-admin request/response models.
 Kept separate from app/schemas.py on purpose: that file's docstring frames
 it as "every field returned to a client" (the public allowlist) — mixing
 admin-only fields (id, plan_status, status) into it would blur that
-guarantee. Nothing here is ever reachable without app/admin_auth.py's
-require_platform_admin dependency.
+guarantee. Nothing here is ever reachable without app/auth_deps.py's
+require_platform_owner or require_org_access dependency.
 """
 
 from __future__ import annotations
@@ -40,17 +40,6 @@ def _validate_slug(value: str) -> str:
             r"^[a-z0-9]+(-[a-z0-9]+)*$"
         )
     return value
-
-
-class AdminLoginRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    password: str = Field(min_length=1)
-
-
-class AdminLoginResponse(BaseModel):
-    token: str
-    expires_in_hours: int
 
 
 class OrganizationCreate(BaseModel):
@@ -330,7 +319,7 @@ class RegistrationAdminOut(BaseModel):
     Admin view of a registration — contains real personal/medical data about
     a child and their parents (Auftrag Abschnitt 9.1, DSGVO Art. 9 für
     allergies/medical_notes). Only ever reachable behind
-    require_platform_admin. Deliberately excludes organization_id/camp_id
+    require_platform_owner/require_org_access. Deliberately excludes organization_id/camp_id
     (already implied by the URL the client called) and terms_accepted/
     privacy_accepted (write-time consent flags, not operationally useful to
     display — every stored row satisfies them by DB constraint already).
@@ -354,4 +343,77 @@ class RegistrationAdminOut(BaseModel):
     jersey_size: Optional[str] = None
     pickup_authorized: Optional[str] = None
     photo_permission: bool
+    created_at: datetime
+
+
+class GlobalRegistrationOut(RegistrationAdminOut):
+    """RegistrationAdminOut plus which organization/camp it belongs to —
+    only the CEO console's global "Anmeldungen" view needs this; the
+    per-camp admin list (RegistrationAdminOut) doesn't, since the URL
+    already scopes it to one camp."""
+
+    organization_slug: str
+    organization_name: str
+    camp_slug: str
+    camp_title: str
+
+
+class MeOut(BaseModel):
+    """Who the caller is and what they can see — the frontend uses this
+    once after login to decide whether to render the CEO console (owner)
+    or a single-organization admin view (org_admin), never by trusting
+    anything client-side beyond this."""
+
+    user_id: str
+    email: Optional[str] = None
+    is_platform_owner: bool
+    admin_organization_slugs: list[str] = Field(default_factory=list)
+
+
+class AddOrganizationMemberRequest(BaseModel):
+    """Assigns an *existing* Supabase Auth user as org_admin by email —
+    deliberately not an "invite" (no email is sent, see
+    app/supabase_auth.py::find_user_by_email's docstring). The account
+    must already exist (created via scripts/create_platform_user.py)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    email: EmailStr
+
+
+class OrganizationMemberOut(BaseModel):
+    id: UUID
+    organization_id: UUID
+    user_id: str
+    email: Optional[str] = None
+    role: str
+    created_at: datetime
+
+
+class PlatformStatsOut(BaseModel):
+    """CEO-console overview counters — every field a single, cheap
+    aggregate query (see repositories/platform_stats.py), not a
+    client-side reduction of the full registrations list (which the
+    console's global-registrations endpoint separately exposes,
+    paginated/filterable, for the cases that do need row-level detail)."""
+
+    organizations_published: int
+    organizations_draft: int
+    camps_total: int
+    registrations_total: int
+    registrations_last_30_days: int
+    payments_open_cents: int
+    payments_paid_cents: int
+    waitlist_total: int
+
+
+class AuditLogEntryOut(BaseModel):
+    id: UUID
+    actor_user_id: Optional[str] = None
+    actor_email: Optional[str] = None
+    action: str
+    organization_id: Optional[UUID] = None
+    target_type: Optional[str] = None
+    target_id: Optional[str] = None
+    metadata: Optional[dict] = None
     created_at: datetime

@@ -248,7 +248,12 @@ explizit, nicht stillschweigend als "erledigt" markiert.
 ## Branch, Commits, Pfad
 
 - Branch: `feat/platform-foundation` (Basis: `feat/saas-richtung-c-org-dashboard @ 120bf44`)
-- Commits: siehe `git log feat/platform-foundation` — Commit-Hashes werden nach dem finalen
-  Review/Commit unten ergänzt.
+- Commits:
+  - `599e746` — feat(platform): replace ADMIN_PASSWORD with Supabase Auth + platform_owner/org_admin roles (Backend)
+  - `c63f338` — feat(platform): Supabase Auth login + CEO console (Frontend)
+  - `a3f9711` — docs(platform): architecture + platform-foundation handoff
 - Dieses Dokument: `docs/PLATFORM_FOUNDATION_HANDOFF.md`
 - Architektur-Referenz: `docs/ARCHITECTURE.md`
+- Nicht gepusht — lokale Commits, lokaler Review reicht laut Auftrag, wenn kein
+  automatisches Produktionsdeployment ausgelöst würde; da unklar ist, ob dieses Repo eine
+  CI/CD-Pipeline auf Push hat, sicherheitshalber nicht gepusht. Auf Wunsch nachholbar.

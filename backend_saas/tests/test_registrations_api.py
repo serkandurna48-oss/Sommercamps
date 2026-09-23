@@ -27,6 +27,7 @@ def _org_row(slug: str, plan_status: str = "active") -> dict:
         "logo_url": None,
         "primary_color": None,
         "plan_status": plan_status,
+        "site_published": True,
     }
 
 

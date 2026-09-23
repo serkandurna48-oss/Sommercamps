@@ -24,16 +24,20 @@ import psycopg2.errors
 from .. import db
 from ..admin_schemas import OrganizationCreate, OrganizationUpdate
 
-_SELECT_BY_SLUG = """
-    select id, slug, name, legal_name, contact_email, contact_phone,
-           logo_url, primary_color, plan_status, theme, iban
+_ORGANIZATION_FIELDS = """
+    id, slug, name, legal_name, contact_email, contact_phone, contact_person_name,
+    logo_url, primary_color, plan_status, theme, iban,
+    intro_heading, intro_text, hero_image_url, billing_notes, site_published
+"""
+
+_SELECT_BY_SLUG = f"""
+    select {_ORGANIZATION_FIELDS}
     from organizations
     where slug = %s
 """
 
-_SELECT_ALL = """
-    select o.id, o.slug, o.name, o.legal_name, o.contact_email, o.contact_phone,
-           o.logo_url, o.primary_color, o.plan_status, o.theme, o.iban,
+_SELECT_ALL = f"""
+    select {', '.join(f'o.{c.strip()}' for c in _ORGANIZATION_FIELDS.strip().split(','))},
            count(c.id) as camp_count
     from organizations o
     left join camps c on c.organization_id = o.id
@@ -41,13 +45,13 @@ _SELECT_ALL = """
     order by o.name asc
 """
 
-_INSERT_ORGANIZATION = """
+_INSERT_ORGANIZATION = f"""
     insert into organizations (
-        slug, name, legal_name, contact_email, contact_phone,
-        logo_url, primary_color, plan_status, iban
-    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-    returning id, slug, name, legal_name, contact_email, contact_phone,
-              logo_url, primary_color, plan_status, theme, iban
+        slug, name, legal_name, contact_email, contact_phone, contact_person_name,
+        logo_url, primary_color, plan_status, iban,
+        intro_heading, intro_text, hero_image_url, billing_notes, site_published
+    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    returning {_ORGANIZATION_FIELDS}
 """
 
 
@@ -105,10 +109,16 @@ def create_organization(data: OrganizationCreate) -> dict:
                     data.legal_name,
                     str(data.contact_email),
                     data.contact_phone,
+                    data.contact_person_name,
                     data.logo_url,
                     data.primary_color,
                     data.plan_status,
                     data.iban,
+                    data.intro_heading,
+                    data.intro_text,
+                    data.hero_image_url,
+                    data.billing_notes,
+                    data.site_published,
                 ),
             )
         except psycopg2.errors.UniqueViolation as exc:
@@ -142,8 +152,7 @@ def update_organization(slug: str, data: OrganizationUpdate) -> Optional[dict]:
         update organizations
         set {set_clause}
         where slug = %s
-        returning id, slug, name, legal_name, contact_email, contact_phone,
-                  logo_url, primary_color, plan_status, theme, iban
+        returning {_ORGANIZATION_FIELDS}
     """
     with db.get_cursor() as cur:
         cur.execute(query, (*fields.values(), slug))

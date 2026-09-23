@@ -82,6 +82,21 @@ def list_organizations() -> list[OrganizationAdminListItem]:
     return [OrganizationAdminListItem.model_validate(row) for row in rows]
 
 
+@router.get(
+    "/organizations/{organization_slug}",
+    response_model=OrganizationAdminOut,
+    dependencies=[Depends(require_platform_admin)],
+)
+def get_organization(organization_slug: str) -> OrganizationAdminOut:
+    """Single-organization admin detail — powers the platform console's
+    Vereinsdetailseite (setup-progress checklist) and the operator preview
+    of an unpublished (draft) organization's public page, which the public
+    GET /api/v1/organizations/{slug} endpoint would 404 on by design (see
+    tenancy.py's site_published check)."""
+    organization = require_organization(organization_slug)
+    return OrganizationAdminOut.model_validate(organization)
+
+
 @router.post(
     "/organizations",
     response_model=OrganizationAdminOut,
@@ -117,6 +132,16 @@ def update_organization(organization_slug: str, data: OrganizationUpdate) -> Org
     if row is None:
         raise HTTPException(status_code=404, detail="Organization not found")
 
+    # Betreiberaktion mit eigenem Log-Ereignis, nicht nur im generischen
+    # "updated" verloren — Veröffentlichen/Zurückziehen ist die einzige
+    # Aktion in diesem Endpunkt, die die öffentliche Sichtbarkeit eines
+    # ganzen Vereins umschaltet.
+    if data.model_fields_set and "site_published" in data.model_fields_set:
+        logger.info(
+            "Organization publish state changed (slug=%s, site_published=%s)",
+            organization_slug,
+            row["site_published"],
+        )
     logger.info("Organization updated (slug=%s)", organization_slug)
     return OrganizationAdminOut.model_validate(row)
 

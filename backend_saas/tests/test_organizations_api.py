@@ -20,6 +20,7 @@ def _org_row(slug: str, plan_status: str, **overrides) -> dict:
         "logo_url": None,
         "primary_color": None,
         "plan_status": plan_status,
+        "site_published": True,
     }
     base.update(overrides)
     return base
@@ -60,6 +61,24 @@ def test_get_organization_inactive_plan_returns_404(monkeypatch, plan_status):
 
     assert response.status_code == 404
     # Same body shape as a genuinely unknown org — no hint of the real reason.
+    assert response.json() == {"detail": "Organization not found"}
+
+
+def test_get_organization_unpublished_returns_404(monkeypatch):
+    """An operator-side draft (site_published=false, plan_status otherwise
+    fine) must 404 exactly like an unknown or inactive org — Betreiber-
+    Builder requirement: 'Unvollständige Entwürfe vor öffentlichem Zugriff
+    schützen'."""
+    monkeypatch.setattr(
+        organizations,
+        "get_organization_by_slug",
+        lambda slug: _org_row(slug, "pilot", site_published=False),
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/api/v1/organizations/demo-fc")
+
+    assert response.status_code == 404
     assert response.json() == {"detail": "Organization not found"}
 
 

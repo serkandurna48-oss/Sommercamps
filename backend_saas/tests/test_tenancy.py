@@ -11,6 +11,7 @@ from app.tenancy import (
     TenantContext,
     TenantInactiveError,
     TenantNotFoundError,
+    TenantUnpublishedError,
     resolve_tenant,
 )
 
@@ -20,7 +21,13 @@ def test_resolve_tenant_returns_context_for_active_org(monkeypatch):
     monkeypatch.setattr(
         organizations,
         "get_organization_by_slug",
-        lambda slug: {"id": org_id, "slug": slug, "name": "Demo FC", "plan_status": "pilot"},
+        lambda slug: {
+            "id": org_id,
+            "slug": slug,
+            "name": "Demo FC",
+            "plan_status": "pilot",
+            "site_published": True,
+        },
     )
 
     ctx = resolve_tenant("demo-fc")
@@ -28,6 +35,23 @@ def test_resolve_tenant_returns_context_for_active_org(monkeypatch):
     assert ctx == TenantContext(
         organization_id=org_id, slug="demo-fc", name="Demo FC", plan_status="pilot"
     )
+
+
+def test_resolve_tenant_raises_for_unpublished_org(monkeypatch):
+    monkeypatch.setattr(
+        organizations,
+        "get_organization_by_slug",
+        lambda slug: {
+            "id": uuid4(),
+            "slug": slug,
+            "name": "Draft FC",
+            "plan_status": "pilot",
+            "site_published": False,
+        },
+    )
+
+    with pytest.raises(TenantUnpublishedError):
+        resolve_tenant("draft-fc")
 
 
 def test_resolve_tenant_raises_for_unknown_slug(monkeypatch):
@@ -54,7 +78,13 @@ def test_resolve_tenant_accepts_both_active_plan_statuses(monkeypatch, plan_stat
     monkeypatch.setattr(
         organizations,
         "get_organization_by_slug",
-        lambda slug: {"id": uuid4(), "slug": slug, "name": "X", "plan_status": plan_status},
+        lambda slug: {
+            "id": uuid4(),
+            "slug": slug,
+            "name": "X",
+            "plan_status": plan_status,
+            "site_published": True,
+        },
     )
 
     ctx = resolve_tenant("some-org")

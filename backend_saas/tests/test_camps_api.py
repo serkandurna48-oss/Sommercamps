@@ -10,7 +10,7 @@ from app.repositories import camps, organizations
 from app.tenancy import TenantContext
 
 
-def _org_row(slug: str, plan_status: str = "active") -> dict:
+def _org_row(slug: str, plan_status: str = "active", site_published: bool = True) -> dict:
     return {
         "id": uuid4(),
         "slug": slug,
@@ -21,6 +21,7 @@ def _org_row(slug: str, plan_status: str = "active") -> dict:
         "logo_url": None,
         "primary_color": None,
         "plan_status": plan_status,
+        "site_published": site_published,
     }
 
 

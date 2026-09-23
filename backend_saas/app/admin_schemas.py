@@ -61,6 +61,7 @@ class OrganizationCreate(BaseModel):
     legal_name: Optional[str] = None
     contact_email: EmailStr
     contact_phone: Optional[str] = None
+    contact_person_name: Optional[str] = None
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
     plan_status: PlanStatus = "pilot"
@@ -68,6 +69,21 @@ class OrganizationCreate(BaseModel):
     # als `theme`, das ausdrücklich keinen Admin-Editor bekommt), damit das
     # Onboarding-Skript sie ohne rohes SQL setzen kann.
     iban: Optional[str] = None
+    intro_heading: Optional[str] = None
+    intro_text: Optional[str] = None
+    hero_image_url: Optional[str] = None
+    billing_notes: Optional[str] = None
+    # Default false, für JEDEN Aufrufer dieses Endpunkts (auch bestehende
+    # Skripte wie onboard_tenant.py/scripts/seed_demo.py, die dieses Feld
+    # nicht mitschicken) — "sicher, bis ausdrücklich veröffentlicht" ist der
+    # richtige Default unabhängig vom Erstellungsweg, nicht nur im neuen
+    # Betreiber-Builder. Ein neu angelegter Verein muss immer erst explizit
+    # veröffentlicht werden (PATCH .../organizations/{slug} mit
+    # site_published=true), bevor Eltern ihn sehen. Die DB-Spalte selbst hat
+    # DEFAULT true (siehe Migration) — das schützt nur bereits bestehende
+    # Altbestand-Zeilen vor dieser Änderung, nicht neue Inserts über diese
+    # API, die immer explizit false mitschicken.
+    site_published: bool = False
 
     @field_validator("slug")
     @classmethod
@@ -101,10 +117,20 @@ class OrganizationUpdate(BaseModel):
     legal_name: Optional[str] = None
     contact_email: Optional[EmailStr] = None
     contact_phone: Optional[str] = None
+    contact_person_name: Optional[str] = None
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
     plan_status: Optional[PlanStatus] = None
     iban: Optional[str] = None
+    intro_heading: Optional[str] = None
+    intro_text: Optional[str] = None
+    hero_image_url: Optional[str] = None
+    billing_notes: Optional[str] = None
+    # Der "Veröffentlichen"/"Zurückziehen"-Schalter läuft über denselben
+    # PATCH wie jedes andere Feld — kein eigener /publish-Endpunkt nötig,
+    # exclude_unset (siehe update_organization) unterscheidet ohnehin schon
+    # zwischen "nicht mitgeschickt" und "bewusst gesetzt".
+    site_published: Optional[bool] = None
 
     @field_validator("primary_color")
     @classmethod
@@ -248,6 +274,7 @@ class OrganizationAdminOut(BaseModel):
     legal_name: Optional[str] = None
     contact_email: str
     contact_phone: Optional[str] = None
+    contact_person_name: Optional[str] = None
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
     plan_status: str
@@ -258,6 +285,11 @@ class OrganizationAdminOut(BaseModel):
     # nicht künstlich brechen.
     theme: str = "tradition"
     iban: Optional[str] = None
+    intro_heading: Optional[str] = None
+    intro_text: Optional[str] = None
+    hero_image_url: Optional[str] = None
+    billing_notes: Optional[str] = None
+    site_published: bool = False
 
 
 class OrganizationAdminListItem(OrganizationAdminOut):

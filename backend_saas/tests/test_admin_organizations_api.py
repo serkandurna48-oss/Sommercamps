@@ -134,3 +134,69 @@ def test_list_organizations_without_auth_returns_401():
         response = client.get("/admin/organizations")
 
     assert response.status_code == 401
+
+
+def test_get_single_organization_returns_draft_even_when_unpublished(monkeypatch):
+    """The admin single-org GET must work regardless of site_published —
+    it's what powers the platform console's operator preview of a draft
+    organization, which the public GET would 404 on by design."""
+    monkeypatch.setattr(
+        organizations,
+        "get_organization_by_slug",
+        lambda slug: _org_row(slug, site_published=False),
+    )
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.get("/admin/organizations/demo-fc", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["site_published"] is False
+
+
+def test_unpublished_organization_reachable_for_admin_but_hidden_publicly(monkeypatch):
+    """Regression guard for the exact bug found during the Richtung-C
+    onboarding walkthrough (2026-09-23): the frontend's org-admin loader
+    (orgAdminData.ts) called the *public* organization endpoint instead of
+    the admin one, so any freshly-created draft organization could never
+    open its own dashboard/Teilnehmer/Zahlungen/etc. — login redirected
+    straight back to login. The backend contract itself was always correct
+    (see test_organizations_api.test_get_organization_unpublished_returns_404
+    and test_get_single_organization_returns_draft_even_when_unpublished
+    above, which cover each side individually); this test pins both halves
+    of the contract together against the *same* org state, in one place, so
+    a future change can't satisfy one side while silently breaking the
+    other."""
+    monkeypatch.setattr(
+        organizations,
+        "get_organization_by_slug",
+        lambda slug: _org_row(slug, site_published=False),
+    )
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        admin_response = client.get("/admin/organizations/demo-fc", headers=headers)
+        public_response = client.get("/api/v1/organizations/demo-fc")
+
+    assert admin_response.status_code == 200
+    assert admin_response.json()["site_published"] is False
+
+    assert public_response.status_code == 404
+    assert public_response.json() == {"detail": "Organization not found"}
+
+
+def test_get_single_organization_unknown_slug_returns_404(monkeypatch):
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: None)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.get("/admin/organizations/does-not-exist", headers=headers)
+
+    assert response.status_code == 404
+
+
+def test_get_single_organization_without_auth_returns_401():
+    with TestClient(app) as client:
+        response = client.get("/admin/organizations/demo-fc")
+
+    assert response.status_code == 401

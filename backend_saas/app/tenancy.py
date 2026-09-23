@@ -36,6 +36,19 @@ class TenantInactiveError(TenantResolutionError):
         super().__init__(f"Organization '{slug}' is not active (plan_status={plan_status})")
 
 
+class TenantUnpublishedError(TenantResolutionError):
+    """Organization exists, plan_status is fine, but site_published is
+    false — it's an operator-side draft (Betreiber-Builder, see
+    admin_schemas.OrganizationCreate.site_published) not yet deliberately
+    published. Distinct from TenantInactiveError purely for clearer
+    server-side logging; app/deps.py maps both to the identical public 404,
+    same reasoning as the plan_status case below."""
+
+    def __init__(self, slug: str):
+        self.slug = slug
+        super().__init__(f"Organization '{slug}' is not published yet")
+
+
 # Mirrors organizations.plan_status's CHECK constraint (see
 # supabase/migrations/20260917133748_create_saas_schema_v1.sql): pilot and
 # active are usable tenants; suspended and cancelled are not. This is a
@@ -61,16 +74,25 @@ def resolve_tenant(slug: str) -> TenantContext:
     """
     Resolves a URL slug to a TenantContext.
 
-    Raises TenantNotFoundError if no organization matches the slug, and
+    Raises TenantNotFoundError if no organization matches the slug,
     TenantInactiveError if the organization exists but its plan_status is
-    not in _ACTIVE_PLAN_STATUSES (e.g. suspended/cancelled) — an inactive
-    tenant is deliberately not treated the same as an active one.
+    not in _ACTIVE_PLAN_STATUSES (e.g. suspended/cancelled), and
+    TenantUnpublishedError if site_published is false (an operator-side
+    draft, see admin_schemas.OrganizationCreate.site_published) — none of
+    these three is treated the same as a genuinely active, published
+    tenant. This function is only ever reached from the *public* surface
+    (app/deps.py::get_tenant_context); the admin surface resolves
+    organizations directly via organizations_repo (see admin_resolve.py)
+    specifically so an operator can still open/preview/publish a draft or
+    suspended organization, which this function would otherwise 404 on.
     """
     org = organizations.get_organization_by_slug(slug)
     if org is None:
         raise TenantNotFoundError(slug)
     if org["plan_status"] not in _ACTIVE_PLAN_STATUSES:
         raise TenantInactiveError(slug, org["plan_status"])
+    if not org["site_published"]:
+        raise TenantUnpublishedError(slug)
     return TenantContext(
         organization_id=org["id"],
         slug=org["slug"],

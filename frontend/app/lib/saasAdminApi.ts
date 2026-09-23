@@ -51,11 +51,17 @@ export interface OrganizationAdmin {
   legal_name: string | null
   contact_email: string
   contact_phone: string | null
+  contact_person_name: string | null
   logo_url: string | null
   primary_color: string | null
   plan_status: string
   theme: string
   iban: string | null
+  intro_heading: string | null
+  intro_text: string | null
+  hero_image_url: string | null
+  billing_notes: string | null
+  site_published: boolean
   camp_count?: number
 }
 
@@ -140,6 +146,17 @@ export async function fetchCampsAdmin(orgSlug: string, token: string): Promise<C
   return res.json() as Promise<CampAdmin[]>
 }
 
+/** Einzelne Organisation, admin-authentifiziert — anders als die öffentliche
+ * fetchOrganization (app/lib/saasApi.ts) funktioniert das auch für einen
+ * Entwurf (site_published=false). Betreiber-Konsole: Vereinsdetailseite +
+ * Vorschau eines unveröffentlichten Vereins. */
+export async function fetchOrganizationAdmin(orgSlug: string, token: string): Promise<OrganizationAdmin | null> {
+  const res = await adminFetch(`/admin/organizations/${orgSlug}`, token)
+  if (res.status === 404) return null
+  if (!res.ok) throw new AdminActionError('Verein konnte nicht geladen werden')
+  return res.json() as Promise<OrganizationAdmin>
+}
+
 export async function fetchRegistrationsAdmin(
   orgSlug: string,
   campSlug: string,
@@ -159,9 +176,17 @@ export interface OrganizationConfigUpdate {
   legal_name?: string | null
   contact_email?: string
   contact_phone?: string | null
+  contact_person_name?: string | null
   logo_url?: string | null
   primary_color?: string | null
   iban?: string | null
+  intro_heading?: string | null
+  intro_text?: string | null
+  hero_image_url?: string | null
+  billing_notes?: string | null
+  /** Der "Veröffentlichen"/"Zurückziehen"-Schalter — siehe
+   * backend_saas admin_schemas.OrganizationUpdate.site_published. */
+  site_published?: boolean
 }
 
 /** Alle Felder optional — nur mitgeschickte Felder werden geändert
@@ -220,8 +245,14 @@ export interface OrganizationCreateInput {
   legal_name?: string | null
   contact_email: string
   contact_phone?: string | null
+  contact_person_name?: string | null
   primary_color?: string | null
   iban?: string | null
+  /** Backend-Default ist bereits false (siehe admin_schemas.
+   * OrganizationCreate.site_published) — hier trotzdem explizit, damit
+   * jeder Aufrufer im Frontend bewusst entscheidet statt sich auf einen
+   * unsichtbaren Server-Default zu verlassen. */
+  site_published?: boolean
 }
 
 export async function createOrganizationAdmin(token: string, data: OrganizationCreateInput): Promise<OrganizationAdmin> {

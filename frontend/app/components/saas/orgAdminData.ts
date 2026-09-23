@@ -3,11 +3,12 @@ import { getAdminToken } from '../../lib/adminSession'
 import {
   AdminAuthError,
   fetchCampsAdmin,
+  fetchOrganizationAdmin,
   fetchRegistrationsAdmin,
   type CampAdmin,
+  type OrganizationAdmin,
   type RegistrationAdmin,
 } from '../../lib/saasAdminApi'
-import { fetchOrganization, type OrganizationPublic } from '../../lib/saasApi'
 
 /**
  * Gemeinsame Lade-Sequenz für alle Org-Admin-Seiten: Token prüfen ->
@@ -20,7 +21,7 @@ import { fetchOrganization, type OrganizationPublic } from '../../lib/saasApi'
  */
 export interface OrgAdminData {
   token: string
-  org: OrganizationPublic
+  org: OrganizationAdmin
   camps: CampAdmin[]
   registrationsByCamp: RegistrationAdmin[][]
 }
@@ -29,7 +30,12 @@ export async function loadOrgAdminData(orgSlug: string): Promise<OrgAdminData> {
   const token = await getAdminToken()
   if (!token) redirect(`/pilot/${orgSlug}/login`)
 
-  const org = await fetchOrganization(orgSlug)
+  // Admin-Sicht (fetchOrganizationAdmin), nicht die öffentliche
+  // fetchOrganization: ein Entwurf (site_published=false) ist für die
+  // öffentliche API seit dem Betreiber-Builder unsichtbar (tenancy.py) —
+  // ein eingeloggter Admin muss die eigene Verwaltung trotzdem öffnen
+  // können, siehe dieselbe Begründung in (org-admin)/layout.tsx.
+  const org = await fetchOrganizationAdmin(orgSlug, token)
   if (!org) redirect(`/pilot/${orgSlug}/login`)
 
   let camps: CampAdmin[]
@@ -49,7 +55,7 @@ export async function loadOrgAdminData(orgSlug: string): Promise<OrgAdminData> {
 
 export interface CampAdminData {
   token: string
-  org: OrganizationPublic
+  org: OrganizationAdmin
   camp: CampAdmin
   registrations: RegistrationAdmin[]
 }
@@ -60,7 +66,7 @@ export async function loadCampAdminData(orgSlug: string, campSlug: string): Prom
   const token = await getAdminToken()
   if (!token) redirect(`/pilot/${orgSlug}/login`)
 
-  const org = await fetchOrganization(orgSlug)
+  const org = await fetchOrganizationAdmin(orgSlug, token)
   if (!org) redirect(`/pilot/${orgSlug}/login`)
 
   let camps: CampAdmin[]

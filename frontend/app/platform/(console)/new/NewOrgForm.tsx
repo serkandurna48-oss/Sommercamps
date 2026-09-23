@@ -52,6 +52,9 @@ export default function NewOrgForm() {
         <Field label="Vereinsname" htmlFor="org_name">
           <input id="org_name" name="org_name" required className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
+        <Field label="Ansprechpartner (optional)" htmlFor="contact_person_name">
+          <input id="contact_person_name" name="contact_person_name" className={INPUT_CLASS} style={INPUT_STYLE} />
+        </Field>
         <Field label="Kontakt-E-Mail" htmlFor="contact_email">
           <input id="contact_email" name="contact_email" type="email" required className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>

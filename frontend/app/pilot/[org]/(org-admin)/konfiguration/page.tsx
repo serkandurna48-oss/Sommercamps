@@ -1,23 +1,25 @@
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { computeBrandTokens } from '../../../../components/saas/brandPipeline'
 import OrganizationConfigForm from '../../../../components/saas/config/OrganizationConfigForm'
 import MatchdayBand from '../../../../components/saas/shell/MatchdayBand'
 import { orgTabs } from '../../../../components/saas/navTabs'
 import { de } from '../../../../lib/i18n/de'
 import { getAdminToken } from '../../../../lib/adminSession'
-import { fetchOrganization } from '../../../../lib/saasApi'
+import { fetchOrganizationAdmin } from '../../../../lib/saasAdminApi'
 
 /** Lädt bewusst NICHT über loadOrgAdminData — diese Seite braucht keine
- * Camps/Registrierungen, nur die Organisation selbst (fetchOrganization
- * liefert bereits alle bearbeitbaren Felder, da OrganizationPublic keine
- * schützenswerten Daten ausschließt außer plan_status/theme). */
+ * Camps/Registrierungen, nur die Organisation selbst. Nutzt seit dem
+ * Betreiber-Builder die ADMIN-Sicht (fetchOrganizationAdmin), nicht mehr
+ * die öffentliche fetchOrganization: die Website-Inhalte, der Ansprech-
+ * partner, die Abrechnungs-Notizen und der Veröffentlichen-Schalter sind
+ * bewusst nicht Teil der öffentlichen OrganizationPublic. */
 export default async function OrgConfigPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params
   const token = await getAdminToken()
   if (!token) redirect(`/pilot/${orgSlug}/login`)
 
-  const org = await fetchOrganization(orgSlug)
-  if (!org) redirect(`/pilot/${orgSlug}/login`)
+  const org = await fetchOrganizationAdmin(orgSlug, token)
+  if (!org) notFound()
 
   const brand = computeBrandTokens(org.primary_color)
 

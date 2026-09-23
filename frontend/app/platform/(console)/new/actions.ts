@@ -46,7 +46,12 @@ export async function createOrganizationWithCampAction(
     name: orgName,
     contact_email: contactEmail,
     contact_phone: optionalStr(formData, 'contact_phone'),
+    contact_person_name: optionalStr(formData, 'contact_person_name'),
     primary_color: optionalStr(formData, 'primary_color'),
+    // site_published bewusst NICHT gesetzt — Backend-Default ist false
+    // (admin_schemas.OrganizationCreate.site_published), der Verein bleibt
+    // Entwurf, bis über den Veröffentlichen-Schalter (Vereinsdetailseite)
+    // bewusst veröffentlicht wird.
   }
 
   try {
@@ -110,5 +115,9 @@ export async function createOrganizationWithCampAction(
     }
   }
 
-  redirect(`/pilot/${orgSlug}/dashboard`)
+  // Nicht direkt in die Vereinsverwaltung — der Verein ist noch ein
+  // Entwurf (site_published=false), die Betreiber-Vereinsdetailseite
+  // zeigt den Einrichtungsfortschritt (Marke/Website-Inhalte fehlen meist
+  // noch) und den Veröffentlichen-Schalter als nächsten Schritt.
+  redirect(`/platform/${orgSlug}`)
 }

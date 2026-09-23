@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { computeBrandTokens } from '../../../../components/saas/brandPipeline'
 import { buildTasks, computeCampStats, pickNextCamp } from '../../../../components/saas/dashboardLogic'
 import { loadOrgAdminData } from '../../../../components/saas/orgAdminData'
@@ -77,7 +78,16 @@ export default async function OrgDashboardPage({ params }: { params: Promise<{ o
         </section>
 
         <section>
-          <h2 className="cp-title mb-4">{de.dashboard.allCamps}</h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="cp-title">{de.dashboard.allCamps}</h2>
+            <Link
+              href={`/pilot/${orgSlug}/camps/new`}
+              className="cp-chip rounded-[var(--cp-r-chip)] border px-3 py-2"
+              style={{ borderColor: 'var(--cp-field-line)', color: 'var(--cp-ink)' }}
+            >
+              + Camp anlegen
+            </Link>
+          </div>
           {campsWithStats.length === 0 ? (
             <EmptyState title={de.dashboard.noCamps} />
           ) : (

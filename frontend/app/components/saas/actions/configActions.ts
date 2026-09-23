@@ -1,9 +1,10 @@
 'use server'
 
+import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getAdminToken } from '../../../lib/adminSession'
 import { CAMP_STATUSES } from '../../../lib/i18n/de'
-import { updateCampAdmin, updateOrganizationAdmin } from '../../../lib/saasAdminApi'
+import { createCampAdmin, SlugConflictError, updateCampAdmin, updateOrganizationAdmin } from '../../../lib/saasAdminApi'
 
 export interface ConfigActionState {
   error: string | null
@@ -57,16 +58,52 @@ export async function updateOrganizationConfigAction(
       contact_email: contactEmail,
       legal_name: optionalStr(formData, 'legal_name'),
       contact_phone: optionalStr(formData, 'contact_phone'),
+      contact_person_name: optionalStr(formData, 'contact_person_name'),
       logo_url: optionalStr(formData, 'logo_url'),
       primary_color: optionalStr(formData, 'primary_color'),
       iban: optionalStr(formData, 'iban'),
+      intro_heading: optionalStr(formData, 'intro_heading'),
+      intro_text: optionalStr(formData, 'intro_text'),
+      hero_image_url: optionalStr(formData, 'hero_image_url'),
+      billing_notes: optionalStr(formData, 'billing_notes'),
     })
   } catch {
     return { error: 'Konnte nicht gespeichert werden — Angaben prüfen und erneut versuchen.', saved: false }
   }
 
   revalidatePath(`/pilot/${orgSlug}`, 'layout')
+  revalidatePath(`/platform/${orgSlug}`)
   return { error: null, saved: true }
+}
+
+export interface PublishActionState {
+  error: string | null
+}
+
+/** Eigene, kleine Aktion statt Wiederverwendung von
+ * updateOrganizationConfigAction — Veröffentlichen/Zurückziehen ist ein
+ * bewusster Ein-Klick-Schalter (siehe Auftrag "bewusste Veröffentlichung"),
+ * kein Nebeneffekt eines vollen Formular-Speicherns mit allen anderen
+ * Stammdaten-Feldern im selben Request. */
+export async function setOrganizationPublishedAction(
+  orgSlug: string,
+  published: boolean,
+  _prev: PublishActionState,
+  _formData: FormData,
+): Promise<PublishActionState> {
+  const token = await getAdminToken()
+  if (!token) return { error: 'Sitzung abgelaufen — bitte neu anmelden.' }
+
+  try {
+    await updateOrganizationAdmin(orgSlug, token, { site_published: published })
+  } catch {
+    return { error: 'Konnte nicht gespeichert werden — erneut versuchen.' }
+  }
+
+  revalidatePath(`/pilot/${orgSlug}`, 'layout')
+  revalidatePath(`/platform/${orgSlug}`)
+  revalidatePath('/platform')
+  return { error: null }
 }
 
 const CAMP_STATUS_SET: ReadonlySet<string> = new Set(CAMP_STATUSES)
@@ -135,4 +172,67 @@ export async function updateCampConfigAction(
 
   revalidatePath(`/pilot/${orgSlug}`, 'layout')
   return { error: null, saved: true }
+}
+
+export interface CampCreateActionState {
+  error: string | null
+}
+
+/** Anders als updateCampConfigAction: braucht `slug` (Pflichtfeld bei
+ * POST, bei PATCH bewusst kein Feld — siehe CampConfigUpdate) und leitet
+ * bei Erfolg direkt in die frische Camp-Konfiguration weiter, statt nur
+ * ein saved:true zurückzugeben — es gibt noch keine Seite, auf der man
+ * "geblieben" sein könnte. */
+export async function createCampAction(
+  orgSlug: string,
+  _prev: CampCreateActionState,
+  formData: FormData,
+): Promise<CampCreateActionState> {
+  const token = await getAdminToken()
+  if (!token) return { error: 'Sitzung abgelaufen — bitte neu anmelden.' }
+
+  const slug = str(formData, 'slug')
+  const title = str(formData, 'title')
+  const startDate = str(formData, 'start_date')
+  const endDate = str(formData, 'end_date')
+  const ageMinRaw = str(formData, 'age_min')
+  const ageMaxRaw = str(formData, 'age_max')
+  const capacityRaw = str(formData, 'capacity')
+  const priceEurosRaw = str(formData, 'price_euros')
+
+  if (!slug || !title || !startDate || !endDate || !ageMinRaw || !ageMaxRaw || !capacityRaw || !priceEurosRaw) {
+    return { error: 'Bitte alle Pflichtfelder ausfüllen.' }
+  }
+
+  const ageMin = Number(ageMinRaw)
+  const ageMax = Number(ageMaxRaw)
+  const capacity = Number(capacityRaw)
+  const priceEuros = Number(priceEurosRaw.replace(',', '.'))
+  if (![ageMin, ageMax, capacity, priceEuros].every(Number.isFinite)) {
+    return { error: 'Zahlenfelder bitte ohne Sonderzeichen eingeben.' }
+  }
+
+  const publishNow = formData.get('publish_now') === 'on'
+
+  try {
+    await createCampAdmin(orgSlug, token, {
+      slug,
+      title,
+      start_date: startDate,
+      end_date: endDate,
+      age_min: ageMin,
+      age_max: ageMax,
+      capacity,
+      price_cents: Math.round(priceEuros * 100),
+      status: publishNow ? 'published' : 'draft',
+    })
+  } catch (err) {
+    if (err instanceof SlugConflictError) {
+      return { error: `Der Slug „${slug}" ist bereits vergeben — einen anderen wählen.` }
+    }
+    return { error: 'Camp konnte nicht angelegt werden — Angaben prüfen und erneut versuchen.' }
+  }
+
+  revalidatePath(`/pilot/${orgSlug}`, 'layout')
+  redirect(`/pilot/${orgSlug}/camps/${slug}/konfiguration`)
 }

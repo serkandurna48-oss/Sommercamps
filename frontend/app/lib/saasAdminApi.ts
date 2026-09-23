@@ -39,6 +39,26 @@ export interface CampAdmin {
   status: 'draft' | 'published' | 'closed' | 'archived'
 }
 
+/** Admin-Sicht einer Organisation, wie sie GET /admin/organizations und
+ * POST /admin/organizations liefern — enthält `id`/`plan_status`, die
+ * OrganizationPublic (Eltern-Ansicht) bewusst nie zeigt. `camp_count` nur
+ * in der Listen-Antwort gesetzt (0 als sicherer Default für Create/Update-
+ * Antworten, die es nicht mitliefern). */
+export interface OrganizationAdmin {
+  id: string
+  slug: string
+  name: string
+  legal_name: string | null
+  contact_email: string
+  contact_phone: string | null
+  logo_url: string | null
+  primary_color: string | null
+  plan_status: string
+  theme: string
+  iban: string | null
+  camp_count?: number
+}
+
 export interface RegistrationAdmin {
   id: string
   registration_token: string
@@ -65,6 +85,17 @@ export class AdminActionError extends Error {
   constructor(message = 'Aktion konnte nicht ausgeführt werden') {
     super(message)
     this.name = 'AdminActionError'
+  }
+}
+
+/** Eigene Fehlerklasse statt AdminActionError für 409 (Slug bereits
+ * vergeben) — der aufrufenden Server Action erlaubt das, im Formular eine
+ * spezifische statt einer generischen Fehlermeldung zu zeigen (siehe
+ * platform/new/actions.ts). */
+export class SlugConflictError extends Error {
+  constructor(public readonly slug: string) {
+    super(`Slug '${slug}' ist bereits vergeben`)
+    this.name = 'SlugConflictError'
   }
 }
 
@@ -171,6 +202,52 @@ async function mutateOrThrow(path: string, token: string, method: 'POST' | 'PATC
   const res = await adminMutate(path, token, method, body)
   if (!res.ok) throw new AdminActionError()
   return res
+}
+
+/** Plattform-Konsole (/platform) — jede Organisation, für den Betreiber
+ * selbst, nie für einen Vereins-Admin. Siehe backend_saas
+ * organizations_repo.list_organizations's Docstring für die
+ * Sicherheitsbegründung (nur hinter require_platform_admin, nie öffentlich). */
+export async function fetchOrganizationsAdmin(token: string): Promise<OrganizationAdmin[]> {
+  const res = await adminFetch('/admin/organizations', token)
+  if (!res.ok) throw new AdminActionError('Vereine konnten nicht geladen werden')
+  return res.json() as Promise<OrganizationAdmin[]>
+}
+
+export interface OrganizationCreateInput {
+  slug: string
+  name: string
+  legal_name?: string | null
+  contact_email: string
+  contact_phone?: string | null
+  primary_color?: string | null
+  iban?: string | null
+}
+
+export async function createOrganizationAdmin(token: string, data: OrganizationCreateInput): Promise<OrganizationAdmin> {
+  const res = await adminMutate('/admin/organizations', token, 'POST', data)
+  if (res.status === 409) throw new SlugConflictError(data.slug)
+  if (!res.ok) throw new AdminActionError('Verein konnte nicht angelegt werden')
+  return res.json() as Promise<OrganizationAdmin>
+}
+
+export interface CampCreateInput {
+  slug: string
+  title: string
+  start_date: string
+  end_date: string
+  age_min: number
+  age_max: number
+  capacity: number
+  price_cents: number
+  status?: 'draft' | 'published'
+}
+
+export async function createCampAdmin(orgSlug: string, token: string, data: CampCreateInput): Promise<CampAdmin> {
+  const res = await adminMutate(`/admin/organizations/${orgSlug}/camps`, token, 'POST', data)
+  if (res.status === 409) throw new SlugConflictError(data.slug)
+  if (!res.ok) throw new AdminActionError('Camp konnte nicht angelegt werden')
+  return res.json() as Promise<CampAdmin>
 }
 
 export async function updateOrganizationAdmin(

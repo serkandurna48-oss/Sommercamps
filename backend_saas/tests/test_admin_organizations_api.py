@@ -112,3 +112,25 @@ def test_patch_unknown_organization_returns_404(monkeypatch):
         )
 
     assert response.status_code == 404
+
+
+def test_list_organizations_returns_camp_count(monkeypatch):
+    rows = [_org_row("club-a", camp_count=3), _org_row("club-b", camp_count=0)]
+    monkeypatch.setattr(organizations, "list_organizations", lambda: rows)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.get("/admin/organizations", headers=headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [o["slug"] for o in body] == ["club-a", "club-b"]
+    assert body[0]["camp_count"] == 3
+    assert body[1]["camp_count"] == 0
+
+
+def test_list_organizations_without_auth_returns_401():
+    with TestClient(app) as client:
+        response = client.get("/admin/organizations")
+
+    assert response.status_code == 401

@@ -260,6 +260,15 @@ class OrganizationAdminOut(BaseModel):
     iban: Optional[str] = None
 
 
+class OrganizationAdminListItem(OrganizationAdminOut):
+    """OrganizationAdminOut plus `camp_count` — only the platform console's
+    tenant-list view needs the count; the create/update responses (plain
+    OrganizationAdminOut) don't compute it, so they stay a separate model
+    instead of a shared-but-sometimes-0 field."""
+
+    camp_count: int = 0
+
+
 class CampAdminOut(BaseModel):
     """Admin view of a camp — unlike CampPublic, includes id, organization_id,
     and status (draft camps are real rows to an admin, not 404s)."""

@@ -2,14 +2,16 @@
 
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { ADMIN_TOKEN_COOKIE } from '../../../lib/adminSession'
-import { adminLogin } from '../../../lib/saasAdminApi'
+import { ADMIN_TOKEN_COOKIE } from '../../lib/adminSession'
+import { adminLogin } from '../../lib/saasAdminApi'
 
 export interface LoginState {
   error: string | null
 }
 
-export async function loginAction(orgSlug: string, _prev: LoginState, formData: FormData): Promise<LoginState> {
+/** Dieselbe Admin-Identität wie pilot/[org]/login/actions.ts — ein Login
+ * reicht für beide Bereiche (Cookie-Pfad "/", siehe lib/adminSession.ts). */
+export async function platformLoginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const password = String(formData.get('password') ?? '')
   if (!password) {
     return { error: 'Bitte Passwort eingeben.' }
@@ -31,5 +33,5 @@ export async function loginAction(orgSlug: string, _prev: LoginState, formData: 
     maxAge: session.expiresInHours * 3600,
   })
 
-  redirect(`/pilot/${orgSlug}/dashboard`)
+  redirect('/platform')
 }

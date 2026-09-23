@@ -8,15 +8,52 @@
 
 ## 1. Ergebnis
 
-**Teilweise testbereit.** Der komplette Ablauf Verein → Camp → Eltern-
-Anmeldung → Admin-Verwaltung (Zahlung, Warteliste, Storno, Export) läuft
-Ende-zu-Ende gegen echte Daten und wurde im Browser + per API verifiziert.
-Ein echter Bug wurde gefunden und behoben (siehe unten). Zwei Punkte
-bleiben offen: mobile Viewport-Verifikation war durch ein Tool-Problem
-blockiert (nicht durch die App), und es gab kein produktives Kunden-
-Onboarding (war auch nicht Auftrag).
+**Teilweise testbereit.** Zwei Ausbaustufen in diesem Dokument:
 
-## 2. Was in diesem Sprint tatsächlich geprüft und geändert wurde
+- **Nachtrag (aktuell):** Die eigentlich fehlende Plattform-Konsole
+  (`/platform`) — eine Seite für den CampsPilot-Betreiber selbst, um alle
+  Vereine zu sehen und neue in einem Schritt anzulegen (Verein + erstes
+  Camp, direkt startklar). Das war vorher komplett unmöglich ohne curl/
+  JSON-Datei/Skript — siehe Abschnitt 2a.
+- **Erster Sprint-Durchlauf:** Der Ablauf Verein → Camp → Eltern-Anmeldung
+  → Admin-Verwaltung (Zahlung, Warteliste, Storno, Export) innerhalb eines
+  *bereits existierenden* Vereins — siehe Abschnitt 2b.
+
+Offene Punkte: mobile Viewport-Verifikation war durch ein Tool-Problem
+blockiert (nicht durch die App), kein produktives Kunden-Onboarding (war
+auch nicht Auftrag).
+
+## 2a. Plattform-Konsole — neuen Verein in unter einer Minute anlegen
+
+**Das war die eigentliche Lücke:** Es gab bisher keine Seite, auf der der
+Betreiber selbst alle Vereine sieht und neue anlegt — nur die Verwaltung
+*innerhalb* eines bereits bestehenden Vereins (`/pilot/[org]/...`), die
+sich ein Verein selbst nutzt. Jetzt gibt es:
+
+- **`GET /admin/organizations`** (neuer Backend-Endpunkt, nur hinter
+  `require_platform_admin`) — listet jeden Verein mit Camp-Anzahl, eine
+  Query statt N+1. Bewusst nicht öffentlich: die ursprüngliche Begründung
+  im Code ("kein Listing, das würde Mandanten querleaken") betraf die
+  *öffentliche* API, nicht den einen Plattform-Betreiber, der ohnehin jeden
+  Mandanten sehen muss, um die Plattform zu betreiben.
+- **`/platform`** — Liste aller Vereine (Name, Slug, Status, Camp-Anzahl,
+  direkter Link in die jeweilige Verwaltung).
+- **`/platform/new`** — Verein **und** erstes Camp in einem Formular, ein
+  Absenden. Nach dem Anlegen direkte Weiterleitung in die Verwaltung des
+  neuen Vereins. Live getestet: neuer Verein "TV Musterstadt" inkl. Camp
+  von leerem Formular bis öffentlich sichtbarer Anmeldeseite in unter
+  einer Minute. Slug-Konflikt zeigt eine konkrete Fehlermeldung statt
+  eines stillen Fehlschlags (ebenfalls live getestet).
+- **`/platform/login`** — eigener, Verein-unabhängiger Login. Dieselbe
+  Admin-Identität wie die bestehende Vereins-Verwaltung (ein Cookie, jetzt
+  mit Pfad "/" statt "/pilot" — ein Login reicht für beides).
+
+Weitere Camps für einen bestehenden Verein kommen weiterhin über die
+normale Vereins-Verwaltung — es gibt dort aber noch keine eigene "Camp
+hinzufügen"-Seite (nur Bearbeiten eines bestehenden Camps), das wäre der
+naheliegende nächste Schritt, war aber nicht Teil dieses Nachtrags.
+
+## 2b. Was im ersten Sprint-Durchlauf geprüft und geändert wurde
 
 ### Gefundener und behobener Bug
 - **Browser-Tab-Titel zeigte für jeden SaaS-Verein "KSV Baunatal –
@@ -76,6 +113,8 @@ sind fest im Skript verankert, nicht per CLI umkonfigurierbar):
 
 Lokal, mit laufenden Diensten (siehe Startbefehle unten):
 
+- **Plattform-Konsole (alle Vereine, neuen anlegen):**
+  `http://localhost:3000/platform` (Login: `/platform/login`)
 - **Eltern-Ansicht (Demo-Verein):**
   `http://localhost:3000/pilot/jk-demo-campspilot-test`
 - **Admin-Login (Demo-Verein):**
@@ -110,9 +149,20 @@ Fallstricke) — im Zweifel den belegenden Prozess beenden und neu starten.
 
 Das Passwort steht in `backend_saas/.env`, Schlüssel `ADMIN_PASSWORD=`.
 Datei lokal öffnen und den Wert dort ablesen — er wird hier bewusst nicht
-wiederholt. Login-Formular: `http://localhost:3000/pilot/jk-demo-campspilot-test/login`.
+wiederholt. Ein Login reicht für **beides**: `http://localhost:3000/platform/login`
+(Plattform-Konsole) und `http://localhost:3000/pilot/jk-demo-campspilot-test/login`
+(einzelner Verein) setzen denselben Cookie.
 
 ## 6. Klicktest (max. 10 Minuten)
+
+0. **Plattform-Konsole:** `http://localhost:3000/platform/login` öffnen,
+   Passwort eingeben. Erwartet: Liste aller Vereine mit Camp-Anzahl. Auf
+   „+ Neuen Verein anlegen" klicken, Verein + erstes Camp ausfüllen
+   (Pflichtfelder: Slug, Name, Kontakt-E-Mail für den Verein; Slug, Titel,
+   Beginn, Ende, Mindest-/Höchstalter, Plätze, Preis fürs Camp), „Camp
+   sofort veröffentlichen" anhaken, absenden. Erwartet: Weiterleitung in
+   die Verwaltung des neuen Vereins; `http://localhost:3000/pilot/<dein-slug>`
+   zeigt das Camp sofort öffentlich mit freien Plätzen.
 
 1. **Demo-Verein ansehen (Eltern-Sicht):** `http://localhost:3000/pilot/jk-demo-campspilot-test`
    öffnen. Erwartet: Tab-Titel "JK Demo – CampsPilot Test", zwei Camps
@@ -177,7 +227,11 @@ wiederholt. Login-Formular: `http://localhost:3000/pilot/jk-demo-campspilot-test
 
 | Test | Methode | Ergebnis |
 |---|---|---|
-| Backend-Unit-/Integrationstests | `pytest` | 199 bestanden |
+| Backend-Unit-/Integrationstests | `pytest` | 201 bestanden |
+| Plattform-Konsole: Vereinsliste | Browser | funktioniert, 5→6 Vereine nach Anlegen korrekt gezählt |
+| Plattform-Konsole: Verein+Camp anlegen (Happy Path) | Browser | funktioniert — neuer Verein von leerem Formular bis öffentlich sichtbarer Anmeldeseite in unter einer Minute |
+| Plattform-Konsole: Slug-Konflikt | Browser | funktioniert, konkrete Fehlermeldung statt stillem Fehlschlag |
+| Plattform-Konsole: nicht angemeldeter Zugriff | curl | 307-Redirect zu `/platform/login`, kein Redirect-Loop (nach Bugfix, siehe Abschnitt 2a-Historie im Commit) |
 | Frontend-Unit-Tests | `vitest run` | 30 bestanden |
 | TypeScript | `tsc --noEmit` | fehlerfrei |
 | Lint | `eslint` | 0 Fehler, 3 Vorbestehende Warnungen (ungenutzter `_prev`-Parameter, Konvention von `useActionState`) |
@@ -216,11 +270,20 @@ wiederholt. Login-Formular: `http://localhost:3000/pilot/jk-demo-campspilot-test
 
 ## 10. Nicht-Blocker, aber spätere Verbesserungen (nicht in diesem Sprint)
 
-- Login-Seite (`/pilot/[org]/login`) hat noch keine eigene
-  `generateMetadata` — zeigt weiterhin den KSV-Titel im Tab (kleinerer
-  Kosmetik-Fund, gleiche Ursache wie der behobene Bug, aber niedrigere
-  Priorität, da die Login-Seite selten lange offen bleibt).
-  Konkurrierende-Anmeldungen-Race erneut unter echter Last verifizieren,
+- **Weitere Camps zu einem bestehenden Verein hinzufügen** geht noch nicht
+  über die UI — `/platform/new` legt nur das *erste* Camp an, und die
+  Vereins-Verwaltung (`/pilot/[org]/(org-admin)/konfiguration`) kann
+  bestehende Camps nur bearbeiten, keine neuen erstellen. Naheliegender
+  nächster Schritt (`POST .../camps` existiert im Backend bereits).
+- Login-Seiten (`/pilot/[org]/login`, `/platform/login`) haben noch keine
+  eigene `generateMetadata` — zeigen weiterhin den KSV-Titel im Tab
+  (kleinerer Kosmetik-Fund, gleiche Ursache wie der behobene Bug, aber
+  niedrigere Priorität, da Login-Seiten selten lange offen bleiben).
+- Das Verein-anlegen-Formular (`/platform/new`) leert sich nach einem
+  Fehler (z. B. Slug-Konflikt) komplett statt die Eingaben zu behalten —
+  ein Nutzer muss nach einem Fehler alles neu eintippen. Kleinere UX-
+  Politur, kein funktionaler Fehler.
+- Konkurrierende-Anmeldungen-Race erneut unter echter Last verifizieren,
   falls die zugrunde liegende Locking-Logik in `app/repositories/
   registrations.py` je verändert wird.
 - Kein Lösch-Endpunkt für Organisationen/Camps — Demo-Daten können nur

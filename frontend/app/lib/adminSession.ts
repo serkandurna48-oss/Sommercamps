@@ -4,8 +4,11 @@
  * Abschnitt 1 schließt Login/Rollen/Berechtigungen aus diesem Ticket aus,
  * siehe Frage 2 der Bestandsaufnahme): kein Refresh, keine Rollen, ein
  * Token pro Browser, gültig für jede Organisation (kein organization_members
- * im Backend). Betrifft ausschließlich die neuen Org-Admin-Screens unter
- * /pilot/[org]/(org-admin) — nie die öffentliche Eltern-Ansicht.
+ * im Backend) UND für die Plattform-Konsole (/platform) — dieselbe
+ * Admin-Identität, ein Login reicht für beides. Cookie-Pfad ist deshalb
+ * "/" (nicht auf /pilot beschränkt), siehe pilot/[org]/login/actions.ts
+ * und platform/login/actions.ts, die beide denselben Cookie setzen. Betrifft
+ * nie die öffentliche Eltern-Ansicht unter /pilot/[org] selbst.
  */
 import { cookies } from 'next/headers'
 

@@ -1,9 +1,14 @@
 """
 Organization repository — lookup-by-slug plus platform-admin writes.
 
-No "list all organizations" endpoint — that would leak the tenant list
-across tenants. If future tickets need more organization data access, add
-narrowly-scoped functions here rather than widening this one further.
+`list_organizations` is platform-admin-only (app/routers/admin.py, gated
+by app/admin_auth.py::require_platform_admin) — the public, tenant-scoped
+routers never call it and have no route that could return it. The original
+concern behind not having a list endpoint ("would leak the tenant list
+across tenants") is about the *public* API; it does not apply to the single
+platform operator, who by definition needs to see every tenant to run the
+platform (list them, onboard a new one). Keep it that way: never expose
+list_organizations through an unauthenticated route.
 
 create_organization/update_organization exist only for the platform-admin
 surface (app/routers/admin.py, gated by app/admin_auth.py) — the public,
@@ -24,6 +29,16 @@ _SELECT_BY_SLUG = """
            logo_url, primary_color, plan_status, theme, iban
     from organizations
     where slug = %s
+"""
+
+_SELECT_ALL = """
+    select o.id, o.slug, o.name, o.legal_name, o.contact_email, o.contact_phone,
+           o.logo_url, o.primary_color, o.plan_status, o.theme, o.iban,
+           count(c.id) as camp_count
+    from organizations o
+    left join camps c on c.organization_id = o.id
+    group by o.id
+    order by o.name asc
 """
 
 _INSERT_ORGANIZATION = """
@@ -63,6 +78,16 @@ def get_organization_by_slug(slug: str) -> Optional[dict]:
     with db.get_cursor() as cur:
         cur.execute(_SELECT_BY_SLUG, (slug,))
         return cur.fetchone()
+
+
+def list_organizations() -> list[dict]:
+    """Platform-admin only — every organization regardless of plan_status,
+    with a `camp_count` (single aggregate query, not one COUNT per
+    organization) for the platform console's tenant list. See module
+    docstring for why this is safe (no public route ever calls it)."""
+    with db.get_cursor() as cur:
+        cur.execute(_SELECT_ALL)
+        return cur.fetchall()
 
 
 def create_organization(data: OrganizationCreate) -> dict:

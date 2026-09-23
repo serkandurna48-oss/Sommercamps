@@ -36,6 +36,7 @@ from ..admin_schemas import (
     CampCreate,
     CampUpdate,
     CancelRegistrationResponse,
+    OrganizationAdminListItem,
     OrganizationAdminOut,
     OrganizationCreate,
     OrganizationUpdate,
@@ -66,6 +67,19 @@ def admin_login(payload: AdminLoginRequest) -> AdminLoginResponse:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Login failed")
     settings = get_settings()
     return AdminLoginResponse(token=create_admin_token(), expires_in_hours=settings.token_expire_hours)
+
+
+@router.get(
+    "/organizations",
+    response_model=list[OrganizationAdminListItem],
+    dependencies=[Depends(require_platform_admin)],
+)
+def list_organizations() -> list[OrganizationAdminListItem]:
+    """Every organization regardless of plan_status, for the platform
+    console's tenant list — see organizations_repo.list_organizations's
+    docstring for why this is safe only behind require_platform_admin."""
+    rows = organizations_repo.list_organizations()
+    return [OrganizationAdminListItem.model_validate(row) for row in rows]
 
 
 @router.post(

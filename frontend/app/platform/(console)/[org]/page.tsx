@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { getAdminToken } from '../../../lib/adminSession'
-import { fetchCampsAdmin, fetchOrganizationAdmin } from '../../../lib/saasAdminApi'
+import { fetchCampsAdmin, fetchOrganizationAdmin, fetchOrganizationMembersAdmin } from '../../../lib/saasAdminApi'
 import PublishToggle from '../../../components/saas/config/PublishToggle'
+import MembersSection from './MembersSection'
 import { computeSetupSteps, setupProgressCount } from '../../setupProgress'
 
 const PLAN_STATUS_LABEL: Record<string, string> = {
@@ -36,7 +37,10 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
   const org = await fetchOrganizationAdmin(orgSlug, token)
   if (!org) notFound()
 
-  const camps = await fetchCampsAdmin(orgSlug, token)
+  const [camps, members] = await Promise.all([
+    fetchCampsAdmin(orgSlug, token),
+    fetchOrganizationMembersAdmin(orgSlug, token),
+  ])
   const steps = computeSetupSteps(org, camps.length)
   const progress = setupProgressCount(steps)
 
@@ -168,6 +172,8 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
           </div>
         )}
       </section>
+
+      <MembersSection orgSlug={org.slug} members={members} />
 
       <section>
         <h2 className="cp-heading mb-3" style={{ color: 'var(--cp-ink)' }}>

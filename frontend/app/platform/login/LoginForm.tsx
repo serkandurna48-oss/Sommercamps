@@ -22,6 +22,20 @@ export default function PlatformLoginForm() {
         </p>
         <h1 className="cp-title mt-1 mb-6">Plattform-Anmeldung</h1>
 
+        <label className="cp-label mb-1.5 block" style={{ color: 'var(--cp-ink-2)' }} htmlFor="email">
+          E-Mail
+        </label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          required
+          autoFocus
+          autoComplete="username"
+          className="cp-subheading mb-4 w-full rounded-[var(--cp-r-field)] border px-4 py-3 outline-none"
+          style={{ borderColor: 'var(--cp-field-line)', fontSize: '16px' }}
+        />
+
         <label className="cp-label mb-1.5 block" style={{ color: 'var(--cp-ink-2)' }} htmlFor="password">
           Passwort
         </label>
@@ -30,7 +44,7 @@ export default function PlatformLoginForm() {
           name="password"
           type="password"
           required
-          autoFocus
+          autoComplete="current-password"
           className="cp-subheading w-full rounded-[var(--cp-r-field)] border px-4 py-3 outline-none"
           style={{ borderColor: 'var(--cp-field-line)', fontSize: '16px' }}
         />

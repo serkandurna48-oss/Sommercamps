@@ -129,17 +129,6 @@ async function adminMutate(path: string, token: string, method: 'POST' | 'PATCH'
   return res
 }
 
-export async function adminLogin(password: string): Promise<{ token: string; expiresInHours: number }> {
-  const res = await fetch(`${baseUrl()}/admin/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password }),
-  })
-  if (!res.ok) throw new AdminAuthError()
-  const body = (await res.json()) as { token: string; expires_in_hours: number }
-  return { token: body.token, expiresInHours: body.expires_in_hours }
-}
-
 export async function fetchCampsAdmin(orgSlug: string, token: string): Promise<CampAdmin[]> {
   const res = await adminFetch(`/admin/organizations/${orgSlug}/camps`, token)
   if (!res.ok) throw new Error(`GET admin camps failed: ${res.status}`)
@@ -343,4 +332,123 @@ export async function setPaymentStatusAdmin(
     { payment_status: paymentStatus },
   )
   return res.json() as Promise<RegistrationAdmin>
+}
+
+// --- feat/platform-foundation: CEO-console-only surface ------------------
+
+/** Wer bin ich, was darf ich sehen — einmal nach dem Login abgefragt, um
+ * zwischen CEO-Konsole (platform_owner) und Einzelvereins-Ansicht
+ * (org_admin) zu entscheiden. Nie clientseitig als Sicherheitsgrenze
+ * behandelt — jeder einzelne Admin-Aufruf wird serverseitig erneut
+ * geprüft (app/auth_deps.py); dies steuert nur, was gerendert wird. */
+export interface Me {
+  user_id: string
+  email: string | null
+  is_platform_owner: boolean
+  admin_organization_slugs: string[]
+}
+
+export async function fetchMe(token: string): Promise<Me> {
+  const res = await adminFetch('/admin/me', token)
+  if (!res.ok) throw new AdminAuthError()
+  return res.json() as Promise<Me>
+}
+
+export interface PlatformStats {
+  organizations_published: number
+  organizations_draft: number
+  camps_total: number
+  registrations_total: number
+  registrations_last_30_days: number
+  payments_open_cents: number
+  payments_paid_cents: number
+  waitlist_total: number
+}
+
+export async function fetchPlatformStats(token: string): Promise<PlatformStats> {
+  const res = await adminFetch('/admin/stats', token)
+  if (!res.ok) throw new AdminActionError('Kennzahlen konnten nicht geladen werden')
+  return res.json() as Promise<PlatformStats>
+}
+
+export interface GlobalRegistration extends RegistrationAdmin {
+  organization_slug: string
+  organization_name: string
+  camp_slug: string
+  camp_title: string
+}
+
+export interface GlobalRegistrationFilter {
+  organizationSlug?: string
+  campSlug?: string
+  status?: RegistrationAdmin['status']
+}
+
+export async function fetchGlobalRegistrationsAdmin(
+  token: string,
+  filter: GlobalRegistrationFilter = {},
+): Promise<GlobalRegistration[]> {
+  const params = new URLSearchParams()
+  if (filter.organizationSlug) params.set('organization_slug', filter.organizationSlug)
+  if (filter.campSlug) params.set('camp_slug', filter.campSlug)
+  if (filter.status) params.set('registration_status', filter.status)
+  const query = params.toString()
+  const res = await adminFetch(`/admin/registrations${query ? `?${query}` : ''}`, token)
+  if (!res.ok) throw new AdminActionError('Anmeldungen konnten nicht geladen werden')
+  return res.json() as Promise<GlobalRegistration[]>
+}
+
+export interface AuditLogEntry {
+  id: string
+  actor_user_id: string | null
+  actor_email: string | null
+  action: string
+  organization_id: string | null
+  target_type: string | null
+  target_id: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+}
+
+export async function fetchAuditLogAdmin(token: string, organizationSlug?: string): Promise<AuditLogEntry[]> {
+  const query = organizationSlug ? `?organization_slug=${encodeURIComponent(organizationSlug)}` : ''
+  const res = await adminFetch(`/admin/audit-log${query}`, token)
+  if (!res.ok) throw new AdminActionError('Änderungsverlauf konnte nicht geladen werden')
+  return res.json() as Promise<AuditLogEntry[]>
+}
+
+export interface OrganizationMember {
+  id: string
+  organization_id: string
+  user_id: string
+  email: string | null
+  role: string
+  created_at: string
+}
+
+export async function fetchOrganizationMembersAdmin(orgSlug: string, token: string): Promise<OrganizationMember[]> {
+  const res = await adminFetch(`/admin/organizations/${orgSlug}/members`, token)
+  if (!res.ok) throw new AdminActionError('Zugriffsliste konnte nicht geladen werden')
+  return res.json() as Promise<OrganizationMember[]>
+}
+
+/** Weist ein bereits bestehendes Supabase-Auth-Konto (per E-Mail gesucht)
+ * als org_admin zu — sendet keine Einladungs-E-Mail (siehe Backend-
+ * Docstring). 404 heißt: noch kein Konto für diese E-Mail vorhanden. */
+export async function addOrganizationMemberAdmin(orgSlug: string, token: string, email: string): Promise<OrganizationMember> {
+  const res = await adminMutate(`/admin/organizations/${orgSlug}/members`, token, 'POST', { email })
+  if (res.status === 404) throw new AdminActionError('Für diese E-Mail existiert noch kein Konto')
+  if (res.status === 503) throw new AdminActionError('Konto-Suche derzeit nicht verfügbar')
+  if (!res.ok) throw new AdminActionError('Zugriff konnte nicht zugewiesen werden')
+  return res.json() as Promise<OrganizationMember>
+}
+
+export async function removeOrganizationMemberAdmin(orgSlug: string, memberId: string, token: string): Promise<void> {
+  const res = await fetch(`${baseUrl()}/admin/organizations/${orgSlug}/members/${memberId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  })
+  if (res.status === 401) throw new AdminAuthError()
+  if (!res.ok) throw new AdminActionError('Zugriff konnte nicht entfernt werden')
 }

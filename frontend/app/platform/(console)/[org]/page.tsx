@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { getAdminToken } from '../../../lib/adminSession'
@@ -5,6 +6,22 @@ import { fetchCampsAdmin, fetchOrganizationAdmin, fetchOrganizationMembersAdmin 
 import PublishToggle from '../../../components/saas/config/PublishToggle'
 import MembersSection from './MembersSection'
 import { computeSetupSteps, setupProgressCount } from '../../setupProgress'
+
+/** Ohne das erbt diese Seite den Layout-Titel "CampsPilot Plattform" —
+ * gleicher Tab-Titel egal welchen Verein man sich gerade ansieht
+ * (MVP-Oberflächenauftrag: "jederzeit erkennbar, ob ich gerade die
+ * Plattform [oder] einen bestimmten Verein ... sehe"). */
+export async function generateMetadata({ params }: { params: Promise<{ org: string }> }): Promise<Metadata> {
+  const { org: orgSlug } = await params
+  const token = await getAdminToken()
+  if (!token) return { title: 'CampsPilot Plattform' }
+  try {
+    const org = await fetchOrganizationAdmin(orgSlug, token)
+    return { title: org ? `${org.name} – Plattform` : 'CampsPilot Plattform' }
+  } catch {
+    return { title: 'CampsPilot Plattform' }
+  }
+}
 
 const PLAN_STATUS_LABEL: Record<string, string> = {
   pilot: 'Pilot',

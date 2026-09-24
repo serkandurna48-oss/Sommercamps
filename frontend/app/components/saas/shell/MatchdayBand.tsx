@@ -65,7 +65,7 @@ export default function MatchdayBand({
     >
       <div className="mx-auto flex max-w-[1080px] flex-col">
         <div className="flex items-center justify-between gap-4 pb-4">
-          <OrgSwitcher name={orgName} logoUrl={orgLogoUrl} />
+          <OrgSwitcher name={orgName} logoUrl={orgLogoUrl} orgSlug={orgSlug} />
           <LogoutButton orgSlug={orgSlug} />
         </div>
 

@@ -136,7 +136,7 @@ _GET_TARGET = f"""
       and status = 'published'
 """
 
-_LOCK_CAMP_CAPACITY = "select capacity from camps where id = %s for update"
+_LOCK_CAMP_CAPACITY = "select capacity, status from camps where id = %s for update"
 
 # Capacity is defined as "how many registered/confirmed rows exist for this
 # camp" — CAPACITY_COUNTING_STATUSES (app/registration_lifecycle.py) is the
@@ -487,6 +487,18 @@ def create_registration(
         cur.execute(_LOCK_CAMP_CAPACITY, (camp.id,))
         locked = cur.fetchone()
         if locked is None:
+            raise CampNotAvailableError(f"Camp '{camp.slug}' no longer available")
+        # Bug (Security-Review, gefunden vor Kundeneinladung): "isn't
+        # published" stand schon in CampNotAvailableError's Docstring als
+        # abgedeckter Fall, wurde hier aber nie tatsächlich geprüft — nur
+        # "Zeile existiert noch" (locked is None), nie der Status selbst.
+        # TOCTOU-Fenster: get_registration_target() im Router liest
+        # status='published' VOR dieser Lock-Anfrage; zieht ein Admin das
+        # Camp exakt in diesem Fenster zurück (PATCH .../camps/{slug} mit
+        # status='draft'), lief die Anmeldung bisher trotzdem als
+        # 'registered'/'waitlist' durch. Jetzt erneut geprüft, innerhalb
+        # derselben gesperrten Transaktion wie die Kapazität.
+        if locked["status"] != "published":
             raise CampNotAvailableError(f"Camp '{camp.slug}' no longer available")
 
         cur.execute(

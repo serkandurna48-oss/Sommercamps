@@ -227,7 +227,7 @@ def test_create_registration_locks_camp_row_for_update(monkeypatch):
     camp = _target(org_id, capacity=5)
     fake_cursor = _FakeCursor(
         results=[
-            {"capacity": 5},  # locked camp row
+            {"capacity": 5, "status": "published"},  # locked camp row
             None,  # duplicate-child check: none found
             {"active_count": 0},  # count query
             {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},
@@ -247,7 +247,7 @@ def test_create_registration_checks_for_duplicate_child_before_counting_capacity
     camp = _target(org_id, capacity=5)
     fake_cursor = _FakeCursor(
         results=[
-            {"capacity": 5},
+            {"capacity": 5, "status": "published"},
             None,
             {"active_count": 0},
             {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},
@@ -269,7 +269,7 @@ def test_create_registration_raises_duplicate_error_and_never_inserts(monkeypatc
     camp = _target(org_id, capacity=5)
     fake_cursor = _FakeCursor(
         results=[
-            {"capacity": 5},
+            {"capacity": 5, "status": "published"},
             {"id": uuid4()},  # a matching, non-cancelled registration already exists
         ]
     )
@@ -286,7 +286,7 @@ def test_create_registration_counts_only_capacity_counting_statuses_for_this_cam
     camp = _target(org_id, capacity=5)
     fake_cursor = _FakeCursor(
         results=[
-            {"capacity": 5},
+            {"capacity": 5, "status": "published"},
             None,
             {"active_count": 0},
             {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},
@@ -313,7 +313,7 @@ def test_create_registration_inserts_registered_when_capacity_available(monkeypa
     token = uuid4()
     fake_cursor = _FakeCursor(
         results=[
-            {"capacity": 2},
+            {"capacity": 2, "status": "published"},
             None,
             {"active_count": 1},  # 1 of 2 spots taken
             {"registration_token": token, "status": "registered", "payment_status": "open"},
@@ -342,7 +342,7 @@ def test_create_registration_inserts_waitlist_when_capacity_reached(monkeypatch)
     token = uuid4()
     fake_cursor = _FakeCursor(
         results=[
-            {"capacity": 2},
+            {"capacity": 2, "status": "published"},
             None,
             {"active_count": 2},  # already at capacity
             {"registration_token": token, "status": "waitlist", "payment_status": "open"},
@@ -368,6 +368,25 @@ def test_create_registration_raises_not_available_when_camp_row_vanished(monkeyp
         registrations.create_registration(_tenant(org_id), camp, _registration_data())
 
 
+def test_create_registration_raises_not_available_when_camp_unpublished_after_lookup(monkeypatch):
+    """Regression for the TOCTOU race (Security-Review, vor Kundeneinladung
+    geschlossen): `camp` (das Argument) ist der Stand von
+    get_registration_target() VOR dem Lock — hier absichtlich noch
+    status='published', wie es der Router zu diesem Zeitpunkt tatsächlich
+    gesehen hat. Die gesperrte Zeile selbst kommt als 'draft' zurück, weil
+    ein Admin das Camp genau in diesem Fenster zurückgezogen hat. Muss
+    CampNotAvailableError auslösen, nicht die Anmeldung trotzdem einfügen."""
+    org_id = uuid4()
+    camp = _target(org_id, status="published")
+    fake_cursor = _FakeCursor(results=[{"capacity": 5, "status": "draft"}])
+    _patch_cursor(monkeypatch, fake_cursor)
+
+    with pytest.raises(CampNotAvailableError):
+        registrations.create_registration(_tenant(org_id), camp, _registration_data())
+
+    assert len(fake_cursor.executed) == 1  # never reached duplicate-check/count/insert
+
+
 def test_create_registration_ignores_any_id_like_data_on_the_request_object(monkeypatch):
     """
     RegistrationCreate has no organization_id/camp_id fields at all (see
@@ -381,7 +400,7 @@ def test_create_registration_ignores_any_id_like_data_on_the_request_object(monk
     camp = _target(org_id, capacity=5)
     fake_cursor = _FakeCursor(
         results=[
-            {"capacity": 5},
+            {"capacity": 5, "status": "published"},
             None,
             {"active_count": 0},
             {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},

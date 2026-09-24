@@ -94,10 +94,14 @@ def create_registration(
             detail="Für dieses Kind liegt für dieses Camp bereits eine Anmeldung vor.",
         ) from exc
     except CampNotAvailableError as exc:
-        # Practically unreachable today (nothing can delete/unpublish a
-        # camp between the two lookups yet) — kept defensive, not dead
-        # code removed, since create_registration's locked re-check can
-        # raise it in principle.
+        # Real, reachable path (Bug, korrigiert im Security-Review vor
+        # Kundeneinladung — der vorherige Kommentar hier behauptete fälsch-
+        # lich "practically unreachable"): ein Admin, der das Camp exakt
+        # zwischen dem initialen get_registration_target()-Lookup oben und
+        # create_registration()'s gesperrtem Re-Check zurückzieht
+        # (status='draft'), löst genau diesen Pfad aus — siehe
+        # create_registration's Docstring/Re-Check in
+        # repositories/registrations.py.
         logger.warning(
             "Registration rejected: camp no longer available mid-transaction "
             "(organization_slug=%s, camp_slug=%s)",

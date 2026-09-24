@@ -33,6 +33,19 @@ create table if not exists public.platform_owners (
     created_at timestamptz not null default now()
 );
 comment on table public.platform_owners is 'Mitgliedschaft statt Rollen-Enum: wer hier eingetragen ist, ist platform_owner (sieht/steuert jede Organisation). Leer = niemand ist Owner (fail-closed, nicht fail-open).';
+-- Bug (Security-Review, gefunden vor Kundeneinladung): der Kommentar oben
+-- (Zeile 24-29 der Originalfassung) behauptete, RLS liefe hier "wie bei
+-- organizations/camps/camp_registrations" ohne Policies — dort ist RLS
+-- aber tatsächlich AKTIVIERT (nur ohne Policies, macht die Tabelle für
+-- anon/authenticated über PostgREST unsichtbar). Hier fehlte das
+-- `enable row level security` komplett: ohne es wären diese drei Tabellen
+-- über die Supabase Data API mit nur dem öffentlichen anon-Key lesbar
+-- (platform_owners) bzw. beschreibbar (organization_members — jeder
+-- eingeloggte Supabase-User hätte sich selbst zu org_admin machen können,
+-- app/auth_deps.py komplett umgangen). RLS ohne Policies = deny-all für
+-- PostgREST, aber weiterhin normaler Zugriff für backend_saas (verbindet
+-- sich über DATABASE_URL/service-Verbindung, nicht als Supabase-Client).
+alter table public.platform_owners enable row level security;
 
 create table if not exists public.organization_members (
     id uuid primary key default gen_random_uuid(),
@@ -45,6 +58,7 @@ create table if not exists public.organization_members (
 comment on table public.organization_members is 'org_admin-Zuordnung: welcher Nutzer darf welche Organisation verwalten. platform_owners brauchen hier keinen Eintrag — ihr Zugriff ist global über platform_owners, nicht organisationsgebunden. Ein role-Enum mit nur einem erlaubten Wert ist bewusst so eng, damit ein späteres zweites Rollen-Level (z. B. read-only) eine bewusste Erweiterung dieses CHECK ist, kein stillschweigend erlaubter Freitext.';
 create index if not exists idx_organization_members_user on public.organization_members(user_id);
 create index if not exists idx_organization_members_org on public.organization_members(organization_id);
+alter table public.organization_members enable row level security;
 
 create table if not exists public.audit_log (
     id uuid primary key default gen_random_uuid(),
@@ -60,3 +74,4 @@ create table if not exists public.audit_log (
 comment on table public.audit_log is 'Wer hat wann was geändert (mind. Publish/Zahlungsstatus/Storno/Rollenänderungen, siehe app/auth_deps.py-Aufrufer). actor_email redundant neben actor_user_id gespeichert, damit ein Log-Eintrag lesbar bleibt, falls der auth.users-Datensatz später gelöscht wird (on delete set null würde sonst nur noch eine anonyme Zeile übriglassen).';
 create index if not exists idx_audit_log_org on public.audit_log(organization_id);
 create index if not exists idx_audit_log_created on public.audit_log(created_at desc);
+alter table public.audit_log enable row level security;

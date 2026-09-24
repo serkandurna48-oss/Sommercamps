@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState } from 'react'
+import { useActionState, useState } from 'react'
 import { CAMP_STATUSES, campStatusLabel, de } from '../../../lib/i18n/de'
 import type { CampAdmin } from '../../../lib/saasAdminApi'
 import { updateCampConfigAction, type ConfigActionState } from '../actions/configActions'
@@ -41,74 +41,50 @@ export default function CampConfigForm({
   const boundAction = updateCampConfigAction.bind(null, orgSlug, camp.slug)
   const [state, formAction, pending] = useActionState<ConfigActionState, FormData>(boundAction, { error: null, saved: false })
 
-  /** `<select>` unten ist bewusst controlled statt `defaultValue` (Bug,
-   * gefunden im Review): ein `defaultValue`-Select zeigt nach einem
-   * fehlgeschlagenen Save weiter den gerade gewählten, nie gespeicherten
-   * Wert — sieht nach einem geänderten Status aus, obwohl der Server ihn
-   * nie bekommen hat.
+  /** `<select>` unten ist absichtlich UNCONTROLLED (`defaultValue`, kein
+   * `value`/`onChange`) und trägt einen `key`, der sich bei jedem
+   * abgeschlossenen Save-Versuch ändert (`selectGeneration`). Vorherige
+   * Version war controlled + ein Ref-Write in einem Interval, um einen
+   * externen Rückschreib-Bug auf den DOM-Wert zu überstimmen — das
+   * funktionierte, war aber nicht mehr nachvollziehbar, WARUM es
+   * funktioniert. Der `key`-Wechsel erzwingt stattdessen einen echten
+   * React-Unmount/Remount des `<select>`: die alte DOM-Node (und jeder
+   * externe Zugriff darauf) verschwindet komplett, die neue startet frisch
+   * mit `defaultValue={status}` — kein Vergleich mit einem "zuletzt von
+   * React geschriebenen Wert" mehr möglich, also auch keine Klasse von
+   * Bugs mehr, die genau darauf beruht. Während eine Auswahl läuft, bleibt
+   * die Node unverändert (kein Remount ohne Save-Abschluss) — der Browser
+   * verwaltet die Live-Auswahl selbst, ganz normal für ein unkontrolliertes
+   * Feld, und das native `<form action=...>` liest beim Submit ohnehin den
+   * echten DOM-Wert.
    *
-   * `status` wird bei einem abgeschlossenen Save-Versuch WÄHREND des
-   * Renderns angepasst (React-Pattern "Adjusting state when a prop
-   * changes"), nicht in einem Effect — ein `setState` synchron im Effect-
-   * Body erzeugt einen unnötigen Kaskaden-Render (react-hooks/set-state-
-   * in-effect) und ist hier auch nicht nötig, da React einen solchen
-   * Render-Zeit-`setState`-Aufruf ohnehin vor dem Commit abfängt.
+   * `status` speichert nur den Wert für das nächste `defaultValue` bei
+   * Remount, nicht die laufende Nutzerauswahl. Bei Erfolg zählt NUR
+   * `state.status` (von der Action zurückgemeldet), nie `camp.status`
+   * (Bug, gefunden im Review): in genau dem Render, in dem `state.saved`
+   * erstmals true wird, kommt `camp` noch aus der Server-Komponente von
+   * VOR diesem Save — `revalidatePath` liefert die aktualisierte Prop erst
+   * in einem eigenen, späteren Render. `camp.status` bleibt hier
+   * ausschließlich der Fehlerfall-Fallback, wo nie revalidiert wird und
+   * der Wert deshalb nie veraltet.
    *
-   * Bei Erfolg zählt NUR `state.status` (von der Action zurückgemeldet),
-   * nie `camp.status` (Bug, gefunden im Review): in genau dem Render, in
-   * dem `state.saved` erstmals true wird, kommt `camp` noch aus der
-   * Server-Komponente von VOR diesem Save — `revalidatePath` liefert die
-   * aktualisierte Prop erst in einem eigenen, späteren Render. `camp.status`
-   * bleibt hier ausschließlich der Fehlerfall-Fallback, wo nie revalidiert
-   * wird und der Wert deshalb nie veraltet.
-   *
-   * Der separate Effect danach schreibt `status` zusätzlich direkt auf
-   * `selectRef.current.value` (Bug, im Review nachgestellt): React setzt
-   * die DOM-`value` eines controlled `<select>` nur, wenn sich der Wert
-   * gegenüber dem zuletzt VON REACT SELBST geschriebenen Wert
-   * unterscheidet — nicht gegenüber dem, was aktuell im echten DOM steht.
-   * Nach einer Tastatur-Auswahl (Browser setzt den DOM-Wert direkt) +
-   * Server-Save, bei dem der zurückgemeldete Stand zufällig wieder dem
-   * VOR der Auswahl gemerkten React-Wert entspricht, überspringt React
-   * den DOM-Write komplett, und das Select bleibt auf einem längst
-   * überholten Browser-internen Stand hängen — reproduzierbar, kein
-   * Einzelfall. Ein erzwungener Write über die Ref bei jeder
-   * `status`-Änderung schließt genau diese Lücke. */
+   * Die Anpassung selbst passiert WÄHREND des Renderns (React-Pattern
+   * "Adjusting state when a prop changes"), nicht in einem Effect — ein
+   * `setState` synchron im Effect-Body erzeugt einen unnötigen
+   * Kaskaden-Render und ist hier auch nicht nötig, da React einen solchen
+   * Render-Zeit-`setState`-Aufruf ohnehin vor dem Commit abfängt. */
   const [status, setStatus] = useState<CampAdmin['status']>(camp.status)
-  const selectRef = useRef<HTMLSelectElement>(null)
+  const [selectGeneration, setSelectGeneration] = useState(0)
 
   const [prevState, setPrevState] = useState(state)
   if (state !== prevState) {
     setPrevState(state)
     const confirmed = state.error ? camp.status : state.saved && state.status ? state.status : null
-    if (confirmed) setStatus(confirmed)
+    if (confirmed) {
+      setStatus(confirmed)
+      setSelectGeneration(g => g + 1)
+    }
   }
-
-  useEffect(() => {
-    /** Erzwingt `status` auf das native `<select>` über ein kurzes
-     * Zeitfenster, nicht nur einmalig (Bug, gefunden im Review, per
-     * MutationObserver-Trace nachgewiesen): irgendetwas außerhalb dieser
-     * Komponente schreibt den DOM-Wert nach einem erfolgreichen Save
-     * manchmal — nicht immer, reproduzierbar flakey — auf einen älteren
-     * Stand zurück, NACHDEM `value={status}` bzw. ein einmaliger
-     * `selectRef.current.value = status`-Write bereits korrekt
-     * angewendet wurden. React merkt diesen externen Rückschreib-Vorgang
-     * nicht (sein zuletzt geschriebener Wert stimmt ja noch mit `status`
-     * überein) und korrigiert ihn deshalb nie selbst. Einmaliges
-     * Erzwingen gewinnt das Timing-Rennen nicht zuverlässig; wiederholtes
-     * Erzwingen über ein Fenster von 1s tut es unabhängig vom exakten
-     * Timing der Störung. */
-    let ticks = 0
-    const id = setInterval(() => {
-      if (selectRef.current && selectRef.current.value !== status) {
-        selectRef.current.value = status
-      }
-      ticks += 1
-      if (ticks >= 20) clearInterval(id)
-    }, 50)
-    if (selectRef.current) selectRef.current.value = status
-    return () => clearInterval(id)
-  }, [status])
 
   return (
     <form action={formAction} className="flex flex-col gap-8">
@@ -212,12 +188,11 @@ export default function CampConfigForm({
         </h3>
         <Field label={de.configPage.field.status} htmlFor="status">
           <select
+            key={selectGeneration}
             id="status"
             name="status"
             required
-            ref={selectRef}
-            value={status}
-            onChange={e => setStatus(e.target.value as CampAdmin['status'])}
+            defaultValue={status}
             className={INPUT_CLASS}
             style={INPUT_STYLE}
           >

@@ -48,6 +48,11 @@ class OrganizationCreate(BaseModel):
     slug: str = Field(min_length=1)
     name: str = Field(min_length=1)
     legal_name: Optional[str] = None
+    # Impressum/Datenschutz-Auftrag (MVP-Oberflächenauftrag): mehrzeilige
+    # Anschrift, die auf /pilot/{slug}/impressum + /datenschutz erscheint.
+    # NULL = ehrlicher "noch nicht angegeben"-Hinweis dort, nie ein
+    # Fallback auf einen anderen Verein.
+    legal_address: Optional[str] = None
     contact_email: EmailStr
     contact_phone: Optional[str] = None
     contact_person_name: Optional[str] = None
@@ -104,6 +109,7 @@ class OrganizationUpdate(BaseModel):
 
     name: Optional[str] = Field(default=None, min_length=1)
     legal_name: Optional[str] = None
+    legal_address: Optional[str] = None
     contact_email: Optional[EmailStr] = None
     contact_phone: Optional[str] = None
     contact_person_name: Optional[str] = None
@@ -286,6 +292,7 @@ class OrganizationAdminOut(BaseModel):
     slug: str
     name: str
     legal_name: Optional[str] = None
+    legal_address: Optional[str] = None
     contact_email: str
     contact_phone: Optional[str] = None
     contact_person_name: Optional[str] = None

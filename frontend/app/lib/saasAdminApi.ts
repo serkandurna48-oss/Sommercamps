@@ -49,6 +49,7 @@ export interface OrganizationAdmin {
   slug: string
   name: string
   legal_name: string | null
+  legal_address: string | null
   contact_email: string
   contact_phone: string | null
   contact_person_name: string | null
@@ -163,6 +164,7 @@ export async function fetchRegistrationsAdmin(
 export interface OrganizationConfigUpdate {
   name?: string
   legal_name?: string | null
+  legal_address?: string | null
   contact_email?: string
   contact_phone?: string | null
   contact_person_name?: string | null
@@ -232,6 +234,7 @@ export interface OrganizationCreateInput {
   slug: string
   name: string
   legal_name?: string | null
+  legal_address?: string | null
   contact_email: string
   contact_phone?: string | null
   contact_person_name?: string | null

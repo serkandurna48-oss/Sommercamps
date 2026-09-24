@@ -8,6 +8,7 @@ function org(overrides: Partial<OrganizationAdmin> = {}): OrganizationAdmin {
     slug: 'demo-fc',
     name: 'Demo FC',
     legal_name: null,
+    legal_address: null,
     contact_email: 'demo@example.com',
     contact_phone: null,
     contact_person_name: null,

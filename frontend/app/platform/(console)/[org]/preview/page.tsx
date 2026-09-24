@@ -46,6 +46,8 @@ export default async function PlatformOrgPreviewPage({ params }: { params: Promi
     slug: org.slug,
     name: org.name,
     legal_name: org.legal_name,
+    legal_address: org.legal_address,
+    contact_person_name: org.contact_person_name,
     contact_email: org.contact_email,
     contact_phone: org.contact_phone,
     logo_url: org.logo_url,

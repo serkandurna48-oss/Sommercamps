@@ -44,6 +44,20 @@ export default function OrganizationConfigForm({
           <Field label={de.configPage.field.legalName} htmlFor="legal_name">
             <input id="legal_name" name="legal_name" defaultValue={org.legal_name ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
+          <Field
+            label="Anschrift (für Impressum/Datenschutz)"
+            htmlFor="legal_address"
+            hint="Straße, PLZ, Ort — erscheint auf der öffentlichen Impressum-/Datenschutzseite dieses Vereins. Ohne diese Angabe zeigt die Seite ehrlich „noch nicht angegeben”, nie die Daten eines anderen Vereins."
+          >
+            <textarea
+              id="legal_address"
+              name="legal_address"
+              rows={2}
+              defaultValue={org.legal_address ?? ''}
+              className={INPUT_CLASS}
+              style={INPUT_STYLE}
+            />
+          </Field>
           <Field label="Ansprechpartner" htmlFor="contact_person_name" hint="Name der Person, die für diesen Verein zuständig ist.">
             <input
               id="contact_person_name"

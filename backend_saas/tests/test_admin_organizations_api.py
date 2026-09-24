@@ -48,6 +48,29 @@ def test_create_organization_success_returns_201(monkeypatch):
     assert "id" in body  # admin view, unlike the public OrganizationPublic
 
 
+def test_create_organization_passes_legal_address_through(monkeypatch):
+    """MVP-Oberflächenauftrag, Blocker "Impressum/Datenschutz pro Verein":
+    legal_address muss vom Request bis in die Repository-Funktion
+    durchgereicht werden — sonst bleibt das neue Feld für die Einrichtung
+    unbenutzbar, egal was das Formular anzeigt."""
+    captured = {}
+
+    def _create(data):
+        captured["legal_address"] = data.legal_address
+        return _org_row(data.slug, legal_address=data.legal_address)
+
+    monkeypatch.setattr(organizations, "create_organization", _create)
+    headers = _auth_headers()
+    payload = {**VALID_PAYLOAD, "legal_address": "Musterstraße 1\n12345 Musterstadt"}
+
+    with TestClient(app) as client:
+        response = client.post("/admin/organizations", json=payload, headers=headers)
+
+    assert response.status_code == 201
+    assert captured["legal_address"] == "Musterstraße 1\n12345 Musterstadt"
+    assert response.json()["legal_address"] == "Musterstraße 1\n12345 Musterstadt"
+
+
 def test_create_organization_duplicate_slug_returns_409(monkeypatch):
     def _raise(data):
         raise OrganizationSlugConflictError(data.slug)

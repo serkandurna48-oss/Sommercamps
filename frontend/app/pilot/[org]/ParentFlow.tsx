@@ -213,7 +213,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
         </div>
       </div>
 
-      <PublicFooter />
+      <PublicFooter orgSlug={org.slug} />
     </section>
   )
 }
@@ -411,17 +411,22 @@ function WaitScreen({
           </div>
         </div>
       )}
-      <PublicFooter />
+      <PublicFooter orgSlug={org.slug} />
     </section>
   )
 }
 
-function PublicFooter() {
+function PublicFooter({ orgSlug }: { orgSlug: string }) {
   return (
     <footer className="foot">
       <nav>
-        <a href="/impressum">Impressum</a>
-        <a href="/datenschutz">Datenschutz</a>
+        {/* Bug, gefunden im MVP-Oberflächenauftrag: zeigte bisher IMMER
+         * KSV Baunatals Rechtsdaten, für jeden Verein auf der Plattform
+         * (siehe /impressum, /datenschutz — die bleiben für das separate
+         * `backend/`-System unverändert). Jetzt pro Verein, siehe
+         * app/pilot/[org]/impressum bzw. datenschutz/page.tsx. */}
+        <a href={`/pilot/${orgSlug}/impressum`}>Impressum</a>
+        <a href={`/pilot/${orgSlug}/datenschutz`}>Datenschutz</a>
         <a href="#agb">Teilnahmebedingungen</a>
       </nav>
       <span className="by">

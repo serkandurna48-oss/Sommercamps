@@ -23,6 +23,14 @@ class OrganizationPublic(BaseModel):
     slug: str
     name: str
     legal_name: Optional[str] = None
+    # MVP-Oberflächenauftrag, Blocker "Impressum/Datenschutz pro Verein":
+    # öffentlich absichtlich (wie iban unten) — beide neuen Rechtsseiten
+    # (/pilot/{slug}/impressum, /datenschutz) brauchen genau diese zwei
+    # Felder ohne Admin-Login lesen zu können, sonst könnten Eltern die
+    # Seite nie aufrufen. NULL = "noch nicht angegeben" auf der Seite,
+    # nie ein Fallback auf einen anderen Verein.
+    legal_address: Optional[str] = None
+    contact_person_name: Optional[str] = None
     contact_email: str
     contact_phone: Optional[str] = None
     logo_url: Optional[str] = None

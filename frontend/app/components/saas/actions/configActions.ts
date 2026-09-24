@@ -65,6 +65,7 @@ export async function updateOrganizationConfigAction(
       name,
       contact_email: contactEmail,
       legal_name: optionalStr(formData, 'legal_name'),
+      legal_address: optionalStr(formData, 'legal_address'),
       contact_phone: optionalStr(formData, 'contact_phone'),
       contact_person_name: optionalStr(formData, 'contact_person_name'),
       logo_url: optionalStr(formData, 'logo_url'),

@@ -19,6 +19,8 @@ export interface OrganizationPublic {
   slug: string
   name: string
   legal_name: string | null
+  legal_address: string | null
+  contact_person_name: string | null
   contact_email: string
   contact_phone: string | null
   logo_url: string | null

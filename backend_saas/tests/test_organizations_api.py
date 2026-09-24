@@ -107,6 +107,8 @@ def test_get_organization_response_includes_only_declared_public_fields(monkeypa
         "slug",
         "name",
         "legal_name",
+        "legal_address",
+        "contact_person_name",
         "contact_email",
         "contact_phone",
         "logo_url",

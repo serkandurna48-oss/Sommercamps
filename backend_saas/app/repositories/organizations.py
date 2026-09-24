@@ -26,7 +26,7 @@ from .. import db
 from ..admin_schemas import OrganizationCreate, OrganizationUpdate
 
 _ORGANIZATION_FIELDS = """
-    id, slug, name, legal_name, contact_email, contact_phone, contact_person_name,
+    id, slug, name, legal_name, legal_address, contact_email, contact_phone, contact_person_name,
     logo_url, primary_color, plan_status, theme, iban,
     intro_heading, intro_text, hero_image_url, billing_notes, site_published
 """
@@ -54,10 +54,10 @@ _SELECT_ALL = f"""
 
 _INSERT_ORGANIZATION = f"""
     insert into organizations (
-        slug, name, legal_name, contact_email, contact_phone, contact_person_name,
+        slug, name, legal_name, legal_address, contact_email, contact_phone, contact_person_name,
         logo_url, primary_color, plan_status, iban,
         intro_heading, intro_text, hero_image_url, billing_notes, site_published
-    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     returning {_ORGANIZATION_FIELDS}
 """
 
@@ -124,6 +124,7 @@ def create_organization(data: OrganizationCreate) -> dict:
                     data.slug,
                     data.name,
                     data.legal_name,
+                    data.legal_address,
                     str(data.contact_email),
                     data.contact_phone,
                     data.contact_person_name,

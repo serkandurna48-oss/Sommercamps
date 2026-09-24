@@ -58,6 +58,7 @@ from ..admin_schemas import (
     PaymentStatusUpdate,
     PlatformStatsOut,
     RegistrationAdminOut,
+    RegistrationDetailsUpdate,
     WaitlistPromoteResponse,
 )
 from ..registration_lifecycle import InvalidStatusTransitionError
@@ -435,6 +436,54 @@ def update_registration_payment_status(
         target_type="registration",
         target_id=str(registration_token),
         metadata={"payment_status": data.payment_status},
+    )
+    return RegistrationAdminOut.model_validate(row)
+
+
+@router.patch(
+    "/organizations/{organization_slug}/camps/{camp_slug}/registrations/{registration_token}/details",
+    response_model=RegistrationAdminOut,
+)
+def update_registration_details(
+    organization_slug: str,
+    camp_slug: str,
+    registration_token: UUID,
+    data: RegistrationDetailsUpdate,
+    auth: AuthContext = Depends(require_org_access),
+) -> RegistrationAdminOut:
+    """Lets an org_admin/owner correct a participant's own submitted data
+    (name typo, jersey size, allergies, pickup list) — MVP-Auftrag
+    "Teilnehmerdaten-Korrektur". Same tenant-scoping and lookup rules as
+    update_registration_payment_status above."""
+    organization = require_organization(organization_slug)
+    camp = require_camp(organization, camp_slug)
+
+    row = registrations_repo.update_registration_details(
+        organization["id"],
+        camp["id"],
+        registration_token,
+        data.child_first_name,
+        data.child_last_name,
+        data.jersey_size,
+        data.allergies,
+        data.pickup_authorized,
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Registration not found")
+
+    logger.info(
+        "Registration details updated (organization_slug=%s, camp_slug=%s)",
+        organization_slug,
+        camp_slug,
+    )
+    platform_roles.write_audit_log(
+        actor_user_id=auth.user_id,
+        actor_email=auth.email,
+        action="registration.details_updated",
+        organization_id=str(organization["id"]),
+        target_type="registration",
+        target_id=str(registration_token),
+        metadata=None,
     )
     return RegistrationAdminOut.model_validate(row)
 

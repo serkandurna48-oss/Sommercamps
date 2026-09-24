@@ -27,7 +27,9 @@ export default function ParticipantRow({
   campSlug: string
 }) {
   const [open, setOpen] = useState(false)
+  const [override, setOverride] = useState<RegistrationAdmin | null>(null)
   const detailId = useId()
+  const effective = override ?? registration
 
   return (
     <div className="cp-roster-row border-t" style={{ borderColor: 'var(--cp-line-2)' }}>
@@ -37,21 +39,21 @@ export default function ParticipantRow({
             type="checkbox"
             checked={selected}
             onChange={onToggleSelect}
-            aria-label={`${registration.child_first_name} ${registration.child_last_name} auswählen`}
+            aria-label={`${effective.child_first_name} ${effective.child_last_name} auswählen`}
             className="h-5 w-5 shrink-0"
             style={{ accentColor: brandColor }}
           />
 
           <p className="cp-subheading min-w-0 flex-1" style={{ color: 'var(--cp-ink)' }}>
-            {registration.child_first_name} {registration.child_last_name}
+            {effective.child_first_name} {effective.child_last_name}
             <span className="cp-num ml-1.5" style={{ color: 'var(--cp-muted)' }}>
-              ({birthYear(registration.child_birth_date)})
+              ({birthYear(effective.child_birth_date)})
             </span>
           </p>
 
           <StatusChip
-            tone={PAYMENT_STATUS_TONE[registration.payment_status] ?? 'neutral'}
-            label={paymentStatusLabel[registration.payment_status] ?? registration.payment_status}
+            tone={PAYMENT_STATUS_TONE[effective.payment_status] ?? 'neutral'}
+            label={paymentStatusLabel[effective.payment_status] ?? effective.payment_status}
           />
 
           <button
@@ -71,7 +73,7 @@ export default function ParticipantRow({
           <p className="cp-chip min-w-0 truncate" style={{ color: 'var(--cp-muted)' }}>
             {registration.parent_first_name} {registration.parent_last_name} · {registration.parent_email}
           </p>
-          {hasNotes(registration) && (
+          {hasNotes(effective) && (
             <span className="cp-chip shrink-0" style={{ color: 'var(--cp-info)' }} title="Allergien oder Hinweise hinterlegt">
               Hinweis
             </span>
@@ -85,7 +87,12 @@ export default function ParticipantRow({
             className="transition-opacity delay-[60ms] duration-150 motion-reduce:transition-none motion-reduce:delay-0"
             style={{ opacity: open ? 1 : 0 }}
           >
-            <ParticipantDetail registration={registration} orgSlug={orgSlug} campSlug={campSlug} />
+            <ParticipantDetail
+              registration={effective}
+              orgSlug={orgSlug}
+              campSlug={campSlug}
+              onDetailsSaved={setOverride}
+            />
           </div>
         </div>
       </div>

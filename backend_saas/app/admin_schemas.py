@@ -253,6 +253,31 @@ class PaymentStatusUpdate(BaseModel):
     payment_status: Literal["open", "paid", "refunded", "waived"]
 
 
+class RegistrationDetailsUpdate(BaseModel):
+    """Lets an org_admin/owner correct a participant's own submitted data
+    after the fact (typo in the child's name, jersey size added later,
+    allergy info updated, pickup list changed) — MVP-Auftrag "Teilnehmer-
+    daten-Korrektur". Deliberately NOT a partial PATCH: like
+    CampConfigUpdate, the admin UI is a full edit form that always
+    resends every field it shows, so there is no "field omitted vs.
+    explicitly cleared" ambiguity to model here. Restricted to exactly the
+    fields the Auftrag names — no parent contact/medical/consent fields,
+    since correcting those is out of scope for this feature."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    child_first_name: str = Field(min_length=1)
+    child_last_name: str = Field(min_length=1)
+    jersey_size: Optional[str] = None
+    allergies: Optional[str] = None
+    pickup_authorized: Optional[str] = None
+
+    @field_validator("jersey_size", "allergies", "pickup_authorized", mode="after")
+    @classmethod
+    def _blank_optional_to_none(cls, value: Optional[str]) -> Optional[str]:
+        return value or None
+
+
 class OrganizationAdminOut(BaseModel):
     """Admin view of an organization — unlike OrganizationPublic, includes
     the internal id and plan_status an admin needs to operate the platform."""

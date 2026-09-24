@@ -334,6 +334,34 @@ export async function setPaymentStatusAdmin(
   return res.json() as Promise<RegistrationAdmin>
 }
 
+export interface RegistrationDetailsInput {
+  child_first_name: string
+  child_last_name: string
+  jersey_size: string | null
+  allergies: string | null
+  pickup_authorized: string | null
+}
+
+/** MVP-Auftrag "Teilnehmerdaten-Korrektur" — lässt einen org_admin/owner
+ * Tippfehler oder veraltete Angaben in einer bereits eingegangenen
+ * Anmeldung korrigieren (Name, Trikotgröße, Allergien, Abholberechtigte).
+ * Immer alle Felder mitschicken, wie updateCampAdmin — kein Teil-PATCH. */
+export async function updateRegistrationDetailsAdmin(
+  orgSlug: string,
+  campSlug: string,
+  registrationToken: string,
+  token: string,
+  data: RegistrationDetailsInput,
+): Promise<RegistrationAdmin> {
+  const res = await mutateOrThrow(
+    `/admin/organizations/${orgSlug}/camps/${campSlug}/registrations/${registrationToken}/details`,
+    token,
+    'PATCH',
+    data,
+  )
+  return res.json() as Promise<RegistrationAdmin>
+}
+
 // --- feat/platform-foundation: CEO-console-only surface ------------------
 
 /** Wer bin ich, was darf ich sehen — einmal nach dem Login abgefragt, um

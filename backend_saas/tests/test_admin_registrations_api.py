@@ -445,3 +445,137 @@ def test_update_payment_status_without_auth_returns_401():
         )
 
     assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# PATCH .../registrations/{id}/details
+# ---------------------------------------------------------------------------
+
+
+def test_update_registration_details_success(monkeypatch):
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    registration_token = uuid4()
+    updated = _registration_row(
+        registration_token=registration_token,
+        child_first_name="Lea",
+        child_last_name="Musterkind",
+        jersey_size="140",
+        allergies="Nüsse",
+        pickup_authorized="Oma Erika",
+    )
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+
+    captured = {}
+
+    def _update(org_id, camp_id, reg_token, child_first_name, child_last_name, jersey_size, allergies, pickup_authorized):
+        captured["camp_id"] = camp_id
+        captured["reg_token"] = reg_token
+        captured["child_first_name"] = child_first_name
+        captured["allergies"] = allergies
+        return updated
+
+    monkeypatch.setattr(registrations_repo, "update_registration_details", _update)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{registration_token}/details",
+            json={
+                "child_first_name": "Lea",
+                "child_last_name": "Musterkind",
+                "jersey_size": "140",
+                "allergies": "Nüsse",
+                "pickup_authorized": "Oma Erika",
+            },
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    assert response.json()["child_first_name"] == "Lea"
+    assert response.json()["allergies"] == "Nüsse"
+    assert captured["camp_id"] == camp["id"]
+    assert captured["reg_token"] == registration_token
+    assert captured["child_first_name"] == "Lea"
+    assert captured["allergies"] == "Nüsse"
+
+
+def test_update_registration_details_rejects_blank_name(monkeypatch):
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{uuid4()}/details",
+            json={"child_first_name": "", "child_last_name": "Musterkind"},
+            headers=headers,
+        )
+
+    assert response.status_code == 422
+
+
+def test_update_registration_details_blank_optional_becomes_none(monkeypatch):
+    """Clearing an optional field (e.g. removing an allergy note that no
+    longer applies) must actually store null, not an empty string —
+    matches the public registration schema's same normalization rule."""
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+
+    captured = {}
+
+    def _update(org_id, camp_id, reg_token, child_first_name, child_last_name, jersey_size, allergies, pickup_authorized):
+        captured["allergies"] = allergies
+        captured["jersey_size"] = jersey_size
+        return _registration_row(registration_token=reg_token)
+
+    monkeypatch.setattr(registrations_repo, "update_registration_details", _update)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{uuid4()}/details",
+            json={"child_first_name": "Lea", "child_last_name": "Musterkind", "allergies": "   ", "jersey_size": ""},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    assert captured["allergies"] is None
+    assert captured["jersey_size"] is None
+
+
+def test_update_registration_details_unknown_registration_returns_404(monkeypatch):
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+    monkeypatch.setattr(
+        registrations_repo,
+        "update_registration_details",
+        lambda org_id, camp_id, reg_token, *a, **kw: None,
+    )
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{uuid4()}/details",
+            json={"child_first_name": "Lea", "child_last_name": "Musterkind"},
+            headers=headers,
+        )
+
+    assert response.status_code == 404
+
+
+def test_update_registration_details_without_auth_returns_401():
+    with TestClient(app) as client:
+        response = client.patch(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{uuid4()}/details",
+            json={"child_first_name": "Lea", "child_last_name": "Musterkind"},
+        )
+
+    assert response.status_code == 401

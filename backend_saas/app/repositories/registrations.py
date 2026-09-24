@@ -356,6 +356,53 @@ _UPDATE_PAYMENT_STATUS = f"""
 """
 
 
+_UPDATE_REGISTRATION_DETAILS = f"""
+    update camp_registrations
+    set child_first_name = %s,
+        child_last_name = %s,
+        jersey_size = %s,
+        allergies = %s,
+        pickup_authorized = %s
+    where registration_token = %s
+      and organization_id = %s
+      and camp_id = %s
+    returning {_ADMIN_REGISTRATION_FIELDS}
+"""
+
+
+def update_registration_details(
+    organization_id: UUID,
+    camp_id: UUID,
+    registration_token: UUID,
+    child_first_name: str,
+    child_last_name: str,
+    jersey_size: Optional[str],
+    allergies: Optional[str],
+    pickup_authorized: Optional[str],
+) -> Optional[dict]:
+    """Corrects a participant's own submitted data after the fact — MVP-
+    Auftrag "Teilnehmerdaten-Korrektur". Same tenant-scoping rule as
+    update_payment_status (organization_id AND camp_id, never
+    registration_token alone) and the same reason: closes the cross-camp-
+    in-the-same-org mutation gap. Returns None if no matching registration
+    exists for this organization+camp."""
+    with db.get_cursor() as cur:
+        cur.execute(
+            _UPDATE_REGISTRATION_DETAILS,
+            (
+                child_first_name,
+                child_last_name,
+                jersey_size,
+                allergies,
+                pickup_authorized,
+                registration_token,
+                organization_id,
+                camp_id,
+            ),
+        )
+        return cur.fetchone()
+
+
 def update_payment_status(
     organization_id: UUID, camp_id: UUID, registration_token: UUID, payment_status: str
 ) -> Optional[dict]:

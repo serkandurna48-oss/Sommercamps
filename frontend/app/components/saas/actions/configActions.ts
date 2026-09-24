@@ -9,6 +9,14 @@ import { createCampAdmin, SlugConflictError, updateCampAdmin, updateOrganization
 export interface ConfigActionState {
   error: string | null
   saved: boolean
+  /** Nur von updateCampConfigAction gesetzt: der Status, der bei Erfolg
+   * tatsächlich persistiert wurde. Wird von CampConfigForm statt der
+   * `camp`-Prop als Erfolgs-Quelle genutzt (Bug, gefunden im Review):
+   * `camp` kommt aus einer separaten, späteren Revalidierung — im Render,
+   * in dem `state.saved` erstmals true wird, ist `camp.status` noch der
+   * ALTE Wert von vor dem Save. Nur der Server-Roundtrip selbst kennt in
+   * diesem Moment zuverlässig den neuen Stand. */
+  status?: 'draft' | 'published' | 'closed' | 'archived'
 }
 
 function str(formData: FormData, key: string): string | undefined {
@@ -171,7 +179,7 @@ export async function updateCampConfigAction(
   }
 
   revalidatePath(`/pilot/${orgSlug}`, 'layout')
-  return { error: null, saved: true }
+  return { error: null, saved: true, status: status as 'draft' | 'published' | 'closed' | 'archived' }
 }
 
 export interface CampCreateActionState {

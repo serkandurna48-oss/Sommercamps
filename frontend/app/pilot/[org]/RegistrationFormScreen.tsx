@@ -19,6 +19,7 @@ interface FormState {
   allergies: string
   pickupAuthorized: string
   termsAccepted: boolean
+  privacyAccepted: boolean
   photoPermission: boolean
 }
 
@@ -34,6 +35,7 @@ const EMPTY: FormState = {
   allergies: '',
   pickupAuthorized: '',
   termsAccepted: false,
+  privacyAccepted: false,
   photoPermission: false,
 }
 
@@ -46,6 +48,7 @@ type FieldKey =
   | 'parentPhone'
   | 'emergencyPhone'
   | 'agb'
+  | 'privacy'
 
 export default function RegistrationFormScreen({
   orgSlug,
@@ -77,7 +80,7 @@ export default function RegistrationFormScreen({
       1: form.childFirstName.trim() !== '' && form.childLastName.trim() !== '' && parseGermanDate(form.childBirthDate) !== null,
       2: form.parentName.trim() !== '' && form.parentEmail.trim() !== '' && form.parentPhone.trim() !== '' && emailValid,
       3: form.emergencyPhone.trim() !== '',
-      4: form.termsAccepted,
+      4: form.termsAccepted && form.privacyAccepted,
     }),
     [form, emailValid],
   )
@@ -96,6 +99,7 @@ export default function RegistrationFormScreen({
       bad.emergencyPhone = 'Ohne Notfallnummer dürfen wir Ihr Kind am ersten Tag nicht übernehmen.'
     }
     if (!form.termsAccepted) bad.agb = 'Pflichtfeld'
+    if (!form.privacyAccepted) bad.privacy = 'Bitte stimmen Sie der Datenschutzerklärung zu.'
     return bad
   }, [submitAttempted, form, emailValid])
 
@@ -113,6 +117,7 @@ export default function RegistrationFormScreen({
     if (form.parentPhone.trim() === '') bad.push('parentPhone')
     if (form.emergencyPhone.trim() === '') bad.push('emergencyPhone')
     if (!form.termsAccepted) bad.push('agb')
+    if (!form.privacyAccepted) bad.push('privacy')
 
     if (bad.length > 0) {
       const target = fieldRefs.current[bad[0]]
@@ -143,10 +148,8 @@ export default function RegistrationFormScreen({
         emergency_contact_phone: form.emergencyPhone.trim(),
         allergies: form.allergies.trim() || null,
         pickup_authorized: form.pickupAuthorized.trim() || null,
-        // Die Referenz kennt nur eine einzelne Pflicht-Einwilligung ("Teilnahmebedingungen");
-        // sie deckt inhaltlich beide vom Backend verlangten Flags ab (§1: keine neuen Formularfelder).
         terms_accepted: form.termsAccepted,
-        privacy_accepted: form.termsAccepted,
+        privacy_accepted: form.privacyAccepted,
         photo_permission: form.photoPermission,
       })
       if (!outcome.ok) {
@@ -355,6 +358,22 @@ export default function RegistrationFormScreen({
                   <span>Ich habe die Teilnahmebedingungen gelesen und melde mein Kind verbindlich an.</span>
                 </span>
               </label>
+              <label className={`consent${badFields.privacy ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.privacy = el }}>
+                <input
+                  type="checkbox"
+                  checked={form.privacyAccepted}
+                  onChange={(e) => set('privacyAccepted', e.target.checked)}
+                  aria-invalid={!!badFields.privacy}
+                  aria-describedby={badFields.privacy ? 'err-privacy' : undefined}
+                />
+                <span className="txt">
+                  <b>Datenschutz</b>
+                  <span>
+                    Ich habe die <a href={`/pilot/${orgSlug}/datenschutz`} target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a> gelesen und stimme der Verarbeitung der Daten für die Camp-Anmeldung zu.
+                  </span>
+                  {badFields.privacy && <span id="err-privacy" role="alert" style={{ color: 'var(--error)' }}>{badFields.privacy}</span>}
+                </span>
+              </label>
               <label className="consent">
                 <input type="checkbox" checked={form.photoPermission} onChange={(e) => set('photoPermission', e.target.checked)} />
                 <span className="txt">
@@ -370,8 +389,8 @@ export default function RegistrationFormScreen({
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
                 <span>
-                  Die Daten Ihres Kindes werden nur für dieses Camp verwendet und sechs Monate nach Camp-Ende gelöscht. Länger bleiben nur Zahlungsbelege, weil
-                  das Steuerrecht es verlangt — ohne Gesundheitsangaben.
+                  Informationen zur Verarbeitung und Speicherung der Daten Ihres Kindes finden Sie in der{' '}
+                  <a href={`/pilot/${orgSlug}/datenschutz`} target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>.
                 </span>
               </div>
             </div>

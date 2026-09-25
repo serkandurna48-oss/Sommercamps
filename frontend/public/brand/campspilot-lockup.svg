@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 396 76" width="396" height="76" role="img" aria-label="CampsPilot">
+  <title>CampsPilot</title>
+  <rect x="6" y="6" width="100" height="64" rx="10" fill="none" stroke="currentColor" stroke-width="5"/>
+  <path d="M56 6V33M56 43V70" fill="none" stroke="currentColor" stroke-width="5"/>
+  <circle cx="56" cy="38" r="15" fill="none" stroke="currentColor" stroke-width="5"/>
+  <circle cx="56" cy="38" r="3.5" fill="#D4581F"/>
+  <!-- Schutzraum links vom Wort: 26 Einheiten, entspricht der halben Zeichenhöhe.
+       Wortmarke: Archivo, Gewicht 700, Breite 112 %, Laufweite -0,035 em.
+       Für Druck und Fremdsysteme einmal in Pfade wandeln. -->
+  <text x="132" y="53" font-family="Archivo, 'Helvetica Neue', sans-serif"
+        font-size="48" font-weight="700" font-stretch="112%"
+        letter-spacing="-1.7" fill="currentColor">CampsPilot</text>
+</svg>

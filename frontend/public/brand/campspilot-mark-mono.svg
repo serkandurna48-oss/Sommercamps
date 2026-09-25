@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 76" width="112" height="76" role="img" aria-label="CampsPilot">
+  <title>CampsPilot</title>
+  <rect x="6" y="6" width="100" height="64" rx="10" fill="none" stroke="currentColor" stroke-width="5"/>
+  <path d="M56 6V33M56 43V70" fill="none" stroke="currentColor" stroke-width="5"/>
+  <circle cx="56" cy="38" r="15" fill="none" stroke="currentColor" stroke-width="5"/>
+  <circle cx="56" cy="38" r="3.5" fill="currentColor"/>
+</svg>

@@ -28,6 +28,13 @@ export default function ParticipantRow({
 }) {
   const [open, setOpen] = useState(false)
   const [override, setOverride] = useState<RegistrationAdmin | null>(null)
+  const [previousRegistration, setPreviousRegistration] = useState(registration)
+  if (registration !== previousRegistration) {
+    setPreviousRegistration(registration)
+    // The action response only bridges the time until server revalidation.
+    // Later payment/cancellation changes must replace that saved snapshot.
+    setOverride(null)
+  }
   const detailId = useId()
   const effective = override ?? registration
 

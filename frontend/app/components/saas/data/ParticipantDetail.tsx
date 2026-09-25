@@ -41,8 +41,12 @@ export default function ParticipantDetail({
   const updateDetails = updateRegistrationDetailsAction.bind(null, orgSlug, campSlug, registration.registration_token)
   const [state, formAction, pending] = useActionState(updateDetails, { error: null, saved: false, registration: null })
 
-  if (state.saved && state.registration && editing) {
-    setEditing(false)
+  const [previousState, setPreviousState] = useState(state)
+  if (state !== previousState) {
+    setPreviousState(state)
+    // Consume each completed save once. The action state stays saved=true
+    // until the next submit, so it must not close a newly opened editor.
+    if (state.saved && state.registration) setEditing(false)
   }
 
   /** `onDetailsSaved` gehört in einen Effect, nicht in den Render-Zweig

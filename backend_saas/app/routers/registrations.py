@@ -25,6 +25,7 @@ from ..repositories.registrations import (
     CampNotAvailableError,
     ChildAgeNotEligibleError,
     DuplicateRegistrationError,
+    OrganizationNotAvailableError,
     RegistrationWindowClosedError,
 )
 from ..schemas import RegistrationCreate, RegistrationCreated
@@ -83,6 +84,8 @@ def create_registration(
 
     try:
         row = registrations_repo.create_registration(tenant, camp, data)
+    except OrganizationNotAvailableError as exc:
+        raise HTTPException(status_code=404, detail="Organization not found") from exc
     except DuplicateRegistrationError as exc:
         logger.info(
             "Registration rejected: duplicate child (organization_slug=%s, camp_slug=%s)",

@@ -1,8 +1,9 @@
 """
 Sets a fake-but-well-formed DATABASE_URL (and other required settings)
 before any test module imports app.main — so Settings() validation
-succeeds without a real .env file. No test in this suite needs a real
-database: db.get_cursor is monkeypatched per-test as needed, and
+succeeds without a real .env file. Unit tests need no real database.
+The explicitly opted-in test_review_postgres module uses a disposable
+loopback database, never DATABASE_URL. db.get_cursor is patched per test, and
 db.init_pool/close_pool are no-op'd for every test below (see
 _no_real_db_pool) so importing/booting the app never opens a real
 connection. This value is intentionally never a real, reachable database

@@ -8,25 +8,9 @@ import Button from '../ui/Button'
 import Field from '../ui/Field'
 import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 import SuccessNote from '../state/SuccessNote'
+import { localInputToIso, toLocalInputValue } from '../../../lib/dateTimeInput'
 
-/** `datetime-local` erwartet "YYYY-MM-DDTHH:mm" ohne Zeitzone. Bewusst
- * NICHT per String-slice (Bug, gefunden im Review): `camp.registration_start`
- * kommt vom Backend als tz-behaftetes ISO ("...+02:00"); ein Slice auf 16
- * Zeichen behält zwar dieselben Ziffern, verliert aber den Offset — beim
- * erneuten Absenden (siehe toIsoDateTime in configActions.ts) interpretiert
- * der Server dieselben Ziffern dann in einer anderen Zeitzone und
- * verschiebt registration_start/_end lautlos um den Offset, selbst wenn
- * der Admin dieses Feld nie angefasst hat (das Formular schickt bei jedem
- * Speichern alle Felder mit). Über echte Date-Methoden (lokale Zeitzone
- * des Browsers) hin und zurück ist der einzige Weg, der konsistent bleibt. */
-function toLocalInputValue(iso: string | null): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
+/** Local wall times are converted to explicit instants before invoking the Server Action. */
 export default function CampConfigForm({
   orgSlug,
   camp,
@@ -38,48 +22,39 @@ export default function CampConfigForm({
   brandStrong: string
   brandOn: string
 }) {
+  const [submitted, setSubmitted] = useState<Record<string, string> | null>(null)
+  const [previousCamp, setPreviousCamp] = useState(camp)
+  if (camp !== previousCamp) {
+    setPreviousCamp(camp)
+    setSubmitted(null)
+  }
+  const inputValue = (field: string, fallback: string | number) => submitted?.[field] ?? fallback
   const boundAction = updateCampConfigAction.bind(null, orgSlug, camp.slug)
-  const [state, formAction, pending] = useActionState<ConfigActionState, FormData>(boundAction, { error: null, saved: false })
+  const [state, formAction, pending] = useActionState<ConfigActionState, FormData>(async (previous, data) => {
+    // React resets uncontrolled fields after a resolved action, including
+    // validation failures. Keep submitted defaults until fresh props arrive.
+    setSubmitted(Object.fromEntries([...data].filter((entry): entry is [string, string] => typeof entry[1] === 'string')))
+    // A datetime-local field has no offset. Convert on the device that
+    // displayed it, not in the Server Action's unrelated timezone.
+    try {
+      for (const field of ['registration_start', 'registration_end'] as const) {
+        data.set(field, localInputToIso(data.get(field), camp[field]))
+      }
+    } catch {
+      return { error: 'Bitte gültige Anmeldezeiten eingeben. Diese Uhrzeit existiert in deiner Zeitzone möglicherweise nicht.', saved: false }
+    }
+    return boundAction(previous, data)
+  }, { error: null, saved: false })
 
-  /** `<select>` unten ist absichtlich UNCONTROLLED (`defaultValue`, kein
-   * `value`/`onChange`) und trägt einen `key`, der sich bei jedem
-   * abgeschlossenen Save-Versuch ändert (`selectGeneration`). Vorherige
-   * Version war controlled + ein Ref-Write in einem Interval, um einen
-   * externen Rückschreib-Bug auf den DOM-Wert zu überstimmen — das
-   * funktionierte, war aber nicht mehr nachvollziehbar, WARUM es
-   * funktioniert. Der `key`-Wechsel erzwingt stattdessen einen echten
-   * React-Unmount/Remount des `<select>`: die alte DOM-Node (und jeder
-   * externe Zugriff darauf) verschwindet komplett, die neue startet frisch
-   * mit `defaultValue={status}` — kein Vergleich mit einem "zuletzt von
-   * React geschriebenen Wert" mehr möglich, also auch keine Klasse von
-   * Bugs mehr, die genau darauf beruht. Während eine Auswahl läuft, bleibt
-   * die Node unverändert (kein Remount ohne Save-Abschluss) — der Browser
-   * verwaltet die Live-Auswahl selbst, ganz normal für ein unkontrolliertes
-   * Feld, und das native `<form action=...>` liest beim Submit ohnehin den
-   * echten DOM-Wert.
-   *
-   * `status` speichert nur den Wert für das nächste `defaultValue` bei
-   * Remount, nicht die laufende Nutzerauswahl. Bei Erfolg zählt NUR
-   * `state.status` (von der Action zurückgemeldet), nie `camp.status`
-   * (Bug, gefunden im Review): in genau dem Render, in dem `state.saved`
-   * erstmals true wird, kommt `camp` noch aus der Server-Komponente von
-   * VOR diesem Save — `revalidatePath` liefert die aktualisierte Prop erst
-   * in einem eigenen, späteren Render. `camp.status` bleibt hier
-   * ausschließlich der Fehlerfall-Fallback, wo nie revalidiert wird und
-   * der Wert deshalb nie veraltet.
-   *
-   * Die Anpassung selbst passiert WÄHREND des Renderns (React-Pattern
-   * "Adjusting state when a prop changes"), nicht in einem Effect — ein
-   * `setState` synchron im Effect-Body erzeugt einen unnötigen
-   * Kaskaden-Render und ist hier auch nicht nötig, da React einen solchen
-   * Render-Zeit-`setState`-Aufruf ohnehin vor dem Commit abfängt. */
+  // Remount the uncontrolled select after each action, using the confirmed
+  // status on success and the submitted selection on failure.
   const [status, setStatus] = useState<CampAdmin['status']>(camp.status)
   const [selectGeneration, setSelectGeneration] = useState(0)
 
   const [prevState, setPrevState] = useState(state)
   if (state !== prevState) {
     setPrevState(state)
-    const confirmed = state.error ? camp.status : state.saved && state.status ? state.status : null
+    const confirmed = state.error ? submitted?.status as CampAdmin['status'] | undefined : state.saved && state.status ? state.status : null
     if (confirmed) {
       setStatus(confirmed)
       setSelectGeneration(g => g + 1)
@@ -97,10 +72,10 @@ export default function CampConfigForm({
           {de.configPage.section.facts}
         </h3>
         <Field label={de.configPage.field.title} htmlFor="title">
-          <input id="title" name="title" required defaultValue={camp.title} className={INPUT_CLASS} style={INPUT_STYLE} />
+          <input id="title" name="title" required defaultValue={inputValue('title', camp.title)} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
         <Field label={de.configPage.field.location} htmlFor="location">
-          <input id="location" name="location" defaultValue={camp.location ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
+          <input id="location" name="location" defaultValue={inputValue('location', camp.location ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
       </section>
 
@@ -108,19 +83,22 @@ export default function CampConfigForm({
         <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
           {de.configPage.section.schedule}
         </h3>
+        <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
+          Die Anmeldezeiten werden in der Zeitzone deines Geräts angezeigt.
+        </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label={de.configPage.field.startDate} htmlFor="start_date">
-            <input id="start_date" name="start_date" type="date" required defaultValue={camp.start_date} className={INPUT_CLASS} style={INPUT_STYLE} />
+            <input id="start_date" name="start_date" type="date" required defaultValue={inputValue('start_date', camp.start_date)} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
           <Field label={de.configPage.field.endDate} htmlFor="end_date">
-            <input id="end_date" name="end_date" type="date" required defaultValue={camp.end_date} className={INPUT_CLASS} style={INPUT_STYLE} />
+            <input id="end_date" name="end_date" type="date" required defaultValue={inputValue('end_date', camp.end_date)} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
           <Field label={de.configPage.field.registrationStart} htmlFor="registration_start">
             <input
               id="registration_start"
               name="registration_start"
               type="datetime-local"
-              defaultValue={toLocalInputValue(camp.registration_start)}
+              defaultValue={inputValue('registration_start', toLocalInputValue(camp.registration_start))}
               className={INPUT_CLASS}
               style={INPUT_STYLE}
             />
@@ -130,19 +108,19 @@ export default function CampConfigForm({
               id="registration_end"
               name="registration_end"
               type="datetime-local"
-              defaultValue={toLocalInputValue(camp.registration_end)}
+              defaultValue={inputValue('registration_end', toLocalInputValue(camp.registration_end))}
               className={INPUT_CLASS}
               style={INPUT_STYLE}
             />
           </Field>
           <Field label={de.configPage.field.ageMin} htmlFor="age_min">
-            <input id="age_min" name="age_min" type="number" min={0} required defaultValue={camp.age_min} className={INPUT_CLASS} style={INPUT_STYLE} />
+            <input id="age_min" name="age_min" type="number" min={0} required defaultValue={inputValue('age_min', camp.age_min)} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
           <Field label={de.configPage.field.ageMax} htmlFor="age_max">
-            <input id="age_max" name="age_max" type="number" min={0} required defaultValue={camp.age_max} className={INPUT_CLASS} style={INPUT_STYLE} />
+            <input id="age_max" name="age_max" type="number" min={0} required defaultValue={inputValue('age_max', camp.age_max)} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
           <Field label={de.configPage.field.capacity} htmlFor="capacity">
-            <input id="capacity" name="capacity" type="number" min={1} required defaultValue={camp.capacity} className={INPUT_CLASS} style={INPUT_STYLE} />
+            <input id="capacity" name="capacity" type="number" min={1} required defaultValue={inputValue('capacity', camp.capacity)} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
           <Field label={de.configPage.field.price} htmlFor="price_euros">
             <input
@@ -152,7 +130,7 @@ export default function CampConfigForm({
               min={0}
               step="0.01"
               required
-              defaultValue={(camp.price_cents / 100).toFixed(2)}
+              defaultValue={inputValue('price_euros', (camp.price_cents / 100).toFixed(2))}
               className={INPUT_CLASS}
               style={INPUT_STYLE}
             />
@@ -165,17 +143,17 @@ export default function CampConfigForm({
           {de.configPage.section.parentInfo}
         </h3>
         <Field label={de.configPage.field.careInfo} htmlFor="care_info">
-          <textarea id="care_info" name="care_info" rows={2} defaultValue={camp.care_info ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
+          <textarea id="care_info" name="care_info" rows={2} defaultValue={inputValue('care_info', camp.care_info ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
         <Field label={de.configPage.field.mealsInfo} htmlFor="meals_info">
-          <textarea id="meals_info" name="meals_info" rows={2} defaultValue={camp.meals_info ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
+          <textarea id="meals_info" name="meals_info" rows={2} defaultValue={inputValue('meals_info', camp.meals_info ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
         <Field label={de.configPage.field.includes} htmlFor="includes" hint={de.configPage.hint.includes}>
           <textarea
             id="includes"
             name="includes"
             rows={4}
-            defaultValue={camp.includes?.join('\n') ?? ''}
+            defaultValue={inputValue('includes', camp.includes?.join('\n') ?? '')}
             className={INPUT_CLASS}
             style={INPUT_STYLE}
           />

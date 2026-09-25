@@ -14,11 +14,13 @@ docstring.
 Concurrency invariant (read this before touching any function below): every
 function that mutates camp_registrations in a way that affects capacity
 (create_registration, promote_next_waitlisted_registration,
-cancel_registration_and_promote_next) begins by acquiring
+cancel_registration_and_promote_next) acquires
 `SELECT ... FOR UPDATE` on the camp's row, via _LOCK_CAMP_CAPACITY, before
 doing anything capacity-sensitive. That single lock is the one
 synchronization point all of them share — bypassing it anywhere would
 reopen the overselling/double-promotion race window. See
+create_registration's organization lock for the additional public-visibility
+guard acquired before the camp lock. See
 cancel_registration_and_promote_next's docstring for why it *additionally*
 locks the registration row first, and why that ordering (registration, then
 camp — never the reverse) can't deadlock against the other functions here.
@@ -34,7 +36,7 @@ from uuid import UUID
 from .. import db
 from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES, validate_transition
 from ..schemas import RegistrationCreate
-from ..tenancy import TenantContext
+from ..tenancy import ACTIVE_PLAN_STATUSES, TenantContext
 from ..utils import age_on_date, is_registration_open
 
 
@@ -42,6 +44,10 @@ class RegistrationRejectedError(Exception):
     """Base class for registration-lifecycle failures — mapped to an HTTP
     error by whichever endpoint (public write-flow today; an internal/admin
     one later) surfaces them."""
+
+
+class OrganizationNotAvailableError(RegistrationRejectedError):
+    """The organization was withdrawn or deactivated after tenant resolution."""
 
 
 class CampNotAvailableError(RegistrationRejectedError):
@@ -137,6 +143,16 @@ _GET_TARGET = f"""
 """
 
 _LOCK_CAMP_CAPACITY = "select capacity, status from camps where id = %s for update"
+
+# SHARE allows registrations in different camps to proceed together, but
+# conflicts with publication/plan UPDATEs. KEY SHARE does not protect these
+# non-key columns. Public registration always locks organization before camp.
+_LOCK_PUBLIC_ORGANIZATION = """
+    select site_published, plan_status
+    from organizations
+    where id = %s
+    for share
+"""
 
 # Capacity is defined as "how many registered/confirmed rows exist for this
 # camp" — CAPACITY_COUNTING_STATUSES (app/registration_lifecycle.py) is the
@@ -463,16 +479,18 @@ def create_registration(
     Runs entirely inside a single transaction (one borrowed connection via
     db.get_cursor):
 
-    1. `SELECT capacity FROM camps WHERE id = %s FOR UPDATE` — locks this
+    1. Lock the organization FOR SHARE and recheck publication/plan status.
+       Concurrent public registrations can share this lock; withdrawal
+       waits until this transaction finishes (or is seen before any write).
+    2. `SELECT capacity, status FROM camps WHERE id = %s FOR UPDATE` — locks this
        camp's row. A concurrent request for the *same* camp blocks here
        until this transaction commits or rolls back; requests for
        *different* camps are unaffected (no cross-camp contention).
-    2. Count active (registered/confirmed — CAPACITY_COUNTING_STATUSES)
+    3. Count active (registered/confirmed — CAPACITY_COUNTING_STATUSES)
        registrations for this camp, inside the same transaction/lock.
-    3. INSERT with status='registered' if capacity remains, else
-       status='waitlist'. Either way this function always succeeds (no
-       exception for "full") — only CampNotAvailableError remains, for the
-       practically-unreachable "camp vanished mid-transaction" case.
+    4. INSERT with status='registered' if capacity remains, else
+       status='waitlist'. Full camps are accepted onto the waitlist;
+       withdrawn organizations or camps are rejected before any insert.
 
     This prevents two concurrent requests from both reading "1 spot left"
     and both inserting as 'registered': the second transaction's FOR UPDATE
@@ -484,6 +502,15 @@ def create_registration(
     from `data`, which has no such fields (see RegistrationCreate).
     """
     with db.get_cursor() as cur:
+        cur.execute(_LOCK_PUBLIC_ORGANIZATION, (tenant.organization_id,))
+        organization = cur.fetchone()
+        if (
+            organization is None
+            or not organization["site_published"]
+            or organization["plan_status"] not in ACTIVE_PLAN_STATUSES
+        ):
+            raise OrganizationNotAvailableError("Organization no longer available")
+
         cur.execute(_LOCK_CAMP_CAPACITY, (camp.id,))
         locked = cur.fetchone()
         if locked is None:

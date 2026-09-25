@@ -54,7 +54,7 @@ class TenantUnpublishedError(TenantResolutionError):
 # active are usable tenants; suspended and cancelled are not. This is a
 # deliberately simple binary split for CP-S403 — no plan-tier or billing
 # nuance beyond "usable vs. not" belongs here yet.
-_ACTIVE_PLAN_STATUSES = frozenset({"pilot", "active"})
+ACTIVE_PLAN_STATUSES = frozenset({"pilot", "active"})
 
 
 @dataclass(frozen=True)
@@ -76,7 +76,7 @@ def resolve_tenant(slug: str) -> TenantContext:
 
     Raises TenantNotFoundError if no organization matches the slug,
     TenantInactiveError if the organization exists but its plan_status is
-    not in _ACTIVE_PLAN_STATUSES (e.g. suspended/cancelled), and
+    not in ACTIVE_PLAN_STATUSES (e.g. suspended/cancelled), and
     TenantUnpublishedError if site_published is false (an operator-side
     draft, see admin_schemas.OrganizationCreate.site_published) — none of
     these three is treated the same as a genuinely active, published
@@ -89,7 +89,7 @@ def resolve_tenant(slug: str) -> TenantContext:
     org = organizations.get_organization_by_slug(slug)
     if org is None:
         raise TenantNotFoundError(slug)
-    if org["plan_status"] not in _ACTIVE_PLAN_STATUSES:
+    if org["plan_status"] not in ACTIVE_PLAN_STATUSES:
         raise TenantInactiveError(slug, org["plan_status"])
     if not org["site_published"]:
         raise TenantUnpublishedError(slug)

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getAdminToken } from '../../../lib/adminSession'
 import { CAMP_STATUSES } from '../../../lib/i18n/de'
+import { parseZonedDateTime } from '../../../lib/dateTimeInput'
 import { createCampAdmin, SlugConflictError, updateCampAdmin, updateOrganizationAdmin } from '../../../lib/saasAdminApi'
 
 export interface ConfigActionState {
@@ -30,20 +31,6 @@ function str(formData: FormData, key: string): string | undefined {
 function optionalStr(formData: FormData, key: string): string | null {
   const value = str(formData, key)
   return value ? value : null
-}
-
-/** Gegenstück zu CampConfigForm's toLocalInputValue — der Browser liefert
- * ein naives "YYYY-MM-DDTHH:mm" aus einem datetime-local-Feld, `new
- * Date(...)` interpretiert das laut ECMA-262 als lokale (Browser-)Zeit,
- * `.toISOString()` hängt den korrekten Offset wieder an. Ohne das (siehe
- * Review-Fund): dieselben Ziffern werden vom Server naiv in dessen eigener
- * Zeitzone interpretiert und verschieben registration_start/_end lautlos
- * bei jedem Speichern, auch wenn das Feld nie angefasst wurde. */
-function toIsoDateTime(formData: FormData, key: string): string | null {
-  const value = str(formData, key)
-  if (!value) return null
-  const d = new Date(value)
-  return Number.isNaN(d.getTime()) ? null : d.toISOString()
 }
 
 export async function updateOrganizationConfigAction(
@@ -163,8 +150,8 @@ export async function updateCampConfigAction(
       title,
       start_date: startDate,
       end_date: endDate,
-      registration_start: toIsoDateTime(formData, 'registration_start'),
-      registration_end: toIsoDateTime(formData, 'registration_end'),
+      registration_start: parseZonedDateTime(formData.get('registration_start')),
+      registration_end: parseZonedDateTime(formData.get('registration_end')),
       age_min: ageMin,
       age_max: ageMax,
       capacity,

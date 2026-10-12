@@ -46,7 +46,7 @@ function OrganizationRow({ org }: { org: OrganizationAdmin }) {
           {org.camp_count === 1 ? 'Camp' : 'Camps'} · Einrichtung {progress.done}/{progress.total}
         </p>
       </Link>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {!org.site_published && (
           <span className="cp-chip rounded-[var(--cp-r-chip)] px-2 py-1" style={{ background: 'var(--cp-error-bg)', color: 'var(--cp-error)' }}>
             Entwurf

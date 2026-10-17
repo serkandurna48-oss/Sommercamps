@@ -8,6 +8,7 @@ import Button from '../ui/Button'
 import Field from '../ui/Field'
 import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 import SuccessNote from '../state/SuccessNote'
+import PendingNote from '../state/PendingNote'
 import { localInputToIso, toLocalInputValue } from '../../../lib/dateTimeInput'
 
 /** Local wall times are converted to explicit instants before invoking the Server Action. */
@@ -183,7 +184,8 @@ export default function CampConfigForm({
         </Field>
       </section>
 
-      {state.error && (
+      {pending && <PendingNote>{de.configPage.saving}</PendingNote>}
+      {!pending && state.error && (
         <p
           className="cp-confirm-pop cp-body rounded-[var(--cp-r-chip)] border px-3 py-2 motion-reduce:animate-none"
           style={{ color: 'var(--cp-error)', background: 'var(--cp-error-bg)', borderColor: 'var(--cp-error-line)' }}
@@ -192,7 +194,7 @@ export default function CampConfigForm({
           {state.error}
         </p>
       )}
-      {state.saved && !state.error && <SuccessNote>{de.configPage.saved}</SuccessNote>}
+      {!pending && state.saved && !state.error && <SuccessNote>{de.configPage.saved}</SuccessNote>}
 
       <div>
         <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn}>

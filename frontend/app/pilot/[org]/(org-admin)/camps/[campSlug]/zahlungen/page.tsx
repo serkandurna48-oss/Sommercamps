@@ -39,8 +39,8 @@ export default async function CampPaymentsPage({
 
       <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
         <div className="mb-8 grid grid-cols-2 gap-4 xl:grid-cols-3">
-          <StatCard label={de.paymentsPage.collected} value={formatEuro(money.collectedCents)} />
-          <StatCard label={de.paymentsPage.open} value={formatEuro(money.openCents)} />
+          <StatCard label={de.paymentsPage.collected} value={formatEuro(money.collectedCents)} wide />
+          <StatCard label={de.paymentsPage.open} value={formatEuro(money.openCents)} wide />
           <StatCard label={de.command.filterPaymentOpen} value={String(openCount)} numericValue={openCount} />
         </div>
 

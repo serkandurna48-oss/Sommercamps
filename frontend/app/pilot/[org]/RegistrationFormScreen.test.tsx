@@ -34,15 +34,19 @@ function walk(node: unknown): ElementNode[] {
   return [element, ...walk(element.props.children)]
 }
 
-function render(onSubmitted = vi.fn()) {
+function render(onSubmitted = vi.fn(), isFull = false) {
   hooks.cursor = 0
   return walk(RegistrationFormScreen({
     orgSlug: 'testverein',
     orgName: 'Testverein',
-    camp: { slug: 'sommer', title: 'Sommercamp', start_date: '2026-07-01', end_date: '2026-07-05', price_cents: 10000, currency: 'EUR' } as never,
+    camp: { slug: 'sommer', title: 'Sommercamp', start_date: '2026-07-01', end_date: '2026-07-05', price_cents: 10000, currency: 'EUR', is_full: isFull } as never,
     onBack: vi.fn(),
     onSubmitted,
   }))
+}
+
+function text(nodes: ElementNode[]): string {
+  return JSON.stringify(nodes.map((node) => node.props.children))
 }
 
 function change(input: ElementNode, value: string | boolean) {
@@ -108,6 +112,26 @@ it('submits both consent flags as true when both checkboxes are accepted', async
   await submit(nodes)
   expect(submitRegistration).toHaveBeenCalledWith('testverein', 'sommer', expect.objectContaining({ terms_accepted: true, privacy_accepted: true }))
   expect(onSubmitted).toHaveBeenCalledOnce()
+})
+
+it('names the waitlist instead of a registration when the camp is full', () => {
+  const button = render(vi.fn(), true).find((node) => node.type === 'button' && node.props.type === 'submit')
+  expect(button?.props.children).toBe('Auf die Warteliste setzen')
+})
+
+it('calls it a registration while places are left', () => {
+  const button = render(vi.fn(), false).find((node) => node.type === 'button' && node.props.type === 'submit')
+  expect(button?.props.children).toBe('Anmeldung absenden')
+})
+
+it('promises no costs for the waitlist and no confirmation mail at all', () => {
+  const full = text(render(vi.fn(), true))
+  expect(full).toContain('Auf der Warteliste entstehen noch keine Kosten.')
+  const open = text(render(vi.fn(), false))
+  expect(open).toContain('Den Betrag überweisen Sie anschließend selbst an Testverein')
+  for (const rendered of [full, open]) {
+    expect(rendered).not.toContain('An diese Adresse geht die Bestätigung')
+  }
 })
 
 it('opens the organization privacy policy in a new tab with noopener', () => {

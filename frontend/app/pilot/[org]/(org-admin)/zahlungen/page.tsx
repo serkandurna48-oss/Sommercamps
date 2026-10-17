@@ -49,8 +49,8 @@ export default async function OrgPaymentsPage({ params }: { params: Promise<{ or
         </p>
 
         <div className="mb-8 grid grid-cols-2 gap-4 xl:grid-cols-3">
-          <StatCard label={de.paymentsPage.collected} value={formatEuro(money.collectedCents)} />
-          <StatCard label={de.paymentsPage.open} value={formatEuro(money.openCents)} />
+          <StatCard label={de.paymentsPage.collected} value={formatEuro(money.collectedCents)} wide />
+          <StatCard label={de.paymentsPage.open} value={formatEuro(money.openCents)} wide />
           <StatCard label={de.command.filterPaymentOpen} value={String(openCount)} numericValue={openCount} />
         </div>
 

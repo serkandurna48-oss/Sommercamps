@@ -39,6 +39,14 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
   const pathname = usePathname()
   const containerRef = useRef<HTMLDivElement>(null)
   const [underline, setUnderline] = useState<{ left: number; width: number } | null>(null)
+  // --cp-tab-mark: die Vereinsfarbe für die Aktiv-Markierung der schmalen
+  // Leiste. Als Custom Property, weil die Markierung in tokens.css hinter
+  // einer Media Query sitzt und von dort nicht an ein Prop herankommt.
+  const navStyle: React.CSSProperties & Record<'--cp-tab-mark', string> = {
+    borderTop: '1px solid var(--cp-band-line)',
+    background: 'var(--cp-band)',
+    '--cp-tab-mark': brandColor,
+  }
 
   useEffect(() => {
     const activeEl = containerRef.current?.querySelector<HTMLElement>('[data-active="true"]')
@@ -52,8 +60,8 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
   return (
     <nav
       ref={containerRef}
-      className="relative flex gap-6 overflow-x-auto max-md:fixed max-md:right-0 max-md:bottom-0 max-md:left-0 max-md:z-20 max-md:justify-around max-md:gap-0 max-md:px-2"
-      style={{ borderTop: '1px solid var(--cp-band-line)', background: 'var(--cp-band)' }}
+      className="fixed right-0 bottom-0 left-0 z-20 grid grid-flow-col auto-cols-fr md:relative md:flex md:gap-6 md:overflow-x-auto"
+      style={navStyle}
       aria-label="Bereiche"
     >
       {tabs.map(tab => {
@@ -65,7 +73,7 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
             href={tab.href}
             data-active={active}
             aria-current={active ? 'page' : undefined}
-            className="cp-subheading inline-flex shrink-0 items-center gap-1.5 pt-3 pb-3 whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 max-md:px-2 max-md:text-center max-md:text-[12px]"
+            className="cp-subheading cp-band-tab inline-flex items-center justify-center gap-1.5 px-1 pt-3 pb-3 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 md:shrink-0 md:justify-start md:px-0 md:whitespace-nowrap"
             style={{
               color: active ? 'var(--cp-on-band)' : 'var(--cp-on-band-2)',
               outlineColor: brandColor,
@@ -79,7 +87,7 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
       {underline && (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute bottom-0 left-0 h-0.5 w-px transition-transform motion-reduce:transition-none max-md:hidden"
+          className="pointer-events-none absolute bottom-0 left-0 hidden h-0.5 w-px transition-transform motion-reduce:transition-none md:block"
           style={{
             background: brandColor,
             transform: `translateX(${underline.left}px) scaleX(${underline.width})`,

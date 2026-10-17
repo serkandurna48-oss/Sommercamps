@@ -78,6 +78,17 @@ it('clears a previous error instead of showing it next to a running save', async
   expect(container.querySelector('[role="alert"]')!.textContent).toBe('Try again')
 })
 
+it('keeps the typed value after a failed save instead of falling back to the stored name', async () => {
+  vi.mocked(updateOrganizationConfigAction).mockResolvedValue({ error: 'Try again', saved: false })
+  await render()
+  const name = container.querySelector<HTMLInputElement>('[name="name"]')!
+  name.value = 'Review und Freunde e. V.'
+  await save()
+
+  expect(container.querySelector('[role="alert"]')!.textContent).toBe('Try again')
+  expect(container.querySelector<HTMLInputElement>('[name="name"]')!.value).toBe('Review und Freunde e. V.')
+})
+
 it('keeps the submit button reachable and labelled while a save runs', async () => {
   let release: (state: ConfigActionState) => void = () => {}
   vi.mocked(updateOrganizationConfigAction).mockImplementation(() => new Promise<ConfigActionState>(resolve => { release = resolve }))

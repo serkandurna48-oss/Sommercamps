@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { de } from '../../../lib/i18n/de'
 import type { OrganizationAdmin } from '../../../lib/saasAdminApi'
 import { updateOrganizationConfigAction, type ConfigActionState } from '../actions/configActions'
@@ -27,8 +27,20 @@ export default function OrganizationConfigForm({
   brandStrong: string
   brandOn: string
 }) {
+  const [submitted, setSubmitted] = useState<Record<string, string> | null>(null)
+  const [previousOrg, setPreviousOrg] = useState(org)
+  if (org !== previousOrg) {
+    setPreviousOrg(org)
+    setSubmitted(null)
+  }
+  const inputValue = (field: string, fallback: string) => submitted?.[field] ?? fallback
   const boundAction = updateOrganizationConfigAction.bind(null, orgSlug)
-  const [state, formAction, pending] = useActionState<ConfigActionState, FormData>(boundAction, { error: null, saved: false })
+  const [state, formAction, pending] = useActionState<ConfigActionState, FormData>(async (previous, data) => {
+    // React resets uncontrolled fields after a resolved action, including
+    // failures. Keep submitted defaults until fresh props arrive.
+    setSubmitted(Object.fromEntries([...data].filter((entry): entry is [string, string] => typeof entry[1] === 'string')))
+    return boundAction(previous, data)
+  }, { error: null, saved: false })
 
   return (
     <div className="flex flex-col gap-10">
@@ -40,10 +52,10 @@ export default function OrganizationConfigForm({
             {de.configPage.section.branding}
           </h3>
           <Field label={de.configPage.field.name} htmlFor="name">
-            <input id="name" name="name" required defaultValue={org.name} className={INPUT_CLASS} style={INPUT_STYLE} />
+            <input id="name" name="name" required defaultValue={inputValue('name', org.name)} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
           <Field label={de.configPage.field.legalName} htmlFor="legal_name">
-            <input id="legal_name" name="legal_name" defaultValue={org.legal_name ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
+            <input id="legal_name" name="legal_name" defaultValue={inputValue('legal_name', org.legal_name ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
           <Field
             label="Anschrift (für Impressum/Datenschutz)"
@@ -54,7 +66,7 @@ export default function OrganizationConfigForm({
               id="legal_address"
               name="legal_address"
               rows={2}
-              defaultValue={org.legal_address ?? ''}
+              defaultValue={inputValue('legal_address', org.legal_address ?? '')}
               className={INPUT_CLASS}
               style={INPUT_STYLE}
             />
@@ -63,20 +75,20 @@ export default function OrganizationConfigForm({
             <input
               id="contact_person_name"
               name="contact_person_name"
-              defaultValue={org.contact_person_name ?? ''}
+              defaultValue={inputValue('contact_person_name', org.contact_person_name ?? '')}
               className={INPUT_CLASS}
               style={INPUT_STYLE}
             />
           </Field>
           <Field label={de.configPage.field.logoUrl} htmlFor="logo_url">
-            <input id="logo_url" name="logo_url" type="url" defaultValue={org.logo_url ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
+            <input id="logo_url" name="logo_url" type="url" defaultValue={inputValue('logo_url', org.logo_url ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
           <Field label={de.configPage.field.primaryColor} htmlFor="primary_color" hint={de.configPage.hint.primaryColor}>
             <div className="flex items-center gap-3">
               <input
                 id="primary_color"
                 name="primary_color"
-                defaultValue={org.primary_color ?? ''}
+                defaultValue={inputValue('primary_color', org.primary_color ?? '')}
                 placeholder="#1c6b45"
                 className={INPUT_CLASS}
                 style={{ ...INPUT_STYLE, maxWidth: '180px' }}
@@ -102,7 +114,7 @@ export default function OrganizationConfigForm({
               name="contact_email"
               type="email"
               required
-              defaultValue={org.contact_email}
+              defaultValue={inputValue('contact_email', org.contact_email)}
               className={INPUT_CLASS}
               style={INPUT_STYLE}
             />
@@ -112,7 +124,7 @@ export default function OrganizationConfigForm({
               id="contact_phone"
               name="contact_phone"
               type="tel"
-              defaultValue={org.contact_phone ?? ''}
+              defaultValue={inputValue('contact_phone', org.contact_phone ?? '')}
               className={INPUT_CLASS}
               style={INPUT_STYLE}
             />
@@ -130,21 +142,21 @@ export default function OrganizationConfigForm({
             <input
               id="intro_heading"
               name="intro_heading"
-              defaultValue={org.intro_heading ?? ''}
+              defaultValue={inputValue('intro_heading', org.intro_heading ?? '')}
               placeholder={org.name}
               className={INPUT_CLASS}
               style={INPUT_STYLE}
             />
           </Field>
           <Field label="Einführungstext" htmlFor="intro_text">
-            <textarea id="intro_text" name="intro_text" rows={3} defaultValue={org.intro_text ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
+            <textarea id="intro_text" name="intro_text" rows={3} defaultValue={inputValue('intro_text', org.intro_text ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
           <Field label="Titelbild-URL" htmlFor="hero_image_url" hint="Kein Upload in dieser Version — Bild extern hochladen und die URL hier eintragen.">
             <input
               id="hero_image_url"
               name="hero_image_url"
               type="url"
-              defaultValue={org.hero_image_url ?? ''}
+              defaultValue={inputValue('hero_image_url', org.hero_image_url ?? '')}
               className={INPUT_CLASS}
               style={INPUT_STYLE}
             />
@@ -159,7 +171,7 @@ export default function OrganizationConfigForm({
             <input
               id="iban"
               name="iban"
-              defaultValue={org.iban ?? ''}
+              defaultValue={inputValue('iban', org.iban ?? '')}
               placeholder="DE89370400440532013000"
               className={INPUT_CLASS}
               style={INPUT_STYLE}
@@ -175,7 +187,7 @@ export default function OrganizationConfigForm({
             Nur für dich als Betreiber sichtbar, nie öffentlich. Vertragsstatus selbst steht auf der Plattform-Konsole.
           </p>
           <Field label="Konditionen" htmlFor="billing_notes" hint="Freitext, z. B. vereinbarter Preis, Rechnungsintervall, Startdatum.">
-            <textarea id="billing_notes" name="billing_notes" rows={2} defaultValue={org.billing_notes ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
+            <textarea id="billing_notes" name="billing_notes" rows={2} defaultValue={inputValue('billing_notes', org.billing_notes ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
         </section>
 

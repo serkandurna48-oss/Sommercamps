@@ -34,11 +34,12 @@ function walk(node: unknown): ElementNode[] {
   return [element, ...walk(element.props.children)]
 }
 
-function render(onSubmitted = vi.fn(), isFull = false) {
+function render(onSubmitted = vi.fn(), isFull = false, hasBankDetails = true) {
   hooks.cursor = 0
   return walk(RegistrationFormScreen({
     orgSlug: 'testverein',
     orgName: 'Testverein',
+    hasBankDetails,
     camp: { slug: 'sommer', title: 'Sommercamp', start_date: '2026-07-01', end_date: '2026-07-05', price_cents: 10000, currency: 'EUR', is_full: isFull } as never,
     onBack: vi.fn(),
     onSubmitted,
@@ -132,6 +133,14 @@ it('promises no costs for the waitlist and no confirmation mail at all', () => {
   for (const rendered of [full, open]) {
     expect(rendered).not.toContain('An diese Adresse geht die Bestätigung')
   }
+})
+
+it('promises bank details on the next screen only when the club stored an IBAN', () => {
+  const withIban = text(render(vi.fn(), false, true))
+  expect(withIban).toContain('Die Bankdaten stehen auf der nächsten Seite.')
+  const withoutIban = text(render(vi.fn(), false, false))
+  expect(withoutIban).not.toContain('Die Bankdaten stehen auf der nächsten Seite.')
+  expect(withoutIban).toContain('Die Bankverbindung ist hier noch nicht hinterlegt')
 })
 
 it('opens the organization privacy policy in a new tab with noopener', () => {

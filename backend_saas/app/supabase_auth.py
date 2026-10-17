@@ -17,9 +17,31 @@ locally-duplicated notion of validity.
 
 from __future__ import annotations
 
+import threading
+
 import httpx
 
 from .config import get_settings
+
+_client: httpx.Client | None = None
+_client_lock = threading.Lock()
+
+
+def get_client() -> httpx.Client:
+    """One client for the whole process instead of httpx.get's implicit
+    per-call client. Constructing a client loads the certifi CA bundle into
+    a fresh SSL context, measured at ~216 ms on the reference machine —
+    more than the Supabase round-trip and the database query together, and
+    previously paid on every authenticated request. Reusing the client also
+    keeps the TLS connection to Supabase alive between requests. This
+    changes transport only: every token is still verified against Supabase
+    on every request, exactly as before."""
+    global _client
+    if _client is None:
+        with _client_lock:
+            if _client is None:
+                _client = httpx.Client(timeout=5.0)
+    return _client
 
 
 class SupabaseAuthError(Exception):
@@ -45,7 +67,7 @@ def verify_access_token(access_token: str) -> SupabaseUser:
     than leaking which one happened to the client."""
     settings = get_settings()
     try:
-        response = httpx.get(
+        response = get_client().get(
             f"{settings.supabase_url}/auth/v1/user",
             headers={
                 "Authorization": f"Bearer {access_token}",
@@ -79,7 +101,7 @@ def find_user_by_email(email: str) -> SupabaseUser | None:
         raise SupabaseAuthError("SUPABASE_SERVICE_ROLE_KEY not configured")
 
     try:
-        response = httpx.get(
+        response = get_client().get(
             f"{settings.supabase_url}/auth/v1/admin/users",
             headers={
                 "Authorization": f"Bearer {settings.supabase_service_role_key}",

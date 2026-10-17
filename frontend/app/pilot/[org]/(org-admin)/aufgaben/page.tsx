@@ -21,7 +21,7 @@ export default async function OrgTasksPage({ params }: { params: Promise<{ org: 
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}
-        title={org.name}
+        title={de.command.tasks}
         metrics={[{ label: de.tasksPage.heading, value: String(tasks.length) }]}
         tabs={orgTabs(orgSlug)}
         brandColor={brand.brand}

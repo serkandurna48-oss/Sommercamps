@@ -4,14 +4,14 @@ import CampCreateForm from '../../../../../components/saas/config/CampCreateForm
 import MatchdayBand from '../../../../../components/saas/shell/MatchdayBand'
 import { orgTabs } from '../../../../../components/saas/navTabs'
 import { getAdminToken } from '../../../../../lib/adminSession'
-import { fetchOrganizationAdmin } from '../../../../../lib/saasAdminApi'
+import { getOrganizationAdmin } from '../../../../../components/saas/orgAdminData'
 
 export default async function NewCampPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params
   const token = await getAdminToken()
   if (!token) redirect(`/pilot/${orgSlug}/login`)
 
-  const org = await fetchOrganizationAdmin(orgSlug, token)
+  const org = await getOrganizationAdmin(orgSlug, token)
   if (!org) notFound()
 
   const brand = computeBrandTokens(org.primary_color)
@@ -36,7 +36,7 @@ export default async function NewCampPage({ params }: { params: Promise<{ org: s
           Weitere Angaben (Ort, Betreuung, Leistungen) lassen sich danach in der Camp-Konfiguration ergänzen.
         </p>
 
-        <CampCreateForm orgSlug={orgSlug} />
+        <CampCreateForm orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
       </main>
     </>
   )

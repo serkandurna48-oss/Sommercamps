@@ -42,9 +42,12 @@ export default async function CampCommandCenterPage({
       />
 
       <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
-        <div className="mb-8 grid grid-cols-2 gap-4 xl:grid-cols-4">
+        {/* grid-flow-row-dense: die breite Geldkachel (StatCard `wide`) passt
+            unter 768px nicht neben die erste Kachel — ohne dense bliebe dort
+            ein leeres Feld stehen. */}
+        <div className="mb-8 grid grid-flow-row-dense grid-cols-2 gap-4 xl:grid-cols-4">
           <StatCard label="Belegung" value={`${stats.registeredCount}/${camp.capacity}`} />
-          <StatCard label="Eingegangen / Offen" value={`${formatEuro(money.collectedCents)} / ${formatEuro(money.openCents)}`} />
+          <StatCard label="Eingegangen / Offen" value={`${formatEuro(money.collectedCents)} / ${formatEuro(money.openCents)}`} wide />
           <StatCard label={de.dashboard.waitlistLabel} value={String(stats.waitlistCount)} numericValue={stats.waitlistCount} />
           <StatCard label="Aufgaben" value={String(openTaskCount)} numericValue={openTaskCount} />
         </div>

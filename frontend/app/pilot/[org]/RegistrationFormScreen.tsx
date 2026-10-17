@@ -53,12 +53,16 @@ type FieldKey =
 export default function RegistrationFormScreen({
   orgSlug,
   orgName,
+  hasBankDetails,
   camp,
   onBack,
   onSubmitted,
 }: {
   orgSlug: string
   orgName: string
+  /** Mirrors DoneScreen: without a stored IBAN the parents have to ask the
+   * club, so the form must not promise bank details on the next screen. */
+  hasBankDetails: boolean
   camp: CampPublic
   onBack: () => void
   onSubmitted: (result: RegistrationCreated, childFirstName: string, parentEmail: string) => void
@@ -438,7 +442,9 @@ export default function RegistrationFormScreen({
           <span className="fine">
             {camp.is_full
               ? 'Auf der Warteliste entstehen noch keine Kosten. Der Betrag wird erst fällig, wenn ein Platz frei wird und Sie zusagen.'
-              : `Den Betrag überweisen Sie anschließend selbst an ${orgName}. Die Bankdaten stehen auf der nächsten Seite.`}
+              : hasBankDetails
+                ? `Den Betrag überweisen Sie anschließend selbst an ${orgName}. Die Bankdaten stehen auf der nächsten Seite.`
+                : `Den Betrag überweisen Sie anschließend selbst an ${orgName}. Die Bankverbindung ist hier noch nicht hinterlegt — wie Sie sie bekommen, steht auf der nächsten Seite.`}
           </span>
         </div>
       </form>

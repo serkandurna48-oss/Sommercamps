@@ -63,6 +63,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
       <RegistrationFormScreen
         orgSlug={org.slug}
         orgName={org.name}
+        hasBankDetails={Boolean(org.iban)}
         camp={selectedCamp}
         onBack={() => {
           setScreen(selectedCamp.is_full ? 'wait' : 'camp')

@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { CampAdmin } from '../../../lib/saasAdminApi'
 import CampConfigForm from './CampConfigForm'
-import { updateCampConfigAction } from '../actions/configActions'
+import { updateCampConfigAction, type ConfigActionState } from '../actions/configActions'
 
 vi.mock('../actions/configActions', () => ({ updateCampConfigAction: vi.fn() }))
 
@@ -67,6 +67,44 @@ it('keeps entered values when saving fails', async () => {
   expect(container.textContent).toContain('Try again')
   expect(container.querySelector<HTMLInputElement>('[name="title"]')!.value).toBe('Changed title')
   expect(container.querySelector<HTMLSelectElement>('[name="status"]')!.value).toBe('published')
+})
+
+it('replaces the earlier result with a pending note while the next save runs', async () => {
+  await act(() => root.render(<CampConfigForm orgSlug="review" camp={camp} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(async () => {
+    container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+  expect(container.querySelector('[role="status"]')!.textContent).toBe('Gespeichert.')
+
+  let release: (state: ConfigActionState) => void = () => {}
+  vi.mocked(updateCampConfigAction).mockImplementation(() => new Promise<ConfigActionState>(resolve => { release = resolve }))
+  await act(async () => {
+    container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+  expect(container.querySelector('[role="status"]')!.textContent).toBe('Wird gespeichert …')
+
+  await act(async () => release({ error: null, saved: true, status: 'draft' }))
+  expect(container.querySelector('[role="status"]')!.textContent).toBe('Gespeichert.')
+})
+
+it('clears a previous error instead of showing it next to a running save', async () => {
+  vi.mocked(updateCampConfigAction).mockResolvedValue({ error: 'Try again', saved: false })
+  await act(() => root.render(<CampConfigForm orgSlug="review" camp={camp} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(async () => {
+    container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+  expect(container.querySelector('[role="alert"]')!.textContent).toBe('Try again')
+
+  let release: (state: ConfigActionState) => void = () => {}
+  vi.mocked(updateCampConfigAction).mockImplementation(() => new Promise<ConfigActionState>(resolve => { release = resolve }))
+  await act(async () => {
+    container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+  expect(container.querySelector('[role="alert"]')).toBeNull()
+  expect(container.querySelector('[role="status"]')!.textContent).toBe('Wird gespeichert …')
+
+  await act(async () => release({ error: 'Try again', saved: false }))
+  expect(container.querySelector('[role="alert"]')!.textContent).toBe('Try again')
 })
 
 it('keeps saved values until fresh server props arrive, then accepts those props', async () => {

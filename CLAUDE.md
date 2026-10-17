@@ -189,6 +189,28 @@ cd frontend && npm install && npm run dev                                   # ht
 
 ---
 
+## Agent-Workflow: Review, Übergabe, Zugang (verbindlich)
+
+Hintergrund: Laufzeitauswertung 17.10.2026 (PRO-52). Die meiste Zeit ging nicht in die
+Umsetzung, sondern in vermeidbare Abgleich- und Zugangsrunden.
+
+1. **Erst pushen, dann prüfen.** Vor jedem Review-Start und jeder Abnahme-Meldung:
+   `pwsh -NoProfile -File ./scripts/check-review-sha.ps1 -Pr <Nr> -TestedSha <getesteter SHA>`.
+   Exit ≠ 0 → kein Review starten, keine Abnahme melden, sondern fehlende Commits pushen.
+   Der Review-Bericht nennt den geprüften SHA.
+2. **Zugang nicht aus dem Host-Kontext prüfen.** `claude auth status` in einer normalen Shell liest
+   die Host-Konfiguration, nicht das verwaltete `CLAUDE_CONFIG_DIR` des Laufs, und ist deshalb
+   kein Beleg für fehlenden Zugang. Ein erfolgreicher Lauf im verwalteten Kontext ist der Beleg.
+   Einen unbestätigten Zugangsstatus nicht weitergeben und nicht wiederholt abfragen.
+   Bei echtem Zugangsproblem: einmal melden und dann auf den Menschen warten.
+3. **Wiederkehrende Umgebungsfehler beheben statt umgehen.** Wenn dieselbe Umgehung in zwei
+   Läufen nötig war, wird sie als eigener Fix-Auftrag gemeldet und nicht still wiederholt.
+4. **Status in fünf Zeilen:** Erledigt · SHA · Getestet (was/wo) · Offen · Nächster Schritt.
+   Auf Ausführungen darüber, was nicht belegbar ist, verzichten. Ausnahme: Es ändert die
+   Entscheidung.
+5. **Kleine Pakete (≤ ~10 Commits, ein Bereich):** ein Umsetzer und ein unabhängiger Reviewer.
+   Keine zusätzliche Koordinationsebene dazwischen.
+
 ## Weiterführende Dokumentation
 
 | Thema | Datei |

@@ -160,6 +160,24 @@
   font-weight: 600;
 }
 
+/* Bereichs-Tabs im Band. Unter 768px ist die Leiste eine fixierte Fussleiste
+ * mit gleich breiten Spalten — bei 390px müssen alle fünf Ziele ohne
+ * horizontales Scrollen sichtbar sein, dafür kleinere Schrift und Umbruch
+ * statt nowrap. Die Regel steht absichtlich NACH .cp-subheading: sonst
+ * gewinnt dessen 17px. Der wandernde Unterstrich ist dort ausgeblendet,
+ * deshalb markiert eine Oberkante in der Vereinsfarbe den aktiven Bereich. */
+@media (max-width: 767px) {
+  .cp-band-tab {
+    font-size: 11px;
+    line-height: 1.15;
+    font-stretch: 100%;
+    font-weight: 600;
+  }
+  .cp-band-tab[data-active='true'] {
+    box-shadow: inset 0 2px 0 0 var(--cp-tab-mark, currentColor);
+  }
+}
+
 /* Für jede Zahl, die mit einer anderen in einer Spalte/Reihe steht —
  * Preise, Plätze, Daten, Telefonnummern. Gezielt anwenden, nicht global. */
 .cp-num {

@@ -378,7 +378,7 @@ function WaitScreen({
           Alle {camp.capacity} Plätze sind vergeben
         </h1>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--ink-2)', maxWidth: '42ch' }}>
-          Sie können Ihr Kind auf die Warteliste setzen. Wir melden uns, sobald ein Platz frei wird, und Sie entscheiden dann in Ruhe.
+          Sie können Ihr Kind auf die Warteliste setzen. {org.name} meldet sich, sobald ein Platz frei wird, und Sie entscheiden dann in Ruhe.
         </p>
         <div className="cap">
           <div className="bar full">
@@ -393,8 +393,8 @@ function WaitScreen({
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
           <h2 className="d3">So läuft die Warteliste</h2>
           <p style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--ink-2)' }}>
-            Sie geben nur Name, Jahrgang und Kontaktdaten an. Wird ein Platz frei, benachrichtigen wir der Reihe nach — Sie haben 48 Stunden Zeit zuzusagen.
-            Erst nach Ihrer Zusage entstehen Kosten.
+            Sie geben nur Name, Jahrgang und Kontaktdaten an. Wird ein Platz frei, benachrichtigt {org.name} der Reihe nach — Sie haben 48 Stunden Zeit
+            zuzusagen. Erst nach Ihrer Zusage entstehen Kosten.
           </p>
           <button className="btn primary" type="button" onClick={onJoinWaitlist}>
             Auf die Warteliste setzen

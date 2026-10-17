@@ -31,6 +31,9 @@ export default function DoneScreen({
   const [copied, setCopied] = useState(false)
   const waitlisted = result.status === 'waitlist'
   const payTo = org.legal_name ?? org.name
+  // null = keine Bankverbindung hinterlegt (§6.4). Dann darf hier keine IBAN und
+  // auch kein Mailversand versprochen werden — die Eltern fragen beim Verein nach.
+  const iban = org.iban
   const containerRef = useRef<HTMLElement>(null)
   useParentFlowMotion(org.theme, containerRef)
 
@@ -57,7 +60,7 @@ export default function DoneScreen({
         </h1>
         <p style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--on-band-2)', maxWidth: '40ch' }}>
           {waitlisted
-            ? `Sobald ein Platz beim ${camp.title} frei wird, melden wir uns bei ${parentEmail}. Es entstehen noch keine Kosten.`
+            ? `${payTo} meldet sich bei Ihnen — unter ${parentEmail} oder telefonisch —, sobald beim ${camp.title} ein Platz frei wird. Es entstehen noch keine Kosten.`
             : `Der Platz beim ${camp.title} vom ${formatCampDateRange(camp.start_date, camp.end_date)} ist reserviert.`}
         </p>
       </header>
@@ -70,7 +73,7 @@ export default function DoneScreen({
       {!waitlisted && (
         <div className="pad sec">
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 17 }}>
-            <h2 className="d3">Jetzt überweisen</h2>
+            <h2 className="d3">{iban ? 'Jetzt überweisen' : 'Die Bezahlung'}</h2>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
               <span className="num" style={{ fontFamily: 'var(--display)', fontSize: 34, fontWeight: 'var(--dw)' as never, letterSpacing: 'var(--dtrack)' }}>
                 {formatPrice(camp.price_cents, camp.currency)}
@@ -81,10 +84,12 @@ export default function DoneScreen({
                 <dt>Empfänger</dt>
                 <dd>{payTo}</dd>
               </div>
-              <div className="r">
-                <dt>IBAN</dt>
-                <dd className="num">{org.iban ?? 'Folgt in der Bestätigungs-E-Mail'}</dd>
-              </div>
+              {iban && (
+                <div className="r">
+                  <dt>IBAN</dt>
+                  <dd className="num">{iban}</dd>
+                </div>
+              )}
               <div className="r">
                 <dt>Verwendungszweck</dt>
                 <dd className="num" style={{ fontWeight: 600 }}>
@@ -105,7 +110,9 @@ export default function DoneScreen({
               </div>
             </dl>
             <p style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--ink-2)' }}>
-              Der Verwendungszweck ordnet die Zahlung automatisch Ihrem Kind zu. Ohne ihn dauert die Zuordnung länger.
+              {iban
+                ? `Bitte den Verwendungszweck mit angeben — damit ordnet ${payTo} die Zahlung Ihrem Kind zu.`
+                : `Die Bankverbindung ist hier noch nicht hinterlegt. Bitte erfragen Sie sie bei ${payTo} unter ${org.contact_email}${org.contact_phone ? ` oder ${org.contact_phone}` : ''} und geben Sie den Verwendungszweck mit an.`}
             </p>
           </div>
         </div>
@@ -124,7 +131,7 @@ export default function DoneScreen({
               <span className="rail" />
             </div>
             <div className="txt">
-              <b>Anmeldung gespeichert</b>
+              <b>{waitlisted ? 'Auf der Warteliste eingetragen' : 'Anmeldung gespeichert'}</b>
               <span>Notieren Sie sich diese Seite — im Pilotbetrieb geht noch keine Bestätigungs-E-Mail raus.</span>
             </div>
           </li>
@@ -136,7 +143,7 @@ export default function DoneScreen({
                   <span className="rail" />
                 </div>
                 <div className="txt">
-                  <b>Wir melden uns, sobald ein Platz frei wird</b>
+                  <b>{payTo} meldet sich, sobald ein Platz frei wird</b>
                   <span>Sie haben dann 48 Stunden Zeit zuzusagen.</span>
                 </div>
               </li>
@@ -159,7 +166,7 @@ export default function DoneScreen({
                 </div>
                 <div className="txt">
                   <b>Sie überweisen den Betrag</b>
-                  <span>Danach geht der Platz an die Warteliste.</span>
+                  <span>{payTo} vermerkt den Zahlungseingang von Hand — das kann einige Tage dauern.</span>
                 </div>
               </li>
               <li data-rise>
@@ -168,8 +175,8 @@ export default function DoneScreen({
                   <span className="rail" />
                 </div>
                 <div className="txt">
-                  <b>Infopaket vor dem Camp</b>
-                  <span>Gruppe, Tagesablauf, Treffpunkt und Packliste.</span>
+                  <b>Infos vor dem Camp</b>
+                  <span>Gruppe, Tagesablauf, Treffpunkt und Packliste erfahren Sie direkt von {payTo}.</span>
                 </div>
               </li>
               <li data-rise>

@@ -78,8 +78,10 @@ export default async function OrgAdminLayout({
     redirect(ownOrg ? `/pilot/${ownOrg}/dashboard` : `/pilot/${org}/login`)
   }
 
+  // pb-16: unter 768px liegt die Bereichsleiste als fixierte Fussleiste über dem
+  // Inhalt (BandTabs.tsx) — ohne diesen Abstand verdeckt sie das Seitenende.
   return (
-    <div className={`${archivo.variable} cp-scope min-h-screen`}>
+    <div className={`${archivo.variable} cp-scope min-h-screen pb-16 md:pb-0`}>
       <GrainOverlay />
       <ViewerProvider isPlatformOwner={me.is_platform_owner}>{children}</ViewerProvider>
     </div>

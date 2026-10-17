@@ -278,7 +278,7 @@ export default function RegistrationFormScreen({
                   aria-describedby={badFields.parentEmail ? 'err-parent-email hint-parent-email' : 'hint-parent-email'}
                 />
                 <span className="err">{badFields.parentEmail && <span id="err-parent-email">{badFields.parentEmail}</span>}</span>
-                <span className="hint" id="hint-parent-email">An diese Adresse geht die Bestätigung mit allen Angaben.</span>
+                <span className="hint" id="hint-parent-email">Über diese Adresse erreicht Sie {orgName} bei Rückfragen.</span>
               </label>
               <label className={`field${badFields.parentPhone ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.parentPhone = el }}>
                 <span className="t-lab">Telefon</span>
@@ -427,9 +427,19 @@ export default function RegistrationFormScreen({
             <span className="sum num">{formatPrice(camp.price_cents, camp.currency)}</span>
           </div>
           <button className={`btn primary${submitting ? ' done' : ''}`} type="submit" disabled={submitting}>
-            {submitting ? 'Wird gesendet …' : 'Anmeldung absenden'}
+            {submitting
+              ? camp.is_full
+                ? 'Wird eingetragen …'
+                : 'Wird gespeichert …'
+              : camp.is_full
+                ? 'Auf die Warteliste setzen'
+                : 'Anmeldung absenden'}
           </button>
-          <span className="fine">Die Bezahlung erfolgt nach der Bestätigung per Überweisung.</span>
+          <span className="fine">
+            {camp.is_full
+              ? 'Auf der Warteliste entstehen noch keine Kosten. Der Betrag wird erst fällig, wenn ein Platz frei wird und Sie zusagen.'
+              : `Den Betrag überweisen Sie anschließend selbst an ${orgName}. Die Bankdaten stehen auf der nächsten Seite.`}
+          </span>
         </div>
       </form>
     </section>

@@ -5,11 +5,11 @@ import MatchdayBand from '../../../../components/saas/shell/MatchdayBand'
 import { orgTabs } from '../../../../components/saas/navTabs'
 import { de } from '../../../../lib/i18n/de'
 import { getAdminToken } from '../../../../lib/adminSession'
-import { fetchOrganizationAdmin } from '../../../../lib/saasAdminApi'
+import { getOrganizationAdmin } from '../../../../components/saas/orgAdminData'
 
 /** Lädt bewusst NICHT über loadOrgAdminData — diese Seite braucht keine
  * Camps/Registrierungen, nur die Organisation selbst. Nutzt seit dem
- * Betreiber-Builder die ADMIN-Sicht (fetchOrganizationAdmin), nicht mehr
+ * Betreiber-Builder die ADMIN-Sicht (getOrganizationAdmin), nicht mehr
  * die öffentliche fetchOrganization: die Website-Inhalte, der Ansprech-
  * partner, die Abrechnungs-Notizen und der Veröffentlichen-Schalter sind
  * bewusst nicht Teil der öffentlichen OrganizationPublic. */
@@ -18,7 +18,7 @@ export default async function OrgConfigPage({ params }: { params: Promise<{ org:
   const token = await getAdminToken()
   if (!token) redirect(`/pilot/${orgSlug}/login`)
 
-  const org = await fetchOrganizationAdmin(orgSlug, token)
+  const org = await getOrganizationAdmin(orgSlug, token)
   if (!org) notFound()
 
   const brand = computeBrandTokens(org.primary_color)
@@ -30,7 +30,7 @@ export default async function OrgConfigPage({ params }: { params: Promise<{ org:
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}
-        title={org.name}
+        title={de.command.configuration}
         tabs={orgTabs(orgSlug)}
         brandColor={brand.brand}
       />

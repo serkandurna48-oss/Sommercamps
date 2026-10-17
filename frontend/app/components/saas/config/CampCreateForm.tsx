@@ -13,7 +13,15 @@ const initialState: CampCreateActionState = { error: null }
  * das Anlegen nur über den Betreiber-Builder oder rohe API-Aufrufe). Ein
  * Verein soll nach dem ersten Camp weitere ohne den Betreiber hinzufügen
  * können. */
-export default function CampCreateForm({ orgSlug }: { orgSlug: string }) {
+export default function CampCreateForm({
+  orgSlug,
+  brandStrong,
+  brandOn,
+}: {
+  orgSlug: string
+  brandStrong: string
+  brandOn: string
+}) {
   const boundAction = createCampAction.bind(null, orgSlug)
   const [state, formAction, pending] = useActionState<CampCreateActionState, FormData>(boundAction, initialState)
 
@@ -63,7 +71,7 @@ export default function CampCreateForm({ orgSlug }: { orgSlug: string }) {
       )}
 
       <div>
-        <Button type="submit" variant="primary" disabled={pending}>
+        <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn}>
           {pending ? 'Wird angelegt …' : 'Camp anlegen'}
         </Button>
       </div>

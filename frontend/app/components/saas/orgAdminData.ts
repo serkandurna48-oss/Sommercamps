@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import { getAdminToken } from '../../lib/adminSession'
 import {
@@ -19,6 +20,20 @@ import {
  * jeder weiteren Org-Admin-Seite (Aufgaben/Warteliste/Zahlungen) sonst
  * viermal dieselbe Kopie gewesen wäre.
  */
+/**
+ * Dieselbe Organisation wird pro Seitenaufruf zweimal geladen: einmal vom
+ * Layout (generateMetadata, für den Tab-Titel) und einmal von der Seite
+ * selbst. Das war ein kompletter zusätzlicher Admin-Request pro Aufruf.
+ *
+ * `cache()` dedupliziert ausschliesslich INNERHALB eines Requests und ist
+ * über alle Argumente — also auch über das Token — mitgeschlüsselt: zwei
+ * Nutzer oder zwei Vereine teilen sich nie einen Eintrag, und zwischen
+ * zwei Requests wird nichts aufbewahrt. Keine Abschwächung der
+ * Zugriffsprüfung: jeder Aufruf, der nicht dedupliziert wird, geht
+ * unverändert mit Bearer-Token ans Backend.
+ */
+export const getOrganizationAdmin = cache(fetchOrganizationAdmin)
+
 export interface OrgAdminData {
   token: string
   org: OrganizationAdmin
@@ -35,7 +50,7 @@ export async function loadOrgAdminData(orgSlug: string): Promise<OrgAdminData> {
   // öffentliche API seit dem Betreiber-Builder unsichtbar (tenancy.py) —
   // ein eingeloggter Admin muss die eigene Verwaltung trotzdem öffnen
   // können, siehe dieselbe Begründung in (org-admin)/layout.tsx.
-  const org = await fetchOrganizationAdmin(orgSlug, token)
+  const org = await getOrganizationAdmin(orgSlug, token)
   if (!org) redirect(`/pilot/${orgSlug}/login`)
 
   let camps: CampAdmin[]
@@ -66,7 +81,7 @@ export async function loadCampAdminData(orgSlug: string, campSlug: string): Prom
   const token = await getAdminToken()
   if (!token) redirect(`/pilot/${orgSlug}/login`)
 
-  const org = await fetchOrganizationAdmin(orgSlug, token)
+  const org = await getOrganizationAdmin(orgSlug, token)
   if (!org) redirect(`/pilot/${orgSlug}/login`)
 
   let camps: CampAdmin[]

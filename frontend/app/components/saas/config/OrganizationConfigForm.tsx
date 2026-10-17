@@ -44,7 +44,7 @@ export default function OrganizationConfigForm({
 
   return (
     <div className="flex flex-col gap-10">
-      <PublishToggle orgSlug={orgSlug} published={org.site_published} />
+      <PublishToggle orgSlug={orgSlug} published={org.site_published} brandStrong={brandStrong} brandOn={brandOn} />
 
       <form action={formAction} className="flex flex-col gap-8">
         <section className="flex flex-col gap-4">

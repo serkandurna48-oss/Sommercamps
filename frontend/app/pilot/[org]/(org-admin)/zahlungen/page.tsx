@@ -31,7 +31,7 @@ export default async function OrgPaymentsPage({ params }: { params: Promise<{ or
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}
-        title={org.name}
+        title={de.command.payments}
         metrics={[
           { label: de.paymentsPage.collected, value: formatEuro(money.collectedCents) },
           { label: de.paymentsPage.open, value: formatEuro(money.openCents) },

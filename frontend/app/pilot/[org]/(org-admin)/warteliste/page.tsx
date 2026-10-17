@@ -29,7 +29,7 @@ export default async function OrgWaitlistPage({ params }: { params: Promise<{ or
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}
-        title={org.name}
+        title={de.command.waitlist}
         metrics={[{ label: de.command.waitlist, value: String(totalWaiting) }]}
         tabs={orgTabs(orgSlug)}
         brandColor={brand.brand}

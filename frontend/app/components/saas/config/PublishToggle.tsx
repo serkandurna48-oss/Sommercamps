@@ -8,8 +8,24 @@ import { setOrganizationPublishedAction, type PublishActionState } from '../acti
  * des großen Stammdaten-Formulars (OrganizationConfigForm), damit man
  * "Veröffentlichen" nie versehentlich mit-absendet. Wiederverwendet auf der
  * Vereins-Konfigurationsseite UND der Plattform-Konsole-Vereinsdetailseite
- * (platform/(console)/[org]) — derselbe Schalter, zwei Orte. */
-export default function PublishToggle({ orgSlug, published }: { orgSlug: string; published: boolean }) {
+ * (platform/(console)/[org]) — derselbe Schalter, zwei Orte.
+ *
+ * Die Brand-Props sind optional, weil genau das die beiden Orte unterscheidet:
+ * im Vereinsbereich ist „Veröffentlichen" eine Hauptaktion in Vereinsfarbe wie
+ * jedes Speichern daneben, in der Plattform-Konsole gibt es bewusst keine
+ * Vereinsfarbe (wie NewOrgForm). Ohne die Props bleibt es beim bisherigen
+ * --cp-ink aus Button.tsx. */
+export default function PublishToggle({
+  orgSlug,
+  published,
+  brandStrong,
+  brandOn,
+}: {
+  orgSlug: string
+  published: boolean
+  brandStrong?: string
+  brandOn?: string
+}) {
   const boundAction = setOrganizationPublishedAction.bind(null, orgSlug, !published)
   const [state, formAction, pending] = useActionState<PublishActionState, FormData>(boundAction, { error: null })
 
@@ -37,7 +53,13 @@ export default function PublishToggle({ orgSlug, published }: { orgSlug: string;
         )}
       </div>
       <form action={formAction}>
-        <Button type="submit" variant={published ? 'secondary' : 'primary'} disabled={pending}>
+        <Button
+          type="submit"
+          variant={published ? 'secondary' : 'primary'}
+          disabled={pending}
+          brandStrong={brandStrong}
+          brandOn={brandOn}
+        >
           {pending ? 'Wird gespeichert …' : published ? 'Zurückziehen' : 'Veröffentlichen'}
         </Button>
       </form>

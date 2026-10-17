@@ -98,6 +98,8 @@ export default function ParticipantRow({
               registration={effective}
               orgSlug={orgSlug}
               campSlug={campSlug}
+              brandStrong={brandColor}
+              brandOn="#FFFFFF"
               onDetailsSaved={setOverride}
             />
           </div>

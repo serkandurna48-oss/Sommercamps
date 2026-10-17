@@ -26,11 +26,15 @@ export default function ParticipantDetail({
   registration,
   orgSlug,
   campSlug,
+  brandStrong,
+  brandOn,
   onDetailsSaved,
 }: {
   registration: RegistrationAdmin
   orgSlug: string
   campSlug: string
+  brandStrong: string
+  brandOn: string
   onDetailsSaved?: (registration: RegistrationAdmin) => void
 }) {
   const missingContact = hasMissingEmergencyContact(registration)
@@ -133,7 +137,7 @@ export default function ParticipantDetail({
             )}
 
             <div className="flex gap-2">
-              <Button type="submit" variant="primary" disabled={pending}>
+              <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn}>
                 {pending ? de.command.editParticipantSaving : de.command.editParticipantSave}
               </Button>
               <Button type="button" variant="quiet" disabled={pending} onClick={() => setEditing(false)}>

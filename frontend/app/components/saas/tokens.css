@@ -181,9 +181,8 @@
 /* Klick-Rückmeldung der Bereichsleiste (BandTabs.tsx, TabHint). Immer
  * gerendert und mit fester Grösse, damit das Erscheinen nichts verschiebt —
  * nur die Deckkraft wechselt. Die Sichtbarkeit hängt an `opacity`, nicht an
- * der Animation: der prefers-reduced-motion-Block weiter unten setzt jede
- * Animationsdauer praktisch auf null, der Punkt muss dann trotzdem stehen
- * bleiben. */
+ * der Animation: der prefers-reduced-motion-Block weiter unten schaltet den
+ * Puls ganz ab, der Punkt muss dann trotzdem stehen bleiben. */
 .cp-tab-hint {
   display: inline-block;
   width: 6px;
@@ -262,6 +261,14 @@
   .cp-scope *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+  /* Eine Dauer von 0.01ms beendet eine `infinite`-Animation nicht, sie lässt
+   * sie nur unmessbar schnell durchlaufen — gemessen stand der Punkt dann bei
+   * 0.3 bis 0.36 statt bei 1, also genau das Flackern, das reduzierte
+   * Bewegung verhindern soll. Hier gehört der Puls abgeschaltet, nicht
+   * beschleunigt; die Deckkraft aus [data-pending='true'] bleibt. */
+  .cp-tab-hint[data-pending='true'] {
+    animation: none !important;
   }
 }
 

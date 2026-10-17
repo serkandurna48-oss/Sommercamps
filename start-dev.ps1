@@ -3,13 +3,23 @@
 .SYNOPSIS
     Startet die komplette lokale Dev-Umgebung für das KSV Sommercamp-System.
     Backend (uvicorn) · Frontend (Next.js) · Claude – jeweils in eigenem Terminal.
+.PARAMETER Saas
+    Startet zusätzlich das backend_saas-Backend (Port 8001) und öffnet den
+    CampsPilot-Pilot-Flow (frontend/app/pilot/[org]) statt der KSV-Startseite.
+    Erwartet, dass frontend/.env.local NEXT_PUBLIC_SAAS_API_URL=http://localhost:8001 setzt.
 #>
 
+param(
+    [switch]$Saas
+)
+
 $ErrorActionPreference = 'Stop'
-$root         = $PSScriptRoot
-$backendPath  = Join-Path $root 'backend'
-$frontendPath = Join-Path $root 'frontend'
-$activate     = Join-Path $backendPath '.venv\Scripts\Activate.ps1'
+$root          = $PSScriptRoot
+$backendPath   = Join-Path $root 'backend'
+$frontendPath  = Join-Path $root 'frontend'
+$activate      = Join-Path $backendPath '.venv\Scripts\Activate.ps1'
+$saasPath      = Join-Path $root 'backend_saas'
+$saasActivate  = Join-Path $saasPath 'venv\Scripts\Activate.ps1'
 
 # ── Voraussetzungen prüfen ────────────────────────────────────────────────────
 
@@ -35,6 +45,19 @@ if (-not (Test-Path (Join-Path $frontendPath 'node_modules'))) {
     exit 1
 }
 
+if ($Saas -and -not (Test-Path $saasActivate)) {
+    Write-Host ''
+    Write-Host '  [!] Python-Venv für backend_saas nicht gefunden.' -ForegroundColor Red
+    Write-Host "      Erwartet: $saasActivate" -ForegroundColor Yellow
+    Write-Host ''
+    Write-Host '  Einmalig im backend_saas-Ordner ausführen:' -ForegroundColor Cyan
+    Write-Host '    python -m venv venv' -ForegroundColor White
+    Write-Host '    .\venv\Scripts\pip install -r requirements.txt' -ForegroundColor White
+    Write-Host ''
+    Read-Host '  Drücke Enter zum Beenden'
+    exit 1
+}
+
 # ── Hilfsfunktion: Terminal öffnen ───────────────────────────────────────────
 # Verwendet -EncodedCommand, um Pfade mit Sonderzeichen sicher zu übergeben.
 
@@ -52,25 +75,36 @@ function Start-DevTerminal {
 
 # ── Terminals starten ─────────────────────────────────────────────────────────
 
+$stepCount = if ($Saas) { 4 } else { 3 }
+
 Write-Host ''
 Write-Host '  KSV Sommercamp – Dev-Umgebung wird gestartet ...' -ForegroundColor Cyan
 Write-Host ''
 
-Write-Host '  [1/3] Backend  (uvicorn --reload)' -ForegroundColor Green
+Write-Host "  [1/$stepCount] Backend  (uvicorn --reload)" -ForegroundColor Green
 Start-DevTerminal `
     -Title   'Backend – uvicorn' `
     -Command "Set-Location '$backendPath'; & '$activate'; uvicorn main:app --reload"
 
 Start-Sleep -Milliseconds 400
 
-Write-Host '  [2/3] Frontend (npm run dev)' -ForegroundColor Green
+Write-Host "  [2/$stepCount] Frontend (npm run dev)" -ForegroundColor Green
 Start-DevTerminal `
     -Title   'Frontend – Next.js' `
     -Command "Set-Location '$frontendPath'; npm run dev"
 
 Start-Sleep -Milliseconds 400
 
-Write-Host '  [3/3] Claude' -ForegroundColor Green
+if ($Saas) {
+    Write-Host "  [3/$stepCount] backend_saas (uvicorn --reload, Port 8001)" -ForegroundColor Green
+    Start-DevTerminal `
+        -Title   'backend_saas – uvicorn :8001' `
+        -Command "Set-Location '$saasPath'; & '$saasActivate'; uvicorn app.main:app --reload --port 8001"
+
+    Start-Sleep -Milliseconds 400
+}
+
+Write-Host "  [$stepCount/$stepCount] Claude" -ForegroundColor Green
 Start-DevTerminal `
     -Title   'Claude' `
     -Command "Set-Location '$root'; claude"
@@ -82,9 +116,15 @@ Write-Host ''
 Write-Host '  Browser öffnet sich in 5 Sekunden ...' -ForegroundColor DarkCyan
 Start-Sleep -Seconds 5
 
-Start-Process 'http://localhost:3000'
-Start-Sleep -Milliseconds 400
-Start-Process 'http://127.0.0.1:8000/docs'
+if ($Saas) {
+    Start-Process 'http://localhost:3000/pilot/ksv-baunatal'
+    Start-Sleep -Milliseconds 400
+    Start-Process 'http://127.0.0.1:8001/docs'
+} else {
+    Start-Process 'http://localhost:3000'
+    Start-Sleep -Milliseconds 400
+    Start-Process 'http://127.0.0.1:8000/docs'
+}
 
 Write-Host ''
 Write-Host '  Fertig. Alle Prozesse laufen in eigenen Terminals.' -ForegroundColor Green
@@ -92,4 +132,12 @@ Write-Host ''
 Write-Host '    Frontend:  http://localhost:3000' -ForegroundColor White
 Write-Host '    API-Docs:  http://127.0.0.1:8000/docs' -ForegroundColor White
 Write-Host '    Admin:     http://localhost:3000/admin' -ForegroundColor White
+if ($Saas) {
+    Write-Host ''
+    Write-Host '    SaaS-Pilot:     http://localhost:3000/pilot/<org-slug>' -ForegroundColor White
+    Write-Host '                    (z. B. ksv-baunatal, jk-performance-academy, campspilot-pilot)' -ForegroundColor DarkGray
+    Write-Host '    SaaS-API-Docs:  http://127.0.0.1:8001/docs' -ForegroundColor White
+    Write-Host '' -ForegroundColor DarkGray
+    Write-Host '    Hinweis: frontend/.env.local braucht NEXT_PUBLIC_SAAS_API_URL=http://localhost:8001' -ForegroundColor DarkYellow
+}
 Write-Host ''

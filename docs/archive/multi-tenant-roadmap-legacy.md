@@ -1,20 +1,20 @@
-# ⚠️ SUPERSEDED / NOT CURRENT PRODUCT DIRECTION
+# Historisch: früher Entwurf der Multi-Tenant-Roadmap (Stand vor JK-102 und vor `backend_saas/`)
 
-> **Dieses Dokument beschreibt NICHT den aktuellen Kurs von CampsPilot.** Es ist die
-> ursprüngliche Zielarchitektur aus der Frühphase des Projekts (Shared-Schema-Multi-Tenant-SaaS
-> mit Row Level Security und Stripe Connect pro Verein). Seit **JK-102** ist der tatsächlich
-> eingeschlagene Weg ein anderer: **isolierte Infrastruktur pro Kunde** (eigenes Supabase-Projekt,
-> eigener Render-Service, eigene Env-Vars) auf einer gemeinsamen Codebase — bewusst **kein**
-> Full-Multi-Tenant-SaaS, kein Self-Service-Onboarding.
+> **Korrektur (Stand CP-S409B):** Der Vermerk, der früher an dieser Stelle stand — Shared-Schema-
+> Multi-Tenant-SaaS sei überholt und nicht mehr aktiver Kurs —, ist selbst überholt. **Shared-
+> Multi-Tenant ist wieder die verbindliche Zielarchitektur** (siehe
+> [`CLAUDE.md`](../../CLAUDE.md), Abschnitt "Projektüberblick & aktueller Kurs"). Die isolierte
+> Pro-Kunde-Infrastruktur aus JK-102 ([`docs/architecture/system-overview.md`](../architecture/system-overview.md))
+> beschreibt weiterhin korrekt den technischen IST-Zustand von `backend/` — aber als
+> Übergangszustand, nicht als Zielbild.
 >
-> **Maßgeblich für den IST-Zustand ist ausschließlich
-> [`docs/architecture/system-overview.md`](../architecture/system-overview.md).** Das dortige
-> Dokument sagt explizit: „Es gibt kein echtes Multi-Tenant-System (keine `organizations`-Tabelle,
-> keine Row-Level-Security-basierte Mandantentrennung)."
->
-> Dieses Archiv-Dokument bleibt nur aus historischen Gründen erhalten (Nachvollziehbarkeit
-> früherer Entscheidungen). Keine der folgenden Phasen ist aktueller Auftrag oder aktive
-> Planung. Bitte nicht als Grundlage für neue Arbeit verwenden.
+> **Trotzdem beschreibt auch dieses Dokument nicht den aktuellen Bauplan.** Die hier festgehaltene
+> Mechanik — `organization_id`-FK direkt in die bestehende KSV-`camp_registrations`-Tabelle,
+> In-Place-Umbau von `backend/` — ist durch einen **parallelen Neubau** ersetzt worden:
+> `backend_saas/` mit eigenem Schema, eigenem Supabase-Projekt, eigenem Deployment. Verbindlich
+> sind [`docs/saas/architecture.md`](../saas/architecture.md) und
+> [`docs/saas/migration-strategy.md`](../saas/migration-strategy.md). Dieses Dokument bleibt nur
+> zur historischen Nachvollziehbarkeit der ursprünglichen Idee erhalten.
 
 ---
 

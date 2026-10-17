@@ -1,0 +1,375 @@
+/*
+ * Richtung C "Hybrid Matchday" — platform tokens (Auftrag Abschnitt 3.1) and
+ * the Archivo type scale (Abschnitt 3.2).
+ *
+ * Deliberately NOT on `:root` — this file is imported only by the new
+ * org-admin screens (frontend/app/pilot/[org]/(org-admin)/layout.tsx) and
+ * scoped under the `.cp-scope` class applied there, so it can never leak
+ * into the parent-facing /pilot/[org] flow or the legacy KSV/JK site, both
+ * of which keep their own tokens untouched (see pilot/theme.ts, globals.css).
+ *
+ * Mandant-specific tokens (--cp-brand, --cp-brand-strong, --cp-brand-on,
+ * --cp-brand-tint) are NOT defined here — they're computed server-side per
+ * organization (see components/saas/brandPipeline.ts) and merged into this
+ * same .cp-scope element via an inline style, mirroring the existing
+ * --accent pattern in PilotFlow.tsx.
+ */
+
+.cp-scope {
+  /* Flächen */
+  --cp-band: #131a17;
+  --cp-band-2: #26302c;
+  --cp-band-line: #2c3733;
+  --cp-paper: #f4f5f2;
+  --cp-surface: #ffffff;
+  --cp-surface-2: #fafbf9;
+  --cp-line: #d9ded7;
+  --cp-line-2: #e6e9e4;
+  --cp-field-line: #c9cfc7;
+
+  /* Text auf heller Fläche */
+  --cp-ink: #171c19;
+  --cp-ink-2: #3e4740;
+  --cp-muted: #5a625c;
+
+  /* Text auf dem Band */
+  --cp-on-band: #ffffff;
+  --cp-on-band-2: #b7c0b9;
+  --cp-on-band-3: #8d978f;
+
+  /* Status — nie vom Mandanten überschreibbar */
+  --cp-ok: #1c6b45;
+  --cp-ok-bg: #e3efe8;
+  --cp-ok-line: #a9cdbb;
+  --cp-pending: #9a5b0b;
+  --cp-pending-bg: #faf1e3;
+  --cp-pending-line: #e0c79b;
+  --cp-error: #a5271f;
+  --cp-error-bg: #fbeae8;
+  --cp-error-line: #e3b6b1;
+  --cp-info: #2b5391;
+  --cp-info-bg: #e7edf6;
+  --cp-info-line: #b4c6e0;
+
+  /* Radien */
+  --cp-r-bar: 0px;
+  --cp-r-chip: 4px;
+  --cp-r-field: 11px;
+  --cp-r-card: 14px;
+
+  background: var(--cp-paper);
+  color: var(--cp-ink);
+}
+
+/* ----------------------------------------------------------------------
+ * Typografie — eine Familie (Archivo), Hierarchie über Breite + Gewicht,
+ * nicht nur Größe. font-stretch braucht die variable Achse `wdth` aus
+ * components/saas/fonts.ts — className von dort muss auf einem Vorfahren
+ * dieser Klassen sitzen.
+ * ---------------------------------------------------------------------- */
+
+.cp-scope {
+  font-family: var(--font-cp), ui-sans-serif, system-ui, sans-serif;
+}
+
+.cp-band-hero {
+  font-size: 52px;
+  line-height: 1;
+  letter-spacing: -1.4px;
+  font-stretch: 118%;
+  font-weight: 700;
+}
+.cp-band-metric {
+  font-size: 38px;
+  line-height: 1;
+  font-stretch: 110%;
+  font-weight: 700;
+}
+/* Design-Reifung nach dem dritten Praxistest: der Countdown ("Tage bis
+ * Camp-Start") ist die eine Zahl im ganzen System, die am meisten zählt —
+ * stand bisher optisch gleichrangig neben drei Nebenkennzahlen. Jetzt
+ * deutlich dominanter (grösser + breiter gestreckt als selbst
+ * cp-band-hero), damit das Dashboard auf einen Blick sagt "hier ist die
+ * wichtige Zahl", nicht vier gleich laute Werte nebeneinander. */
+.cp-band-hero-metric {
+  font-size: 76px;
+  line-height: 0.95;
+  letter-spacing: -2.4px;
+  font-stretch: 140%;
+  font-weight: 800;
+}
+/* Statische Haltepunkt-Anpassung, kein Tween — Abschnitt 6: unter 768px ist
+ * für 52/38px kein Platz mehr (siehe Verifikation bei 390px), unabhängig
+ * von den Motion-Regeln in Abschnitt 7 (die nur Übergänge betreffen). */
+@media (max-width: 767px) {
+  .cp-band-hero {
+    font-size: 34px;
+    letter-spacing: -0.8px;
+  }
+  .cp-band-metric {
+    font-size: 28px;
+  }
+  .cp-band-hero-metric {
+    font-size: 48px;
+    letter-spacing: -1.4px;
+  }
+}
+.cp-band-title {
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+  font-stretch: 112%;
+  font-weight: 700;
+}
+.cp-title {
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -0.4px;
+  font-stretch: 112%;
+  font-weight: 700;
+}
+.cp-heading {
+  font-size: 21px;
+  line-height: 1.25;
+  letter-spacing: -0.3px;
+  font-stretch: 108%;
+  font-weight: 700;
+}
+.cp-subheading {
+  font-size: 17px;
+  line-height: 1.3;
+  font-stretch: 100%;
+  font-weight: 600;
+}
+.cp-body {
+  font-size: 15px;
+  line-height: 1.55;
+  font-stretch: 100%;
+  font-weight: 400;
+}
+.cp-label {
+  font-size: 13px;
+  line-height: 1.4;
+  font-stretch: 100%;
+  font-weight: 600;
+}
+.cp-chip {
+  font-size: 12px;
+  line-height: 1.2;
+  font-stretch: 100%;
+  font-weight: 600;
+}
+
+/* Bereichs-Tabs im Band. Unter 768px ist die Leiste eine fixierte Fussleiste
+ * mit gleich breiten Spalten — bei 390px müssen alle fünf Ziele ohne
+ * horizontales Scrollen sichtbar sein, dafür kleinere Schrift und Umbruch
+ * statt nowrap. Die Regel steht absichtlich NACH .cp-subheading: sonst
+ * gewinnt dessen 17px. Der wandernde Unterstrich ist dort ausgeblendet,
+ * deshalb markiert eine Oberkante in der Vereinsfarbe den aktiven Bereich. */
+@media (max-width: 767px) {
+  .cp-band-tab {
+    font-size: 11px;
+    line-height: 1.15;
+    font-stretch: 100%;
+    font-weight: 600;
+  }
+  .cp-band-tab[data-active='true'] {
+    box-shadow: inset 0 2px 0 0 var(--cp-tab-mark, currentColor);
+  }
+}
+
+/* Für jede Zahl, die mit einer anderen in einer Spalte/Reihe steht —
+ * Preise, Plätze, Daten, Telefonnummern. Gezielt anwenden, nicht global. */
+.cp-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Eine Stimme für jede hervorgehobene Zahl im Admin — Design-Reifung nach
+ * dem zweiten Praxistest: vorher hatte cp-band-metric (Band, gross, breit
+ * gestreckt) nichts mit dem viel leiseren cp-title auf den StatCards zu
+ * tun, obwohl beide dasselbe sagen ("das ist die wichtige Zahl hier").
+ * Jetzt eine gemeinsame, sehr breit gestreckte, fette Ziffernstimme —
+ * absichtlich an Stadionanzeigen/Spielstand-Tafeln angelehnt (das
+ * eigentliche Sujet dieses Produkts), nicht generisches Dashboard-Grau. */
+.cp-scoreboard {
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: -0.6px;
+  font-stretch: 132%;
+  font-weight: 800;
+}
+@media (max-width: 767px) {
+  .cp-scoreboard {
+    font-size: 27px;
+  }
+}
+
+/* M1 + M3 (Abschnitt 7): der einzige sanktionierte Weg, eine Höhe zu
+ * animieren, ohne height/max-height direkt zu tweenen (verboten) —
+ * grid-template-rows 0fr <-> 1fr, mit explizitem min-height:0 auf dem
+ * Grid-Item, weil das automatische Minimum sonst den Inhalt nicht unter
+ * seine intrinsische Höhe schrumpfen lässt (CSS Sizing Level 3 "automatic
+ * minimum size" — overflow:hidden allein reichte hier nicht zuverlässig).
+ * Gemeinsam genutzt von MatchdayBand (M1, 240ms) und ParticipantDetail
+ * (M3, 220ms) — Dauer wird per Inline-Style/Klasse pro Nutzung gesetzt. */
+.cp-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+.cp-collapse.cp-collapse-expanded {
+  grid-template-rows: 1fr;
+}
+.cp-collapse.cp-collapse-m3 {
+  transition-duration: 220ms;
+}
+.cp-collapse > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Abschnitt 7, "Pflicht" — ohne diesen Block ist das Feature nicht fertig. */
+@media (prefers-reduced-motion: reduce) {
+  .cp-scope,
+  .cp-scope *,
+  .cp-scope *::before,
+  .cp-scope *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ----------------------------------------------------------------------
+ * Listen-Container nach Rolle, nicht einheitlich (Design-Reifung nach dem
+ * ersten Praxistest): eine Teilnehmer-/Wartelisten-Aufstellung ist ein
+ * Mannschaftsbogen, kein generisches SaaS-Card-Grid — flache Fläche,
+ * Vereinsfarben-Spine links (raw --cp-brand, wie CapacityBar/Band-Kante),
+ * kein umlaufender Rahmen, kein Radius. Farbe kommt als Inline-Style
+ * (borderLeftColor) von der jeweiligen Seite, nicht aus einer CSS-Var —
+ * --cp-brand ist nur auf der Style-Preview-Seite tatsächlich gesetzt,
+ * überall sonst wird die Vereinsfarbe als Prop durchgereicht (Abschnitt
+ * 3.3-Konvention, siehe CapacityBar/StatusChip).
+ * ---------------------------------------------------------------------- */
+.cp-roster {
+  background: var(--cp-surface);
+  border-radius: 0;
+}
+/* Dezente Zebra-Streifen — lesbarer bei einer langen Aufstellung, echte
+ * Mannschaftsbögen/Spielberichte machen das genauso, keine reine
+ * Verzierung. */
+.cp-roster-row:nth-child(even) {
+  background: var(--cp-surface-2);
+}
+
+/* Zahlungen liest sich wie ein Kontoauszug, nicht wie ein Team-Bogen:
+ * jede Zeile trägt ihre eigene Statusfarbe als schmale Kante links, statt
+ * einer gemeinsamen Vereinsfarben-Spine — Status ist hier die Information,
+ * die beim schnellen Scannen zählt, nicht die Vereinszugehörigkeit. */
+.cp-ledger-row {
+  border-left: 3px solid transparent;
+}
+.cp-ledger-row[data-status='open'] {
+  border-left-color: var(--cp-pending);
+}
+.cp-ledger-row[data-status='paid'] {
+  border-left-color: var(--cp-ok);
+}
+.cp-ledger-row[data-status='refunded'],
+.cp-ledger-row[data-status='waived'] {
+  border-left-color: var(--cp-info);
+}
+
+/* ----------------------------------------------------------------------
+ * Export "Drucken" (Strg+P -> als PDF speichern) — kein eigener
+ * PDF-Renderer, die Browser-Druckfunktion macht die Arbeit. Alles, was nur
+ * für Bildschirm-Interaktion existiert, bekommt hier `.cp-noprint`; das
+ * dunkle Band würde sonst als schwarze Fläche auf Papier landen.
+ * ---------------------------------------------------------------------- */
+@media print {
+  .cp-scope header,
+  .cp-noprint {
+    display: none !important;
+  }
+  .cp-scope {
+    background: #ffffff;
+    color: #000000;
+  }
+  .cp-scope a {
+    color: #000000;
+    text-decoration: none;
+  }
+  .cp-grain {
+    display: none !important;
+  }
+}
+
+/* ----------------------------------------------------------------------
+ * Filmkorn (Design-Reifung nach dem zweiten Praxistest) — derselbe
+ * Materialgedanke wie im Eltern-Flow (siehe pilot/[org]/publicTheme.css
+ * ".grain"), hier deutlich zurückhaltender (0.035 statt 0.03–0.07): ein
+ * Werkzeug, das mehrmals täglich offen ist, braucht ruhigere Textur als
+ * eine einmalige Landingpage. Macht aus der bisher komplett flachen
+ * --cp-paper-Fläche etwas mit echter Materialität statt sterilem Weiss.
+ * pointer-events:none + aria-hidden auf dem Element selbst (siehe
+ * GrainOverlay.tsx) — reine Optik, nichts Interaktives. In print via
+ * .cp-noprint-Pendant oben ausgeblendet (Korn auf Papier wäre nur Lärm).
+ * ---------------------------------------------------------------------- */
+.cp-grain {
+  position: fixed;
+  inset: -55%;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.035;
+  background-repeat: repeat;
+  animation: cp-grain 1.1s steps(6) infinite;
+}
+@keyframes cp-grain {
+  0% {
+    transform: translate(0, 0);
+  }
+  16% {
+    transform: translate(-1.5%, -2%);
+  }
+  33% {
+    transform: translate(-2.5%, 1.5%);
+  }
+  50% {
+    transform: translate(1.5%, -1%);
+  }
+  66% {
+    transform: translate(2%, 2.5%);
+  }
+  83% {
+    transform: translate(-1%, 1%);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+/* ----------------------------------------------------------------------
+ * Bestätigungs-Moment (Design-Reifung nach dem zweiten Praxistest) — eine
+ * Erfolgs-/Fehlermeldung in ActionForm erschien bisher per stillem
+ * Conditional-Render, ohne jede Bewegung. Ein einzelnes, kurzes Aufblenden
+ * mit leichtem Einschwingen (kein Loop, kein "Puls" — Abschnitt 7 verbietet
+ * pulsierende Elemente weiterhin) macht aus "Als bezahlt markieren" eine
+ * spürbare Quittierung statt eines unbemerkten DOM-Updates. Der einzige
+ * bewusst gesetzte Boldness-Moment für Interaktionen in diesem System.
+ * ---------------------------------------------------------------------- */
+@keyframes cp-confirm-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(-2px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.015) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.cp-confirm-pop {
+  animation: cp-confirm-pop 260ms cubic-bezier(0.2, 0, 0, 1);
+}

@@ -18,11 +18,6 @@ interface DoneState {
   parentEmail: string
 }
 
-const HERO_IMAGE: Record<string, { src: string; alt: string }> = {
-  tradition: { src: '/pilot/leibchen.webp', alt: 'Gefaltete Trainingsleibchen auf einer Bank am Spielfeldrand.' },
-  akademie: { src: '/jk/hero.jpg', alt: 'Trainingsszene auf dem Spielfeld.' },
-}
-
 export default function ParentFlow({ org, camps }: { org: OrganizationPublic; camps: CampPublic[] }) {
   const router = useRouter()
   const [screen, setScreen] = useState<ScreenName>('org')
@@ -111,19 +106,22 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
     )
   }
 
-  const hero = HERO_IMAGE[org.theme]
+  // Themes control presentation; content belongs to the organization.
+  const hero = org.hero_image_url?.trim()
+  const heading = org.intro_heading?.trim() || org.name
+  const intro = org.intro_text?.trim() || 'Alle Camps auf einen Blick — wählen Sie unten den passenden Termin für Ihr Kind.'
 
   return (
     <section className="screen" id="s-org" ref={orgContainerRef}>
       {org.theme === 'tradition' && (
         <header className="hero h-trad">
           <div className="shield">{shortCode}</div>
-          <h1 className="d1" data-split>{org.name}</h1>
+          <h1 className="d1" data-split>{heading}</h1>
           <div className="rule" />
-          <p className="intro" data-rise>Alle Camps auf einen Blick — wählen Sie unten den passenden Termin für Ihr Kind.</p>
+          <p className="intro" data-rise>{intro}</p>
           {hero && (
             <div className="shot">
-              <Image id="shotA" src={hero.src} alt={hero.alt} width={1040} height={680} priority style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <Image id="shotA" src={hero} alt="" unoptimized width={1040} height={680} priority style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
           )}
         </header>
@@ -131,7 +129,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
 
       {org.theme === 'akademie' && (
         <header className="hero h-akad">
-          <div className="bg">{hero && <Image id="shotB" src={hero.src} alt={hero.alt} fill priority style={{ objectFit: 'cover', opacity: 0.46 }} />}</div>
+          <div className="bg">{hero && <Image id="shotB" src={hero} alt="" unoptimized fill priority style={{ objectFit: 'cover', opacity: 0.46 }} />}</div>
           <div className="veil" />
           <div className="in">
             <span className="mark">
@@ -142,9 +140,9 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
               </span>
               <span className="t">{org.name}</span>
             </span>
-            <h1 className="d1" data-split>{org.name}</h1>
+            <h1 className="d1" data-split>{heading}</h1>
             <p className="intro" data-rise style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--on-band-2)', maxWidth: '40ch' }}>
-              Alle Camps auf einen Blick — wählen Sie unten den passenden Termin für Ihr Kind.
+              {intro}
             </p>
           </div>
         </header>
@@ -158,8 +156,8 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
               <span className="lab">Feriencamps</span>
             </div>
             <div>
-              <h1 className="d1" data-split>{org.name}</h1>
-              <p className="intro" data-rise>Alle Camps auf einen Blick — wählen Sie unten den passenden Termin für Ihr Kind.</p>
+              <h1 className="d1" data-split>{heading}</h1>
+              <p className="intro" data-rise>{intro}</p>
               <div className="facts">
                 <div data-rise>
                   <b className="num" data-count={camps.length}>{camps.length}</b>

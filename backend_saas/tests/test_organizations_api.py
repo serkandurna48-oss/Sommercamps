@@ -114,5 +114,25 @@ def test_get_organization_response_includes_only_declared_public_fields(monkeypa
         "logo_url",
         "primary_color",
         "theme",
+        "intro_heading",
+        "intro_text",
+        "hero_image_url",
         "iban",
     }
+
+
+def test_public_editorial_content_is_returned_without_billing_notes(monkeypatch):
+    content = {
+        "intro_heading": "Unser Fußballsommer",
+        "intro_text": "Training bei unserem Verein.",
+        "hero_image_url": "https://images.example.com/camp.jpg",
+    }
+    monkeypatch.setattr(
+        organizations, "get_organization_by_slug",
+        lambda slug: _org_row(slug, "active", **content, billing_notes="Private"),
+    )
+    with TestClient(app) as client:
+        response = client.get("/api/v1/organizations/demo-fc")
+    assert response.status_code == 200
+    assert {key: response.json()[key] for key in content} == content
+    assert "billing_notes" not in response.json()

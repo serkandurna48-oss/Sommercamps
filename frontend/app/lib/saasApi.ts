@@ -27,6 +27,9 @@ export interface OrganizationPublic {
   primary_color: string | null
   // Eltern-Flow-Auftrag §3.1/§3.2: bestimmt, welches der drei Themes serverseitig rendert.
   theme: 'tradition' | 'akademie' | 'kompakt'
+  intro_heading: string | null
+  intro_text: string | null
+  hero_image_url: string | null
   // Für die Zahlungsdaten auf der Bestätigungsseite (§6.4). null = kein Überweisungshinweis.
   iban: string | null
 }

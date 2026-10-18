@@ -10,9 +10,8 @@ import { getOrganizationAdmin } from '../../../../components/saas/orgAdminData'
 /** Lädt bewusst NICHT über loadOrgAdminData — diese Seite braucht keine
  * Camps/Registrierungen, nur die Organisation selbst. Nutzt seit dem
  * Betreiber-Builder die ADMIN-Sicht (getOrganizationAdmin), nicht mehr
- * die öffentliche fetchOrganization: die Website-Inhalte, der Ansprech-
- * partner, die Abrechnungs-Notizen und der Veröffentlichen-Schalter sind
- * bewusst nicht Teil der öffentlichen OrganizationPublic. */
+ * die öffentliche fetchOrganization: Abrechnungs-Notizen und der
+ * Veröffentlichen-Schalter sind ausschließlich in der Admin-Sicht verfügbar. */
 export default async function OrgConfigPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params
   const token = await getAdminToken()

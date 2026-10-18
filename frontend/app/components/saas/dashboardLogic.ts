@@ -17,7 +17,7 @@
 
 import type { CampAdmin, RegistrationAdmin } from '../../lib/saasAdminApi'
 
-const ACTIVE_STATUSES = new Set(['registered', 'confirmed'])
+import { isActiveRegistration, openPaymentStats } from './commandCenterLogic'
 
 export interface CampWithStats {
   camp: CampAdmin
@@ -30,13 +30,12 @@ export interface CampWithStats {
 export function computeCampStats(camp: CampAdmin, registrations: RegistrationAdmin[]): CampWithStats {
   let registeredCount = 0
   let waitlistCount = 0
-  let openPaymentsCount = 0
+  const openPaymentsCount = openPaymentStats(registrations).count
   let missingEmergencyContactCount = 0
 
   for (const r of registrations) {
-    if (ACTIVE_STATUSES.has(r.status)) {
+    if (isActiveRegistration(r)) {
       registeredCount++
-      if (r.payment_status === 'open') openPaymentsCount++
       if (!r.emergency_contact_name && !r.emergency_contact_phone) missingEmergencyContactCount++
     } else if (r.status === 'waitlist') {
       waitlistCount++

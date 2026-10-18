@@ -475,3 +475,41 @@ def test_created_registration_uses_resolved_tenant_and_camp(monkeypatch):
     assert captured["tenant"].slug == "academy-a"
     assert captured["camp"] is camp
     assert captured["camp"].organization_id == resolved_org_id
+
+
+@pytest.mark.parametrize("field", ["parent_first_name", "parent_last_name", "emergency_contact_phone"])
+@pytest.mark.parametrize("invalid", [None, "", "   ", "\t\n", "missing"])
+def test_required_contact_fields_reject_missing_or_blank(monkeypatch, field, invalid):
+    _patch_org(monkeypatch)
+    monkeypatch.setattr(registrations_repo, "get_registration_target", lambda tenant, slug: _target())
+
+    def must_not_create(*args):
+        pytest.fail("Invalid contact data must never reach persistence")
+
+    monkeypatch.setattr(registrations_repo, "create_registration", must_not_create)
+    payload = _valid_payload(**{field: invalid})
+    if invalid == "missing":
+        payload.pop(field)
+    with TestClient(app) as client:
+        response = _post(client, payload)
+    assert response.status_code == 422
+    assert any(error["loc"] == ["body", field] for error in response.json()["detail"])
+
+
+def test_required_contact_fields_trim_before_persistence(monkeypatch):
+    _patch_org(monkeypatch)
+    monkeypatch.setattr(registrations_repo, "get_registration_target", lambda tenant, slug: _target())
+
+    def create(tenant, camp, data):
+        assert data.parent_first_name == "Alex"
+        assert data.parent_last_name == "Beispiel"
+        assert data.emergency_contact_phone == "+49 123456"
+        return _fake_created_row()
+
+    monkeypatch.setattr(registrations_repo, "create_registration", create)
+    with TestClient(app) as client:
+        response = _post(client, _valid_payload(
+            parent_first_name=" Alex ", parent_last_name=" Beispiel ",
+            emergency_contact_phone=" +49 123456 ",
+        ))
+    assert response.status_code == 201

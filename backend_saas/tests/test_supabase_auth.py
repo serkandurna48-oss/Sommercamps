@@ -6,6 +6,9 @@ real external service" rule as the rest of this suite.
 
 from __future__ import annotations
 
+import base64
+import json
+
 import httpx
 import pytest
 
@@ -124,3 +127,148 @@ def test_find_user_by_email_not_found(monkeypatch):
     assert user is None
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
     get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def _clear_token_cache():
+    with supabase_auth._token_cache_lock:
+        supabase_auth._token_cache.clear()
+    yield
+    with supabase_auth._token_cache_lock:
+        supabase_auth._token_cache.clear()
+
+
+def _jwt(exp=1100, **claims):
+    payload = {"exp": exp, **claims}
+    encoded = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+    return f"eyJhbGciOiJIUzI1NiJ9.{encoded}.test-signature"
+
+
+@pytest.fixture
+def cache_clock(monkeypatch):
+    clock = {"wall": 1000.0, "mono": 100.0}
+    monkeypatch.setattr(supabase_auth.time, "time", lambda: clock["wall"])
+    monkeypatch.setattr(supabase_auth.time, "monotonic", lambda: clock["mono"])
+    return clock
+
+
+def test_verified_jwt_reuses_identity_but_does_not_expose_mutable_cached_user(monkeypatch, cache_clock):
+    client = _fake_client(monkeypatch, lambda *a, **k: _FakeResponse(200, {"id": "user-1", "email": "a@example.com"}))
+    token = _jwt()
+    first = supabase_auth.verify_access_token(token)
+    first.id = "mutated"
+    second = supabase_auth.verify_access_token(token)
+    assert second.id == "user-1"
+    assert client.calls == 1
+    assert token not in supabase_auth._token_cache
+
+
+def test_cached_verification_expires_at_sixty_seconds(monkeypatch, cache_clock):
+    client = _fake_client(monkeypatch, lambda *a, **k: _FakeResponse(200, {"id": "user-1"}))
+    token = _jwt(exp=5000)
+    supabase_auth.verify_access_token(token)
+    cache_clock.update(wall=1059.9, mono=159.9)
+    supabase_auth.verify_access_token(token)
+    assert client.calls == 1
+    cache_clock.update(wall=1060, mono=160)
+    supabase_auth.verify_access_token(token)
+    assert client.calls == 2
+
+
+def test_cache_never_outlives_jwt_expiry(monkeypatch, cache_clock):
+    client = _fake_client(monkeypatch, lambda *a, **k: _FakeResponse(200, {"id": "user-1"}))
+    token = _jwt(exp=1010)
+    supabase_auth.verify_access_token(token)
+    cache_clock.update(wall=1010, mono=110)
+    with pytest.raises(supabase_auth.SupabaseAuthError):
+        supabase_auth.verify_access_token(token)
+    assert client.calls == 2
+    assert not supabase_auth._token_cache
+
+
+def test_rejected_jwt_is_never_cached(monkeypatch, cache_clock):
+    client = _fake_client(monkeypatch, lambda *a, **k: _FakeResponse(401, {}))
+    for _ in range(2):
+        with pytest.raises(supabase_auth.SupabaseAuthError):
+            supabase_auth.verify_access_token(_jwt())
+    assert client.calls == 2
+    assert not supabase_auth._token_cache
+
+
+def test_network_errors_are_never_cached(monkeypatch, cache_clock):
+    def unreachable(*a, **k):
+        raise httpx.ConnectError("offline")
+    client = _fake_client(monkeypatch, unreachable)
+    for _ in range(2):
+        with pytest.raises(supabase_auth.SupabaseAuthError):
+            supabase_auth.verify_access_token(_jwt())
+    assert client.calls == 2
+    assert not supabase_auth._token_cache
+
+
+@pytest.mark.parametrize("expiry", [None, "1100", True, float('nan'), float('inf'), 10**400])
+def test_unusable_expiry_is_not_cached(monkeypatch, cache_clock, expiry):
+    client = _fake_client(monkeypatch, lambda *a, **k: _FakeResponse(200, {"id": "user-1"}))
+    token = _jwt(exp=expiry)
+    supabase_auth.verify_access_token(token)
+    supabase_auth.verify_access_token(token)
+    assert client.calls == 2
+    assert not supabase_auth._token_cache
+
+
+def test_missing_expiry_is_not_cached(monkeypatch, cache_clock):
+    payload = base64.urlsafe_b64encode(b'{"sub":"user-1"}').decode().rstrip('=')
+    client = _fake_client(monkeypatch, lambda *a, **k: _FakeResponse(200, {"id": "user-1"}))
+    token = f"header.{payload}.signature"
+    supabase_auth.verify_access_token(token)
+    supabase_auth.verify_access_token(token)
+    assert client.calls == 2
+
+
+@pytest.mark.parametrize("body", [{}, {"id": 3}, {"id": "  "}, {"id": "user", "email": []}, []])
+def test_malformed_success_response_is_not_cached(monkeypatch, cache_clock, body):
+    _fake_client(monkeypatch, lambda *a, **k: _FakeResponse(200, body))
+    with pytest.raises(supabase_auth.SupabaseAuthError):
+        supabase_auth.verify_access_token(_jwt())
+    assert not supabase_auth._token_cache
+
+
+def test_cache_evicts_least_recently_used_entry_at_size_limit(monkeypatch, cache_clock):
+    monkeypatch.setattr(supabase_auth, "_TOKEN_CACHE_MAX_SIZE", 2)
+    client = _fake_client(monkeypatch, lambda *a, **k: _FakeResponse(200, {"id": "user-1"}))
+    tokens = [_jwt(sub=str(i)) for i in range(3)]
+    for token in tokens[:2]:
+        supabase_auth.verify_access_token(token)
+    supabase_auth.verify_access_token(tokens[0])
+    supabase_auth.verify_access_token(tokens[2])
+    assert len(supabase_auth._token_cache) == 2
+    supabase_auth.verify_access_token(tokens[0])
+    assert client.calls == 3
+    supabase_auth.verify_access_token(tokens[1])
+    assert client.calls == 4
+    assert len(supabase_auth._token_cache) == 2
+
+
+def test_network_time_counts_towards_ttl(monkeypatch, cache_clock):
+    def slow(*a, **k):
+        cache_clock["mono"] += 5
+        cache_clock["wall"] += 5
+        return _FakeResponse(200, {"id": "user-1"})
+    client = _fake_client(monkeypatch, slow)
+    token = _jwt()
+    supabase_auth.verify_access_token(token)
+    cache_clock.update(wall=1060, mono=160)
+    supabase_auth.verify_access_token(token)
+    assert client.calls == 2
+
+
+def test_revoked_token_is_rejected_after_ttl(monkeypatch, cache_clock):
+    responses = iter([_FakeResponse(200, {"id": "user-1"}), _FakeResponse(401, {})])
+    client = _fake_client(monkeypatch, lambda *a, **k: next(responses))
+    token = _jwt()
+    supabase_auth.verify_access_token(token)
+    cache_clock.update(wall=1060, mono=160)
+    with pytest.raises(supabase_auth.SupabaseAuthError):
+        supabase_auth.verify_access_token(token)
+    assert client.calls == 2
+    assert not supabase_auth._token_cache

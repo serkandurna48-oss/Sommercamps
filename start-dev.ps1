@@ -75,52 +75,85 @@ function Start-DevTerminal {
 
 # ── Terminals starten ─────────────────────────────────────────────────────────
 
-$stepCount = if ($Saas) { 4 } else { 3 }
-
-Write-Host ''
-Write-Host '  KSV Sommercamp – Dev-Umgebung wird gestartet ...' -ForegroundColor Cyan
-Write-Host ''
-
-Write-Host "  [1/$stepCount] Backend  (uvicorn --reload)" -ForegroundColor Green
-Start-DevTerminal `
-    -Title   'Backend – uvicorn' `
-    -Command "Set-Location '$backendPath'; & '$activate'; uvicorn main:app --reload"
-
-Start-Sleep -Milliseconds 400
-
-Write-Host "  [2/$stepCount] Frontend (npm run dev)" -ForegroundColor Green
-Start-DevTerminal `
-    -Title   'Frontend – Next.js' `
-    -Command "Set-Location '$frontendPath'; npm run dev"
-
-Start-Sleep -Milliseconds 400
-
 if ($Saas) {
-    Write-Host "  [3/$stepCount] backend_saas (uvicorn --reload, Port 8001)" -ForegroundColor Green
+    # SaaS-Demo: backend_saas :8001 ZUERST, /health abwarten, dann Frontend.
+    # Legacy-Backend wird nicht gestartet — es wird für den Pilot-Flow nicht
+    # benötigt und würde sonst ECONNREFUSED-Fehler im Next.js-Log erzeugen.
+    Write-Host ''
+    Write-Host '  CampsPilot SaaS Demo – Umgebung wird gestartet ...' -ForegroundColor Cyan
+    Write-Host ''
+
+    Write-Host '  [1/3] backend_saas (uvicorn --reload, Port 8001)' -ForegroundColor Green
     Start-DevTerminal `
         -Title   'backend_saas – uvicorn :8001' `
         -Command "Set-Location '$saasPath'; & '$saasActivate'; uvicorn app.main:app --reload --port 8001"
 
+    # /health pollen bis 200 oder 30-Sekunden-Timeout
+    Write-Host '  Warte auf backend_saas /health ...' -ForegroundColor DarkCyan
+    $deadline = (Get-Date).AddSeconds(30)
+    $ready = $false
+    while ((Get-Date) -lt $deadline) {
+        Start-Sleep -Seconds 1
+        try {
+            $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8001/health' -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+            if ($r.StatusCode -eq 200) { $ready = $true; break }
+        } catch {}
+    }
+    if (-not $ready) {
+        Write-Host '  [!] backend_saas antwortet nicht auf /health — Frontend trotzdem starten.' -ForegroundColor Yellow
+    } else {
+        Write-Host '  backend_saas ist bereit (200 OK).' -ForegroundColor Green
+    }
+
+    Write-Host '  [2/3] Frontend (npm run dev)' -ForegroundColor Green
+    Start-DevTerminal `
+        -Title   'Frontend – Next.js' `
+        -Command "Set-Location '$frontendPath'; npm run dev"
+
     Start-Sleep -Milliseconds 400
-}
 
-Write-Host "  [$stepCount/$stepCount] Claude" -ForegroundColor Green
-Start-DevTerminal `
-    -Title   'Claude' `
-    -Command "Set-Location '$root'; claude"
+    Write-Host '  [3/3] Claude' -ForegroundColor Green
+    Start-DevTerminal `
+        -Title   'Claude' `
+        -Command "Set-Location '$root'; claude"
 
-# ── Browser öffnen ────────────────────────────────────────────────────────────
-# Kurze Wartezeit, damit Backend und Frontend hochfahren können.
+    Write-Host ''
+    Write-Host '  Browser öffnet sich in 5 Sekunden ...' -ForegroundColor DarkCyan
+    Start-Sleep -Seconds 5
 
-Write-Host ''
-Write-Host '  Browser öffnet sich in 5 Sekunden ...' -ForegroundColor DarkCyan
-Start-Sleep -Seconds 5
-
-if ($Saas) {
     Start-Process 'http://localhost:3000/pilot/jk-demo-campspilot-test'
     Start-Sleep -Milliseconds 400
     Start-Process 'http://127.0.0.1:8001/docs'
 } else {
+    $stepCount = 3
+
+    Write-Host ''
+    Write-Host '  KSV Sommercamp – Dev-Umgebung wird gestartet ...' -ForegroundColor Cyan
+    Write-Host ''
+
+    Write-Host "  [1/$stepCount] Backend  (uvicorn --reload)" -ForegroundColor Green
+    Start-DevTerminal `
+        -Title   'Backend – uvicorn' `
+        -Command "Set-Location '$backendPath'; & '$activate'; uvicorn main:app --reload"
+
+    Start-Sleep -Milliseconds 400
+
+    Write-Host "  [2/$stepCount] Frontend (npm run dev)" -ForegroundColor Green
+    Start-DevTerminal `
+        -Title   'Frontend – Next.js' `
+        -Command "Set-Location '$frontendPath'; npm run dev"
+
+    Start-Sleep -Milliseconds 400
+
+    Write-Host "  [$stepCount/$stepCount] Claude" -ForegroundColor Green
+    Start-DevTerminal `
+        -Title   'Claude' `
+        -Command "Set-Location '$root'; claude"
+
+    Write-Host ''
+    Write-Host '  Browser öffnet sich in 5 Sekunden ...' -ForegroundColor DarkCyan
+    Start-Sleep -Seconds 5
+
     Start-Process 'http://localhost:3000'
     Start-Sleep -Milliseconds 400
     Start-Process 'http://127.0.0.1:8000/docs'
@@ -129,15 +162,12 @@ if ($Saas) {
 Write-Host ''
 Write-Host '  Fertig. Alle Prozesse laufen in eigenen Terminals.' -ForegroundColor Green
 Write-Host ''
-Write-Host '    Frontend:  http://localhost:3000' -ForegroundColor White
-Write-Host '    API-Docs:  http://127.0.0.1:8000/docs' -ForegroundColor White
-Write-Host '    Admin:     http://localhost:3000/admin' -ForegroundColor White
 if ($Saas) {
-    Write-Host ''
-    Write-Host '    SaaS-Pilot:     http://localhost:3000/pilot/<org-slug>' -ForegroundColor White
-    Write-Host '                    (z. B. ksv-baunatal, jk-performance-academy, campspilot-pilot)' -ForegroundColor DarkGray
-    Write-Host '    SaaS-API-Docs:  http://127.0.0.1:8001/docs' -ForegroundColor White
-    Write-Host '' -ForegroundColor DarkGray
-    Write-Host '    Hinweis: frontend/.env.local braucht NEXT_PUBLIC_SAAS_API_URL=http://localhost:8001' -ForegroundColor DarkYellow
+    Write-Host '    Demo-Pilot: http://localhost:3000/pilot/jk-demo-campspilot-test' -ForegroundColor White
+    Write-Host '    API-Docs:   http://127.0.0.1:8001/docs' -ForegroundColor White
+} else {
+    Write-Host '    Frontend:  http://localhost:3000' -ForegroundColor White
+    Write-Host '    API-Docs:  http://127.0.0.1:8000/docs' -ForegroundColor White
+    Write-Host '    Admin:     http://localhost:3000/admin' -ForegroundColor White
 }
 Write-Host ''

@@ -1,5 +1,5 @@
 import { computeBrandTokens } from '../../../../components/saas/brandPipeline'
-import { computeMoneyStats, isActiveRegistration } from '../../../../components/saas/commandCenterLogic'
+import { computeMoneyStats, isOpenPayment } from '../../../../components/saas/commandCenterLogic'
 import { loadOrgAdminData } from '../../../../components/saas/orgAdminData'
 import MatchdayBand from '../../../../components/saas/shell/MatchdayBand'
 import PaymentSection, { type PaymentEntry } from '../../../../components/saas/data/PaymentSection'
@@ -22,7 +22,7 @@ export default async function OrgPaymentsPage({ params }: { params: Promise<{ or
   )
 
   const entries: PaymentEntry[] = camps.flatMap((camp, i) => registrationsByCamp[i].map(registration => ({ registration, camp })))
-  const openCount = entries.filter(e => isActiveRegistration(e.registration) && e.registration.payment_status === 'open').length
+  const openCount = entries.filter(e => isOpenPayment(e.registration)).length
 
   return (
     <>

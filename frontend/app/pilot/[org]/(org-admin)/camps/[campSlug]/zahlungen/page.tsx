@@ -1,5 +1,5 @@
 import { computeBrandTokens } from '../../../../../../components/saas/brandPipeline'
-import { computeMoneyStats, isActiveRegistration } from '../../../../../../components/saas/commandCenterLogic'
+import { computeMoneyStats, isOpenPayment } from '../../../../../../components/saas/commandCenterLogic'
 import { loadCampAdminData } from '../../../../../../components/saas/orgAdminData'
 import MatchdayBand from '../../../../../../components/saas/shell/MatchdayBand'
 import PaymentSection, { type PaymentEntry } from '../../../../../../components/saas/data/PaymentSection'
@@ -18,7 +18,7 @@ export default async function CampPaymentsPage({
   const brand = computeBrandTokens(org.primary_color)
   const money = computeMoneyStats(camp, registrations)
   const entries: PaymentEntry[] = registrations.map(registration => ({ registration, camp }))
-  const openCount = entries.filter(e => isActiveRegistration(e.registration) && e.registration.payment_status === 'open').length
+  const openCount = entries.filter(e => isOpenPayment(e.registration)).length
 
   return (
     <>

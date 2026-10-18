@@ -144,7 +144,6 @@ export default function DoneScreen({
                 </div>
                 <div className="txt">
                   <b>{payTo} meldet sich, sobald ein Platz frei wird</b>
-                  <span>Sie haben dann 48 Stunden Zeit zuzusagen.</span>
                 </div>
               </li>
               <li data-rise>

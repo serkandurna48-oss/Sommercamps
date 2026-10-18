@@ -143,6 +143,23 @@ it('promises bank details on the next screen only when the club stored an IBAN',
   expect(withoutIban).toContain('Die Bankverbindung ist hier noch nicht hinterlegt')
 })
 
+it('accepts a single-word parent name without a last name', async () => {
+  const onSubmitted = vi.fn()
+  let nodes = render(onSubmitted)
+  const inputs = nodes.filter((node) => node.type === 'input' && node.props.type !== 'checkbox')
+  // Use 'Alex' (no space) for the parent name field (index 3); keep other fields valid.
+  const values = ['Mia', 'Muster', '01.01.2018', 'Alex', 'eva@example.de', '12345', '67890', '']
+  inputs.forEach((input, index) => change(input, values[index]))
+  change(checkbox(nodes, 'Teilnahmebedingungen'), true)
+  change(checkbox(nodes, 'Datenschutz'), true)
+  nodes = render(onSubmitted)
+  await submit(nodes)
+  expect(submitRegistration).toHaveBeenCalledWith('testverein', 'sommer',
+    expect.objectContaining({ parent_first_name: 'Alex', parent_last_name: '' }),
+  )
+  expect(onSubmitted).toHaveBeenCalledOnce()
+})
+
 it('opens the organization privacy policy in a new tab with noopener', () => {
   const nodes = render()
   const label = nodes.find((node) => node.type === 'label' && walk(node.props.children).includes(checkbox(nodes, 'Datenschutz')))

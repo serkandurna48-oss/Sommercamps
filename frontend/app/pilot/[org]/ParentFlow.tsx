@@ -249,7 +249,7 @@ function CampScreen({
         </div>
       </div>
 
-      <div className="pad sec" style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 28 }}>
+      <div className="pad sec" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div className="tags">
           <span className={`chip ${camp.registration_open ? 'ok' : 'info'}`}>{camp.registration_open ? 'Anmeldung geöffnet' : 'Anmeldung geschlossen'}</span>
           <span className="tag">
@@ -259,7 +259,7 @@ function CampScreen({
         <h1 className="d1" data-split style={{ fontSize: 'clamp(28px,6.4vw,46px)' }}>
           {camp.title}
         </h1>
-        <span className="num" style={{ fontSize: 18, fontWeight: 600 }}>
+        <span className="num" style={{ fontSize: 17, fontWeight: 600, color: 'var(--ink-2)' }}>
           {formatCampDateRange(camp.start_date, camp.end_date)}
         </span>
         <div className="cap">

@@ -571,7 +571,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 .cp-public[data-theme='tradition'] .sec-head {
   flex-direction: column;
@@ -706,9 +706,14 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--brand-strong);
+  display: inline-block;
+  transition: transform 0.18s var(--ease);
 }
 .cp-public[data-theme='akademie'] .c-go {
   color: var(--brand);
+}
+.cp-public .camp:not(.full):hover .c-go {
+  transform: translateX(3px);
 }
 .cp-public .camp.full .c-date b,
 .cp-public .camp.full .c-name {
@@ -876,6 +881,14 @@
   background: none;
   cursor: pointer;
   flex-shrink: 0;
+  border-radius: var(--r-card);
+  transition: background 0.18s var(--ease);
+}
+.cp-public .back:hover {
+  background: var(--surface-2);
+}
+.cp-public .back:active {
+  opacity: 0.6;
 }
 .cp-public .top .who {
   display: flex;
@@ -1167,6 +1180,16 @@
 }
 .cp-public .btn.primary:hover {
   filter: brightness(1.08);
+}
+.cp-public .btn.primary:active {
+  filter: brightness(0.92);
+}
+.cp-public .btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+.cp-public .btn:disabled:hover {
+  filter: none;
 }
 .cp-public .btn.done {
   background: var(--ok);

@@ -45,6 +45,10 @@ def local_database():
         with psycopg2.connect(dbname=name, **config) as setup:
             with setup.cursor() as cur:
                 cur.execute("CREATE SCHEMA auth; CREATE TABLE auth.users (id uuid PRIMARY KEY)")
+                # Minimal auth.uid() stand-in: PostgREST supplies verified JWT claims.
+                cur.execute("""CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE
+                    AS $$ SELECT (nullif(current_setting('request.jwt.claims', true), '')::jsonb
+                        ->> 'sub')::uuid $$""")
                 for role in ("anon", "authenticated"):
                     cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (role,))
                     if cur.fetchone() is None:
@@ -52,6 +56,7 @@ def local_database():
                 migrations = Path(__file__).resolve().parents[2] / "supabase" / "migrations"
                 for migration in sorted(migrations.glob("*.sql")):
                     cur.execute(migration.read_text(encoding="utf-8"))
+                cur.execute("GRANT USAGE ON SCHEMA auth TO anon, authenticated")
                 cur.execute("GRANT USAGE ON SCHEMA public TO anon, authenticated")
                 cur.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon, authenticated")
         setup.close()

@@ -42,9 +42,7 @@ class FakeProvider:
         self.sent: list[MailMessage] = []
 
     def send(self, message: MailMessage) -> None:
-        logger.info(
-            "FakeProvider: would send to %s — subject: %s", message.to_email, message.subject
-        )
+        logger.info("FakeProvider: would send — subject: %s", message.subject)
         self.sent.append(message)
 
 

@@ -9,6 +9,7 @@ Two status values → two distinct messages:
 from __future__ import annotations
 
 from datetime import date
+from html import escape
 from typing import Optional
 
 from .mail import MailMessage
@@ -33,36 +34,46 @@ def build_registration_mail(
     payment_reference: str,
     iban: Optional[str],
 ) -> MailMessage:
+    # Escape all user-supplied strings before interpolating into HTML.
+    e_org_name = escape(org_name)
+    e_org_email = escape(org_email)
+    e_camp_title = escape(camp_title)
+    e_parent_name = escape(parent_name)
+    e_child_name = escape(child_name)
+    e_payment_ref = escape(payment_reference)
+    e_iban = escape(iban) if iban else None
+    e_phone = escape(org_phone) if org_phone else None
+
     dates = _date_range(camp_start, camp_end)
-    phone_line = f"<br>Telefon: {org_phone}" if org_phone else ""
+    phone_line = f"<br>Telefon: {e_phone}" if e_phone else ""
 
     if status == "registered":
         subject = f"Anmeldebestätigung – {camp_title}"
         payment_block = (
-            f"<p>Verwendungszweck: <strong>{payment_reference}</strong>"
-            f"<br>IBAN: <strong>{iban}</strong></p>"
-            if iban
+            f"<p>Verwendungszweck: <strong>{e_payment_ref}</strong>"
+            f"<br>IBAN: <strong>{e_iban}</strong></p>"
+            if e_iban
             else ""
         )
         html = f"""\
-<p>Hallo {parent_name},</p>
-<p>die Anmeldung von <strong>{child_name}</strong> für <strong>{camp_title}</strong>
+<p>Hallo {e_parent_name},</p>
+<p>die Anmeldung von <strong>{e_child_name}</strong> für <strong>{e_camp_title}</strong>
 ({dates}) ist bei uns eingegangen.</p>
 {payment_block}
-<p>Bei Fragen wende dich direkt an {org_name}:<br>
-E-Mail: {org_email}{phone_line}</p>
-<p>Viele Grüße,<br>{org_name}</p>"""
+<p>Bei Fragen wende dich direkt an {e_org_name}:<br>
+E-Mail: {e_org_email}{phone_line}</p>
+<p>Viele Grüße,<br>{e_org_name}</p>"""
     else:
         subject = f"Wartelistenbestätigung – {camp_title}"
         html = f"""\
-<p>Hallo {parent_name},</p>
-<p>die Anmeldung von <strong>{child_name}</strong> für <strong>{camp_title}</strong>
+<p>Hallo {e_parent_name},</p>
+<p>die Anmeldung von <strong>{e_child_name}</strong> für <strong>{e_camp_title}</strong>
 ({dates}) ist bei uns eingegangen. Das Camp ist aktuell ausgebucht –
-{child_name} steht auf der Warteliste.</p>
-<p>Sollte ein Platz frei werden, meldet sich {org_name} direkt bei dir.</p>
-<p>Bei Fragen wende dich direkt an {org_name}:<br>
-E-Mail: {org_email}{phone_line}</p>
-<p>Viele Grüße,<br>{org_name}</p>"""
+{e_child_name} steht auf der Warteliste.</p>
+<p>Sollte ein Platz frei werden, meldet sich {e_org_name} direkt bei dir.</p>
+<p>Bei Fragen wende dich direkt an {e_org_name}:<br>
+E-Mail: {e_org_email}{phone_line}</p>
+<p>Viele Grüße,<br>{e_org_name}</p>"""
 
     return MailMessage(
         to_email=parent_email,

@@ -394,8 +394,7 @@ function WaitScreen({
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
           <h2 className="d3">So läuft die Warteliste</h2>
           <p style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--ink-2)' }}>
-            Sie geben nur Name, Jahrgang und Kontaktdaten an. Wird ein Platz frei, benachrichtigt {org.name} der Reihe nach — Sie haben 48 Stunden Zeit
-            zuzusagen. Erst nach Ihrer Zusage entstehen Kosten.
+            Sie geben nur Name, Jahrgang und Kontaktdaten an. Wird ein Platz frei, meldet sich {org.name} direkt bei Ihnen.
           </p>
           <button className="btn primary" type="button" onClick={onJoinWaitlist}>
             Auf die Warteliste setzen

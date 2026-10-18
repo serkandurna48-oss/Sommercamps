@@ -70,3 +70,9 @@ it('separates the waitlist case from a reserved place', () => {
   expect(html).not.toContain('DE89370400440532013000')
   expect(html).not.toContain('Zahlung offen')
 })
+
+it('does not promise a 48-hour acceptance window on the waitlist', () => {
+  const html = render({ result: { status: 'waitlist' } })
+  expect(html).not.toContain('48 Stunden')
+  expect(html).toContain('meldet sich')
+})

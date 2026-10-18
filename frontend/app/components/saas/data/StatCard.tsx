@@ -62,9 +62,9 @@ export default function StatCard({
       style={{ borderColor, background: bg }}
     >
       {numericValue !== undefined ? (
-        <CountUpNumber value={numericValue} className="cp-num cp-scoreboard" style={{ color: valueColor }} />
+        <CountUpNumber value={numericValue} className="cp-num cp-scoreboard" style={{ color: valueColor, whiteSpace: 'nowrap' }} />
       ) : (
-        <p className="cp-num cp-scoreboard" style={{ color: valueColor }}>
+        <p className="cp-num cp-scoreboard" style={{ color: valueColor, whiteSpace: 'nowrap' }}>
           {value}
         </p>
       )}

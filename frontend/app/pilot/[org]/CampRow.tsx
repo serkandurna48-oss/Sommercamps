@@ -66,7 +66,7 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
           </span>
         </span>
         <span className="c-foot">
-          <span className={`c-price num${camp.is_full ? ' muted' : ''}`}>{formatPrice(camp.price_cents, camp.currency)}</span>
+          <span className="c-price num">{formatPrice(camp.price_cents, camp.currency)}</span>
           <span className="c-go">{camp.is_full ? 'Auf die Warteliste' : 'Ansehen'}</span>
         </span>
       </span>

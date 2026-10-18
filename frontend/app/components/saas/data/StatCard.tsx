@@ -58,7 +58,7 @@ export default function StatCard({
 
   return (
     <div
-      className={`rounded-[var(--cp-r-card)] border p-5${wide ? ' col-span-2 md:col-span-1' : ''}`}
+      className={`rounded-[var(--cp-r-card)] border p-5${wide ? ' col-span-2 md:col-span-1 xl:col-span-2' : ''}`}
       style={{ borderColor, background: bg }}
     >
       {numericValue !== undefined ? (

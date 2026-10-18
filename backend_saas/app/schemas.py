@@ -121,7 +121,7 @@ class RegistrationCreate(BaseModel):
     child_birth_date: date
 
     emergency_contact_name: Optional[str] = None
-    emergency_contact_phone: Optional[str] = None
+    emergency_contact_phone: str = Field(min_length=1)
 
     medical_notes: Optional[str] = None
     allergies: Optional[str] = None
@@ -136,7 +136,7 @@ class RegistrationCreate(BaseModel):
     privacy_accepted: bool
 
     @field_validator(
-        "emergency_contact_name", "emergency_contact_phone", "medical_notes", "allergies",
+        "emergency_contact_name", "medical_notes", "allergies",
         "jersey_size", "pickup_authorized",
         mode="after",
     )

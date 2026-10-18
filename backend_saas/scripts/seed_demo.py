@@ -70,35 +70,53 @@ ORGANIZATION = {
     "contact_email": "demo@campspilot.example",
     "contact_phone": "0170 0000000",
     "primary_color": "#C79B3B",
+    "logo_url": "/jk/logo.jpg",
+    "hero_image_url": "/jk/hero.jpg",
+    "intro_heading": "DU willst DICH weiterentwickeln, wir bringen DICH auf DEIN nächstes Level.",
+    "intro_text": "Talententwicklung",
     "plan_status": "pilot",
     "iban": "DE89370400440532013000",
 }
 
+_JK_BENEFITS = [
+    "Stationstraining",
+    "Wettbewerbe, Events und Turnier",
+    "Techniktraining & Individualtraining",
+    "Spieleranalyse und Videoanalyse",
+    "Mittagessen, Getränke und Verpflegung vor Ort",
+]
+
 CAMP_A = {
     "slug": "sommercamp-2027",
-    "title": "Sommercamp 2027",
+    "title": "Sommercamp bei FSK Vollmarshausen",
     "start_date": "2027-07-07",
-    "end_date": "2027-07-11",
-    "age_min": 7,
+    "end_date": "2027-07-09",
+    "age_min": 6,
     "age_max": 14,
     "capacity": 4,
-    "price_cents": 18900,
+    "price_cents": 14900,
     "currency": "EUR",
-    "location": "Sportanlage Kassel-Nord",
+    "care_info": "9–15 Uhr",
+    "meals_info": "Mittagessen, Getränke und Verpflegung vor Ort",
+    "includes": _JK_BENEFITS,
+    "location": "Sportplatz FSK Vollmarshausen",
     "status": "published",
 }
 
 CAMP_B = {
     "slug": "herbstcamp-2027",
-    "title": "Herbstcamp 2027",
-    "start_date": "2027-10-18",
-    "end_date": "2027-10-22",
-    "age_min": 7,
-    "age_max": 16,
+    "title": "Sommercamp bei TSV Wolfsanger",
+    "start_date": "2027-07-28",
+    "end_date": "2027-07-30",
+    "age_min": 8,
+    "age_max": 14,
     "capacity": 12,
-    "price_cents": 16500,
+    "price_cents": 14900,
     "currency": "EUR",
-    "location": "Sportanlage Kassel-Nord",
+    "care_info": "9–15 Uhr",
+    "meals_info": "Mittagessen, Getränke und Verpflegung vor Ort",
+    "includes": _JK_BENEFITS,
+    "location": "Sportplatz TSV Wolfsanger",
     "status": "published",
 }
 
@@ -269,6 +287,42 @@ def _publish_organization(client: httpx.Client, api_url: str, token: str) -> Non
         sys.exit(1)
 
 
+def _update_organization_branding(client: httpx.Client, api_url: str, token: str) -> None:
+    payload = {
+        "logo_url": ORGANIZATION["logo_url"],
+        "hero_image_url": ORGANIZATION["hero_image_url"],
+        "intro_heading": ORGANIZATION["intro_heading"],
+        "intro_text": ORGANIZATION["intro_text"],
+    }
+    response = client.patch(
+        f"{api_url}/admin/organizations/{DEMO_ORG_SLUG}",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if response.status_code == 200:
+        print(f"  organization '{DEMO_ORG_SLUG}': branding updated")
+    else:
+        print(f"  organization '{DEMO_ORG_SLUG}': branding update FAILED — HTTP {response.status_code} — {response.text}", file=sys.stderr)
+        sys.exit(1)
+
+
+_CAMP_BRANDING_FIELDS = {"title", "start_date", "end_date", "age_min", "age_max", "price_cents", "care_info", "meals_info", "includes", "location"}
+
+
+def _update_camp_branding(client: httpx.Client, api_url: str, token: str, camp: dict) -> None:
+    payload = {k: v for k, v in camp.items() if k in _CAMP_BRANDING_FIELDS}
+    response = client.patch(
+        f"{api_url}/admin/organizations/{DEMO_ORG_SLUG}/camps/{camp['slug']}",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if response.status_code == 200:
+        print(f"  camp '{camp['slug']}': branding updated")
+    else:
+        print(f"  camp '{camp['slug']}': branding update FAILED — HTTP {response.status_code} — {response.text}", file=sys.stderr)
+        sys.exit(1)
+
+
 def _create_camp(client: httpx.Client, api_url: str, token: str, camp: dict) -> None:
     response = client.post(
         f"{api_url}/admin/organizations/{DEMO_ORG_SLUG}/camps", json=camp, headers={"Authorization": f"Bearer {token}"}
@@ -383,17 +437,17 @@ def main() -> None:
         print(f"Seeding demo tenant '{DEMO_ORG_SLUG}' against {args.api_url} ...")
         token = _login(args.email, args.password)
         _create_organization(client, args.api_url, token)
+        _update_organization_branding(client, args.api_url, token)
         _publish_organization(client, args.api_url, token)
         _create_camp(client, args.api_url, token, CAMP_A)
         _create_camp(client, args.api_url, token, CAMP_B)
+        _update_camp_branding(client, args.api_url, token, CAMP_A)
+        _update_camp_branding(client, args.api_url, token, CAMP_B)
 
         if args.reset:
             print("--reset: storniere alle aktiven Anmeldungen ...")
             _reset_registrations(client, args.api_url, token, CAMP_A["slug"])
             _reset_registrations(client, args.api_url, token, CAMP_B["slug"])
-            print("--reset: aktualisiere Camp-Titel ...")
-            _update_camp_title(client, args.api_url, token, CAMP_A)
-            _update_camp_title(client, args.api_url, token, CAMP_B)
 
         print(f"  seeding registrations for '{CAMP_A['slug']}' ...")
         _seed_registrations(client, args.api_url, token, CAMP_A["slug"], CAMP_A_REGISTRATIONS)

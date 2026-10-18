@@ -196,10 +196,10 @@ CAMP_B_REGISTRATIONS = [
         "_mark_paid": True,
     },
     {
-        # No emergency contact — shows up as gap in admin "Aufgaben".
         "parent_first_name": "Melanie", "parent_last_name": "Richter",
         "parent_email": "melanie.richter@example.com", "parent_phone": "+49 170 2000023",
         "child_first_name": "Noah", "child_last_name": "Richter", "child_birth_date": "2015-08-14",
+        "emergency_contact_name": "Bernd Richter", "emergency_contact_phone": "+49 170 2000033",
         "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": False,
     },
@@ -253,6 +253,19 @@ def _create_organization(client: httpx.Client, api_url: str, token: str) -> None
         print(f"  organization '{DEMO_ORG_SLUG}': already exists, skipping")
     else:
         print(f"  organization '{DEMO_ORG_SLUG}': FAILED — HTTP {response.status_code} — {response.text}", file=sys.stderr)
+        sys.exit(1)
+
+
+def _publish_organization(client: httpx.Client, api_url: str, token: str) -> None:
+    response = client.patch(
+        f"{api_url}/admin/organizations/{DEMO_ORG_SLUG}",
+        json={"site_published": True},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if response.status_code == 200:
+        print(f"  organization '{DEMO_ORG_SLUG}': site_published=true")
+    else:
+        print(f"  organization '{DEMO_ORG_SLUG}': publish FAILED — HTTP {response.status_code} — {response.text}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -370,6 +383,7 @@ def main() -> None:
         print(f"Seeding demo tenant '{DEMO_ORG_SLUG}' against {args.api_url} ...")
         token = _login(args.email, args.password)
         _create_organization(client, args.api_url, token)
+        _publish_organization(client, args.api_url, token)
         _create_camp(client, args.api_url, token, CAMP_A)
         _create_camp(client, args.api_url, token, CAMP_B)
 

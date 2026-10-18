@@ -12,6 +12,16 @@ export function isActiveRegistration(r: RegistrationAdmin): boolean {
   return ACTIVE_STATUSES.has(r.status)
 }
 
+/** Only active registrations carry an outstanding payment obligation. */
+export function isOpenPayment(r: RegistrationAdmin): boolean {
+  return isActiveRegistration(r) && r.payment_status === 'open'
+}
+
+/** Amounts are calculated by the caller using each camp's price. */
+export function openPaymentStats(registrations: RegistrationAdmin[]): { count: number } {
+  return { count: registrations.filter(isOpenPayment).length }
+}
+
 export function hasMissingEmergencyContact(r: RegistrationAdmin): boolean {
   return !r.emergency_contact_name && !r.emergency_contact_phone
 }
@@ -34,7 +44,7 @@ export function computeMoneyStats(camp: CampAdmin, registrations: RegistrationAd
   for (const r of registrations) {
     if (!isActiveRegistration(r)) continue
     if (r.payment_status === 'paid') collectedCents += camp.price_cents
-    else if (r.payment_status === 'open') openCents += camp.price_cents
+    else if (isOpenPayment(r)) openCents += camp.price_cents
   }
   return { collectedCents, openCents }
 }
@@ -48,7 +58,7 @@ export function filterRegistrations(
 ): RegistrationAdmin[] {
   const q = search.trim().toLowerCase()
   return registrations.filter(r => {
-    if (filter === 'payment-open' && !(isActiveRegistration(r) && r.payment_status === 'open')) return false
+    if (filter === 'payment-open' && !isOpenPayment(r)) return false
     if (filter === 'missing-info' && !hasMissingEmergencyContact(r)) return false
 
     if (!q) return true
@@ -59,7 +69,7 @@ export function filterRegistrations(
 
 export function countByFilter(registrations: RegistrationAdmin[]): Record<ParticipantFilter, number> {
   return {
-    'payment-open': registrations.filter(r => isActiveRegistration(r) && r.payment_status === 'open').length,
+    'payment-open': openPaymentStats(registrations).count,
     'missing-info': registrations.filter(hasMissingEmergencyContact).length,
     all: registrations.length,
   }

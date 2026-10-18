@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  isOpenPayment,
+  openPaymentStats,
   birthYear,
   computeMoneyStats,
   countByFilter,
@@ -7,6 +9,7 @@ import {
   hasMissingEmergencyContact,
   hasNotes,
 } from './commandCenterLogic'
+import { computeCampStats } from './dashboardLogic'
 import type { CampAdmin, RegistrationAdmin } from '../../lib/saasAdminApi'
 
 function camp(overrides: Partial<CampAdmin> = {}): CampAdmin {
@@ -126,5 +129,28 @@ describe('countByFilter', () => {
 describe('birthYear', () => {
   it('extrahiert das Jahr aus einem ISO-Datum', () => {
     expect(birthYear('2018-03-01')).toBe(2018)
+  })
+})
+
+
+describe('shared open payment definition', () => {
+  it('agrees across dashboard, camp totals and payment filters for every status combination', () => {
+    const registrations: RegistrationAdmin[] = []
+    for (const status of ['registered', 'confirmed', 'waitlist', 'cancelled'] as const) {
+      for (const payment_status of ['open', 'paid', 'waived', 'refunded'] as const) {
+        const r = reg({ status, payment_status })
+        expect(isOpenPayment(r)).toBe(
+          (status === 'registered' || status === 'confirmed') && payment_status === 'open',
+        )
+        registrations.push(r)
+      }
+    }
+    const c = camp({ price_cents: 12345 })
+    expect(openPaymentStats(registrations)).toEqual({ count: 2 })
+    expect(computeCampStats(c, registrations).openPaymentsCount).toBe(2)
+    expect(countByFilter(registrations)['payment-open']).toBe(2)
+    expect(filterRegistrations(registrations, 'payment-open', '')).toHaveLength(2)
+    expect(computeMoneyStats(c, registrations)).toEqual({ openCents: 24690, collectedCents: 24690 })
+    expect(openPaymentStats([])).toEqual({ count: 0 })
   })
 })

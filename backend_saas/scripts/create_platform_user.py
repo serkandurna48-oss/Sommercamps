@@ -37,10 +37,14 @@ import argparse
 import getpass
 import os
 import sys
+from pathlib import Path
 
 import httpx
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 
 def _dsn_with_sslmode(database_url: str) -> str:

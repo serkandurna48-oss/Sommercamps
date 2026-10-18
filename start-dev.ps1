@@ -117,7 +117,7 @@ Write-Host '  Browser öffnet sich in 5 Sekunden ...' -ForegroundColor DarkCyan
 Start-Sleep -Seconds 5
 
 if ($Saas) {
-    Start-Process 'http://localhost:3000/pilot/ksv-baunatal'
+    Start-Process 'http://localhost:3000/pilot/jk-demo-campspilot-test'
     Start-Sleep -Milliseconds 400
     Start-Process 'http://127.0.0.1:8001/docs'
 } else {

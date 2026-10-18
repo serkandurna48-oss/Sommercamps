@@ -26,7 +26,14 @@ Safety, by construction:
 
 Usage:
     python scripts/seed_demo.py --api-url http://localhost:8000 \
-        --admin-password "$ADMIN_PASSWORD"
+        --email owner@example.com --password "$CAMPSPILOT_PASSWORD"
+
+    # or via env vars:
+    CAMPSPILOT_EMAIL=owner@example.com CAMPSPILOT_PASSWORD=secret \
+        python scripts/seed_demo.py
+
+Requires SUPABASE_URL and SUPABASE_ANON_KEY in the environment (same values
+backend_saas/.env uses) — signs in via Supabase Auth just like onboard_tenant.py.
 """
 
 from __future__ import annotations
@@ -34,8 +41,12 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from pathlib import Path
 
 import httpx
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 DEMO_ORG_SLUG = "jk-demo-campspilot-test"
 DEMO_ORG_NAME = "JK Demo – CampsPilot Test"
@@ -140,12 +151,25 @@ CAMP_B_REGISTRATIONS = [
 ]
 
 
-def _login(client: httpx.Client, api_url: str, password: str) -> str:
-    response = client.post(f"{api_url}/admin/login", json={"password": password})
+def _login(email: str, password: str) -> str:
+    """Signs in via Supabase Auth — same mechanism as onboard_tenant.py and the
+    frontend's login server actions (feat/platform-foundation replaced the old
+    single ADMIN_PASSWORD/POST /admin/login scheme)."""
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_anon_key = os.environ.get("SUPABASE_ANON_KEY")
+    if not supabase_url or not supabase_anon_key:
+        print("SUPABASE_URL and SUPABASE_ANON_KEY must be set in the environment.", file=sys.stderr)
+        sys.exit(1)
+    response = httpx.post(
+        f"{supabase_url}/auth/v1/token?grant_type=password",
+        headers={"apikey": supabase_anon_key, "Content-Type": "application/json"},
+        json={"email": email, "password": password},
+        timeout=10.0,
+    )
     if response.status_code != 200:
         print(f"Login failed: HTTP {response.status_code} — {response.text}", file=sys.stderr)
         sys.exit(1)
-    return response.json()["token"]
+    return response.json()["access_token"]
 
 
 def _create_organization(client: httpx.Client, api_url: str, token: str) -> None:
@@ -221,11 +245,12 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--api-url", default="http://localhost:8000", help="backend_saas base URL (default: local dev, port 8000)")
-    parser.add_argument("--admin-password", default=os.environ.get("ADMIN_PASSWORD"), help="Platform-admin password. Defaults to the ADMIN_PASSWORD env var.")
+    parser.add_argument("--email", default=os.environ.get("CAMPSPILOT_EMAIL"), help="Platform-admin email. Defaults to CAMPSPILOT_EMAIL env var.")
+    parser.add_argument("--password", default=os.environ.get("CAMPSPILOT_PASSWORD"), help="Platform-admin password. Defaults to CAMPSPILOT_PASSWORD env var.")
     args = parser.parse_args()
 
-    if not args.admin_password:
-        print("No admin password given (use --admin-password or set ADMIN_PASSWORD).", file=sys.stderr)
+    if not args.email or not args.password:
+        print("Email and password required (use --email/--password or set CAMPSPILOT_EMAIL/CAMPSPILOT_PASSWORD).", file=sys.stderr)
         sys.exit(1)
 
     with httpx.Client(timeout=10.0) as client:
@@ -235,7 +260,7 @@ def main() -> None:
             sys.exit(1)
 
         print(f"Seeding demo tenant '{DEMO_ORG_SLUG}' against {args.api_url} ...")
-        token = _login(client, args.api_url, args.admin_password)
+        token = _login(args.email, args.password)
         _create_organization(client, args.api_url, token)
         _create_camp(client, args.api_url, token, CAMP_A)
         _create_camp(client, args.api_url, token, CAMP_B)

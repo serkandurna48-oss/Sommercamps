@@ -12,6 +12,17 @@ export const PAYMENT_STATUS_TONE: Record<string, StatusTone> = {
   cancelled: 'neutral',
 }
 
+/** Anmeldestatus → Ton. Parallel zu PAYMENT_STATUS_TONE, damit S3 beide
+ * in derselben Zeile rendern kann. Absicht: dot=true (Anmeldestatus) +
+ * voller Chip (Zahlung) sorgt im Tabellenkontext für visuelle Trennung,
+ * auch wenn beide denselben Ton hätten. */
+export const REGISTRATION_STATUS_TONE: Record<string, StatusTone> = {
+  registered: 'ok',
+  confirmed: 'ok',
+  waitlist: 'pending',
+  cancelled: 'neutral',
+}
+
 const TONE_VARS: Record<Exclude<StatusTone, 'neutral'>, { color: string; bg: string; line: string }> = {
   ok: { color: 'var(--cp-ok)', bg: 'var(--cp-ok-bg)', line: 'var(--cp-ok-line)' },
   pending: { color: 'var(--cp-pending)', bg: 'var(--cp-pending-bg)', line: 'var(--cp-pending-line)' },

@@ -6,7 +6,10 @@ import BandTabs, { type TabItem } from './BandTabs'
 import LogoutButton from './LogoutButton'
 import OrgSwitcher from './OrgSwitcher'
 
-export type MatchdayBandMetric = Omit<BandMetricProps, 'size'>
+/** `hero` (optional): erzwingt die große Schrift auf dieser Metrik statt
+ * auf der ersten. Rückwärtskompatibel: wenn kein hero-Flag gesetzt ist,
+ * bekommt Metrik 0 wie bisher die hero-Größe. */
+export type MatchdayBandMetric = Omit<BandMetricProps, 'size'> & { hero?: boolean }
 
 export interface MatchdayBandProps {
   /** full = Dashboard (grosses Band, schrumpft beim Scrollen per M1).
@@ -89,11 +92,15 @@ export default function MatchdayBand({
                 </div>
                 {metrics.length > 0 && (
                   <div className="grid grid-cols-2 gap-x-6 gap-y-3 xl:flex xl:flex-nowrap xl:items-end xl:gap-8">
-                    {metrics.map((m, i) => (
-                      <div key={m.label} className={i === 0 || m.bar || metrics.length === 1 ? undefined : 'hidden md:block'}>
-                        <BandMetric {...m} size={i === 0 && metrics.length > 1 ? 'hero' : 'band'} />
-                      </div>
-                    ))}
+                    {metrics.map((m, i) => {
+                      const anyHero = metrics.some(x => x.hero)
+                      const isHero = anyHero ? !!m.hero : (i === 0 && metrics.length > 1)
+                      return (
+                        <div key={m.label} className={isHero || m.bar || metrics.length === 1 ? undefined : 'hidden md:block'}>
+                          <BandMetric {...m} size={isHero ? 'hero' : 'band'} />
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>

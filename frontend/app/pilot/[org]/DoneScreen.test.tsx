@@ -76,3 +76,9 @@ it('does not promise a 48-hour acceptance window on the waitlist', () => {
   expect(html).not.toContain('48 Stunden')
   expect(html).toContain('meldet sich')
 })
+
+it('does not promise a prior acceptance step before costs on the waitlist', () => {
+  const html = render({ result: { status: 'waitlist' } })
+  expect(html).not.toContain('Zusage')
+  expect(html).toContain('sofort nach')
+})

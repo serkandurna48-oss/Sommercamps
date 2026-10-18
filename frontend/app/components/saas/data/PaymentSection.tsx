@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { de, formatEuro, paymentStatusLabel } from '../../../lib/i18n/de'
+import { de, formatEuro, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import { xlsxHrefWithFilter, type ExportColumn } from '../../../lib/exportCsv'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { isActiveRegistration } from '../commandCenterLogic'
@@ -24,6 +24,7 @@ function buildColumns(showCampTitle: boolean): ExportColumn<PaymentEntry>[] {
     { header: 'Elternteil', value: e => `${e.registration.parent_first_name} ${e.registration.parent_last_name}` },
     { header: 'E-Mail', value: e => e.registration.parent_email },
     { header: 'Preis (EUR)', value: e => formatEuro(e.camp.price_cents, e.camp.currency) },
+    { header: 'Anmeldestatus', value: e => registrationStatusLabel[e.registration.status] ?? e.registration.status },
     { header: 'Zahlungsstatus', value: e => paymentStatusLabel[e.registration.payment_status] ?? e.registration.payment_status },
   ]
 }

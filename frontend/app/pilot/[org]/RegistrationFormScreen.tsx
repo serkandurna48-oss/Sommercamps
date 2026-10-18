@@ -96,7 +96,7 @@ export default function RegistrationFormScreen({
     if (form.childFirstName.trim() === '') bad.childFirstName = 'Bitte tragen Sie den Vornamen ein.'
     if (form.childLastName.trim() === '') bad.childLastName = 'Bitte tragen Sie den Nachnamen ein.'
     if (parseGermanDate(form.childBirthDate) === null) bad.childBirthDate = 'Bitte im Format TT.MM.JJJJ.'
-    if (form.parentName.trim() === '') bad.parentName = 'Bitte tragen Sie Ihren Namen ein.'
+    if (form.parentName.trim() === '' || !form.parentName.trim().includes(' ')) bad.parentName = 'Bitte Vor- und Nachnamen angeben.'
     if (!emailValid) bad.parentEmail = 'Diese Adresse ist unvollständig. Beispiel: name@beispiel.de'
     if (form.parentPhone.trim() === '') bad.parentPhone = 'Bitte tragen Sie eine Telefonnummer ein.'
     if (form.emergencyPhone.trim() === '') {
@@ -116,7 +116,7 @@ export default function RegistrationFormScreen({
     if (form.childFirstName.trim() === '') bad.push('childFirstName')
     if (form.childLastName.trim() === '') bad.push('childLastName')
     if (parseGermanDate(form.childBirthDate) === null) bad.push('childBirthDate')
-    if (form.parentName.trim() === '') bad.push('parentName')
+    if (form.parentName.trim() === '' || !form.parentName.trim().includes(' ')) bad.push('parentName')
     if (!emailValid) bad.push('parentEmail')
     if (form.parentPhone.trim() === '') bad.push('parentPhone')
     if (form.emergencyPhone.trim() === '') bad.push('emergencyPhone')

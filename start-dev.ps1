@@ -10,7 +10,8 @@
 #>
 
 param(
-    [switch]$Saas
+    [switch]$Saas,
+    [switch]$Demo
 )
 
 $ErrorActionPreference = 'Stop'
@@ -45,7 +46,7 @@ if (-not (Test-Path (Join-Path $frontendPath 'node_modules'))) {
     exit 1
 }
 
-if ($Saas -and -not (Test-Path $saasActivate)) {
+if (($Saas -or $Demo) -and -not (Test-Path $saasActivate)) {
     Write-Host ''
     Write-Host '  [!] Python-Venv für backend_saas nicht gefunden.' -ForegroundColor Red
     Write-Host "      Erwartet: $saasActivate" -ForegroundColor Yellow
@@ -75,7 +76,63 @@ function Start-DevTerminal {
 
 # ── Terminals starten ─────────────────────────────────────────────────────────
 
-if ($Saas) {
+if ($Demo) {
+    # Produktionsmodus für Aufnahme: backend_saas ohne --reload, Next.js `start` statt `dev`.
+    # Voraussetzung: `npm run build` wurde im frontend-Ordner bereits ausgeführt.
+    if (-not (Test-Path (Join-Path $frontendPath '.next'))) {
+        Write-Host ''
+        Write-Host '  [!] .next-Ordner fehlt — zuerst im frontend-Ordner `npm run build` ausführen.' -ForegroundColor Red
+        Write-Host ''
+        Read-Host '  Drücke Enter zum Beenden'
+        exit 1
+    }
+
+    Write-Host ''
+    Write-Host '  CampsPilot Demo (Produktionsmodus) – Umgebung wird gestartet ...' -ForegroundColor Cyan
+    Write-Host ''
+
+    Write-Host '  [1/3] backend_saas (uvicorn OHNE --reload, Port 8001)' -ForegroundColor Green
+    Start-DevTerminal `
+        -Title   'backend_saas – uvicorn :8001 PROD' `
+        -Command "Set-Location '$saasPath'; & '$saasActivate'; uvicorn app.main:app --port 8001"
+
+    Write-Host '  Warte auf backend_saas /health ...' -ForegroundColor DarkCyan
+    $deadline = (Get-Date).AddSeconds(30)
+    $ready = $false
+    while ((Get-Date) -lt $deadline) {
+        Start-Sleep -Seconds 1
+        try {
+            $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8001/health' -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+            if ($r.StatusCode -eq 200) { $ready = $true; break }
+        } catch {}
+    }
+    if (-not $ready) {
+        Write-Host '  [!] backend_saas antwortet nicht auf /health — Frontend trotzdem starten.' -ForegroundColor Yellow
+    } else {
+        Write-Host '  backend_saas ist bereit (200 OK).' -ForegroundColor Green
+    }
+
+    Write-Host '  [2/3] Frontend (npm run start — Produktionsbuild)' -ForegroundColor Green
+    Start-DevTerminal `
+        -Title   'Frontend – Next.js PROD' `
+        -Command "Set-Location '$frontendPath'; npm run start"
+
+    Start-Sleep -Milliseconds 400
+
+    Write-Host '  [3/3] Claude' -ForegroundColor Green
+    Start-DevTerminal `
+        -Title   'Claude' `
+        -Command "Set-Location '$root'; claude"
+
+    Write-Host ''
+    Write-Host '  Browser öffnet sich in 5 Sekunden ...' -ForegroundColor DarkCyan
+    Start-Sleep -Seconds 5
+
+    Start-Process 'http://localhost:3000/pilot/jk-academy-demo'
+    Start-Sleep -Milliseconds 400
+    Start-Process 'http://127.0.0.1:8001/docs'
+
+} elseif ($Saas) {
     # SaaS-Demo: backend_saas :8001 ZUERST, /health abwarten, dann Frontend.
     # Legacy-Backend wird nicht gestartet — es wird für den Pilot-Flow nicht
     # benötigt und würde sonst ECONNREFUSED-Fehler im Next.js-Log erzeugen.
@@ -162,7 +219,10 @@ if ($Saas) {
 Write-Host ''
 Write-Host '  Fertig. Alle Prozesse laufen in eigenen Terminals.' -ForegroundColor Green
 Write-Host ''
-if ($Saas) {
+if ($Demo) {
+    Write-Host '    Demo-Pilot: http://localhost:3000/pilot/jk-academy-demo  (PROD)' -ForegroundColor White
+    Write-Host '    API-Docs:   http://127.0.0.1:8001/docs' -ForegroundColor White
+} elseif ($Saas) {
     Write-Host '    Demo-Pilot: http://localhost:3000/pilot/jk-academy-demo' -ForegroundColor White
     Write-Host '    API-Docs:   http://127.0.0.1:8001/docs' -ForegroundColor White
 } else {

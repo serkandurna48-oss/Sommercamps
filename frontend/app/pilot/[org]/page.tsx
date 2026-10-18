@@ -49,10 +49,17 @@ const THEME_SURFACE: Record<string, string> = {
  */
 export default async function PilotOrgPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params
-  const org = await fetchOrganization(orgSlug)
+  const [orgOutcome, campsOutcome] = await Promise.allSettled([
+    fetchOrganization(orgSlug),
+    fetchCamps(orgSlug),
+  ])
+
+  if (orgOutcome.status === 'rejected') throw orgOutcome.reason
+  const org = orgOutcome.value
   if (!org) notFound()
 
-  const camps = await fetchCamps(orgSlug)
+  if (campsOutcome.status === 'rejected') throw campsOutcome.reason
+  const camps = campsOutcome.value
   const ground = THEME_SURFACE[org.theme] ?? THEME_SURFACE.tradition
   const brand = computeBrandSafe(org.primary_color, ground)
 

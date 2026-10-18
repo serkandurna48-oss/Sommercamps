@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { de, formatEuro, paymentStatusLabel } from '../../../lib/i18n/de'
 import { xlsxHrefWithFilter, type ExportColumn } from '../../../lib/exportCsv'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
+import { isActiveRegistration } from '../commandCenterLogic'
 import EmptyState from '../state/EmptyState'
 import ExportBar from '../ui/ExportBar'
 import FilterButton from '../ui/FilterButton'
@@ -52,7 +53,7 @@ export default function PaymentSection({
 
   const counts = useMemo(
     () => ({
-      open: entries.filter(e => e.registration.payment_status === 'open').length,
+      open: entries.filter(e => isActiveRegistration(e.registration) && e.registration.payment_status === 'open').length,
       paid: entries.filter(e => e.registration.payment_status === 'paid').length,
       all: entries.length,
     }),
@@ -64,7 +65,12 @@ export default function PaymentSection({
     return <EmptyState title={emptyLabel} />
   }
 
-  const filtered = filter === 'all' ? entries : entries.filter(e => e.registration.payment_status === filter)
+  const filtered =
+    filter === 'all'
+      ? entries
+      : filter === 'open'
+        ? entries.filter(e => isActiveRegistration(e.registration) && e.registration.payment_status === 'open')
+        : entries.filter(e => e.registration.payment_status === filter)
 
   return (
     <div>

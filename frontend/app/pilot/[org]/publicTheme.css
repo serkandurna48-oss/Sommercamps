@@ -422,7 +422,7 @@
 }
 .cp-public .h-akad .mark .t {
   font-size: 13px;
-  color: #d8ded b;
+  color: var(--on-band-2);
   letter-spacing: 0.03em;
 }
 .cp-public .h-akad .stats {
@@ -436,6 +436,11 @@
 .cp-public .h-akad .stat {
   text-align: right;
 }
+.cp-public[data-theme='akademie'] .h-akad .mark .c {
+  background: #0F172A;
+  overflow: hidden;
+}
+
 .cp-public .h-akad .stat b {
   display: block;
   font-size: clamp(26px, 4.6vw, 40px);

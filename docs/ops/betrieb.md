@@ -63,7 +63,10 @@ den Service als „unhealthy" eingestuft hätte.
 
 ## 3. Erforderliche Konfiguration (nur Namen, nie Werte)
 
-Quelle: `backend_saas/app/config.py`. Pflichtfelder ohne Default schlagen beim Start fehl.
+Quelle: `backend_saas/app/config.py` (Pflichtfelder) + `backend_saas/app/notifications/mail.py`
+(Notification-Vars). Pflichtfelder ohne Default schlagen beim Start fehl.
+
+**Kern-Konfiguration (`app/config.py`)**
 
 | Env-Var | Pflicht | Default | Zweck |
 |---|---|---|---|
@@ -76,13 +79,17 @@ Quelle: `backend_saas/app/config.py`. Pflichtfelder ohne Default schlagen beim S
 | `LOG_LEVEL` | – | `INFO` | Python-Logging-Level |
 | `CORS_ORIGINS_EXTRA` | – | leer | Kommaseparierte Zusatz-Origins (Vercel-URL) |
 
-**Veraltete Vars in render.yaml** (belegt): `ADMIN_PASSWORD` und `JWT_SECRET` sind in
-`render.yaml` noch aufgeführt, aber in `config.py` nicht mehr vorhanden — die alte
-Passwort/JWT-Authentifizierung ist durch Supabase Auth ersetzt. Diese Vars können auf Render
-entfernt werden, falls sie gesetzt sind.
+**Notification-Konfiguration (`app/notifications/mail.py`)**
 
-**Lokale Entwicklung:** Kopie von `backend_saas/.env.example` nach `backend_saas/.env` (Datei
-existiert noch nicht im Repo, ungeprüft — ggf. Vorlage anlegen).
+| Env-Var | Pflicht | Default | Zweck |
+|---|---|---|---|
+| `NOTIFICATION_PROVIDER` | – | leer → FakeProvider | `"brevo"` für echten Mailversand; alles andere → FakeProvider (loggt nur, kein Netzwerk) |
+| `BREVO_API_KEY` | wenn brevo | – | Brevo-API-Key (Dashboard → SMTP & API → API Keys) |
+| `NOTIFICATION_FROM_EMAIL` | – | `noreply@campspilot.app` | Absenderadresse |
+| `NOTIFICATION_FROM_NAME` | – | `CampsPilot` | Absendername |
+
+**Lokale Entwicklung:** Kopie von `backend_saas/.env.example` nach `backend_saas/.env`, dann
+Pflichtfelder befüllen.
 
 ---
 
@@ -170,6 +177,5 @@ dokumentiert.
 | Punkt | Priorität | Wer |
 |---|---|---|
 | Backup-Plan für Supabase-Projekt prüfen (Free vs. Pro) | Hoch | Serkan (Supabase Dashboard) |
-| `ADMIN_PASSWORD` + `JWT_SECRET` aus Render-Dashboard entfernen (veraltet) | Mittel | Serkan |
-| `backend_saas/.env.example` anlegen (Vorlage für neue Entwickler) | Niedrig | S4 oder S1 |
+| `ADMIN_PASSWORD` + `JWT_SECRET` aus Render-Dashboard entfernen (aus `render.yaml` bereits mit S4 `b38ab98` entfernt, falls sie noch im Dashboard gesetzt sind) | Mittel | Serkan |
 | Lokale Supabase-Instanz für isolierte Tests aufsetzen | Niedrig | S3/S5 (Smoke-Test-Spur) |

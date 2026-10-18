@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from 'react'
 import { de } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { cancelRegistrationAction, updateRegistrationDetailsAction } from '../actions/waitlistActions'
+import { setPaymentStatusAction } from '../actions/paymentActions'
 import { hasMissingEmergencyContact, hasNotes } from '../commandCenterLogic'
 import ActionForm from '../ui/ActionForm'
 import Button from '../ui/Button'
@@ -40,6 +41,9 @@ export default function ParticipantDetail({
   const missingContact = hasMissingEmergencyContact(registration)
   const notes = hasNotes(registration)
   const cancel = cancelRegistrationAction.bind(null, orgSlug, campSlug, registration.registration_token)
+  const markPaid = setPaymentStatusAction.bind(null, orgSlug, campSlug, registration.registration_token, 'paid', de.paymentsPage.markPaidSuccess)
+  const markWaived = setPaymentStatusAction.bind(null, orgSlug, campSlug, registration.registration_token, 'waived', de.paymentsPage.markWaivedSuccess)
+  const markRefunded = setPaymentStatusAction.bind(null, orgSlug, campSlug, registration.registration_token, 'refunded', de.paymentsPage.markRefundedSuccess)
 
   const [editing, setEditing] = useState(false)
   const updateDetails = updateRegistrationDetailsAction.bind(null, orgSlug, campSlug, registration.registration_token)
@@ -206,6 +210,19 @@ export default function ParticipantDetail({
             <Button variant="secondary">Anrufen</Button>
           </a>
         </div>
+
+        {registration.payment_status === 'open' && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <ActionForm action={markPaid} label={de.paymentsPage.markPaid} pendingLabel={de.paymentsPage.updating} variant="secondary" />
+            <ActionForm action={markWaived} label={de.paymentsPage.markWaived} pendingLabel={de.paymentsPage.updating} variant="quiet" />
+          </div>
+        )}
+        {registration.payment_status === 'paid' && (
+          <div className="mt-3">
+            <ActionForm action={markRefunded} label={de.paymentsPage.markRefunded} pendingLabel={de.paymentsPage.updating} variant="quiet" />
+          </div>
+        )}
+
         {registration.status !== 'cancelled' && (
           <div className="mt-4">
             <ActionForm action={cancel} label="Anmeldung stornieren" pendingLabel="Wird storniert …" variant="quiet" />

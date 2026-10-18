@@ -48,9 +48,7 @@ export default async function OrgPaymentsPage({ params }: { params: Promise<{ or
           {de.paymentsPage.subtitleOrg}
         </p>
 
-        <div className="mb-8 grid grid-cols-2 gap-4 xl:grid-cols-3">
-          <StatCard label={de.paymentsPage.collected} value={formatEuro(money.collectedCents)} wide />
-          <StatCard label={de.paymentsPage.open} value={formatEuro(money.openCents)} wide />
+        <div className="mb-8">
           <StatCard label={de.command.filterPaymentOpen} value={String(openCount)} numericValue={openCount} />
         </div>
 
@@ -58,8 +56,6 @@ export default async function OrgPaymentsPage({ params }: { params: Promise<{ or
           entries={entries}
           orgSlug={orgSlug}
           brandColor={brand.brand}
-          brandStrong={brand.brandStrong}
-          brandOn={brand.brandOn}
           emptyLabel={de.paymentsPage.emptyOrg}
           showCampTitle
           csvFilename={`${orgSlug}-zahlungen.csv`}

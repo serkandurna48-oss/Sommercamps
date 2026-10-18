@@ -41,7 +41,6 @@ export default async function OrgDashboardPage({ params }: { params: Promise<{ o
             ? (() => {
                 const days = Math.max(0, daysUntil(nextCamp.camp.start_date))
                 return [
-                  { label: 'Tage', value: String(days), numericValue: days },
                   {
                     label: de.dashboard.spotsLabel,
                     value: `${nextCamp.registeredCount}/${nextCamp.camp.capacity}`,
@@ -50,6 +49,7 @@ export default async function OrgDashboardPage({ params }: { params: Promise<{ o
                   },
                   { label: de.dashboard.openPaymentsLabel, value: String(nextCamp.openPaymentsCount), numericValue: nextCamp.openPaymentsCount },
                   { label: de.dashboard.waitlistLabel, value: String(nextCamp.waitlistCount), numericValue: nextCamp.waitlistCount },
+                  { label: 'Tage bis Camp', value: String(days), numericValue: days },
                 ]
               })()
             : []

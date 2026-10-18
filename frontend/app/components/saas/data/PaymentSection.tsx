@@ -32,8 +32,6 @@ export default function PaymentSection({
   entries,
   orgSlug,
   brandColor,
-  brandStrong,
-  brandOn,
   emptyLabel,
   showCampTitle = false,
   csvFilename,
@@ -42,8 +40,6 @@ export default function PaymentSection({
   entries: PaymentEntry[]
   orgSlug: string
   brandColor: string
-  brandStrong: string
-  brandOn: string
   emptyLabel: string
   showCampTitle?: boolean
   csvFilename: string
@@ -113,8 +109,6 @@ export default function PaymentSection({
               registration={e.registration}
               camp={e.camp}
               orgSlug={orgSlug}
-              brandStrong={brandStrong}
-              brandOn={brandOn}
               showCampTitle={showCampTitle}
             />
           ))}

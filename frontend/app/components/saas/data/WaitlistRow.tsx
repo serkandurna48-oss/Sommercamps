@@ -2,10 +2,12 @@ import { daysSince, de } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { birthYear } from '../commandCenterLogic'
 
-/** Reine Anzeige, keine eigene Aktion — das Aufrücken ist eine einzige
- * Aktion pro Camp (immer Platz 1, siehe WaitlistCard), nicht pro Zeile,
- * damit kein Button neben Platz 2/3 etwas anderes tut als er zeigt. */
+function formatShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
 export default function WaitlistRow({ registration, position }: { registration: RegistrationAdmin; position: number }) {
+  const days = daysSince(registration.created_at)
   return (
     <div
       className="cp-roster-row flex flex-col gap-1.5 border-t px-5 py-3.5 md:flex-row md:items-center md:justify-between md:gap-4"
@@ -31,9 +33,14 @@ export default function WaitlistRow({ registration, position }: { registration: 
           </p>
         </div>
       </div>
-      <p className="cp-chip shrink-0 pl-10 md:pl-0" style={{ color: 'var(--cp-pending)' }}>
-        {de.waitlistPage.waitingSince(daysSince(registration.created_at))}
-      </p>
+      <div className="flex flex-col items-start gap-0.5 pl-10 md:items-end md:pl-0">
+        <p className="cp-chip shrink-0" style={{ color: 'var(--cp-pending)' }}>
+          {de.waitlistPage.waitingSince(days)}
+        </p>
+        <p className="cp-chip shrink-0" style={{ color: 'var(--cp-muted)' }}>
+          Angemeldet am {formatShortDate(registration.created_at)}
+        </p>
+      </div>
     </div>
   )
 }

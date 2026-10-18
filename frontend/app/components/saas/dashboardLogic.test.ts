@@ -115,3 +115,19 @@ describe('buildTasks', () => {
     expect(buildTasks([stats])).toEqual([])
   })
 })
+
+
+describe('demo waitlist consistency', () => {
+  it('reports three waiting children alongside four occupied places on every camp view', () => {
+    const registrations = [
+      reg(), reg(), reg({ status: 'confirmed' }), reg({ payment_status: 'paid' }),
+      reg({ status: 'waitlist' }), reg({ status: 'waitlist' }), reg({ status: 'waitlist' }),
+      reg({ status: 'cancelled' }),
+    ]
+    const stats = computeCampStats(camp({ capacity: 4 }), registrations)
+    expect(stats.waitlistCount).toBe(3)
+    expect(stats.waitlistCount).toBe(registrations.filter(r => r.status === 'waitlist').length)
+    expect(stats.registeredCount).toBe(4)
+    expect(buildTasks([stats]).find(t => t.kind === 'waitlist')?.count).toBe(3)
+  })
+})

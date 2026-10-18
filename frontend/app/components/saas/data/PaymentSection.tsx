@@ -1,10 +1,10 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { de, formatEuro, paymentStatusLabel } from '../../../lib/i18n/de'
+import { de, formatEuro, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import { xlsxHrefWithFilter, type ExportColumn } from '../../../lib/exportCsv'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
-import { isActiveRegistration } from '../commandCenterLogic'
+import { isOpenPayment } from '../commandCenterLogic'
 import EmptyState from '../state/EmptyState'
 import ExportBar from '../ui/ExportBar'
 import FilterButton from '../ui/FilterButton'
@@ -24,6 +24,7 @@ function buildColumns(showCampTitle: boolean): ExportColumn<PaymentEntry>[] {
     { header: 'Elternteil', value: e => `${e.registration.parent_first_name} ${e.registration.parent_last_name}` },
     { header: 'E-Mail', value: e => e.registration.parent_email },
     { header: 'Preis (EUR)', value: e => formatEuro(e.camp.price_cents, e.camp.currency) },
+    { header: 'Anmeldestatus', value: e => registrationStatusLabel[e.registration.status] ?? e.registration.status },
     { header: 'Zahlungsstatus', value: e => paymentStatusLabel[e.registration.payment_status] ?? e.registration.payment_status },
   ]
 }
@@ -32,8 +33,6 @@ export default function PaymentSection({
   entries,
   orgSlug,
   brandColor,
-  brandStrong,
-  brandOn,
   emptyLabel,
   showCampTitle = false,
   csvFilename,
@@ -42,8 +41,6 @@ export default function PaymentSection({
   entries: PaymentEntry[]
   orgSlug: string
   brandColor: string
-  brandStrong: string
-  brandOn: string
   emptyLabel: string
   showCampTitle?: boolean
   csvFilename: string
@@ -53,7 +50,7 @@ export default function PaymentSection({
 
   const counts = useMemo(
     () => ({
-      open: entries.filter(e => isActiveRegistration(e.registration) && e.registration.payment_status === 'open').length,
+      open: entries.filter(e => isOpenPayment(e.registration)).length,
       paid: entries.filter(e => e.registration.payment_status === 'paid').length,
       all: entries.length,
     }),
@@ -69,7 +66,7 @@ export default function PaymentSection({
     filter === 'all'
       ? entries
       : filter === 'open'
-        ? entries.filter(e => isActiveRegistration(e.registration) && e.registration.payment_status === 'open')
+        ? entries.filter(e => isOpenPayment(e.registration))
         : entries.filter(e => e.registration.payment_status === filter)
 
   return (
@@ -113,8 +110,6 @@ export default function PaymentSection({
               registration={e.registration}
               camp={e.camp}
               orgSlug={orgSlug}
-              brandStrong={brandStrong}
-              brandOn={brandOn}
               showCampTitle={showCampTitle}
             />
           ))}

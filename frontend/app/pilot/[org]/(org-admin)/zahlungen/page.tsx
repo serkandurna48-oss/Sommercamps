@@ -1,5 +1,5 @@
 import { computeBrandTokens } from '../../../../components/saas/brandPipeline'
-import { computeMoneyStats, isActiveRegistration } from '../../../../components/saas/commandCenterLogic'
+import { computeMoneyStats, isOpenPayment } from '../../../../components/saas/commandCenterLogic'
 import { loadOrgAdminData } from '../../../../components/saas/orgAdminData'
 import MatchdayBand from '../../../../components/saas/shell/MatchdayBand'
 import PaymentSection, { type PaymentEntry } from '../../../../components/saas/data/PaymentSection'
@@ -22,7 +22,7 @@ export default async function OrgPaymentsPage({ params }: { params: Promise<{ or
   )
 
   const entries: PaymentEntry[] = camps.flatMap((camp, i) => registrationsByCamp[i].map(registration => ({ registration, camp })))
-  const openCount = entries.filter(e => isActiveRegistration(e.registration) && e.registration.payment_status === 'open').length
+  const openCount = entries.filter(e => isOpenPayment(e.registration)).length
 
   return (
     <>
@@ -48,9 +48,7 @@ export default async function OrgPaymentsPage({ params }: { params: Promise<{ or
           {de.paymentsPage.subtitleOrg}
         </p>
 
-        <div className="mb-8 grid grid-cols-2 gap-4 xl:grid-cols-3">
-          <StatCard label={de.paymentsPage.collected} value={formatEuro(money.collectedCents)} wide />
-          <StatCard label={de.paymentsPage.open} value={formatEuro(money.openCents)} wide />
+        <div className="mb-8">
           <StatCard label={de.command.filterPaymentOpen} value={String(openCount)} numericValue={openCount} />
         </div>
 
@@ -58,8 +56,6 @@ export default async function OrgPaymentsPage({ params }: { params: Promise<{ or
           entries={entries}
           orgSlug={orgSlug}
           brandColor={brand.brand}
-          brandStrong={brand.brandStrong}
-          brandOn={brand.brandOn}
           emptyLabel={de.paymentsPage.emptyOrg}
           showCampTitle
           csvFilename={`${orgSlug}-zahlungen.csv`}

@@ -1,49 +1,30 @@
+'use client'
+
+import { useState } from 'react'
 import { de, formatEuro, paymentStatusLabel } from '../../../lib/i18n/de'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import ActionForm from '../ui/ActionForm'
+import Button from '../ui/Button'
 import StatusChip, { PAYMENT_STATUS_TONE } from './StatusChip'
 
-/**
- * Eine Zahlungszeile mit den einzigen sinnvollen nächsten Schritten für
- * ihren aktuellen Status — nie alle fünf Werte als Auswahl (ein "erlassen"
- * -Button auf einer schon erstatteten Zahlung wäre eine Aktion ohne
- * plausiblen Anwendungsfall). `cancelled` ist nirgends als Ziel wählbar —
- * das ist ein Folgezustand einer stornierten Anmeldung, kein manueller
- * Buchungsschritt (siehe backend_saas update_payment_status-Docstring).
- */
 export default function PaymentRow({
   registration,
   camp,
   orgSlug,
-  brandStrong,
-  brandOn,
   showCampTitle = false,
 }: {
   registration: RegistrationAdmin
   camp: CampAdmin
   orgSlug: string
-  brandStrong: string
-  brandOn: string
   showCampTitle?: boolean
 }) {
+  const [confirmWaive, setConfirmWaive] = useState(false)
+  const [confirmRefund, setConfirmRefund] = useState(false)
+
   const markPaid = setPaymentStatusAction.bind(null, orgSlug, camp.slug, registration.registration_token, 'paid', de.paymentsPage.markPaidSuccess)
-  const markWaived = setPaymentStatusAction.bind(
-    null,
-    orgSlug,
-    camp.slug,
-    registration.registration_token,
-    'waived',
-    de.paymentsPage.markWaivedSuccess,
-  )
-  const markRefunded = setPaymentStatusAction.bind(
-    null,
-    orgSlug,
-    camp.slug,
-    registration.registration_token,
-    'refunded',
-    de.paymentsPage.markRefundedSuccess,
-  )
+  const markWaived = setPaymentStatusAction.bind(null, orgSlug, camp.slug, registration.registration_token, 'waived', de.paymentsPage.markWaivedSuccess)
+  const markRefunded = setPaymentStatusAction.bind(null, orgSlug, camp.slug, registration.registration_token, 'refunded', de.paymentsPage.markRefundedSuccess)
 
   return (
     <div
@@ -65,9 +46,9 @@ export default function PaymentRow({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 md:flex-col md:items-end md:gap-1.5">
+      <div className="flex flex-wrap items-center gap-3 md:flex-col md:items-end md:gap-1.5">
         <div className="flex items-center gap-3">
-          <span className="cp-num cp-heading shrink-0" style={{ color: 'var(--cp-ink)' }}>
+          <span className="cp-num cp-subheading shrink-0" style={{ color: 'var(--cp-ink)' }}>
             {formatEuro(camp.price_cents, camp.currency)}
           </span>
           <StatusChip
@@ -75,21 +56,53 @@ export default function PaymentRow({
             label={paymentStatusLabel[registration.payment_status] ?? registration.payment_status}
           />
         </div>
+
         {registration.payment_status === 'open' && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <ActionForm
               action={markPaid}
               label={de.paymentsPage.markPaid}
               pendingLabel={de.paymentsPage.updating}
-              variant="primary"
-              brandStrong={brandStrong}
-              brandOn={brandOn}
+              variant="secondary"
             />
-            <ActionForm action={markWaived} label={de.paymentsPage.markWaived} pendingLabel={de.paymentsPage.updating} variant="secondary" />
+            {confirmWaive ? (
+              <div className="flex items-center gap-2">
+                <ActionForm
+                  action={markWaived}
+                  label={de.paymentsPage.markWaived}
+                  pendingLabel={de.paymentsPage.updating}
+                  variant="quiet"
+                />
+                <Button type="button" variant="quiet" onClick={() => setConfirmWaive(false)}>
+                  Abbrechen
+                </Button>
+              </div>
+            ) : (
+              <Button type="button" variant="quiet" onClick={() => setConfirmWaive(true)}>
+                {de.paymentsPage.markWaived}
+              </Button>
+            )}
           </div>
         )}
+
         {registration.payment_status === 'paid' && (
-          <ActionForm action={markRefunded} label={de.paymentsPage.markRefunded} pendingLabel={de.paymentsPage.updating} variant="secondary" />
+          confirmRefund ? (
+            <div className="flex items-center gap-2">
+              <ActionForm
+                action={markRefunded}
+                label={de.paymentsPage.markRefunded}
+                pendingLabel={de.paymentsPage.updating}
+                variant="quiet"
+              />
+              <Button type="button" variant="quiet" onClick={() => setConfirmRefund(false)}>
+                Abbrechen
+              </Button>
+            </div>
+          ) : (
+            <Button type="button" variant="quiet" onClick={() => setConfirmRefund(true)}>
+              {de.paymentsPage.markRefunded}
+            </Button>
+          )
         )}
       </div>
     </div>

@@ -1,16 +1,20 @@
 'use client'
 
 import { useId, useState } from 'react'
-import { paymentStatusLabel } from '../../../lib/i18n/de'
+import { paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { birthYear, hasNotes } from '../commandCenterLogic'
 import ParticipantDetail from './ParticipantDetail'
-import StatusChip, { PAYMENT_STATUS_TONE } from './StatusChip'
+import StatusChip, { PAYMENT_STATUS_TONE, type StatusTone } from './StatusChip'
 import { IconChevronDown } from '../icons'
 
-/** Steuert ihren eigenen offen/zu-Zustand (Abschnitt 5). M3: Inline-Detail
- * wächst per .cp-collapse (dieselbe Technik wie M1, siehe tokens.css),
- * Inhalt blendet mit 60ms Versatz ein (Abschnitt 7). */
+const REGISTRATION_STATUS_TONE: Record<string, StatusTone> = {
+  registered: 'ok',
+  confirmed: 'ok',
+  cancelled: 'neutral',
+  waitlist: 'pending',
+}
+
 export default function ParticipantRow({
   registration,
   selected,
@@ -31,8 +35,6 @@ export default function ParticipantRow({
   const [previousRegistration, setPreviousRegistration] = useState(registration)
   if (registration !== previousRegistration) {
     setPreviousRegistration(registration)
-    // The action response only bridges the time until server revalidation.
-    // Later payment/cancellation changes must replace that saved snapshot.
     setOverride(null)
   }
   const detailId = useId()
@@ -40,52 +42,67 @@ export default function ParticipantRow({
 
   return (
     <div className="cp-roster-row border-t" style={{ borderColor: 'var(--cp-line-2)' }}>
-      <div className="flex flex-col gap-2 px-5 py-3.5 md:flex-row md:flex-wrap md:items-center md:gap-4">
-        <div className="flex items-center gap-4">
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={onToggleSelect}
-            aria-label={`${effective.child_first_name} ${effective.child_last_name} auswählen`}
-            className="h-5 w-5 shrink-0"
-            style={{ accentColor: brandColor }}
-          />
+      <div className="flex items-center gap-3 px-5 py-3.5">
+        {/* Checkbox outside the expand trigger — click does not bubble to row */}
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelect}
+          aria-label={`${effective.child_first_name} ${effective.child_last_name} auswählen`}
+          className="h-5 w-5 shrink-0"
+          style={{ accentColor: brandColor }}
+        />
 
-          <p className="cp-subheading min-w-0 flex-1" style={{ color: 'var(--cp-ink)' }}>
-            {effective.child_first_name} {effective.child_last_name}
-            <span className="cp-num ml-1.5" style={{ color: 'var(--cp-muted)' }}>
-              ({birthYear(effective.child_birth_date)})
-            </span>
-          </p>
+        {/* Entire summary is one expand button: name, parent, chips, arrow */}
+        <button
+          type="button"
+          onClick={() => setOpen(v => !v)}
+          aria-expanded={open}
+          aria-controls={detailId}
+          className="min-w-0 flex-1 text-left"
+        >
+          {/*
+           * Mobile: relative container, arrow absolute-right; pr-8 keeps text clear.
+           * Desktop (md): 5-column grid — name, parent, reg-chip, pay-chip, arrow.
+           * md:contents on the chips wrapper makes the two chips direct grid children.
+           */}
+          <div className="relative flex flex-col gap-1.5 pr-8 md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto_auto_auto] md:items-center md:gap-x-4 md:pr-0">
+            {/* Col 1: Kind-Name + Jg. + Hinweis-Badge */}
+            <p className="cp-subheading min-w-0 truncate" style={{ color: 'var(--cp-ink)' }}>
+              {effective.child_first_name} {effective.child_last_name}
+              <span className="cp-num ml-1.5" style={{ color: 'var(--cp-muted)' }}>
+                ({birthYear(effective.child_birth_date)})
+              </span>
+              {hasNotes(effective) && (
+                <span className="cp-chip ml-2" style={{ color: 'var(--cp-info)' }}>
+                  Hinweis
+                </span>
+              )}
+            </p>
 
-          <StatusChip
-            tone={PAYMENT_STATUS_TONE[effective.payment_status] ?? 'neutral'}
-            label={paymentStatusLabel[effective.payment_status] ?? effective.payment_status}
-          />
+            {/* Col 2: Elternteil-Name */}
+            <p className="cp-chip min-w-0 truncate" style={{ color: 'var(--cp-muted)' }}>
+              {registration.parent_first_name} {registration.parent_last_name}
+            </p>
 
-          <button
-            type="button"
-            onClick={() => setOpen(v => !v)}
-            aria-expanded={open}
-            aria-controls={detailId}
-            aria-label={open ? 'Details schließen' : 'Details öffnen'}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--cp-r-chip)] transition-transform motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 md:order-last"
-            style={{ transform: open ? 'rotate(180deg)' : 'none', outlineColor: brandColor }}
-          >
-            <IconChevronDown className="text-[var(--cp-ink-2)]" />
-          </button>
-        </div>
+            {/* Cols 3+4: Status-Chips; md:contents makes them direct grid children */}
+            <div className="flex flex-wrap gap-2 md:contents">
+              <StatusChip
+                tone={REGISTRATION_STATUS_TONE[effective.status] ?? 'neutral'}
+                label={registrationStatusLabel[effective.status] ?? effective.status}
+              />
+              <StatusChip
+                tone={PAYMENT_STATUS_TONE[effective.payment_status] ?? 'neutral'}
+                label={paymentStatusLabel[effective.payment_status] ?? effective.payment_status}
+              />
+            </div>
 
-        <div className="flex min-w-0 flex-wrap items-center gap-2 pl-9 md:flex-1 md:pl-0">
-          <p className="cp-chip min-w-0 truncate" style={{ color: 'var(--cp-muted)' }}>
-            {registration.parent_first_name} {registration.parent_last_name} · {registration.parent_email}
-          </p>
-          {hasNotes(effective) && (
-            <span className="cp-chip shrink-0" style={{ color: 'var(--cp-info)' }} title="Allergien oder Hinweise hinterlegt">
-              Hinweis
-            </span>
-          )}
-        </div>
+            {/* Col 5 on desktop; absolute top-right on mobile */}
+            <IconChevronDown
+              className={`absolute right-0 top-1/2 -translate-y-1/2 shrink-0 text-[var(--cp-ink-2)] transition-transform motion-reduce:transition-none md:static md:translate-y-0 ${open ? 'rotate-180' : ''}`}
+            />
+          </div>
+        </button>
       </div>
 
       <div id={detailId} className={`cp-collapse cp-collapse-m3 motion-reduce:transition-none ${open ? 'cp-collapse-expanded' : ''}`}>

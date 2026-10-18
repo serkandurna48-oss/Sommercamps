@@ -48,14 +48,19 @@ export default function WaitlistCard({
             {de.waitlistPage.familiesWaiting(waitlisted.length)}
           </p>
         </div>
-        <ActionForm
-          action={promote}
-          label={de.waitlistPage.promote}
-          pendingLabel={de.waitlistPage.promoting}
-          variant="primary"
-          brandStrong={brandStrong}
-          brandOn={brandOn}
-        />
+        <div className="flex flex-col items-start gap-1">
+          <ActionForm
+            action={promote}
+            label={de.waitlistPage.promote}
+            pendingLabel={de.waitlistPage.promoting}
+            variant="primary"
+            brandStrong={brandStrong}
+            brandOn={brandOn}
+          />
+          <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
+            {de.waitlistPage.promoteHint}
+          </p>
+        </div>
       </div>
       <div className="cp-roster" style={{ borderLeft: `3px solid ${brandColor}` }}>
         {waitlisted.map((r, i) => (

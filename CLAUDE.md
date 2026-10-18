@@ -151,6 +151,8 @@ Der aktuelle Bauplan für die Zielarchitektur ist nicht diese alte Roadmap, sond
 [`docs/saas/architecture.md`](docs/saas/architecture.md) +
 [`docs/saas/migration-strategy.md`](docs/saas/migration-strategy.md) +
 `backend_saas/README.md` (dortiger Implementierungsstand, laufend aktualisiert).
+S3: RLS-Lesepolicies als Migration vorbereitet und ausschließlich isoliert lokal getestet,
+noch nicht in der Cloud angewendet; Details: [`docs/saas/rls-s3.md`](docs/saas/rls-s3.md).
 
 ---
 

@@ -50,16 +50,23 @@ export async function loadOrgAdminData(orgSlug: string): Promise<OrgAdminData> {
   // öffentliche API seit dem Betreiber-Builder unsichtbar (tenancy.py) —
   // ein eingeloggter Admin muss die eigene Verwaltung trotzdem öffnen
   // können, siehe dieselbe Begründung in (org-admin)/layout.tsx.
-  const org = await getOrganizationAdmin(orgSlug, token)
+  const [orgOutcome, campsOutcome] = await Promise.allSettled([
+    getOrganizationAdmin(orgSlug, token),
+    fetchCampsAdmin(orgSlug, token),
+  ])
+
+  if (orgOutcome.status === 'rejected') {
+    if (orgOutcome.reason instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
+    throw orgOutcome.reason
+  }
+  const org = orgOutcome.value
   if (!org) redirect(`/pilot/${orgSlug}/login`)
 
-  let camps: CampAdmin[]
-  try {
-    camps = await fetchCampsAdmin(orgSlug, token)
-  } catch (err) {
-    if (err instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
-    throw err
+  if (campsOutcome.status === 'rejected') {
+    if (campsOutcome.reason instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
+    throw campsOutcome.reason
   }
+  const camps = campsOutcome.value
 
   const registrationsByCamp = await Promise.all(
     camps.map(camp => fetchRegistrationsAdmin(orgSlug, camp.slug, token)),
@@ -87,8 +94,10 @@ export async function loadCampAdminData(orgSlug: string, campSlug: string): Prom
   let camps: CampAdmin[]
   let registrations: RegistrationAdmin[]
   try {
-    camps = await fetchCampsAdmin(orgSlug, token)
-    registrations = await fetchRegistrationsAdmin(orgSlug, campSlug, token)
+    ;[camps, registrations] = await Promise.all([
+      fetchCampsAdmin(orgSlug, token),
+      fetchRegistrationsAdmin(orgSlug, campSlug, token),
+    ])
   } catch (err) {
     if (err instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
     throw err

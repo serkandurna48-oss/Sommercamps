@@ -85,7 +85,7 @@ def health() -> JSONResponse:
             cur.execute("SELECT 1")
         return JSONResponse(
             status_code=200,
-            content={"status": "ok", "database": "ok", "service": "campspilot-saas-api"},
+            content={"status": "ok", "database": "ok", "service": "campspilot-saas-api", "version": app.version},
         )
     except Exception:
         logger.exception("Health check failed: database unreachable")

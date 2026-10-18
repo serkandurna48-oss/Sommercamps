@@ -24,12 +24,20 @@ Safety, by construction:
   creates duplicate demo registrations or double-applies payment/cancel
   actions.
 
+--reset: cancels all existing registrations in both demo camps first,
+  then updates camp titles (removes historical [DEMO] prefix), then
+  re-seeds everything fresh. Safe to run repeatedly.
+
 Usage:
-    python scripts/seed_demo.py --api-url http://localhost:8000 \
+    python scripts/seed_demo.py --api-url http://localhost:8001 \\
         --email owner@example.com --password "$CAMPSPILOT_PASSWORD"
 
+    # Sauberer Stand vor der Aufnahme:
+    python scripts/seed_demo.py --api-url http://localhost:8001 \\
+        --email owner@example.com --password "$CAMPSPILOT_PASSWORD" --reset
+
     # or via env vars:
-    CAMPSPILOT_EMAIL=owner@example.com CAMPSPILOT_PASSWORD=secret \
+    CAMPSPILOT_EMAIL=owner@example.com CAMPSPILOT_PASSWORD=secret \\
         python scripts/seed_demo.py
 
 Requires SUPABASE_URL and SUPABASE_ANON_KEY in the environment (same values
@@ -65,7 +73,7 @@ ORGANIZATION = {
 
 CAMP_A = {
     "slug": "sommerwoche-1",
-    "title": "[DEMO] Feriencamp Sommerwoche 1",
+    "title": "Feriencamp Sommerwoche",
     "start_date": "2027-07-05",
     "end_date": "2027-07-09",
     "age_min": 6,
@@ -79,7 +87,7 @@ CAMP_A = {
 
 CAMP_B = {
     "slug": "herbstwoche-1",
-    "title": "[DEMO] Feriencamp Herbstwoche",
+    "title": "Feriencamp Herbstwoche",
     "start_date": "2027-10-11",
     "end_date": "2027-10-15",
     "age_min": 6,
@@ -96,56 +104,86 @@ CAMP_B = {
 # handoff click-test can exercise "Warteliste aufrücken lassen" live.
 CAMP_A_REGISTRATIONS = [
     {
-        "parent_first_name": "Anna", "parent_last_name": "Beispiel",
-        "parent_email": "anna.beispiel@example.com", "parent_phone": "+49 170 1000001",
-        "child_first_name": "Mia", "child_last_name": "Beispiel", "child_birth_date": "2018-03-11",
-        "emergency_contact_name": "Peter Beispiel", "emergency_contact_phone": "+49 170 1000011",
+        "parent_first_name": "Anna", "parent_last_name": "Hoffmann",
+        "parent_email": "anna.hoffmann@example.com", "parent_phone": "+49 170 1000001",
+        "child_first_name": "Mia", "child_last_name": "Hoffmann", "child_birth_date": "2018-03-11",
+        "emergency_contact_name": "Thomas Hoffmann", "emergency_contact_phone": "+49 170 1000011",
         "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": True,
     },
     {
-        "parent_first_name": "Peter", "parent_last_name": "Beispiel",
-        "parent_email": "peter.beispiel@example.com", "parent_phone": "+49 170 1000002",
-        "child_first_name": "Ben", "child_last_name": "Beispiel", "child_birth_date": "2017-06-20",
+        "parent_first_name": "Stefan", "parent_last_name": "Bauer",
+        "parent_email": "stefan.bauer@example.com", "parent_phone": "+49 170 1000002",
+        "child_first_name": "Ben", "child_last_name": "Bauer", "child_birth_date": "2017-06-20",
         "allergies": "Nussallergie — Epipen dabei",
         "photo_permission": False, "terms_accepted": True, "privacy_accepted": True,
-        "_mark_paid": False,
+        "_mark_paid": True,
     },
     {
-        "parent_first_name": "Petra", "parent_last_name": "Beispiel",
-        "parent_email": "petra.beispiel@example.com", "parent_phone": "+49 170 1000003",
-        "child_first_name": "Clara", "child_last_name": "Beispiel", "child_birth_date": "2019-01-05",
-        "emergency_contact_name": "Dirk Beispiel", "emergency_contact_phone": "+49 170 1000013",
+        "parent_first_name": "Petra", "parent_last_name": "Müller",
+        "parent_email": "petra.mueller@example.com", "parent_phone": "+49 170 1000003",
+        "child_first_name": "Clara", "child_last_name": "Müller", "child_birth_date": "2019-01-05",
+        "emergency_contact_name": "Klaus Müller", "emergency_contact_phone": "+49 170 1000013",
         "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": False,
     },
     {
         # Camp A is full after the three above — this one lands on the
-        # waitlist via the existing capacity/waitlist rule, not a special
-        # case in this script.
-        "parent_first_name": "Dirk", "parent_last_name": "Beispiel",
-        "parent_email": "dirk.beispiel@example.com", "parent_phone": "+49 170 1000004",
-        "child_first_name": "David", "child_last_name": "Beispiel", "child_birth_date": "2018-09-02",
+        # waitlist via the existing capacity/waitlist rule.
+        "parent_first_name": "Dirk", "parent_last_name": "Weber",
+        "parent_email": "dirk.weber@example.com", "parent_phone": "+49 170 1000004",
+        "child_first_name": "David", "child_last_name": "Weber", "child_birth_date": "2018-09-02",
         "photo_permission": False, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": False,
     },
 ]
 
-# Camp B: capacity 8, deliberately nowhere near full — the demo's
-# "normal, not-full camp" contrast to Camp A's full+waitlist story.
+# Camp B: capacity 8, 6 registrations seeded (2 free spots) with mixed
+# payment statuses — shows a realistic, active camp that isn't full yet.
 CAMP_B_REGISTRATIONS = [
     {
-        "parent_first_name": "Erik", "parent_last_name": "Beispiel",
-        "parent_email": "erik.beispiel@example.com", "parent_phone": "+49 170 1000005",
-        "child_first_name": "Emma", "child_last_name": "Beispiel", "child_birth_date": "2016-11-30",
+        "parent_first_name": "Erik", "parent_last_name": "Schmidt",
+        "parent_email": "erik.schmidt@example.com", "parent_phone": "+49 170 1000005",
+        "child_first_name": "Emma", "child_last_name": "Schmidt", "child_birth_date": "2016-11-30",
+        "emergency_contact_name": "Lena Schmidt", "emergency_contact_phone": "+49 170 1000015",
         "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": True,
     },
     {
-        "parent_first_name": "Frida", "parent_last_name": "Beispiel",
-        "parent_email": "frida.beispiel@example.com", "parent_phone": "+49 170 1000006",
-        "child_first_name": "Finn", "child_last_name": "Beispiel", "child_birth_date": "2015-04-18",
+        "parent_first_name": "Sabine", "parent_last_name": "Fischer",
+        "parent_email": "sabine.fischer@example.com", "parent_phone": "+49 170 1000006",
+        "child_first_name": "Finn", "child_last_name": "Fischer", "child_birth_date": "2015-04-18",
         "photo_permission": False, "terms_accepted": True, "privacy_accepted": True,
+        "_mark_paid": False,
+    },
+    {
+        "parent_first_name": "Markus", "parent_last_name": "Wagner",
+        "parent_email": "markus.wagner@example.com", "parent_phone": "+49 170 1000007",
+        "child_first_name": "Leon", "child_last_name": "Wagner", "child_birth_date": "2017-08-22",
+        "emergency_contact_name": "Julia Wagner", "emergency_contact_phone": "+49 170 1000017",
+        "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
+        "_mark_paid": True,
+    },
+    {
+        "parent_first_name": "Julia", "parent_last_name": "Braun",
+        "parent_email": "julia.braun@example.com", "parent_phone": "+49 170 1000008",
+        "child_first_name": "Lena", "child_last_name": "Braun", "child_birth_date": "2018-12-03",
+        "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
+        "_mark_paid": False,
+    },
+    {
+        "parent_first_name": "Thomas", "parent_last_name": "Schneider",
+        "parent_email": "thomas.schneider@example.com", "parent_phone": "+49 170 1000009",
+        "child_first_name": "Jonas", "child_last_name": "Schneider", "child_birth_date": "2016-05-14",
+        "emergency_contact_name": "Maria Schneider", "emergency_contact_phone": "+49 170 1000019",
+        "photo_permission": False, "terms_accepted": True, "privacy_accepted": True,
+        "_mark_paid": True,
+    },
+    {
+        "parent_first_name": "Claudia", "parent_last_name": "Meyer",
+        "parent_email": "claudia.meyer@example.com", "parent_phone": "+49 170 1000010",
+        "child_first_name": "Sophie", "child_last_name": "Meyer", "child_birth_date": "2017-02-28",
+        "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": False,
     },
 ]
@@ -198,15 +236,51 @@ def _create_camp(client: httpx.Client, api_url: str, token: str, camp: dict) -> 
         sys.exit(1)
 
 
-def _existing_emails(client: httpx.Client, api_url: str, token: str, camp_slug: str) -> set[str]:
+def _update_camp_title(client: httpx.Client, api_url: str, token: str, camp: dict) -> None:
+    response = client.patch(
+        f"{api_url}/admin/organizations/{DEMO_ORG_SLUG}/camps/{camp['slug']}",
+        json={"title": camp["title"]},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if response.status_code == 200:
+        print(f"  camp '{camp['slug']}': title updated to '{camp['title']}'")
+    else:
+        print(f"  camp '{camp['slug']}': title update FAILED — HTTP {response.status_code} — {response.text}", file=sys.stderr)
+        sys.exit(1)
+
+
+def _existing_registrations(client: httpx.Client, api_url: str, token: str, camp_slug: str) -> list[dict]:
     response = client.get(
         f"{api_url}/admin/organizations/{DEMO_ORG_SLUG}/camps/{camp_slug}/registrations",
         headers={"Authorization": f"Bearer {token}"},
     )
     if response.status_code != 200:
-        print(f"  could not list existing registrations for '{camp_slug}': HTTP {response.status_code}", file=sys.stderr)
+        print(f"  could not list registrations for '{camp_slug}': HTTP {response.status_code}", file=sys.stderr)
         sys.exit(1)
-    return {row["parent_email"] for row in response.json()}
+    return response.json()
+
+
+def _existing_emails(client: httpx.Client, api_url: str, token: str, camp_slug: str) -> set[str]:
+    return {row["parent_email"] for row in _existing_registrations(client, api_url, token, camp_slug)}
+
+
+def _reset_registrations(client: httpx.Client, api_url: str, token: str, camp_slug: str) -> None:
+    rows = _existing_registrations(client, api_url, token, camp_slug)
+    active = [r for r in rows if r.get("status") not in ("cancelled",)]
+    if not active:
+        print(f"  camp '{camp_slug}': no active registrations to cancel")
+        return
+    print(f"  camp '{camp_slug}': cancelling {len(active)} registrations ...")
+    for reg in active:
+        token_ = reg["registration_token"]
+        resp = client.post(
+            f"{api_url}/admin/organizations/{DEMO_ORG_SLUG}/camps/{camp_slug}/registrations/{token_}/cancel",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        if resp.status_code not in (200, 204):
+            print(f"    cancel {token_} FAILED — HTTP {resp.status_code} — {resp.text}", file=sys.stderr)
+            sys.exit(1)
+        print(f"    cancelled {reg.get('child_first_name', '?')} {reg.get('child_last_name', '?')} ({reg.get('parent_email', '?')})")
 
 
 def _seed_registrations(client: httpx.Client, api_url: str, token: str, camp_slug: str, registrations: list[dict]) -> None:
@@ -244,9 +318,10 @@ def main() -> None:
         sys.exit(1)
 
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--api-url", default="http://localhost:8000", help="backend_saas base URL (default: local dev, port 8000)")
+    parser.add_argument("--api-url", default="http://localhost:8001", help="backend_saas base URL (default: local dev -Saas, port 8001)")
     parser.add_argument("--email", default=os.environ.get("CAMPSPILOT_EMAIL"), help="Platform-admin email. Defaults to CAMPSPILOT_EMAIL env var.")
     parser.add_argument("--password", default=os.environ.get("CAMPSPILOT_PASSWORD"), help="Platform-admin password. Defaults to CAMPSPILOT_PASSWORD env var.")
+    parser.add_argument("--reset", action="store_true", help="Alle Demo-Anmeldungen zuerst stornieren, dann sauber neu anlegen. Setzt außerdem Camp-Titel auf die aktuellen Werte.")
     args = parser.parse_args()
 
     if not args.email or not args.password:
@@ -264,6 +339,15 @@ def main() -> None:
         _create_organization(client, args.api_url, token)
         _create_camp(client, args.api_url, token, CAMP_A)
         _create_camp(client, args.api_url, token, CAMP_B)
+
+        if args.reset:
+            print("--reset: storniere alle aktiven Anmeldungen ...")
+            _reset_registrations(client, args.api_url, token, CAMP_A["slug"])
+            _reset_registrations(client, args.api_url, token, CAMP_B["slug"])
+            print("--reset: aktualisiere Camp-Titel ...")
+            _update_camp_title(client, args.api_url, token, CAMP_A)
+            _update_camp_title(client, args.api_url, token, CAMP_B)
+
         print(f"  seeding registrations for '{CAMP_A['slug']}' ...")
         _seed_registrations(client, args.api_url, token, CAMP_A["slug"], CAMP_A_REGISTRATIONS)
         print(f"  seeding registrations for '{CAMP_B['slug']}' ...")

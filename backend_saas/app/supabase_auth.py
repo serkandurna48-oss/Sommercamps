@@ -7,17 +7,22 @@ nothing about what they're allowed to do — that's app/auth_deps.py
 
 Deliberately verifies tokens by calling Supabase's own `/auth/v1/user`
 endpoint rather than decoding the JWT locally: Supabase does the signature
-check, expiry check, and revocation check for us, so this module never
-needs to hold or rotate a JWT-signing secret. The tradeoff is one extra
-network round-trip per authenticated request — acceptable at this
-service's scale, and it keeps "is this token still valid" as a single
-source of truth (Supabase's own session store) instead of a second,
-locally-duplicated notion of validity.
+check, expiry check, and revocation check for us. Successful verifications
+are cached in this process for at most 60 seconds, never beyond JWT exp.
+Revocations can therefore take up to 60 seconds to propagate. Roles are
+not cached here: auth_deps still resolves authorization for every request.
 """
 
 from __future__ import annotations
 
+import base64
+import binascii
+import hashlib
+import json
+import math
 import threading
+import time
+from collections import OrderedDict
 
 import httpx
 
@@ -25,6 +30,30 @@ from .config import get_settings
 
 _client: httpx.Client | None = None
 _client_lock = threading.Lock()
+
+_TOKEN_CACHE_TTL = 60.0
+_TOKEN_CACHE_MAX_SIZE = 512
+# Store token hashes, never bearer credentials. Values are immutable identity
+# fields plus monotonic TTL and wall-clock exp boundaries.
+_token_cache: OrderedDict[str, tuple[str, str | None, float, float]] = OrderedDict()
+_token_cache_lock = threading.Lock()
+
+
+def _token_expiry(access_token: str) -> float | None:
+    """Read exp only as a cache upper bound, never as proof of authenticity."""
+    try:
+        parts = access_token.split(".")
+        if len(parts) != 3 or len(access_token) > 16384:
+            return None
+        payload = base64.b64decode(parts[1] + "=" * (-len(parts[1]) % 4), altchars=b"-_", validate=True)
+        claims = json.loads(payload)
+        expiry = claims.get("exp") if isinstance(claims, dict) else None
+        if isinstance(expiry, bool) or not isinstance(expiry, (int, float)):
+            return None
+        expiry = float(expiry)
+        return expiry if math.isfinite(expiry) else None
+    except (ValueError, OverflowError, UnicodeError, binascii.Error):
+        return None
 
 
 def get_client() -> httpx.Client:
@@ -34,8 +63,8 @@ def get_client() -> httpx.Client:
     more than the Supabase round-trip and the database query together, and
     previously paid on every authenticated request. Reusing the client also
     keeps the TLS connection to Supabase alive between requests. This
-    changes transport only: every token is still verified against Supabase
-    on every request, exactly as before."""
+    reuses transport for cache misses; only a previously verified identity
+    inside the bounded token-cache lifetime can skip the network request."""
     global _client
     if _client is None:
         with _client_lock:
@@ -66,6 +95,18 @@ def verify_access_token(access_token: str) -> SupabaseUser:
     this," and the caller (app/auth_deps.py) treats both as 401 rather
     than leaking which one happened to the client."""
     settings = get_settings()
+    cache_key = hashlib.sha256(
+        f"{settings.supabase_url}\0{settings.supabase_anon_key}\0{access_token}".encode()
+    ).hexdigest()
+    with _token_cache_lock:
+        cached = _token_cache.get(cache_key)
+        if cached is not None:
+            user_id, email, deadline, expiry = cached
+            if time.monotonic() < deadline and time.time() < expiry:
+                _token_cache.move_to_end(cache_key)
+                return SupabaseUser(id=user_id, email=email)
+            del _token_cache[cache_key]
+    verification_started = time.monotonic()
     try:
         response = get_client().get(
             f"{settings.supabase_url}/auth/v1/user",
@@ -81,11 +122,33 @@ def verify_access_token(access_token: str) -> SupabaseUser:
     if response.status_code != 200:
         raise SupabaseAuthError(f"Token rejected by Supabase Auth (status={response.status_code})")
 
-    body = response.json()
-    user_id = body.get("id")
-    if not user_id:
+    try:
+        body = response.json()
+    except ValueError as exc:
+        raise SupabaseAuthError("Invalid Supabase Auth response") from exc
+    user_id = body.get("id") if isinstance(body, dict) else None
+    if not isinstance(user_id, str) or not user_id.strip():
         raise SupabaseAuthError("Supabase Auth response missing user id")
-    return SupabaseUser(id=user_id, email=body.get("email"))
+    email = body.get("email")
+    if email is not None and not isinstance(email, str):
+        raise SupabaseAuthError("Invalid Supabase Auth email")
+    expiry = _token_expiry(access_token)
+    now = time.time()
+    if expiry is not None:
+        if expiry <= now:
+            raise SupabaseAuthError("Access token expired")
+        deadline = min(verification_started + _TOKEN_CACHE_TTL, time.monotonic() + expiry - now)
+        with _token_cache_lock:
+            # Bound both the lifetime and memory use even for many users.
+            for key, entry in list(_token_cache.items()):
+                if entry[2] <= time.monotonic() or entry[3] <= now:
+                    del _token_cache[key]
+            if deadline > time.monotonic():
+                _token_cache[cache_key] = (user_id, email, deadline, expiry)
+                _token_cache.move_to_end(cache_key)
+                while len(_token_cache) > _TOKEN_CACHE_MAX_SIZE:
+                    _token_cache.popitem(last=False)
+    return SupabaseUser(id=user_id, email=email)
 
 
 def find_user_by_email(email: str) -> SupabaseUser | None:

@@ -24,6 +24,7 @@ def test_health_ok_when_database_reachable(monkeypatch):
         "status": "ok",
         "database": "ok",
         "service": "campspilot-saas-api",
+        "version": "0.1.0",
     }
 
 

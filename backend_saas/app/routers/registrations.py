@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
 from ..deps import get_tenant_context
 from ..notifications.sending import send_registration_notification
@@ -44,6 +44,7 @@ router = APIRouter(
 def create_registration(
     camp_slug: str,
     data: RegistrationCreate,
+    background_tasks: BackgroundTasks,
     tenant: TenantContext = Depends(get_tenant_context),
 ) -> RegistrationCreated:
     """
@@ -129,7 +130,8 @@ def create_registration(
         camp_slug,
         row["status"],
     )
-    send_registration_notification(
+    background_tasks.add_task(
+        send_registration_notification,
         registration_token=row["registration_token"],
         status=row["status"],
         organization_id=tenant.organization_id,

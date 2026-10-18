@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.notifications import sending
 from app.repositories import organizations
 from app.repositories import registrations as registrations_repo
 from app.repositories.registrations import RegistrationTarget
@@ -513,3 +514,35 @@ def test_required_contact_fields_trim_before_persistence(monkeypatch):
             emergency_contact_phone=" +49 123456 ",
         ))
     assert response.status_code == 201
+
+
+# --------------------------------------------------------------------------
+# Mail via BackgroundTasks
+# --------------------------------------------------------------------------
+
+
+def test_registration_201_even_with_slow_mail_provider(monkeypatch):
+    """Mail läuft als BackgroundTask: 201 kommt zurück, auch wenn der Provider hängt."""
+    from app.routers import registrations as registrations_router
+
+    _patch_org(monkeypatch)
+    monkeypatch.setattr(registrations_repo, "get_registration_target", lambda tenant, slug: _target())
+    monkeypatch.setattr(
+        registrations_repo, "create_registration", lambda tenant, camp, data: _fake_created_row()
+    )
+
+    mail_called = []
+
+    def slow_send(**kwargs):
+        import time
+        time.sleep(0.05)  # langsamer Provider
+        mail_called.append(True)
+
+    # Patch in dem Modul, das den Namen bindet (registrations_router importiert ihn by name)
+    monkeypatch.setattr(registrations_router, "send_registration_notification", slow_send)
+
+    with TestClient(app) as client:
+        response = _post(client, _valid_payload())
+
+    assert response.status_code == 201
+    assert mail_called  # Mail wurde nach der Antwort als BackgroundTask versucht

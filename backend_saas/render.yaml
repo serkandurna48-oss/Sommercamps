@@ -39,7 +39,11 @@ services:
       - key: CORS_ORIGINS_EXTRA
         sync: false           # comma-separated extra allowed origins; empty until a real
                                # frontend exists — see README.md "CORS"
+      - key: NOTIFICATION_PROVIDER
+        sync: false           # "brevo" for real mail; anything else/unset → FakeProvider (local dev/CI)
       - key: BREVO_API_KEY
         sync: false           # required when NOTIFICATION_PROVIDER=brevo; get from Brevo Dashboard
       - key: NOTIFICATION_FROM_EMAIL
         sync: false           # sender address; default noreply@campspilot.app
+      - key: NOTIFICATION_FROM_NAME
+        sync: false           # sender display name; default CampsPilot

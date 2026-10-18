@@ -68,7 +68,7 @@ class BrevoProvider:
             "https://api.brevo.com/v3/smtp/email",
             headers={"api-key": self._api_key, "Content-Type": "application/json"},
             json=payload,
-            timeout=10,
+            timeout=5,
         )
         resp.raise_for_status()
 

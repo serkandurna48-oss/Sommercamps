@@ -20,7 +20,7 @@ interface DoneState {
 
 const HERO_IMAGE: Record<string, { src: string; alt: string }> = {
   tradition: { src: '/pilot/leibchen.webp', alt: 'Gefaltete Trainingsleibchen auf einer Bank am Spielfeldrand.' },
-  akademie: { src: '/pilot/hero.webp', alt: 'Der Sportplatz bei Flutlicht.' },
+  akademie: { src: '/jk/hero.jpg', alt: 'Trainingsszene auf dem Spielfeld.' },
 }
 
 export default function ParentFlow({ org, camps }: { org: OrganizationPublic; camps: CampPublic[] }) {
@@ -135,11 +135,15 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
           <div className="veil" />
           <div className="in">
             <span className="mark">
-              <span className="c">{shortCode}</span>
+              <span className="c">
+                {org.logo_url
+                  ? <Image src={org.logo_url} alt={org.name} width={30} height={30} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : shortCode}
+              </span>
               <span className="t">{org.name}</span>
             </span>
             <h1 className="d1" data-split>{org.name}</h1>
-            <p className="intro" data-rise style={{ fontSize: 16, lineHeight: 1.6, color: '#C6CFCB', maxWidth: '40ch' }}>
+            <p className="intro" data-rise style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--on-band-2)', maxWidth: '40ch' }}>
               Alle Camps auf einen Blick — wählen Sie unten den passenden Termin für Ihr Kind.
             </p>
           </div>

@@ -20,6 +20,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ..deps import get_tenant_context
+from ..notifications.sending import send_registration_notification
 from ..repositories import registrations as registrations_repo
 from ..repositories.registrations import (
     CampNotAvailableError,
@@ -127,5 +128,18 @@ def create_registration(
         tenant.slug,
         camp_slug,
         row["status"],
+    )
+    send_registration_notification(
+        registration_token=row["registration_token"],
+        status=row["status"],
+        organization_id=tenant.organization_id,
+        camp_id=camp.id,
+        start_date=camp.start_date,
+        end_date=camp.end_date,
+        parent_email=data.parent_email,
+        parent_first_name=data.parent_first_name,
+        parent_last_name=data.parent_last_name,
+        child_first_name=data.child_first_name,
+        child_last_name=data.child_last_name,
     )
     return RegistrationCreated.model_validate(row)

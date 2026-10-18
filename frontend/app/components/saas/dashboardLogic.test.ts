@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { buildTasks, computeCampStats, pickNextCamp } from './dashboardLogic'
+import { daysUntil } from '../../lib/i18n/de'
 import type { CampAdmin, RegistrationAdmin } from '../../lib/saasAdminApi'
 
 function camp(overrides: Partial<CampAdmin> = {}): CampAdmin {
@@ -129,5 +130,22 @@ describe('demo waitlist consistency', () => {
     expect(stats.waitlistCount).toBe(registrations.filter(r => r.status === 'waitlist').length)
     expect(stats.registeredCount).toBe(4)
     expect(buildTasks([stats]).find(t => t.kind === 'waitlist')?.count).toBe(3)
+  })
+})
+
+
+describe('demo countdown regression', () => {
+  it('selects July 7 before the autumn camp and returns 262 calendar days on October 18', () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-10-18T10:00:00+02:00'))
+      const summer = computeCampStats(camp({ slug: 'summer', start_date: '2027-07-07', end_date: '2027-07-11' }), [])
+      const autumn = computeCampStats(camp({ slug: 'autumn', start_date: '2027-10-18', end_date: '2027-10-22' }), [])
+      const next = pickNextCamp([autumn, summer])
+      expect(next?.camp.slug).toBe('summer')
+      expect(daysUntil(next!.camp.start_date)).toBe(262)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

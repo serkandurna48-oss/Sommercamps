@@ -705,19 +705,20 @@
 .cp-public .c-go {
   font-size: 13px;
   font-weight: 600;
-  color: var(--brand-strong);
+  color: var(--brand-on);
   display: inline-flex;
   align-items: center;
   padding: 6px 12px;
   border-radius: var(--r-chip);
-  background: var(--surface-2);
-  border: 1px solid var(--line);
+  background: var(--brand-strong);
+  border: 1px solid var(--brand-strong);
   white-space: nowrap;
   transition: transform 0.18s var(--ease), background 0.18s var(--ease);
 }
 .cp-public[data-theme='akademie'] .c-go {
-  color: var(--brand);
-  background: var(--surface);
+  color: var(--brand-on);
+  background: var(--brand);
+  border-color: var(--brand);
 }
 .cp-public .camp.full .c-go {
   color: var(--info);

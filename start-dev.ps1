@@ -121,7 +121,7 @@ if ($Saas) {
     Write-Host '  Browser öffnet sich in 5 Sekunden ...' -ForegroundColor DarkCyan
     Start-Sleep -Seconds 5
 
-    Start-Process 'http://localhost:3000/pilot/jk-demo-campspilot-test'
+    Start-Process 'http://localhost:3000/pilot/jk-academy-demo'
     Start-Sleep -Milliseconds 400
     Start-Process 'http://127.0.0.1:8001/docs'
 } else {
@@ -163,7 +163,7 @@ Write-Host ''
 Write-Host '  Fertig. Alle Prozesse laufen in eigenen Terminals.' -ForegroundColor Green
 Write-Host ''
 if ($Saas) {
-    Write-Host '    Demo-Pilot: http://localhost:3000/pilot/jk-demo-campspilot-test' -ForegroundColor White
+    Write-Host '    Demo-Pilot: http://localhost:3000/pilot/jk-academy-demo' -ForegroundColor White
     Write-Host '    API-Docs:   http://127.0.0.1:8001/docs' -ForegroundColor White
 } else {
     Write-Host '    Frontend:  http://localhost:3000' -ForegroundColor White

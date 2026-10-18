@@ -39,7 +39,7 @@ export default async function CampPaymentsPage({
 
       <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
         <div className="mb-8">
-          <StatCard label={de.command.filterPaymentOpen} value={String(openCount)} numericValue={openCount} />
+          <StatCard label={de.command.filterPaymentOpen} value={String(openCount)} numericValue={openCount} tone="pending" />
         </div>
 
         <PaymentSection

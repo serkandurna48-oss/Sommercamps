@@ -49,7 +49,7 @@ export default async function OrgPaymentsPage({ params }: { params: Promise<{ or
         </p>
 
         <div className="mb-8">
-          <StatCard label={de.command.filterPaymentOpen} value={String(openCount)} numericValue={openCount} />
+          <StatCard label={de.command.filterPaymentOpen} value={String(openCount)} numericValue={openCount} tone="pending" />
         </div>
 
         <PaymentSection

@@ -214,12 +214,12 @@ export default function ParticipantDetail({
         {registration.payment_status === 'open' && (
           <div className="mt-3 flex flex-wrap gap-2">
             <ActionForm action={markPaid} label={de.paymentsPage.markPaid} pendingLabel={de.paymentsPage.updating} variant="secondary" />
-            <ActionForm action={markWaived} label={de.paymentsPage.markWaived} pendingLabel={de.paymentsPage.updating} variant="quiet" />
+            <ActionForm action={markWaived} label={de.paymentsPage.markWaived} pendingLabel={de.paymentsPage.updating} variant="quiet-danger" requireConfirm="Wirklich erlassen?" />
           </div>
         )}
         {registration.payment_status === 'paid' && (
           <div className="mt-3">
-            <ActionForm action={markRefunded} label={de.paymentsPage.markRefunded} pendingLabel={de.paymentsPage.updating} variant="quiet" />
+            <ActionForm action={markRefunded} label={de.paymentsPage.markRefunded} pendingLabel={de.paymentsPage.updating} variant="quiet-danger" requireConfirm="Wirklich erstatten?" />
           </div>
         )}
 

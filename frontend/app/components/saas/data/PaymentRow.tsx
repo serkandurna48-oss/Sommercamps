@@ -1,11 +1,7 @@
-'use client'
-
-import { useState } from 'react'
 import { de, formatEuro, paymentStatusLabel } from '../../../lib/i18n/de'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import ActionForm from '../ui/ActionForm'
-import Button from '../ui/Button'
 import StatusChip, { PAYMENT_STATUS_TONE } from './StatusChip'
 
 export default function PaymentRow({
@@ -19,9 +15,6 @@ export default function PaymentRow({
   orgSlug: string
   showCampTitle?: boolean
 }) {
-  const [confirmWaive, setConfirmWaive] = useState(false)
-  const [confirmRefund, setConfirmRefund] = useState(false)
-
   const markPaid = setPaymentStatusAction.bind(null, orgSlug, camp.slug, registration.registration_token, 'paid', de.paymentsPage.markPaidSuccess)
   const markWaived = setPaymentStatusAction.bind(null, orgSlug, camp.slug, registration.registration_token, 'waived', de.paymentsPage.markWaivedSuccess)
   const markRefunded = setPaymentStatusAction.bind(null, orgSlug, camp.slug, registration.registration_token, 'refunded', de.paymentsPage.markRefundedSuccess)
@@ -65,44 +58,24 @@ export default function PaymentRow({
               pendingLabel={de.paymentsPage.updating}
               variant="secondary"
             />
-            {confirmWaive ? (
-              <div className="flex items-center gap-2">
-                <ActionForm
-                  action={markWaived}
-                  label={de.paymentsPage.markWaived}
-                  pendingLabel={de.paymentsPage.updating}
-                  variant="quiet"
-                />
-                <Button type="button" variant="quiet" onClick={() => setConfirmWaive(false)}>
-                  Abbrechen
-                </Button>
-              </div>
-            ) : (
-              <Button type="button" variant="quiet" onClick={() => setConfirmWaive(true)}>
-                {de.paymentsPage.markWaived}
-              </Button>
-            )}
+            <ActionForm
+              action={markWaived}
+              label={de.paymentsPage.markWaived}
+              pendingLabel={de.paymentsPage.updating}
+              variant="quiet-danger"
+              requireConfirm="Wirklich erlassen?"
+            />
           </div>
         )}
 
         {registration.payment_status === 'paid' && (
-          confirmRefund ? (
-            <div className="flex items-center gap-2">
-              <ActionForm
-                action={markRefunded}
-                label={de.paymentsPage.markRefunded}
-                pendingLabel={de.paymentsPage.updating}
-                variant="quiet"
-              />
-              <Button type="button" variant="quiet" onClick={() => setConfirmRefund(false)}>
-                Abbrechen
-              </Button>
-            </div>
-          ) : (
-            <Button type="button" variant="quiet" onClick={() => setConfirmRefund(true)}>
-              {de.paymentsPage.markRefunded}
-            </Button>
-          )
+          <ActionForm
+            action={markRefunded}
+            label={de.paymentsPage.markRefunded}
+            pendingLabel={de.paymentsPage.updating}
+            variant="quiet-danger"
+            requireConfirm="Wirklich erstatten?"
+          />
         )}
       </div>
     </div>

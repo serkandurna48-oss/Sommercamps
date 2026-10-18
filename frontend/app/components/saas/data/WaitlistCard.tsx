@@ -56,6 +56,7 @@ export default function WaitlistCard({
             variant="primary"
             brandStrong={brandStrong}
             brandOn={brandOn}
+            requireConfirm="Platz wirklich vergeben?"
           />
           <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
             {de.waitlistPage.promoteHint}

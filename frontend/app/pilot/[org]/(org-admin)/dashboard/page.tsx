@@ -46,6 +46,7 @@ export default async function OrgDashboardPage({ params }: { params: Promise<{ o
                     value: `${nextCamp.registeredCount}/${nextCamp.camp.capacity}`,
                     bar: nextCamp.camp.capacity > 0 ? nextCamp.registeredCount / nextCamp.camp.capacity : 0,
                     barColor: brand.brand,
+                    hero: true,
                   },
                   { label: de.dashboard.openPaymentsLabel, value: String(nextCamp.openPaymentsCount), numericValue: nextCamp.openPaymentsCount },
                   { label: de.dashboard.waitlistLabel, value: String(nextCamp.waitlistCount), numericValue: nextCamp.waitlistCount },

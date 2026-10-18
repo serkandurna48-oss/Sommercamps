@@ -5,15 +5,8 @@ import { paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/d
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { birthYear, hasNotes } from '../commandCenterLogic'
 import ParticipantDetail from './ParticipantDetail'
-import StatusChip, { PAYMENT_STATUS_TONE, type StatusTone } from './StatusChip'
+import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from './StatusChip'
 import { IconChevronDown } from '../icons'
-
-const REGISTRATION_STATUS_TONE: Record<string, StatusTone> = {
-  registered: 'ok',
-  confirmed: 'ok',
-  cancelled: 'neutral',
-  waitlist: 'pending',
-}
 
 export default function ParticipantRow({
   registration,
@@ -66,7 +59,7 @@ export default function ParticipantRow({
            * Desktop (md): 5-column grid — name, parent, reg-chip, pay-chip, arrow.
            * md:contents on the chips wrapper makes the two chips direct grid children.
            */}
-          <div className="relative flex flex-col gap-1.5 pr-8 md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto_auto_auto] md:items-center md:gap-x-4 md:pr-0">
+          <div className="relative cp-admin-row [--cp-row-cols:1fr] md:[--cp-row-cols:minmax(0,2fr)_minmax(0,1fr)_auto_auto_auto] gap-y-1.5 md:gap-y-0 pr-8 md:pr-0">
             {/* Col 1: Kind-Name + Jg. + Hinweis-Badge */}
             <p className="cp-subheading min-w-0 truncate" style={{ color: 'var(--cp-ink)' }}>
               {effective.child_first_name} {effective.child_last_name}
@@ -90,6 +83,7 @@ export default function ParticipantRow({
               <StatusChip
                 tone={REGISTRATION_STATUS_TONE[effective.status] ?? 'neutral'}
                 label={registrationStatusLabel[effective.status] ?? effective.status}
+                dot
               />
               <StatusChip
                 tone={PAYMENT_STATUS_TONE[effective.payment_status] ?? 'neutral'}

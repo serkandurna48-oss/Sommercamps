@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { useMemo, useRef, useState } from 'react'
 import type { CampPublic, OrganizationPublic, RegistrationCreated } from '../../lib/saasApi'
 import { formatCampDateRange, formatPrice, orgShortCode } from '../../lib/parentFlowFormat'
@@ -23,6 +24,7 @@ const HERO_IMAGE: Record<string, { src: string; alt: string }> = {
 }
 
 export default function ParentFlow({ org, camps }: { org: OrganizationPublic; camps: CampPublic[] }) {
+  const router = useRouter()
   const [screen, setScreen] = useState<ScreenName>('org')
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
   const [done, setDone] = useState<DoneState | null>(null)
@@ -52,6 +54,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
   }
 
   function backToOrg() {
+    router.refresh()
     setScreen('org')
     setSelectedSlug(null)
     setDone(null)

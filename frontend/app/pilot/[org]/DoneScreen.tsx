@@ -151,8 +151,8 @@ export default function DoneScreen({
                   <span className="dot next">3</span>
                 </div>
                 <div className="txt">
-                  <b>Erst nach Ihrer Zusage entstehen Kosten</b>
-                  <span>Vorher passiert nichts weiter.</span>
+                  <b>Wird ein Platz frei, rücken Sie sofort nach</b>
+                  <span>Der Verein informiert Sie persönlich — keine automatische Nachricht, keine Frist.</span>
                 </div>
               </li>
             </>

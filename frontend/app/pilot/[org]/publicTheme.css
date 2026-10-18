@@ -703,14 +703,26 @@
   font-weight: 600;
 }
 .cp-public .c-go {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--brand-strong);
-  display: inline-block;
-  transition: transform 0.18s var(--ease);
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: var(--r-chip);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+  transition: transform 0.18s var(--ease), background 0.18s var(--ease);
 }
 .cp-public[data-theme='akademie'] .c-go {
   color: var(--brand);
+  background: var(--surface);
+}
+.cp-public .camp.full .c-go {
+  color: var(--info);
+  background: var(--info-bg);
+  border-color: var(--info-line);
 }
 .cp-public .camp:not(.full):hover .c-go {
   transform: translateX(3px);

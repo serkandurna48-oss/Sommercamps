@@ -441,7 +441,7 @@ export default function RegistrationFormScreen({
           </button>
           <span className="fine">
             {camp.is_full
-              ? 'Auf der Warteliste entstehen noch keine Kosten. Der Betrag wird erst fällig, wenn ein Platz frei wird und Sie zusagen.'
+              ? 'Auf der Warteliste entstehen noch keine Kosten.'
               : hasBankDetails
                 ? `Den Betrag überweisen Sie anschließend selbst an ${orgName}. Die Bankdaten stehen auf der nächsten Seite.`
                 : `Den Betrag überweisen Sie anschließend selbst an ${orgName}. Die Bankverbindung ist hier noch nicht hinterlegt — wie Sie sie bekommen, steht auf der nächsten Seite.`}

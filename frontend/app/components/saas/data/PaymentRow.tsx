@@ -1,8 +1,9 @@
-import { de, formatEuro, paymentStatusLabel } from '../../../lib/i18n/de'
+import { de, formatEuro, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
+import { isActiveRegistration, isOpenPayment } from '../commandCenterLogic'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import ActionForm from '../ui/ActionForm'
-import StatusChip, { PAYMENT_STATUS_TONE } from './StatusChip'
+import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from './StatusChip'
 
 export default function PaymentRow({
   registration,
@@ -48,9 +49,16 @@ export default function PaymentRow({
             tone={PAYMENT_STATUS_TONE[registration.payment_status] ?? 'neutral'}
             label={paymentStatusLabel[registration.payment_status] ?? registration.payment_status}
           />
+          {!isActiveRegistration(registration) && (
+            <StatusChip
+              tone={REGISTRATION_STATUS_TONE[registration.status] ?? 'neutral'}
+              label={registrationStatusLabel[registration.status] ?? registration.status}
+              dot
+            />
+          )}
         </div>
 
-        {registration.payment_status === 'open' && (
+        {isOpenPayment(registration) && (
           <div className="flex flex-wrap items-center gap-2">
             <ActionForm
               action={markPaid}

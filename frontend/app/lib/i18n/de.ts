@@ -70,7 +70,7 @@ export const de = {
         count === 1
           ? `Eine Anmeldung wartet bei „${campTitle}" auf einen Platz`
           : `${count} Anmeldungen warten bei „${campTitle}" auf einen Platz`,
-      hint: 'Wird ein Platz frei, informiere die Warteliste in Reihenfolge.',
+      hint: 'Das nächste Kind rückt sofort nach. Der Verein informiert — keine automatische Nachricht.',
     },
     review: 'Ansehen',
     markDone: 'Erledigt',

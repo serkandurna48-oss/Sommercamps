@@ -5,7 +5,7 @@ import { de } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { cancelRegistrationAction, updateRegistrationDetailsAction } from '../actions/waitlistActions'
 import { setPaymentStatusAction } from '../actions/paymentActions'
-import { hasMissingEmergencyContact, hasNotes } from '../commandCenterLogic'
+import { hasMissingEmergencyContact, hasNotes, isOpenPayment } from '../commandCenterLogic'
 import ActionForm from '../ui/ActionForm'
 import Button from '../ui/Button'
 import Field from '../ui/Field'
@@ -211,7 +211,7 @@ export default function ParticipantDetail({
           </a>
         </div>
 
-        {registration.payment_status === 'open' && (
+        {isOpenPayment(registration) && (
           <div className="mt-3 flex flex-wrap gap-2">
             <ActionForm action={markPaid} label={de.paymentsPage.markPaid} pendingLabel={de.paymentsPage.updating} variant="secondary" />
             <ActionForm action={markWaived} label={de.paymentsPage.markWaived} pendingLabel={de.paymentsPage.updating} variant="quiet-danger" requireConfirm="Wirklich erlassen?" />

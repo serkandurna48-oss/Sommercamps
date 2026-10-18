@@ -8,8 +8,8 @@ registration data is intentionally hardcoded, not caller-configurable, so
 it can never be pointed at a real customer by accident.
 
 Safety, by construction:
-- The target organization slug/name are constants in this file, both
-  containing "demo" — never editable via CLI args.
+- The target organization slug is a constant in this file, hardcoded and
+  never editable via CLI args.
 - Hard-blocks the two real-customer slugs that already exist in the
   Cloud CampsPilot SaaS project (ksv-baunatal, jk-performance-academy) —
   this script will refuse to run if DEMO_ORG_SLUG were ever changed to
@@ -56,8 +56,11 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-DEMO_ORG_SLUG = "jk-demo-campspilot-test"
-DEMO_ORG_NAME = "JK Demo – CampsPilot Test"
+DEMO_ORG_SLUG = "jk-academy-demo"
+DEMO_ORG_NAME = "JK Performance Academy"
+# theme "akademie" is intentionally not set here: OrganizationCreate/Update
+# does not expose the `theme` column (admin_schemas.py:303-307). Reported in
+# S1 bericht — must be set manually if needed, never via raw SQL on the cloud.
 _BLOCKED_SLUGS = {"ksv-baunatal", "jk-performance-academy"}
 
 ORGANIZATION = {
@@ -66,123 +69,153 @@ ORGANIZATION = {
     "legal_name": None,
     "contact_email": "demo@campspilot.example",
     "contact_phone": "0170 0000000",
-    "primary_color": "#1c6b45",
+    "primary_color": "#C79B3B",
     "plan_status": "pilot",
     "iban": "DE89370400440532013000",
 }
 
 CAMP_A = {
-    "slug": "sommerwoche-1",
-    "title": "Feriencamp Sommerwoche",
-    "start_date": "2027-07-05",
-    "end_date": "2027-07-09",
-    "age_min": 6,
-    "age_max": 12,
-    "capacity": 3,
-    "price_cents": 8900,
+    "slug": "sommercamp-2027",
+    "title": "Sommercamp 2027",
+    "start_date": "2027-07-07",
+    "end_date": "2027-07-11",
+    "age_min": 7,
+    "age_max": 14,
+    "capacity": 4,
+    "price_cents": 18900,
     "currency": "EUR",
-    "location": "Sportplatz Musterstadt",
+    "location": "Sportanlage Kassel-Nord",
     "status": "published",
 }
 
 CAMP_B = {
-    "slug": "herbstwoche-1",
-    "title": "Feriencamp Herbstwoche",
-    "start_date": "2027-10-11",
-    "end_date": "2027-10-15",
-    "age_min": 6,
-    "age_max": 14,
-    "capacity": 8,
-    "price_cents": 7500,
+    "slug": "herbstcamp-2027",
+    "title": "Herbstcamp 2027",
+    "start_date": "2027-10-18",
+    "end_date": "2027-10-22",
+    "age_min": 7,
+    "age_max": 16,
+    "capacity": 12,
+    "price_cents": 16500,
     "currency": "EUR",
-    "location": "Sportplatz Musterstadt",
+    "location": "Sportanlage Kassel-Nord",
     "status": "published",
 }
 
-# Camp A: capacity 3. First three registered fill it, the fourth is the
-# demo's waitlist case — left on the waitlist (not pre-promoted) so the
-# handoff click-test can exercise "Warteliste aufrücken lassen" live.
+# Camp A: capacity 4. First four fill the camp; the next three land on the
+# waitlist in order — so Jan can click "Platz vergeben" live during the demo.
 CAMP_A_REGISTRATIONS = [
     {
-        "parent_first_name": "Anna", "parent_last_name": "Hoffmann",
-        "parent_email": "anna.hoffmann@example.com", "parent_phone": "+49 170 1000001",
-        "child_first_name": "Mia", "child_last_name": "Hoffmann", "child_birth_date": "2018-03-11",
-        "emergency_contact_name": "Thomas Hoffmann", "emergency_contact_phone": "+49 170 1000011",
+        "parent_first_name": "Robert", "parent_last_name": "Klein",
+        "parent_email": "robert.klein@example.com", "parent_phone": "+49 170 2000001",
+        "child_first_name": "Luca", "child_last_name": "Klein", "child_birth_date": "2017-04-09",
+        "emergency_contact_name": "Sabine Klein", "emergency_contact_phone": "+49 170 2000011",
         "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": True,
     },
     {
-        "parent_first_name": "Stefan", "parent_last_name": "Bauer",
-        "parent_email": "stefan.bauer@example.com", "parent_phone": "+49 170 1000002",
-        "child_first_name": "Ben", "child_last_name": "Bauer", "child_birth_date": "2017-06-20",
-        "allergies": "Nussallergie — Epipen dabei",
+        "parent_first_name": "Monika", "parent_last_name": "Krüger",
+        "parent_email": "monika.krueger@example.com", "parent_phone": "+49 170 2000002",
+        "child_first_name": "Hanna", "child_last_name": "Krüger", "child_birth_date": "2016-09-15",
+        "emergency_contact_name": "Frank Krüger", "emergency_contact_phone": "+49 170 2000012",
+        "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
+        "_mark_paid": True,
+    },
+    {
+        "parent_first_name": "Jens", "parent_last_name": "Schwarz",
+        "parent_email": "jens.schwarz@example.com", "parent_phone": "+49 170 2000003",
+        "child_first_name": "Nils", "child_last_name": "Schwarz", "child_birth_date": "2018-02-20",
+        "emergency_contact_name": "Yvonne Schwarz", "emergency_contact_phone": "+49 170 2000013",
         "photo_permission": False, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": True,
     },
     {
-        "parent_first_name": "Petra", "parent_last_name": "Müller",
-        "parent_email": "petra.mueller@example.com", "parent_phone": "+49 170 1000003",
-        "child_first_name": "Clara", "child_last_name": "Müller", "child_birth_date": "2019-01-05",
-        "emergency_contact_name": "Klaus Müller", "emergency_contact_phone": "+49 170 1000013",
+        "parent_first_name": "Angela", "parent_last_name": "Brandt",
+        "parent_email": "angela.brandt@example.com", "parent_phone": "+49 170 2000004",
+        "child_first_name": "Tim", "child_last_name": "Brandt", "child_birth_date": "2017-11-07",
+        "emergency_contact_name": "Dieter Brandt", "emergency_contact_phone": "+49 170 2000014",
         "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": False,
     },
     {
-        # Camp A is full after the three above — this one lands on the
-        # waitlist via the existing capacity/waitlist rule.
-        "parent_first_name": "Dirk", "parent_last_name": "Weber",
-        "parent_email": "dirk.weber@example.com", "parent_phone": "+49 170 1000004",
-        "child_first_name": "David", "child_last_name": "Weber", "child_birth_date": "2018-09-02",
+        # Camp A is full after the four above — this and the next two land on
+        # the waitlist in FIFO order.
+        "parent_first_name": "Peter", "parent_last_name": "Koch",
+        "parent_email": "peter.koch@example.com", "parent_phone": "+49 170 2000005",
+        "child_first_name": "Laura", "child_last_name": "Koch", "child_birth_date": "2018-07-03",
+        "emergency_contact_name": "Ursula Koch", "emergency_contact_phone": "+49 170 2000015",
         "photo_permission": False, "terms_accepted": True, "privacy_accepted": True,
+        "_mark_paid": False,
+    },
+    {
+        "parent_first_name": "Maria", "parent_last_name": "Schuster",
+        "parent_email": "maria.schuster@example.com", "parent_phone": "+49 170 2000006",
+        "child_first_name": "Felix", "child_last_name": "Schuster", "child_birth_date": "2019-03-25",
+        "emergency_contact_name": "Hans Schuster", "emergency_contact_phone": "+49 170 2000016",
+        "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
+        "_mark_paid": False,
+    },
+    {
+        "parent_first_name": "Lukas", "parent_last_name": "Vogel",
+        "parent_email": "lukas.vogel@example.com", "parent_phone": "+49 170 2000007",
+        "child_first_name": "Jana", "child_last_name": "Vogel", "child_birth_date": "2016-12-11",
+        "emergency_contact_name": "Christine Vogel", "emergency_contact_phone": "+49 170 2000017",
+        "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": False,
     },
 ]
 
-# Camp B: capacity 8, 6 registrations seeded (2 free spots) with mixed
-# payment statuses — shows a realistic, active camp that isn't full yet.
+# Camp B: capacity 12, 6 registrations (2 free spots) with mixed payment.
+# Notable: Hansen has a food allergy (Aufgaben demo), Richter has no
+# emergency contact (a visible gap in "Aufgaben").
 CAMP_B_REGISTRATIONS = [
     {
-        "parent_first_name": "Erik", "parent_last_name": "Schmidt",
-        "parent_email": "erik.schmidt@example.com", "parent_phone": "+49 170 1000005",
-        "child_first_name": "Emma", "child_last_name": "Schmidt", "child_birth_date": "2016-11-30",
-        "emergency_contact_name": "Lena Schmidt", "emergency_contact_phone": "+49 170 1000015",
+        "parent_first_name": "Frank", "parent_last_name": "Neumann",
+        "parent_email": "frank.neumann@example.com", "parent_phone": "+49 170 2000020",
+        "child_first_name": "Max", "child_last_name": "Neumann", "child_birth_date": "2015-06-18",
+        "emergency_contact_name": "Ingrid Neumann", "emergency_contact_phone": "+49 170 2000030",
         "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": True,
     },
     {
-        "parent_first_name": "Sabine", "parent_last_name": "Fischer",
-        "parent_email": "sabine.fischer@example.com", "parent_phone": "+49 170 1000006",
-        "child_first_name": "Finn", "child_last_name": "Fischer", "child_birth_date": "2015-04-18",
+        "parent_first_name": "Birgit", "parent_last_name": "Schäfer",
+        "parent_email": "birgit.schaefer@example.com", "parent_phone": "+49 170 2000021",
+        "child_first_name": "Lea", "child_last_name": "Schäfer", "child_birth_date": "2016-03-30",
+        "emergency_contact_name": "Walter Schäfer", "emergency_contact_phone": "+49 170 2000031",
         "photo_permission": False, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": False,
     },
     {
-        "parent_first_name": "Markus", "parent_last_name": "Wagner",
-        "parent_email": "markus.wagner@example.com", "parent_phone": "+49 170 1000007",
-        "child_first_name": "Leon", "child_last_name": "Wagner", "child_birth_date": "2017-08-22",
-        "emergency_contact_name": "Julia Wagner", "emergency_contact_phone": "+49 170 1000017",
+        # Allergy child — shows up as orange task card in admin "Aufgaben".
+        "parent_first_name": "Hans-Peter", "parent_last_name": "Hansen",
+        "parent_email": "hp.hansen@example.com", "parent_phone": "+49 170 2000022",
+        "child_first_name": "Erik", "child_last_name": "Hansen", "child_birth_date": "2014-10-05",
+        "allergies": "Glutenunverträglichkeit (Zöliakie) — bitte glutenfreie Verpflegung",
+        "emergency_contact_name": "Gudrun Hansen", "emergency_contact_phone": "+49 170 2000032",
         "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": True,
     },
     {
-        "parent_first_name": "Julia", "parent_last_name": "Braun",
-        "parent_email": "julia.braun@example.com", "parent_phone": "+49 170 1000008",
-        "child_first_name": "Lena", "child_last_name": "Braun", "child_birth_date": "2018-12-03",
+        # No emergency contact — shows up as gap in admin "Aufgaben".
+        "parent_first_name": "Melanie", "parent_last_name": "Richter",
+        "parent_email": "melanie.richter@example.com", "parent_phone": "+49 170 2000023",
+        "child_first_name": "Noah", "child_last_name": "Richter", "child_birth_date": "2015-08-14",
         "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": False,
     },
     {
-        "parent_first_name": "Thomas", "parent_last_name": "Schneider",
-        "parent_email": "thomas.schneider@example.com", "parent_phone": "+49 170 1000009",
-        "child_first_name": "Jonas", "child_last_name": "Schneider", "child_birth_date": "2016-05-14",
-        "emergency_contact_name": "Maria Schneider", "emergency_contact_phone": "+49 170 1000019",
+        "parent_first_name": "Oliver", "parent_last_name": "Fuchs",
+        "parent_email": "oliver.fuchs@example.com", "parent_phone": "+49 170 2000024",
+        "child_first_name": "Luisa", "child_last_name": "Fuchs", "child_birth_date": "2016-01-22",
+        "emergency_contact_name": "Katja Fuchs", "emergency_contact_phone": "+49 170 2000034",
         "photo_permission": False, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": True,
     },
     {
-        "parent_first_name": "Claudia", "parent_last_name": "Meyer",
-        "parent_email": "claudia.meyer@example.com", "parent_phone": "+49 170 1000010",
-        "child_first_name": "Sophie", "child_last_name": "Meyer", "child_birth_date": "2017-02-28",
+        "parent_first_name": "Ute", "parent_last_name": "Schreiber",
+        "parent_email": "ute.schreiber@example.com", "parent_phone": "+49 170 2000025",
+        "child_first_name": "Paul", "child_last_name": "Schreiber", "child_birth_date": "2017-05-08",
+        "emergency_contact_name": "Ralf Schreiber", "emergency_contact_phone": "+49 170 2000035",
         "photo_permission": True, "terms_accepted": True, "privacy_accepted": True,
         "_mark_paid": False,
     },
@@ -354,8 +387,14 @@ def main() -> None:
         _seed_registrations(client, args.api_url, token, CAMP_B["slug"], CAMP_B_REGISTRATIONS)
 
     print("Done.")
-    print(f"Parent view:  http://localhost:3000/pilot/{DEMO_ORG_SLUG}")
+    print(f"Parent view:  http://localhost:3000/pilot/{DEMO_ORG_SLUG}/")
     print(f"Admin login:  http://localhost:3000/pilot/{DEMO_ORG_SLUG}/login")
+    print()
+    print("Serkan: Demo-User als org_admin der neuen Org einrichten:")
+    print(f"  python scripts/create_platform_user.py --role org_admin --org {DEMO_ORG_SLUG}")
+    print("  (Passwort über CAMPSPILOT_PASSWORD env var setzen)")
+    print()
+    print("Hinweis: theme 'akademie' nicht per API setzbar (admin_schemas.py:303). Default bleibt 'tradition'.")
 
 
 if __name__ == "__main__":

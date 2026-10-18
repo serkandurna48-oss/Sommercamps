@@ -296,6 +296,14 @@ def test_retry_is_noop_when_registration_missing(monkeypatch, fake_provider):
     assert len(fake_provider.sent) == 0
 
 
+def test_sender_name_contains_org_name(monkeypatch, fake_provider):
+    _patch(monkeypatch)
+    _call_send()
+
+    assert len(fake_provider.sent) == 1
+    assert fake_provider.sent[0].sender_name == "JK Performance Academy über CampsPilot"
+
+
 def test_retry_idempotent_double_call(monkeypatch, fake_provider):
     """Second call after first success sends nothing."""
     from datetime import datetime, timezone

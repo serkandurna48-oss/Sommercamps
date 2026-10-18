@@ -118,6 +118,7 @@ def _do_send(
         payment_reference=payment_reference,
         iban=ctx.get("iban"),
     )
+    msg.sender_name = f"{ctx['org_name']} über CampsPilot"
     get_provider().send(msg)
     _mark_sent(registration_token)
 

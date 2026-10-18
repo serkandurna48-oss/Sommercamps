@@ -21,7 +21,7 @@ services:
     name: campspilot-saas-backend
     runtime: python
     region: frankfurt          # physically close to the Supabase eu-central-1 project
-    plan: free                 # same caveat as KSV: free tier sleeps when idle (cold start)
+    plan: starter              # Starter plan — no cold starts in production (upgraded 2026-10-18)
     rootDir: backend_saas
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
@@ -44,6 +44,5 @@ services:
       - key: BREVO_API_KEY
         sync: false           # required when NOTIFICATION_PROVIDER=brevo; get from Brevo Dashboard
       - key: NOTIFICATION_FROM_EMAIL
-        sync: false           # sender address; default noreply@campspilot.app
-      - key: NOTIFICATION_FROM_NAME
-        sync: false           # sender display name; default CampsPilot
+        sync: false           # sender address (SPF/DKIM-verifizierte Domain in Brevo); default noreply@campspilot.app
+        # Absendername ist dynamisch: "{org_name} über CampsPilot" — kein NOTIFICATION_FROM_NAME mehr nötig

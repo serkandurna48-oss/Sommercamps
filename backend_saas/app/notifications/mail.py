@@ -28,6 +28,7 @@ class MailMessage:
     subject: str
     html_content: str
     reply_to: Optional[str] = None
+    sender_name: Optional[str] = None  # overrides provider default when set
 
 
 @runtime_checkable
@@ -56,7 +57,7 @@ class BrevoProvider:
         import requests
 
         payload: dict = {
-            "sender": {"email": self._from_email, "name": self._from_name},
+            "sender": {"email": self._from_email, "name": message.sender_name or self._from_name},
             "to": [{"email": message.to_email, "name": message.to_name}],
             "subject": message.subject,
             "htmlContent": message.html_content,

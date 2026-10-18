@@ -85,8 +85,8 @@ Quelle: `backend_saas/app/config.py` (Pflichtfelder) + `backend_saas/app/notific
 |---|---|---|---|
 | `NOTIFICATION_PROVIDER` | – | leer → FakeProvider | `"brevo"` für echten Mailversand; alles andere → FakeProvider (loggt nur, kein Netzwerk) |
 | `BREVO_API_KEY` | wenn brevo | – | Brevo-API-Key (Dashboard → SMTP & API → API Keys) |
-| `NOTIFICATION_FROM_EMAIL` | – | `noreply@campspilot.app` | Absenderadresse |
-| `NOTIFICATION_FROM_NAME` | – | `CampsPilot` | Absendername |
+| `NOTIFICATION_FROM_EMAIL` | – | `noreply@campspilot.app` | Absenderadresse (SPF/DKIM-verifizierte Domain in Brevo empfohlen) |
+| ~~`NOTIFICATION_FROM_NAME`~~ | – | – | Nicht mehr verwendet — Absendername ist dynamisch: `{Vereinsname} über CampsPilot` (aus Org-Daten) |
 
 **Lokale Entwicklung:** Kopie von `backend_saas/.env.example` nach `backend_saas/.env`, dann
 Pflichtfelder befüllen.

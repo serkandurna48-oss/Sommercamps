@@ -85,17 +85,18 @@
   font-stretch: 110%;
   font-weight: 700;
 }
-/* Design-Reifung nach dem dritten Praxistest: der Countdown ("Tage bis
- * Camp-Start") ist die eine Zahl im ganzen System, die am meisten zählt —
- * stand bisher optisch gleichrangig neben drei Nebenkennzahlen. Jetzt
- * deutlich dominanter (grösser + breiter gestreckt als selbst
- * cp-band-hero), damit das Dashboard auf einen Blick sagt "hier ist die
- * wichtige Zahl", nicht vier gleich laute Werte nebeneinander. */
+/* Design-Reifung nach dem vierten Praxistest: hero-metric von 76 auf 62 px
+ * reduziert. Bei 76 px dominierte der Countdown die Kopfzeile so stark,
+ * dass Belegung und offene Zahlungen — die handlungsrelevanten Zahlen —
+ * kaum wahrgenommen wurden. 62 px ist noch klar größer als cp-band-metric
+ * (38 px), aber nicht mehr doppelt so groß. S3 stellt die Belegung als
+ * ersten Metrik-Wert voran, damit das "hero"-Gewicht auf die richtige Zahl
+ * fällt. */
 .cp-band-hero-metric {
-  font-size: 76px;
+  font-size: 62px;
   line-height: 0.95;
-  letter-spacing: -2.4px;
-  font-stretch: 140%;
+  letter-spacing: -2px;
+  font-stretch: 134%;
   font-weight: 800;
 }
 /* Statische Haltepunkt-Anpassung, kein Tween — Abschnitt 6: unter 768px ist
@@ -110,8 +111,8 @@
     font-size: 28px;
   }
   .cp-band-hero-metric {
-    font-size: 48px;
-    letter-spacing: -1.4px;
+    font-size: 42px;
+    letter-spacing: -1.2px;
   }
 }
 .cp-band-title {
@@ -270,6 +271,27 @@
   .cp-tab-hint[data-pending='true'] {
     animation: none !important;
   }
+}
+
+/* ----------------------------------------------------------------------
+ * Hover-Zustände für Buttons — inline style kann kein :hover, deshalb
+ * stehen die Regeln hier und werden per className in Button.tsx referenziert.
+ * ---------------------------------------------------------------------- */
+.cp-btn-primary:not(:disabled):hover { opacity: 0.88; }
+.cp-btn-secondary:not(:disabled):hover { background: var(--cp-surface-2); }
+.cp-btn-quiet:not(:disabled):hover { background: var(--cp-line-2); }
+.cp-btn-quiet-danger:not(:disabled):hover { background: var(--cp-error-bg); }
+
+/* ----------------------------------------------------------------------
+ * Tabellenzeile mit festen Spalten (Admin-Listen: Teilnehmer, Zahlungen).
+ * Aufrufer setzt --cp-row-cols und optional --cp-row-gap per style-Attribut.
+ * Auf < 768 px bricht S3 auf Stapel um (keine erzwungene Spaltenanzahl hier).
+ * ---------------------------------------------------------------------- */
+.cp-admin-row {
+  display: grid;
+  grid-template-columns: var(--cp-row-cols);
+  align-items: center;
+  column-gap: var(--cp-row-gap, 16px);
 }
 
 /* ----------------------------------------------------------------------

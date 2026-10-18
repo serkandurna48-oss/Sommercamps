@@ -23,9 +23,27 @@ const TONE_VARS: Record<Exclude<StatusTone, 'neutral'>, { color: string; bg: str
  * Die einzige Stelle, an der Status gerendert wird (Abschnitt 5). Nie die
  * Vereinsfarbe (Abschnitt 3.3: Statusflächen sind von --cp-brand-* immer
  * unabhängig) — nur die vier festen --cp-ok/pending/error/info-Tokens.
+ *
+ * `dot` (optional): zeigt einen farbigen Punkt + Text statt der vollen
+ * Badge-Fläche — für kompakte Tabellenzeilen, wo ein voller Chip zu viel
+ * Gewicht hätte. Label bleibt immer sichtbar (kein Icon-only).
  */
-export default function StatusChip({ tone, label }: { tone: StatusTone; label: string }) {
+export default function StatusChip({ tone, label, dot }: { tone: StatusTone; label: string; dot?: boolean }) {
   const vars = tone === 'neutral' ? null : TONE_VARS[tone]
+
+  if (dot) {
+    return (
+      <span className="cp-chip inline-flex items-center gap-1.5" style={{ color: vars?.color ?? 'var(--cp-muted)' }}>
+        <span
+          className="h-2 w-2 shrink-0 rounded-full"
+          style={{ background: vars?.color ?? 'var(--cp-muted)' }}
+          aria-hidden
+        />
+        {label}
+      </span>
+    )
+  }
+
   return (
     <span
       className="cp-chip inline-flex items-center rounded-[var(--cp-r-chip)] border px-2.5 py-1"

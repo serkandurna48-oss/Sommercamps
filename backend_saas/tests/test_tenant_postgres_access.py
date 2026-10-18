@@ -12,8 +12,9 @@ from fastapi.testclient import TestClient
 from app import supabase_auth
 from app.main import app
 from app.repositories import registrations
+from app.tenancy import TenantContext
 from app.schemas import RegistrationCreate
-from .test_registrations_api import _valid_payload
+from .test_registrations_api import _target, _valid_payload
 from .test_admin_access_matrix import ADMIN_REQUESTS
 from .test_review_postgres import local_database, real_db  # noqa: F401
 
@@ -103,16 +104,23 @@ def test_foreign_tokens_cannot_be_used_through_an_authorized_org_path(real_db, m
     slug = f"isolated-own-{own_org.hex}"
     with cursor() as cur:
         cur.execute("INSERT INTO auth.users(id) VALUES (%s)", (user,))
-        cur.execute("INSERT INTO organizations(id,slug,name,contact_email) VALUES (%s,%s,'Own','own@example.com')", (own_org, slug))
+        cur.execute("INSERT INTO organizations(id,slug,name,contact_email,site_published,plan_status) VALUES (%s,%s,'Own','own@example.com',true,'active')", (own_org, slug))
         cur.execute("INSERT INTO organization_members(organization_id,user_id) VALUES (%s,%s)", (own_org, user))
-        cur.execute("INSERT INTO camps(id,organization_id,slug,title,start_date,end_date,age_min,age_max,capacity,price_cents) VALUES (%s,%s,'summer-1','Own','2027-07-05','2027-07-09',6,12,1,1000)", (own_camp, own_org))
+        cur.execute("INSERT INTO camps(id,organization_id,slug,title,start_date,end_date,age_min,age_max,capacity,price_cents,status) VALUES (%s,%s,'summer-1','Own','2027-07-05','2027-07-09',6,12,1,1000,'published')", (own_camp, own_org))
+    own_tenant = TenantContext(own_org, slug, "Own", "active")
+    own_camp_target = _target(id=own_camp, organization_id=own_org, capacity=1, slug="summer-1")
+    own_first_reg = registrations.create_registration(own_tenant, own_camp_target, RegistrationCreate(**_valid_payload(child_first_name="OwnRegisteredChild")))
+    assert own_first_reg["status"] == "registered"
+    own_second_reg = registrations.create_registration(own_tenant, own_camp_target, RegistrationCreate(**_valid_payload(child_first_name="OwnWaitlistedChild")))
+    assert own_second_reg["status"] == "waitlist"
     monkeypatch.setattr(supabase_auth, "verify_access_token", lambda token: supabase_auth.SupabaseUser(str(user), "own@example.com"))
     headers = {"Authorization": "Bearer isolated-owner-a"}
     base = f"/admin/organizations/{slug}"
     camp_path = f"{base}/camps/summer-1"
     registration = f"{camp_path}/registrations/{first['registration_token']}"
     with TestClient(app) as client:
-        assert client.get(f"{camp_path}/registrations", headers=headers).json() == []
+        reg_list = client.get(f"{camp_path}/registrations", headers=headers).json()
+        assert not any(r["child_first_name"] in ("ForeignSensitiveChild", "ForeignWaitlistedChild") for r in reg_list)
         for suffix, payload in (("payment-status", {"payment_status": "paid"}), ("details", {"child_first_name": "Tampered", "child_last_name": "Tampered"})):
             assert client.patch(f"{registration}/{suffix}", headers=headers, json=payload).status_code == 404
         assert client.post(f"{registration}/cancel", headers=headers).status_code == 404
@@ -125,12 +133,26 @@ def test_foreign_tokens_cannot_be_used_through_an_authorized_org_path(real_db, m
         )
         for endpoint, views in exports:
             for view in views:
-                response = client.get(endpoint, headers=headers, params={"view": view, "tokens": str(first["registration_token"])})
+                # For waitlist: use the foreign *waitlisted* child's token (second), not the
+                # registered one — using first here would produce a vacuously empty result
+                # because the status filter removes first (registered) before any name check.
+                token = second["registration_token"] if view == "waitlist" else first["registration_token"]
+                response = client.get(endpoint, headers=headers, params={"view": view, "tokens": str(token)})
                 assert response.status_code == 200, (endpoint, view, response.status_code)
                 with ZipFile(BytesIO(response.content)) as archive:
                     xml = b"".join(archive.read(name) for name in archive.namelist() if name.endswith(".xml"))
                 assert b"ForeignSensitiveChild" not in xml
                 assert b"ForeignWaitlistedChild" not in xml
+        for endpoint, views in exports:
+            for view in views:
+                response = client.get(endpoint, headers=headers, params={"view": view})
+                assert response.status_code == 200, (endpoint, view, response.status_code)
+                with ZipFile(BytesIO(response.content)) as archive:
+                    xml = b"".join(archive.read(name) for name in archive.namelist() if name.endswith(".xml"))
+                assert b"ForeignSensitiveChild" not in xml
+                assert b"ForeignWaitlistedChild" not in xml
+                if view == "waitlist":
+                    assert b"OwnWaitlistedChild" in xml
     with cursor() as cur:
         cur.execute("SELECT child_first_name,status,payment_status FROM camp_registrations WHERE registration_token=%s", (first["registration_token"],))
         row = cur.fetchone()

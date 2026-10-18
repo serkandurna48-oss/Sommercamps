@@ -57,20 +57,22 @@ export default function ActionForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col items-start gap-1.5">
+    <form action={formAction} className="flex flex-col items-start gap-2">
       {effectiveConfirming && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
-            {requireConfirm}
-          </span>
+        <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
+          {requireConfirm}
+        </p>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" disabled={pending} variant={variant} brandStrong={brandStrong} brandOn={brandOn}>
+          {pending ? pendingLabel : label}
+        </Button>
+        {effectiveConfirming && (
           <Button type="button" variant="quiet" onClick={() => setConfirming(false)}>
             Abbrechen
           </Button>
-        </div>
-      )}
-      <Button type="submit" disabled={pending} variant={variant} brandStrong={brandStrong} brandOn={brandOn}>
-        {pending ? pendingLabel : label}
-      </Button>
+        )}
+      </div>
       {state.error && (
         <p className="cp-confirm-pop cp-chip motion-reduce:animate-none" style={{ color: 'var(--cp-error)' }} role="alert">
           {state.error}

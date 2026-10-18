@@ -25,6 +25,22 @@ Die Migration ist wiederholbar: eigene Policies werden mit `DROP POLICY IF EXIST
 ersetzt. Andere Policies werden nicht gelöscht; vor einer späteren Cloud-Anwendung
 muss deren tatsächlicher Stand geprüft werden. Dieses Paket enthält kein Deployment.
 
+## Vor Cloud-Anwendung
+
+Bevor die Migration auf dem produktiven CampsPilot-SaaS-Supabase-Projekt
+(`backend_saas/`) ausgeführt wird:
+
+1. `supabase/check_db_role.sql` im SQL-Editor des Projekts (pilot oder auth,
+   Rolle `postgres`/`service_role`) ausführen.
+2. Gibt die Abfrage Zeilen zurück, existieren Policies auf den sechs Tabellen,
+   die nicht mit `s3_` beginnen. Die Migration würde sofort mit einem
+   `RAISE EXCEPTION` abbrechen (kein s3_-Zustand wird angelegt).
+3. Bei Fremdpolicies entscheidet **Serkan**: Policy entfernen oder umbenennen,
+   dann Migration erneut prüfen.
+
+Die Migration enthält keinen automatischen Löschpfad für Fremdpolicies —
+die Entscheidung bleibt beim Menschen.
+
 ## Verifikation
 
 Eigener PostgreSQL-Cluster auf `127.0.0.1:55443`, zufällige Testdatenbank mit allen

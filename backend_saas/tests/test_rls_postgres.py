@@ -129,3 +129,63 @@ def test_migration_is_repeatable(local_database):
         with conn.cursor() as cur:
             cur.execute(migration.read_text(encoding="utf-8"))
             cur.execute(migration.read_text(encoding="utf-8"))
+
+
+def test_migration_aborts_on_foreign_policy(local_database):
+    migration_sql = (
+        Path(__file__).resolve().parents[2]
+        / "supabase/migrations/20261018154831_tenant_read_policies.sql"
+    ).read_text(encoding="utf-8")
+
+    # Drop all s3_ policies so we can verify the aborted migration creates none.
+    setup = psycopg2.connect(**local_database)
+    setup.autocommit = True
+    try:
+        with setup.cursor() as cur:
+            for table in TABLES:
+                cur.execute(
+                    "SELECT policyname FROM pg_policies "
+                    "WHERE schemaname='public' AND tablename=%s AND policyname LIKE 's3\\_%%'",
+                    (table,),
+                )
+                for (name,) in cur.fetchall():
+                    cur.execute(
+                        sql.SQL("DROP POLICY IF EXISTS {} ON public.{}").format(
+                            sql.Identifier(name), sql.Identifier(table)
+                        )
+                    )
+            cur.execute(
+                "CREATE POLICY foreign_open ON public.camp_registrations"
+                " FOR SELECT TO authenticated USING (true)"
+            )
+    finally:
+        setup.close()
+
+    try:
+        with pytest.raises(psycopg2.errors.RaiseException):
+            with psycopg2.connect(**local_database) as run:
+                with run.cursor() as cur:
+                    cur.execute(migration_sql)
+
+        verify = psycopg2.connect(**local_database)
+        try:
+            with verify.cursor() as cur:
+                cur.execute(
+                    "SELECT count(*) FROM pg_policies "
+                    "WHERE schemaname='public' AND tablename=ANY(%s) AND policyname LIKE 's3\\_%%'",
+                    (list(TABLES),),
+                )
+                assert cur.fetchone()[0] == 0
+        finally:
+            verify.close()
+    finally:
+        restore = psycopg2.connect(**local_database)
+        restore.autocommit = True
+        try:
+            with restore.cursor() as cur:
+                cur.execute("DROP POLICY IF EXISTS foreign_open ON public.camp_registrations")
+        finally:
+            restore.close()
+        with psycopg2.connect(**local_database) as reapply:
+            with reapply.cursor() as cur:
+                cur.execute(migration_sql)

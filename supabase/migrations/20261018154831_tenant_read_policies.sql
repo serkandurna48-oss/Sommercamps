@@ -6,6 +6,32 @@
 -- validation, capacity locking, audit records and role assignment.
 -- No data/columns change: no additional personal data or privacy-notice impact.
 
+-- Abort immediately if any permissive policy whose name does not start with
+-- 's3_' exists on one of the six tables. Such a policy would remain active
+-- alongside ours (OR semantics) and could expose cross-tenant data.
+DO $$
+DECLARE
+    _r RECORD;
+BEGIN
+    FOR _r IN
+        SELECT tablename, policyname
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename IN (
+              'platform_owners', 'organization_members', 'organizations',
+              'camps', 'camp_registrations', 'audit_log'
+          )
+          AND policyname NOT LIKE 's3\_%' ESCAPE '\'
+        ORDER BY tablename, policyname
+    LOOP
+        RAISE EXCEPTION
+            'Fremdpolicy auf %.%: Migration abgebrochen. '
+            'Policy prüfen und entscheiden (docs/saas/rls-s3.md § "Vor Cloud-Anwendung").',
+            _r.tablename, _r.policyname;
+    END LOOP;
+END;
+$$;
+
 alter table public.platform_owners enable row level security;
 alter table public.organization_members enable row level security;
 alter table public.organizations enable row level security;

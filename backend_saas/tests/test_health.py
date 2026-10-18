@@ -20,11 +20,11 @@ def test_health_ok_when_database_reachable(monkeypatch):
         response = client.get("/health")
 
     assert response.status_code == 200
-    assert response.json() == {
-        "status": "ok",
-        "database": "ok",
-        "service": "campspilot-saas-api",
-    }
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["database"] == "ok"
+    assert body["service"] == "campspilot-saas-api"
+    assert body["env"]  # non-empty string, value comes from APP_ENV (default: "local")
 
 
 def test_health_returns_503_when_database_unreachable(monkeypatch):
@@ -44,6 +44,26 @@ def test_health_returns_503_when_database_unreachable(monkeypatch):
     body = response.json()
     assert body["status"] == "error"
     assert body["database"] == "unreachable"
+
+
+def test_health_reports_app_env(monkeypatch):
+    @contextmanager
+    def fake_get_cursor():
+        yield MagicMock()
+
+    monkeypatch.setattr(db, "get_cursor", fake_get_cursor)
+
+    from app import main as app_main
+    from app.config import Settings
+    monkeypatch.setattr(app_main, "settings", Settings.model_construct(
+        app_env="test-staging", app_name="CampsPilot SaaS API"
+    ))
+
+    with TestClient(app) as client:
+        response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json()["env"] == "test-staging"
 
 
 def test_health_response_never_leaks_connection_details(monkeypatch):

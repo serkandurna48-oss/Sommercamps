@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = Field(default="CampsPilot SaaS API", alias="APP_NAME")
-    app_env: str = Field(default="development", alias="APP_ENV")
+    app_env: str = Field(default="local", alias="APP_ENV")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
     # No default on purpose — every environment (local, cloud) must set this

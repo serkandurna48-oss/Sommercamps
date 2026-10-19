@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import StagingBanner from '../../components/saas/StagingBanner'
 import { archivo } from '../../components/saas/fonts'
 import GrainOverlay from '../../components/saas/GrainOverlay'
 import '../../components/saas/tokens.css'
@@ -38,6 +39,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
 
   return (
     <div className={`${archivo.variable} cp-scope min-h-screen`}>
+      <StagingBanner />
       <GrainOverlay />
       <div className="border-b" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-ink)' }}>
         <div className="mx-auto flex max-w-[1080px] items-center justify-between px-4 py-4 md:px-8">

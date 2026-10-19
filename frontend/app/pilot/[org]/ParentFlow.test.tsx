@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it, vi } from 'vitest'
-import type { OrganizationPublic } from '../../lib/saasApi'
-import ParentFlow, { headlineScale } from './ParentFlow'
+import type { CampPublic, OrganizationPublic } from '../../lib/saasApi'
+import ParentFlow, { CampScreen, headlineScale } from './ParentFlow'
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
 vi.mock('./motion', () => ({ useParentFlowMotion: () => {} }))
@@ -97,4 +97,21 @@ it('headlineScale: JKs langer Leitsatz (>48 Zeichen) → md', () => {
 it('akademie h1 trägt data-scale="md" bei JKs Leitsatz', () => {
   const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'akademie', intro_heading: jkLeitsatz }} camps={[]} />)
   expect(html).toContain('data-scale="md"')
+})
+
+// ── M3: CampScreen ──
+it('CampScreen rendert Camp-Titel, Preis und CTA', () => {
+  const camp: CampPublic = {
+    slug: 'camp-a', title: 'Sommercamp A', start_date: '2026-07-07', end_date: '2026-07-11',
+    registration_start: null, registration_end: null,
+    age_min: 8, age_max: 14, capacity: 30, price_cents: 19900, currency: 'EUR',
+    registration_open: true, location: 'Kassel', care_info: null, meals_info: null, includes: null,
+    registered_count: 10, waitlist_count: 0, spots_remaining: 20, is_full: false,
+  }
+  const html = renderToStaticMarkup(
+    <CampScreen org={{ ...org, theme: 'tradition' }} camp={camp} onBack={() => {}} onRegister={() => {}} />,
+  )
+  expect(html).toContain('Sommercamp A')
+  expect(html).toContain('199') // Preis 199,00 € enthält "199"
+  expect(html).toContain('Jetzt anmelden')
 })

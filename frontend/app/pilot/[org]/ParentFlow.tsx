@@ -358,7 +358,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
   )
 }
 
-function CampScreen({
+export function CampScreen({
   org,
   camp,
   onBack,
@@ -373,41 +373,52 @@ function CampScreen({
   const tight = !camp.is_full && camp.spots_remaining <= 3
   const containerRef = useRef<HTMLElement>(null)
   useParentFlowMotion(org.theme, containerRef)
+  const startDay = parseInt(camp.start_date.slice(8, 10))
+  const startMonth = new Date(camp.start_date + 'T12:00:00').toLocaleString('de-DE', { month: 'long' })
 
   return (
     <section className="screen" id="s-camp" ref={containerRef}>
-      <div className="top">
-        <button className="back" type="button" onClick={onBack} aria-label="Zurück zur Übersicht">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <div className="camp-back pad">
+        <button className="back-link" type="button" onClick={onBack} aria-label="Zurück zur Übersicht">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M15 5l-7 7 7 7" />
           </svg>
+          Zurück zur Übersicht
         </button>
-        <div className="who">
-          <b>{org.name}</b>
-          <span>{camp.title}</span>
-        </div>
       </div>
 
-      <div className="pad sec" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <div className="tags">
-          <span className={`chip ${camp.registration_open ? 'ok' : 'info'}`}>{camp.registration_open ? 'Anmeldung geöffnet' : 'Anmeldung geschlossen'}</span>
-          <span className="tag">
-            {camp.age_min} bis {camp.age_max} Jahre
-          </span>
-        </div>
-        <h1 className="d1" data-split style={{ fontSize: 'clamp(28px,6.4vw,46px)' }}>
-          {camp.title}
-        </h1>
-        <span className="num" style={{ fontSize: 17, fontWeight: 600, color: 'var(--ink-2)' }}>
-          {formatCampDateRange(camp.start_date, camp.end_date)}
-        </span>
-        <div className="cap">
-          <div className={`bar${camp.is_full ? ' full' : ''}`}>
-            <i style={{ width: `${pct}%` }} />
+      <div className="camp-hd pad">
+        <div className="camp-hd-in">
+          <div className="camp-hd-main">
+            <span className="sec-label">
+              {[camp.location, formatCampDateRange(camp.start_date, camp.end_date)].filter(Boolean).join(' · ')}
+            </span>
+            <h1 className="d1" data-split data-scale={headlineScale(camp.title)} lang="de">
+              {camp.title}
+            </h1>
+            <p className="camp-hd-intro">
+              {camp.age_min}–{camp.age_max} Jahre
+            </p>
           </div>
-          <span className={`t num${tight ? ' tight' : ''}`}>
-            {tight ? `Nur noch ${camp.spots_remaining} Plätze frei` : `${camp.spots_remaining} von ${camp.capacity} Plätzen frei`}
-          </span>
+          <div className="camp-date-block">
+            <b className="camp-date-num num">{startDay}</b>
+            <span className="camp-date-month">{startMonth}</span>
+          </div>
+        </div>
+        <div className="camp-hd-meta">
+          <div className="tags">
+            <span className={`chip ${camp.registration_open ? 'ok' : 'info'}`}>
+              {camp.registration_open ? 'Anmeldung geöffnet' : 'Anmeldung geschlossen'}
+            </span>
+          </div>
+          <div className="cap">
+            <div className={`bar${camp.is_full ? ' full' : ''}`}>
+              <i style={{ width: `${pct}%` }} />
+            </div>
+            <span className={`t num${tight ? ' tight' : ''}`}>
+              {tight ? `Nur noch ${camp.spots_remaining} Plätze frei` : `${camp.spots_remaining} von ${camp.capacity} Plätzen frei`}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -420,10 +431,12 @@ function CampScreen({
             </div>
           )}
           <div className="r">
+            <dt>Zeitraum</dt>
+            <dd>{formatCampDateRange(camp.start_date, camp.end_date)}</dd>
+          </div>
+          <div className="r">
             <dt>Jahrgänge</dt>
-            <dd className="num">
-              {camp.age_min} bis {camp.age_max} Jahre
-            </dd>
+            <dd className="num">{camp.age_min} bis {camp.age_max} Jahre</dd>
           </div>
           {camp.care_info && (
             <div className="r">
@@ -441,16 +454,11 @@ function CampScreen({
       </div>
 
       {camp.includes && camp.includes.length > 0 && (
-        <div className="pad" style={{ paddingBottom: 28, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <h2 className="d3">Im Preis enthalten</h2>
-          <ul className="list-check">
+        <div className="pad" style={{ paddingBottom: 28 }}>
+          <span className="sec-label">Im Preis enthalten</span>
+          <ul className="camp-incl">
             {camp.includes.map((item, i) => (
-              <li key={i} data-rise>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: 3 }}>
-                  <path d="M5 12.5l4.5 4.5L19 7" />
-                </svg>
-                <span>{item}</span>
-              </li>
+              <li key={i} data-rise>{item}</li>
             ))}
           </ul>
         </div>
@@ -460,18 +468,16 @@ function CampScreen({
         <div className="line">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <span className="sum num">{formatPrice(camp.price_cents, camp.currency)}</span>
-            <span className="muted" style={{ fontSize: 12 }}>
-              pro Kind
-            </span>
+            <span className="muted" style={{ fontSize: 12 }}>pro Kind</span>
           </div>
           <button
-            className="btn primary"
+            className="btn primary btn-pill"
             type="button"
             onClick={onRegister}
             disabled={!camp.registration_open}
             style={{ width: 'auto', flexGrow: 1, maxWidth: 250 }}
           >
-            Kind anmelden
+            Jetzt anmelden
           </button>
         </div>
       </div>

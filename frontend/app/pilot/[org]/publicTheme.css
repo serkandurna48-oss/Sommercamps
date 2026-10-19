@@ -2025,3 +2025,335 @@
   background: var(--surface);
   border: 1px solid var(--line-2);
 }
+
+/* ══════════════════════════════════════════════
+   M3 — Camp-Detail, Formular, Bestätigung
+   ══════════════════════════════════════════════ */
+
+/* ── M3 Camp-Detail: Zurück-Textlink ── */
+.cp-public .camp-back {
+  padding: 16px 20px 8px;
+}
+@media (min-width: 900px) {
+  .cp-public .camp-back {
+    padding-inline: 40px;
+  }
+}
+.cp-public .back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.18s var(--ease);
+}
+.cp-public .back-link:hover { color: var(--ink); }
+.cp-public .back-link svg { flex-shrink: 0; }
+
+/* ── M3 Camp-Detail: kleiner Hero-Kopf ── */
+.cp-public .camp-hd {
+  padding: 32px 20px 28px;
+}
+@media (min-width: 900px) {
+  .cp-public .camp-hd {
+    padding: 48px 40px 36px;
+  }
+}
+.cp-public .camp-hd-in {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+@media (min-width: 900px) {
+  .cp-public .camp-hd-in {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 40px;
+  }
+}
+.cp-public .camp-hd-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+.cp-public .camp-hd h1 {
+  line-height: .92;
+  letter-spacing: -.03em;
+  max-width: 20ch;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+.cp-public .camp-hd h1[data-scale='xl'] { font-size: clamp(2.8rem, 8vw, 7.5rem); }
+.cp-public .camp-hd h1[data-scale='lg'] { font-size: clamp(2.4rem, 6vw, 5.5rem); }
+.cp-public .camp-hd h1[data-scale='md'] { font-size: clamp(2rem, 4.6vw, 4.25rem); }
+.cp-public .camp-hd-intro {
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 42ch;
+}
+.cp-public .camp-date-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+@media (min-width: 900px) {
+  .cp-public .camp-date-block { align-items: flex-end; }
+}
+.cp-public .camp-date-num {
+  font-family: var(--display);
+  font-size: clamp(2.5rem, 3.5vw, 3.5rem);
+  font-weight: var(--dw);
+  letter-spacing: var(--dtrack);
+  line-height: 1;
+}
+.cp-public .camp-date-month {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.cp-public .camp-hd-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+/* ── M3 Camp-Detail: ruhige Leistungsliste ── */
+.cp-public .camp-incl {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+  margin-top: 12px;
+}
+.cp-public .camp-incl li {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  padding-left: 20px;
+  position: relative;
+}
+.cp-public .camp-incl li::before {
+  content: '–';
+  position: absolute;
+  left: 0;
+  opacity: 0.45;
+}
+
+/* ── M3 Gemeinsam: Pill-Button-Modifier ── */
+.cp-public .btn-pill {
+  border-radius: 9999px;
+}
+.cp-public .btn-pill:focus-visible {
+  outline-offset: 3px;
+}
+
+/* ── M3 Camp-Detail: Glas-Dock (Akademie) ── */
+.cp-public[data-theme='akademie'] .dock {
+  background: rgba(255,255,255,.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255,255,255,.12);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.18);
+}
+
+/* ── M3 Formular: Abschnittskopf als Label + h2 ── */
+.cp-public .fsec-head {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 18px;
+}
+.cp-public[data-theme='tradition'] .fsec-head {
+  align-items: center;
+  text-align: center;
+}
+.cp-public[data-theme='akademie'] .fsec-head {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* ── M3 Formular: max-width 560px (Desktop) ── */
+@media (min-width: 900px) {
+  .cp-public #s-form .form-body {
+    max-width: 560px;
+  }
+}
+
+/* ── M3 Formular: Felder 48px / 17px Schrift ── */
+.cp-public #s-form .field input,
+.cp-public #s-form .field select {
+  height: 48px;
+  font-size: 17px;
+}
+.cp-public #s-form .err > span {
+  font-size: 14px;
+}
+.cp-public #s-form .consent input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+}
+
+/* ── M3 Formular: Fortschrittsanzeige als Text ── */
+.cp-public .prog.prog-m3 {
+  display: flex;
+  align-items: center;
+  padding-block: 12px 14px;
+}
+.cp-public .prog-text {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── M3 DoneScreen: große Headline (lg-Skala) ── */
+.cp-public .done-headline {
+  font-size: clamp(2.4rem, 6vw, 5.5rem);
+  line-height: .92;
+  letter-spacing: -.03em;
+  max-width: 20ch;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+.cp-public .done-sub {
+  font-size: 17px;
+  line-height: 1.55;
+  max-width: 42ch;
+}
+
+/* ── M3 DoneScreen: Zusammenfassungs-Karte ── */
+.cp-public[data-theme='akademie'] .done-summary {
+  background: rgba(255,255,255,.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 28px;
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.18);
+  padding: 28px;
+}
+.cp-public[data-theme='tradition'] .done-summary,
+.cp-public[data-theme='kompakt'] .done-summary {
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-card);
+  padding: 24px;
+}
+.cp-public[data-theme='kompakt'] .done-summary {
+  border-width: 2px;
+}
+.cp-public .done-summary-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.cp-public .done-summary-rows {
+  display: flex;
+  flex-direction: column;
+}
+.cp-public .done-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line-2);
+}
+.cp-public .done-summary-row:first-child { border-top: 0; }
+.cp-public[data-theme='akademie'] .done-summary-row {
+  border-color: rgba(255,255,255,.1);
+}
+.cp-public .done-summary-row dt {
+  font-size: 13px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.cp-public .done-summary-row dd {
+  font-size: 14px;
+  font-weight: 500;
+  text-align: right;
+}
+
+/* ── M3 DoneScreen: Überweisungsblock ── */
+.cp-public .done-transfer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line-2);
+}
+.cp-public[data-theme='akademie'] .done-transfer {
+  border-color: rgba(255,255,255,.1);
+}
+.cp-public .done-transfer-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.cp-public .done-transfer-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cp-public .done-transfer-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+}
+.cp-public .done-transfer-row dt {
+  color: var(--muted);
+  width: 100px;
+  flex-shrink: 0;
+}
+.cp-public .done-transfer-row dd {
+  font-size: 14px;
+  font-weight: 500;
+}
+.cp-public .done-ref-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.cp-public .done-ref {
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-field);
+  flex: 1;
+  overflow-wrap: break-word;
+  word-break: break-all;
+}
+.cp-public[data-theme='akademie'] .done-ref {
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.12);
+}
+.cp-public .done-ref-note {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}

@@ -84,3 +84,26 @@ it('does not promise a prior acceptance step before costs on the waitlist', () =
   expect(html).not.toContain('Zusage')
   expect(html).toContain('sofort nach')
 })
+
+// ── M3: Zusammenfassung und Überweisungsblock ──
+it('rendert Zusammenfassungskarte mit Kind, Camp, Zeitraum und Preis', () => {
+  const html = render()
+  expect(html).toContain('done-summary')
+  expect(html).toContain('Mia') // Kind
+  expect(html).toContain('Sommercamp') // Camp-Titel
+  expect(html).toContain('149') // Preis 149,00 € enthält "149"
+})
+
+it('rendert Überweisungsblock mit kopierbarem Verwendungszweck bei gesetzter IBAN', () => {
+  const html = render()
+  expect(html).toContain('done-transfer')
+  expect(html).toContain('DE89370400440532013000') // IBAN
+  expect(html).toContain('done-ref') // monospace Verwendungszweck-Element
+  expect(html).toContain('CP-1234') // Verwendungszweck
+})
+
+it('zeigt keinen Überweisungsblock bei Warteliste', () => {
+  const html = render({ result: { status: 'waitlist' } })
+  expect(html).not.toContain('done-transfer')
+  expect(html).not.toContain('DE89370400440532013000')
+})

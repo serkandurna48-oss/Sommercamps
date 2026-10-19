@@ -243,7 +243,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
       </div>
 
       {hero && (
-        <div className="img-strip">
+        <div className="img-strip" data-section>
           <Image src={hero} alt="" unoptimized fill style={{ objectFit: 'cover', objectPosition: 'center 35%' }} />
           <div className="img-strip-veil" />
         </div>
@@ -266,7 +266,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
         <h2 className="d2" data-split>Häufige Fragen</h2>
         <div className="faq">
           {publicUI.faq.map((item, i) => (
-            <details key={i} className="faq-item">
+            <details key={i} className="faq-item" data-rise>
               <summary>{item.q}</summary>
               <p>{item.a}</p>
             </details>

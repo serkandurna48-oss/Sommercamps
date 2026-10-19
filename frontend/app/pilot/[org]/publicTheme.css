@@ -620,7 +620,7 @@
   background: none;
   border: 0;
   color: inherit;
-  transition: background 0.22s var(--ease);
+  transition: background 0.22s var(--ease), box-shadow 0.22s var(--ease), transform 0.22s var(--ease);
 }
 .cp-public[data-theme='tradition'] .camp {
   grid-template-columns: 74px minmax(0, 1fr);
@@ -1203,7 +1203,7 @@
   font-weight: 600;
   cursor: pointer;
   width: 100%;
-  transition: filter 0.2s var(--ease);
+  transition: filter 0.2s var(--ease), background-color 0.2s var(--ease), border-color 0.2s var(--ease);
 }
 .cp-public .btn.primary {
   background: var(--brand-strong);
@@ -1650,4 +1650,47 @@
   line-height: 1.65;
   color: var(--ink-2);
   padding-bottom: 18px;
+}
+
+/* ── M1 Motion ── */
+
+/* Hero-Foto: sehr leichter Zoom-out beim Laden (CSS standalone scale-Property,
+   kein Konflikt mit GSAP-transform auf dem gleichen Element) */
+@keyframes cp-hero-zoom-out {
+  from { scale: 1.04; }
+  to   { scale: 1; }
+}
+.cp-public .h-trad .shot img {
+  animation: cp-hero-zoom-out 1.1s ease-out;
+}
+.cp-public .h-akad .bg img {
+  animation: cp-hero-zoom-out 1.4s ease-out;
+}
+
+/* Abschnitt-Einblendung beim Scrollen.
+   Initialzustand (opacity:0) wird NUR gesetzt, wenn JS die Klasse .m1-ready
+   hinzufügt — ohne JS oder im SSR sind alle Inhalte sichtbar. */
+.m1-ready [data-section] {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+.m1-ready [data-section].m1-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Camp-Karten: Hover-/Fokus-Schatten (2–4 px Hebung je Theme) */
+.cp-public[data-theme='tradition'] .camp:hover,
+.cp-public[data-theme='tradition'] .camp:focus-visible {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+.cp-public[data-theme='akademie'] .camp:hover,
+.cp-public[data-theme='akademie'] .camp:focus-visible {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.36);
+  transform: translateY(-3px);
+}
+.cp-public[data-theme='kompakt'] .camp:hover,
+.cp-public[data-theme='kompakt'] .camp:focus-visible {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }

@@ -131,7 +131,31 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
     const container = containerRef.current
     if (reduce || !container) return
 
-    let cleanup: (() => void) | undefined
+    // M1: Abschnitt-Einblendung — synchron starten (kein GSAP, kein Library)
+    // Bereits sichtbare Abschnitte sofort markieren, bevor m1-ready gesetzt
+    // wird, damit kein Flicker entsteht.
+    container.querySelectorAll<Element>('[data-section]').forEach((el) => {
+      if ((el as HTMLElement).getBoundingClientRect().top < window.innerHeight * 0.9) {
+        el.classList.add('m1-in')
+      }
+    })
+    container.classList.add('m1-ready')
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            ;(e.target as HTMLElement).classList.add('m1-in')
+            io.unobserve(e.target)
+          }
+        })
+      },
+      { threshold: 0.1 },
+    )
+    container.querySelectorAll<Element>('[data-section]').forEach((el) => {
+      if (!el.classList.contains('m1-in')) io.observe(el)
+    })
+
+    let gsapCleanup: (() => void) | undefined
     let cancelled = false
     const playedTweens: ReturnType<Gsap['to']>[] = []
     const allTweens: ReturnType<Gsap['to']>[] = []
@@ -161,10 +185,33 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
           revealOnScroll(ScrollTrigger, h, 0.9, tween, playedTweens)
         })
 
+        // M1: Camp-Karten gestaffelt — als Gruppe, bevor der allgemeine
+        // [data-rise]-Durchlauf läuft, damit kein Doppel-Tween entsteht.
+        const campEls = Array.from(container.querySelectorAll<HTMLElement>('.camps .camp[data-rise]'))
+        if (campEls.length > 0) {
+          const campY = theme === 'kompakt' ? 12 : 18
+          const campDur = theme === 'kompakt' ? 0.44 : 0.52
+          const campTween = gsap.fromTo(
+            campEls,
+            { y: campY, opacity: 0 },
+            { y: 0, opacity: 1, duration: campDur, ease: 'expo.out', stagger: 0.08, paused: true },
+          )
+          allTweens.push(campTween)
+          revealOnScroll(ScrollTrigger, campEls[0], 0.94, campTween, playedTweens)
+          campEls.forEach((el) => { el.dataset.riseHandled = '1' })
+        }
+
+        // [data-rise] — Hero-Elemente (immer im Viewport beim Laden) bekommen
+        // kürzere Dauer (400–650 ms), Rest behält Theme-Timing.
         container.querySelectorAll<HTMLElement>('[data-rise]').forEach((el) => {
-          const y = theme === 'kompakt' ? 14 : 26
-          const riseDur = theme === 'kompakt' ? 0.5 : 0.9
-          const tween = gsap.fromTo(el, { y, opacity: 0 }, { y: 0, opacity: 1, duration: riseDur, ease: 'expo.out', paused: true })
+          if (el.dataset.riseHandled) return
+          const inHero = !!el.closest('.hero')
+          const y = inHero ? 12 : theme === 'kompakt' ? 14 : 26
+          const riseDur = inHero
+            ? theme === 'kompakt' ? 0.42 : theme === 'akademie' ? 0.58 : 0.52
+            : theme === 'kompakt' ? 0.5 : 0.9
+          const riseEas = inHero ? 'power2.out' : 'expo.out'
+          const tween = gsap.fromTo(el, { y, opacity: 0 }, { y: 0, opacity: 1, duration: riseDur, ease: riseEas, paused: true })
           allTweens.push(tween)
           revealOnScroll(ScrollTrigger, el, 0.94, tween, playedTweens)
         })
@@ -222,11 +269,13 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
       // gedrosselt in Hintergrund-Tabs feuert es irgendwann) und zwingt jede
       // bereits gestartete Einblendung spätestens nach 1,5 s in ihren
       // Endzustand — lieber sofort fertig als dauerhaft kaputt aussehend.
+      // M1: Abschnitte ebenfalls sicherstellen.
       const safety = window.setTimeout(() => {
         allTweens.forEach((t) => t.progress(1))
+        container.querySelectorAll<HTMLElement>('[data-section]').forEach((el) => el.classList.add('m1-in'))
       }, 1500)
 
-      cleanup = () => {
+      gsapCleanup = () => {
         window.clearTimeout(safety)
         ctx.revert()
       }
@@ -234,7 +283,9 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
 
     return () => {
       cancelled = true
-      cleanup?.()
+      container.classList.remove('m1-ready')
+      io.disconnect()
+      gsapCleanup?.()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme])

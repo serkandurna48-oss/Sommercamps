@@ -10,6 +10,7 @@ param(
     [switch]$ValidateOnly
 )
 
+$ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $guardPath = Join-Path $projectRoot '.claude/hooks/guard-prod.ps1'
 $settingsPath = Join-Path $projectRoot '.claude/settings.json'
@@ -36,10 +37,30 @@ if ($ValidateOnly) {
     exit 0
 }
 
-$hooksDir = Join-Path $MainRepoPath ".git\hooks"
-if (-not (Test-Path $hooksDir)) {
-    Write-Error "Kein git-Repo oder hooks-Ordner fehlt: $hooksDir"
+$commonDir = (& git -C $MainRepoPath rev-parse --path-format=absolute --git-common-dir 2>$null)
+if ($LASTEXITCODE -ne 0 -or -not $commonDir) {
+    Write-Error "Kein git-Repo: $MainRepoPath"
     exit 1
+}
+$hooksDir = Join-Path $commonDir 'hooks'
+$configuredHooksPath = & git -C $MainRepoPath config --get core.hooksPath
+if ($LASTEXITCODE -ne 1) {
+    throw 'core.hooksPath is configured or cannot be checked; shared hooks would not reliably protect this repository.'
+}
+if (-not (Test-Path -LiteralPath $hooksDir -PathType Container)) {
+    Write-Error "Git hooks-Ordner fehlt: $hooksDir"
+    exit 1
+}
+
+function Install-GitHook([string]$Name, [string]$Content) {
+    $path = Join-Path $hooksDir $Name
+    if (Test-Path -LiteralPath $path -PathType Leaf) {
+        $backup = $path + '.backup-' + [guid]::NewGuid().ToString('N')
+        Copy-Item -LiteralPath $path -Destination $backup -ErrorAction Stop
+        Write-Host "Gesichert: $backup"
+    }
+    [System.IO.File]::WriteAllText($path, $Content, (New-Object System.Text.UTF8Encoding($false)))
+    Write-Host "Installiert: $path"
 }
 
 # Unix LF endings are required — git on Windows runs hooks via sh.
@@ -52,8 +73,10 @@ $hookContent = "#!/bin/sh`n" +
 "# Not a branch switch — nothing to check.`n" +
 "[ `"`$branch_checkout`" = `"1`" ] || exit 0`n" +
 "`n" +
-"# Linked worktree: GIT_DIR contains 'worktrees' — leave it alone.`n" +
-"case `"`$GIT_DIR`" in *worktrees*) exit 0 ;; esac`n" +
+"# Linked worktrees have a private git dir distinct from the common dir.`n" +
+"git_dir=`$(git rev-parse --absolute-git-dir) || exit 1`n" +
+"common_dir=`$(git rev-parse --path-format=absolute --git-common-dir) || exit 1`n" +
+"[ `"`$git_dir`" = `"`$common_dir`" ] || exit 0`n" +
 "`n" +
 "new_branch=`$(git symbolic-ref --short HEAD 2>/dev/null)`n" +
 "[ `"`$new_branch`" = `"demo/jan`" ] && exit 0`n" +
@@ -69,9 +92,16 @@ $hookContent = "#!/bin/sh`n" +
 "    echo `"  Working tree dirty — bitte manuell: git checkout demo/jan`"`n" +
 "fi`n"
 
-$hookPath = Join-Path $hooksDir "post-checkout"
-[System.IO.File]::WriteAllText($hookPath, $hookContent)
-
-Write-Host "Installiert: $hookPath"
+Install-GitHook 'post-checkout' $hookContent
+$pushContent = @'
+#!/bin/sh
+# Shared across worktrees. Only an exact, explicit override permits a push.
+if [ "$CAMPSPILOT_ALLOW_PUSH" = "yes-serkan" ]; then
+    exit 0
+fi
+echo "CampsPilot pre-push: push blocked; CAMPSPILOT_ALLOW_PUSH must equal yes-serkan." >&2
+exit 1
+'@ -replace "`r`n", "`n"
+Install-GitHook 'pre-push' $pushContent
 Write-Host 'Prod guard uses tracked .claude/settings.json; restart Claude Code after applying the commit.'
 Write-Host 'Payload-only tests: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-guards.ps1'

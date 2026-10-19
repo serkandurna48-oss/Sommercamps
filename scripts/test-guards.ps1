@@ -1,9 +1,10 @@
-# Payload-only tests: command strings are data, never shell input.
+# Payloads stay inert; Extended/GitOnly also exercise Git against a local bare repo.
 param(
     [string]$GuardScript = (Join-Path (Split-Path $PSScriptRoot -Parent) '.claude/hooks/guard-prod.ps1'),
     [string]$ShellPath = (Join-Path $PSHOME $(if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' })),
     [string]$ReportPath,
     [switch]$Extended,
+    [switch]$GitOnly,
     [switch]$BoundarySweep
 )
 $ErrorActionPreference = 'Stop'
@@ -94,7 +95,33 @@ try {
         @{ D='git option quoted semicolon'; C='git -c user.name="A;B" push origin demo'; E=2 }
         @{ D='psql stdin redirect'; C='PGHOST=db.wkmckfbzhmihyfwiekct.supabase.co psql<example.sql'; E=2 }
         @{ D='psql exe redirect'; C='$env:PGHOST="db.asowsktznpiioaxerlta.supabase.co"; psql.exe>example.log'; E=2 }
+        @{ D='C4 git global option'; C='git -c user.name=Example push origin example'; E=2 }
+        @{ D='C4 cmd wrapper'; C='cmd /c "git push origin example"'; E=2 }
+        @{ D='C4 variable program boundary'; C='$g="git"; & $g push origin example'; E=0 }
+        @{ D='C4 variable prod URL boundary'; C='curl -X POST "$PROD_API"'; E=0 }
+        @{ D='alias for git'; C='Set-Alias g git; g push origin example'; E=2 }
+        @{ D='new alias for curl'; C='New-Alias c curl'; E=2 }
+        @{ D='encoded command long'; C=('powershell -EncodedCommand ' + [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes('git push origin example'))); E=2 }
+        @{ D='encoded command short'; C='pwsh -enc ZAB1AG0AbQB5AA=='; E=2 }
+        @{ D='encoded command ec'; C='powershell -ec ZAB1AG0AbQB5AA=='; E=2 }
+        @{ D='git no verify'; C='git --no-verify push origin example'; E=2 }
+        @{ D='git no verify without push'; C='git commit --no-verify -m example'; E=2 }
+        @{ D='git hooksPath'; C='git config core.hooksPath /tmp/elsewhere'; E=2 }
+        @{ D='git hooksPath with file option'; C='git config --file .git/config core.hooksPath /tmp/elsewhere'; E=2 }
+        @{ D='git hooksPath set subcommand'; C='git config set core.hooksPath /tmp/elsewhere'; E=2 }
+        @{ D='curl clustered POST'; C='curl -sXPOST https://campspilot.vercel.app/example'; E=2 }
+        @{ D='curl clustered DELETE'; C='curl -sXDELETE https://campspilot.vercel.app/example'; E=2 }
+        @{ D='curl clustered separate PUT'; C='curl -sSX PUT https://campspilot.vercel.app/example'; E=2 }
+        @{ D='curl request PATCH'; C='curl --request=PATCH https://campspilot.vercel.app/example'; E=2 }
+        @{ D='curl clustered redirect'; C='curl https://campspilot.vercel.app/example -sXPOST>example.log'; E=2 }
+        @{ D='curl clustered quoted lowercase'; C='curl -sX"post" https://campspilot.vercel.app/example'; E=2 }
+        @{ D='curl clustered GET'; C='curl -sSXGET https://campspilot.vercel.app/health'; E=0 }
     )
+    foreach ($aliasCommand in @('Set-Alias', 'New-Alias')) {
+        foreach ($targetTool in @('git', 'gh', 'curl', 'psql', 'Invoke-WebRequest', 'Invoke-RestMethod')) {
+            $tests += @{ D="$aliasCommand target $targetTool"; C="$aliasCommand -Name guarded -Value $targetTool"; E=2 }
+        }
+    }
     if ($Extended) {
         $targets = @(
             'https://sommercamps-0aod.onrender.com/example',
@@ -154,11 +181,16 @@ try {
         }
     }
     $results = @()
+    $root = Split-Path $PSScriptRoot -Parent
+    if (-not $GitOnly) {
     foreach ($tool in @('Bash', 'PowerShell')) {
         foreach ($test in $tests) {
             $payload = @{ tool_name=$tool; tool_input=@{ command=$test.C } } | ConvertTo-Json -Compress -Depth 4
             $result = Test-Guard $GuardScript $payload $test.E
             $results += [PSCustomObject]@{ Tool=$tool; Description=$test.D; Expected=$result.Expected; Actual=$result.Actual; Passed=$result.Passed; Message=$result.Message }
+            if ($results.Count % 50 -eq 0) {
+                Write-Host ("Progress: {0}/{1} payload checks; failures: {2}" -f $results.Count, ($tests.Count * 2), @($results | Where-Object { -not $_.Passed }).Count)
+            }
         }
     }
     foreach ($invalid in @('', '{broken', '{}', 'null', '[]', '{"tool_name":"Bash","tool_input":{"command":42}}', '{"tool_name":"Bash","tool_input":{"command":""}}')) {
@@ -204,6 +236,109 @@ try {
             }
         }
     } finally { if (Test-Path -LiteralPath $fixture) { Remove-Item -LiteralPath $fixture -Force } }
+    }
+    if ($Extended -or $GitOnly) {
+        # Real Git is exercised only against a fresh local bare repository.
+        $caseRoot = Join-Path $root ('guard-git-' + [guid]::NewGuid().ToString('N'))
+        $source = Join-Path $caseRoot 'source'
+        $remote = Join-Path $caseRoot 'remote.git'
+        $linked = Join-Path $caseRoot 'linked'
+        $savedPushOverride = $env:CAMPSPILOT_ALLOW_PUSH
+        $savedErrorPreference = $ErrorActionPreference
+        try {
+            # Windows PowerShell promotes native stderr to errors. Git exit codes
+            # are checked explicitly below, including intentionally rejected pushes.
+            $ErrorActionPreference = 'Continue'
+            New-Item -ItemType Directory -Path $caseRoot | Out-Null
+            & git init --bare $remote 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot create local bare repository' }
+            & git init $source 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot create local source repository' }
+            & git -C $source config user.name 'Guard Test' | Out-Null
+            & git -C $source config user.email 'guard@campspilot.example' | Out-Null
+            Set-Content -LiteralPath (Join-Path $source 'fixture.txt') -Value 'synthetic' -Encoding ASCII
+            & git -C $source add fixture.txt | Out-Null
+            & git -C $source commit -m 'synthetic fixture' 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot commit local fixture' }
+            & git -C $source remote add origin $remote | Out-Null
+            $existingHook = Join-Path $source '.git/hooks/pre-push'
+            [IO.File]::WriteAllText($existingHook, "#!/bin/sh`n# previous hook`nexit 0`n", [Text.Encoding]::ASCII)
+            $existingContent = [IO.File]::ReadAllText($existingHook)
+            & $ShellPath -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $root 'scripts/install-guards.ps1') -MainRepoPath $source 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot install hooks in synthetic repository' }
+            $hookPath = Join-Path $source '.git/hooks/pre-push'
+            $backups = @(Get-ChildItem -LiteralPath (Join-Path $source '.git/hooks') -Filter 'pre-push.backup-*')
+            $backupOK = $backups.Count -eq 1 -and [IO.File]::ReadAllText($backups[0].FullName) -ceq $existingContent
+            $results += [PSCustomObject]@{ Tool='git'; Description='existing hook backed up unchanged'; Expected=1; Actual=$backups.Count; Passed=$backupOK; Message='' }
+            $before = (& git --git-dir=$remote rev-list --all --count).Trim()
+            $env:CAMPSPILOT_ALLOW_PUSH = ''
+            & git -C $source push origin HEAD:refs/heads/blocked 2>&1 | Out-Null
+            $blocked = $LASTEXITCODE
+            $after = (& git --git-dir=$remote rev-list --all --count).Trim()
+            $results += [PSCustomObject]@{ Tool='git'; Description='local push blocked by pre-push'; Expected=1; Actual=$blocked; Passed=($blocked -eq 1 -and $before -eq $after); Message='' }
+
+            $g = 'git'
+            $output = (& $g -C $source push origin HEAD:refs/heads/variable 2>&1 | Out-String)
+            $code = $LASTEXITCODE
+            $results += [PSCustomObject]@{ Tool='git'; Description='C4 variable push blocked'; Expected=1; Actual=$code; Passed=($code -eq 1 -and $output -match 'CampsPilot pre-push: push blocked'); Message=$output }
+            Set-Alias -Name GuardTestGit -Value git -Scope Local
+            $output = (GuardTestGit -C $source push origin HEAD:refs/heads/alias 2>&1 | Out-String)
+            $code = $LASTEXITCODE
+            $results += [PSCustomObject]@{ Tool='git'; Description='C4 alias push blocked'; Expected=1; Actual=$code; Passed=($code -eq 1 -and $output -match 'CampsPilot pre-push: push blocked'); Message=$output }
+            foreach ($override in @('YES-SERKAN', 'yes-serkan ', 'no')) {
+                $env:CAMPSPILOT_ALLOW_PUSH = $override
+                $output = (& git -C $source push origin HEAD:refs/heads/override-blocked 2>&1 | Out-String)
+                $code = $LASTEXITCODE
+                $results += [PSCustomObject]@{ Tool='git'; Description="inexact override blocked: $override"; Expected=1; Actual=$code; Passed=($code -eq 1 -and $output -match 'CampsPilot pre-push: push blocked'); Message=$output }
+            }
+            $env:CAMPSPILOT_ALLOW_PUSH = ''
+
+            $worktreeOutput = (& git -C $source worktree add -b linked $linked 2>&1 | Out-String)
+            if ($LASTEXITCODE -ne 0) { throw "Cannot create linked worktree: $worktreeOutput" }
+            $installedContent = [IO.File]::ReadAllText($hookPath)
+            & $ShellPath -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $root 'scripts/install-guards.ps1') -MainRepoPath $linked 2>&1 | Out-Null
+            $installCode = $LASTEXITCODE
+            $backups = @(Get-ChildItem -LiteralPath (Join-Path $source '.git/hooks') -Filter 'pre-push.backup-*')
+            $results += [PSCustomObject]@{ Tool='git'; Description='linked installer uses common hooks and preserves backup'; Expected=0; Actual=$installCode; Passed=($installCode -eq 0 -and $backups.Count -eq 2 -and [IO.File]::ReadAllText($hookPath) -ceq $installedContent); Message='' }
+            & git -C $linked push origin HEAD:refs/heads/linked 2>&1 | Out-Null
+            $linkedBlocked = $LASTEXITCODE
+            $results += [PSCustomObject]@{ Tool='git'; Description='linked worktree push blocked'; Expected=1; Actual=$linkedBlocked; Passed=($linkedBlocked -eq 1); Message='' }
+            $after = (& git --git-dir=$remote rev-list --all --count).Trim()
+            $results += [PSCustomObject]@{ Tool='git'; Description='all blocked pushes leave bare repo empty'; Expected=0; Actual=[int]$after; Passed=($after -eq '0'); Message='' }
+
+            $env:CAMPSPILOT_ALLOW_PUSH = 'yes-serkan'
+            & git -C $source push origin HEAD:refs/heads/explicit-override 2>&1 | Out-Null
+            $code = $LASTEXITCODE
+            $results += [PSCustomObject]@{ Tool='git'; Description='exact override permits local push'; Expected=0; Actual=$code; Passed=($code -eq 0); Message='' }
+            $env:CAMPSPILOT_ALLOW_PUSH = ''
+
+            & git -C $source config core.hooksPath 'custom-hooks' | Out-Null
+            & $ShellPath -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $root 'scripts/install-guards.ps1') -MainRepoPath $source 2>&1 | Out-Null
+            $code = $LASTEXITCODE
+            $results += [PSCustomObject]@{ Tool='git'; Description='installer rejects custom hooksPath without replacing hooks'; Expected=1; Actual=$code; Passed=($code -eq 1 -and [IO.File]::ReadAllText($hookPath) -ceq $installedContent); Message='' }
+            & git -C $source config --unset core.hooksPath | Out-Null
+            # An explicitly empty hooksPath still overrides Git's default path.
+            Add-Content -LiteralPath (Join-Path $source '.git/config') -Value "`n[core]`n    hooksPath =" -Encoding ASCII
+            & $ShellPath -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $root 'scripts/install-guards.ps1') -MainRepoPath $source 2>&1 | Out-Null
+            $code = $LASTEXITCODE
+            $results += [PSCustomObject]@{ Tool='git'; Description='installer rejects empty hooksPath'; Expected=1; Actual=$code; Passed=($code -eq 1); Message='' }
+            & git -C $source config --unset core.hooksPath | Out-Null
+
+            Rename-Item -LiteralPath $hookPath -NewName 'pre-push.disabled'
+            & git -C $source push origin HEAD:refs/heads/without-hook 2>&1 | Out-Null
+            $withoutHook = $LASTEXITCODE
+            $results += [PSCustomObject]@{ Tool='git'; Description='missing pre-push hook is detected'; Expected=0; Actual=$withoutHook; Passed=($withoutHook -eq 0); Message='Negative control: local push succeeds without the hook' }
+        } finally {
+            $env:CAMPSPILOT_ALLOW_PUSH = $savedPushOverride
+            $ErrorActionPreference = $savedErrorPreference
+            $resolvedRoot = [IO.Path]::GetFullPath($root).TrimEnd('\', '/')
+            $resolvedCase = [IO.Path]::GetFullPath($caseRoot)
+            if (-not $resolvedCase.StartsWith($resolvedRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+                throw 'Synthetic repository escaped project root'
+            }
+            if (Test-Path -LiteralPath $caseRoot) { Remove-Item -LiteralPath $caseRoot -Recurse -Force }
+        }
+    }
     $results | Format-Table Tool, Description, Expected, Actual, Passed -AutoSize | Out-Host
     $failed = @($results | Where-Object { -not $_.Passed }).Count
     Write-Host ("Result: {0}/{1} passed, {2} failures; runtime {3}" -f ($results.Count - $failed), $results.Count, $failed, $PSVersionTable.PSVersion)

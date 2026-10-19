@@ -105,5 +105,6 @@ und kann vorhandene Cloud-Konfiguration laden. Nicht für lokale Tests verwenden
 Historische Optionen waren `-Saas` und `-Demo`; sie gehören zum Altstarter.
 Nur nach bewusster manueller Prüfung einer vollständig isolierten Umgebung wäre
 `powershell -File ./start-dev.legacy.ps1 -Saas` die frühere Bedienung.
-Der sichere Rollback einer Änderung erfolgt per Git-Revert; die Legacy-Datei
-niemals unbemerkt als Standardstarter zurückkopieren.
+Ein vollständiger Git-Revert stellt ebenfalls den ungeschützten Altstarter
+wieder her und verlangt dieselbe bewusste Prüfung der Zielumgebung. Die
+Legacy-Datei niemals unbemerkt als Standardstarter zurückkopieren.

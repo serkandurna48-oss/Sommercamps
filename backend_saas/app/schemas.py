@@ -38,6 +38,10 @@ class OrganizationPublic(BaseModel):
     # Eltern-Flow-Auftrag Abschnitt 3.1/3.2: bestimmt, welches der drei
     # Themes die öffentliche Strecke serverseitig rendert.
     theme: str = "tradition"
+    # Public editorial content; billing_notes remains admin-only.
+    intro_heading: Optional[str] = None
+    intro_text: Optional[str] = None
+    hero_image_url: Optional[str] = None
     # Für die Überweisungs-Zahlungsart auf der Bestätigungsseite (Abschnitt
     # 6.4). Öffentlich absichtlich, nicht schützenswert — eine IBAN, die
     # explizit zum Bezahlen herausgegeben wird, ist kein Geheimnis. NULL =

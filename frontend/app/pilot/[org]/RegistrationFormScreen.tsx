@@ -194,7 +194,7 @@ export default function RegistrationFormScreen({
       </div>
 
       <form onSubmit={handleSubmit} noValidate>
-        <div className="pad">
+        <div className="pad form-body">
           <section className="fsec">
             <div className="fsec-head">
               <span className={`step${sectionDone[1] ? ' done' : ''}`}>1</span>

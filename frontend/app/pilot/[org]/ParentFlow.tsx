@@ -9,6 +9,7 @@ import CampRow from './CampRow'
 import RegistrationFormScreen from './RegistrationFormScreen'
 import DoneScreen from './DoneScreen'
 import { useParentFlowMotion } from './motion'
+import { publicUI } from '../../lib/i18n/de'
 
 type ScreenName = 'org' | 'camp' | 'form' | 'done' | 'wait'
 
@@ -16,11 +17,6 @@ interface DoneState {
   result: RegistrationCreated
   childName: string
   parentEmail: string
-}
-
-const HERO_IMAGE: Record<string, { src: string; alt: string }> = {
-  tradition: { src: '/pilot/leibchen.webp', alt: 'Gefaltete Trainingsleibchen auf einer Bank am Spielfeldrand.' },
-  akademie: { src: '/jk/hero.jpg', alt: 'Trainingsszene auf dem Spielfeld.' },
 }
 
 export default function ParentFlow({ org, camps }: { org: OrganizationPublic; camps: CampPublic[] }) {
@@ -111,19 +107,22 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
     )
   }
 
-  const hero = HERO_IMAGE[org.theme]
+  // Themes control presentation; content belongs to the organization.
+  const hero = org.hero_image_url?.trim()
+  const heading = org.intro_heading?.trim() || org.name
+  const intro = org.intro_text?.trim() || 'Alle Camps auf einen Blick — wählen Sie unten den passenden Termin für Ihr Kind.'
 
   return (
     <section className="screen" id="s-org" ref={orgContainerRef}>
       {org.theme === 'tradition' && (
         <header className="hero h-trad">
           <div className="shield">{shortCode}</div>
-          <h1 className="d1" data-split>{org.name}</h1>
+          <h1 className="d1" data-split>{heading}</h1>
           <div className="rule" />
-          <p className="intro" data-rise>Alle Camps auf einen Blick — wählen Sie unten den passenden Termin für Ihr Kind.</p>
+          <p className="intro" data-rise>{intro}</p>
           {hero && (
             <div className="shot">
-              <Image id="shotA" src={hero.src} alt={hero.alt} width={1040} height={680} priority style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <Image id="shotA" src={hero} alt="" unoptimized width={1040} height={680} priority style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
           )}
         </header>
@@ -131,7 +130,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
 
       {org.theme === 'akademie' && (
         <header className="hero h-akad">
-          <div className="bg">{hero && <Image id="shotB" src={hero.src} alt={hero.alt} fill priority style={{ objectFit: 'cover', opacity: 0.46 }} />}</div>
+          <div className="bg">{hero && <Image id="shotB" src={hero} alt="" unoptimized fill priority style={{ objectFit: 'cover' }} />}</div>
           <div className="veil" />
           <div className="in">
             <span className="mark">
@@ -142,10 +141,18 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
               </span>
               <span className="t">{org.name}</span>
             </span>
-            <h1 className="d1" data-split>{org.name}</h1>
+            <h1 className="d1" data-split>{heading}</h1>
             <p className="intro" data-rise style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--on-band-2)', maxWidth: '40ch' }}>
-              Alle Camps auf einen Blick — wählen Sie unten den passenden Termin für Ihr Kind.
+              {intro}
             </p>
+            {camps.length > 0 && (
+              <div className="stats">
+                <div className="stat">
+                  <b className="num">{camps.reduce((s, c) => s + c.capacity, 0)}</b>
+                  <span>Plätze gesamt</span>
+                </div>
+              </div>
+            )}
           </div>
         </header>
       )}
@@ -158,8 +165,8 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
               <span className="lab">Feriencamps</span>
             </div>
             <div>
-              <h1 className="d1" data-split>{org.name}</h1>
-              <p className="intro" data-rise>Alle Camps auf einen Blick — wählen Sie unten den passenden Termin für Ihr Kind.</p>
+              <h1 className="d1" data-split>{heading}</h1>
+              <p className="intro" data-rise>{intro}</p>
               <div className="facts">
                 <div data-rise>
                   <b className="num" data-count={camps.length}>{camps.length}</b>
@@ -179,6 +186,36 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
             </div>
           </div>
         </header>
+      )}
+
+      {camps.length > 0 && (
+        <div className="factsstrip pad">
+          <div className="factsstrip-in">
+            <div className="fstat">
+              <b className="num">{camps.length}</b>
+              <span>{camps.length === 1 ? 'Camp' : 'Camps'}</span>
+            </div>
+            {(() => {
+              const ageMin = Math.min(...camps.map(c => c.age_min))
+              const ageMax = Math.max(...camps.map(c => c.age_max))
+              return (
+                <div className="fstat">
+                  <b className="num">{ageMin}–{ageMax}</b>
+                  <span>Jahre</span>
+                </div>
+              )
+            })()}
+            {(() => {
+              const locs = [...new Set(camps.map(c => c.location).filter(Boolean))]
+              return locs.length > 0 ? (
+                <div className="fstat fstat-loc">
+                  <b>{locs.join(' · ')}</b>
+                  <span>{locs.length === 1 ? 'Ort' : 'Orte'}</span>
+                </div>
+              ) : null
+            })()}
+          </div>
+        </div>
       )}
 
       <div className="assure">
@@ -202,6 +239,38 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
           ) : (
             camps.map((camp) => <CampRow key={camp.slug} camp={camp} onSelect={openCamp} />)
           )}
+        </div>
+      </div>
+
+      {hero && (
+        <div className="img-strip">
+          <Image src={hero} alt="" unoptimized fill style={{ objectFit: 'cover', objectPosition: 'center 35%' }} />
+          <div className="img-strip-veil" />
+        </div>
+      )}
+
+      <div className="pad how-sec">
+        <h2 className="d2" data-split>{publicUI.howItWorks.heading}</h2>
+        <div className="how-steps">
+          {publicUI.howItWorks.steps.map((step) => (
+            <div key={step.num} className="how-step" data-rise>
+              <span className="how-num">{step.num}</span>
+              <h3 className="d3">{step.title}</h3>
+              <p>{step.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="pad faq-sec">
+        <h2 className="d2" data-split>Häufige Fragen</h2>
+        <div className="faq">
+          {publicUI.faq.map((item, i) => (
+            <details key={i} className="faq-item">
+              <summary>{item.q}</summary>
+              <p>{item.a}</p>
+            </details>
+          ))}
         </div>
       </div>
 

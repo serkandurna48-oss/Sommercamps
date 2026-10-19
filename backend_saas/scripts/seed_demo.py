@@ -73,7 +73,7 @@ ORGANIZATION = {
     "logo_url": "/jk/logo.jpg",
     "hero_image_url": "/jk/hero.jpg",
     "intro_heading": "DU willst DICH weiterentwickeln, wir bringen DICH auf DEIN nächstes Level.",
-    "intro_text": "Talententwicklung",
+    "intro_text": "Individuelles Training. Starke Camps. Dein nächstes Level.",
     "plan_status": "pilot",
     "iban": "DE89370400440532013000",
 }
@@ -96,10 +96,10 @@ CAMP_A = {
     "capacity": 4,
     "price_cents": 14900,
     "currency": "EUR",
-    "care_info": "9–15 Uhr",
+    "care_info": "Mi–Fr, 9–15 Uhr",
     "meals_info": "Mittagessen, Getränke und Verpflegung vor Ort",
     "includes": _JK_BENEFITS,
-    "location": "Sportplatz FSK Vollmarshausen",
+    "location": "FSK Vollmarshausen",
     "status": "published",
 }
 
@@ -113,10 +113,10 @@ CAMP_B = {
     "capacity": 12,
     "price_cents": 14900,
     "currency": "EUR",
-    "care_info": "9–15 Uhr",
+    "care_info": "Mi–Fr, 9–15 Uhr",
     "meals_info": "Mittagessen, Getränke und Verpflegung vor Ort",
     "includes": _JK_BENEFITS,
-    "location": "Sportplatz TSV Wolfsanger",
+    "location": "TSV Wolfsanger",
     "status": "published",
 }
 

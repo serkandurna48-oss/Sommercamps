@@ -220,7 +220,7 @@
 }
 @media (min-width: 900px) {
   .cp-public .app {
-    max-width: 1120px;
+    max-width: 1280px;
   }
 }
 .cp-public .pad {
@@ -228,7 +228,7 @@
 }
 @media (min-width: 900px) {
   .cp-public .pad {
-    padding-inline: 56px;
+    padding-inline: 40px;
   }
 }
 
@@ -288,6 +288,13 @@
   position: relative;
   overflow: hidden;
 }
+@media (min-width: 900px) {
+  .cp-public .hero {
+    margin-inline: calc(50% - 50vw);
+    width: 100vw;
+    max-width: none;
+  }
+}
 
 .cp-public .h-trad {
   background: var(--brand-strong);
@@ -298,6 +305,7 @@
 @media (min-width: 900px) {
   .cp-public .h-trad {
     padding-top: 56px;
+    padding-inline: max(40px, calc(50vw - 600px));
   }
 }
 .cp-public .h-trad .shield {
@@ -366,7 +374,7 @@
 }
 @media (min-width: 900px) {
   .cp-public .h-akad {
-    padding: 0 56px 52px;
+    padding: 0 max(40px, calc(50vw - 600px)) 52px;
   }
 }
 .cp-public .h-akad .bg {
@@ -378,14 +386,14 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.46;
+  opacity: 0.72;
   will-change: transform;
 }
 .cp-public .h-akad .veil {
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: linear-gradient(to top, rgba(8, 11, 10, 0.97) 8%, rgba(8, 11, 10, 0.55) 52%, rgba(8, 11, 10, 0.72) 100%);
+  background: linear-gradient(to top, rgba(8, 11, 10, 0.97) 8%, rgba(8, 11, 10, 0.82) 40%, rgba(8, 11, 10, 0.60) 62%, rgba(8, 11, 10, 0.78) 100%);
 }
 .cp-public .h-akad .in {
   position: relative;
@@ -437,7 +445,7 @@
   text-align: right;
 }
 .cp-public[data-theme='akademie'] .h-akad .mark .c {
-  background: #0F172A;
+  background: var(--band);
   overflow: hidden;
 }
 
@@ -471,7 +479,7 @@
 }
 @media (min-width: 900px) {
   .cp-public .h-komp .in {
-    padding: 80px 56px 46px;
+    padding: 80px max(40px, calc(50vw - 600px)) 46px;
     display: grid;
     grid-template-columns: 190px minmax(0, 1fr);
     column-gap: 40px;
@@ -549,7 +557,7 @@
 }
 @media (min-width: 900px) {
   .cp-public .assure {
-    padding-inline: 56px;
+    padding-inline: max(40px, calc(50% - 380px));
   }
 }
 .cp-public[data-theme='kompakt'] .assure {
@@ -592,7 +600,8 @@
   margin-top: 4px;
 }
 .cp-public[data-theme='akademie'] .sec-head {
-  flex-direction: row-reverse;
+  flex-direction: row;
+  justify-content: flex-start;
 }
 .cp-public[data-theme='kompakt'] .sec-head {
   border-bottom: 2px solid var(--line);
@@ -730,12 +739,13 @@
   background: var(--info-bg);
   border-color: var(--info-line);
 }
+.cp-public[data-theme='akademie'] .camp.full .c-go {
+  color: var(--pending);
+  background: var(--pending-bg);
+  border-color: var(--pending-line);
+}
 .cp-public .camp:not(.full):hover .c-go {
   transform: translateX(3px);
-}
-.cp-public .camp.full .c-date b,
-.cp-public .camp.full .c-name {
-  opacity: 0.62;
 }
 .cp-public .c-name {
   font-size: 18px;
@@ -787,6 +797,10 @@
 .cp-public .chip.info {
   color: var(--info);
   background: var(--info-bg);
+}
+.cp-public[data-theme='akademie'] .chip.info {
+  color: var(--pending);
+  background: var(--pending-bg);
 }
 
 .cp-public .cap {
@@ -935,7 +949,7 @@
 }
 @media (min-width: 900px) {
   .cp-public .prog {
-    padding-inline: 56px;
+    padding-inline: max(40px, calc(50% - 380px));
   }
 }
 .cp-public .prog .bars {
@@ -1227,7 +1241,7 @@
 }
 @media (min-width: 900px) {
   .cp-public .dock {
-    padding-inline: 56px;
+    padding-inline: max(40px, calc(50% - 380px));
   }
 }
 .cp-public[data-theme='kompakt'] .dock {
@@ -1260,7 +1274,7 @@
 }
 @media (min-width: 900px) {
   .cp-public .ok-band {
-    padding-inline: 56px;
+    padding-inline: max(40px, calc(50% - 380px));
   }
 }
 .cp-public[data-theme='tradition'] .ok-band {
@@ -1380,7 +1394,7 @@
 }
 @media (min-width: 900px) {
   .cp-public .foot {
-    padding-inline: 56px;
+    padding-inline: 40px;
   }
 }
 .cp-public[data-theme='tradition'] .foot {
@@ -1427,4 +1441,213 @@
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ── 2-Spalten Camp-Liste (≥1024 px, Akademie-Theme) ── */
+@media (min-width: 1024px) {
+  .cp-public[data-theme='akademie'] .camps {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Includes-Liste in CampRow ── */
+.cp-public .inc {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0;
+  list-style: none;
+}
+.cp-public .inc li {
+  display: flex;
+  gap: 5px;
+  align-items: baseline;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.cp-public .inc li::before {
+  content: '✓';
+  color: var(--ok);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.cp-public .inc li.more {
+  color: var(--muted);
+  padding-left: 16px;
+}
+.cp-public .inc li.more::before {
+  display: none;
+}
+
+/* ── Faktenleiste unter Hero ── */
+.cp-public .factsstrip {
+  border-bottom: 1px solid var(--line-2);
+  padding-block: 18px;
+}
+.cp-public .factsstrip-in {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+@media (min-width: 900px) {
+  .cp-public .factsstrip-in {
+    gap: 40px;
+  }
+}
+.cp-public .fstat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.cp-public .fstat b {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
+}
+.cp-public .fstat span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.cp-public .fstat-loc b {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ── „So einfach geht's" ── */
+.cp-public .how-sec {
+  padding-block: 36px 52px;
+  border-top: 1px solid var(--line-2);
+}
+.cp-public .how-sec .d2 {
+  margin-bottom: 28px;
+}
+.cp-public .how-steps {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 680px) {
+  .cp-public .how-steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.cp-public .how-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-card);
+}
+.cp-public[data-theme='akademie'] .how-step {
+  border-color: var(--line);
+}
+.cp-public[data-theme='kompakt'] .how-step {
+  border-width: 2px;
+}
+.cp-public .how-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--brand-strong);
+  color: var(--brand-on);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.cp-public[data-theme='kompakt'] .how-num {
+  border-radius: 0;
+}
+.cp-public .how-step p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* ── Bildstreifen (JK-spezifisch, nur wenn Hero gesetzt) ── */
+.cp-public .img-strip {
+  position: relative;
+  height: 240px;
+  overflow: hidden;
+}
+@media (min-width: 900px) {
+  .cp-public .img-strip {
+    height: 320px;
+    margin-inline: calc(50% - 50vw);
+    width: 100vw;
+  }
+}
+.cp-public .img-strip-veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, var(--band) 0%, transparent 20%, transparent 80%, var(--band) 100%);
+}
+
+/* ── Formular-Spaltenbreite (Desktop) ── */
+@media (min-width: 900px) {
+  .cp-public .form-body {
+    --form-max: 760px;
+    max-width: var(--form-max);
+    margin-inline: auto;
+  }
+}
+
+/* ── FAQ ── */
+.cp-public .faq-sec {
+  padding-block: 40px;
+  border-top: 1px solid var(--line-2);
+}
+.cp-public .faq-sec .d2 {
+  margin-bottom: 20px;
+}
+.cp-public .faq {
+  display: flex;
+  flex-direction: column;
+}
+.cp-public .faq-item {
+  border-top: 1px solid var(--line-2);
+}
+.cp-public .faq-item:last-child {
+  border-bottom: 1px solid var(--line-2);
+}
+.cp-public .faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.cp-public .faq-item summary::-webkit-details-marker {
+  display: none;
+}
+.cp-public .faq-item summary::after {
+  content: '';
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translate(-3px, -3px);
+  transition: transform 0.22s var(--ease);
+}
+.cp-public .faq-item[open] summary::after {
+  transform: rotate(225deg) translate(-3px, -3px);
+}
+.cp-public .faq-item p {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  padding-bottom: 18px;
 }

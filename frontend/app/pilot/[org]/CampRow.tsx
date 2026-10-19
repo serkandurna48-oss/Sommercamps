@@ -49,10 +49,19 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
         </span>
         <span className="tags">
           {camp.is_full && <span className="chip info">Ausgebucht</span>}
+          {camp.location && <span className="tag">{camp.location}</span>}
           <span className="tag">
             {camp.age_min} bis {camp.age_max} Jahre
           </span>
+          {camp.care_info && <span className="tag">{camp.care_info}</span>}
+          {camp.meals_info && <span className="tag">{camp.meals_info}</span>}
         </span>
+        {camp.includes && camp.includes.length > 0 && (
+          <ul className="inc">
+            {camp.includes.slice(0, 3).map((item, i) => <li key={i}>{item}</li>)}
+            {camp.includes.length > 3 && <li className="more">+{camp.includes.length - 3} weitere</li>}
+          </ul>
+        )}
         <span className="cap">
           <span className={`bar${camp.is_full ? ' full' : ''}`}>
             <i ref={barRef} />
@@ -66,7 +75,7 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
           </span>
         </span>
         <span className="c-foot">
-          <span className={`c-price num${camp.is_full ? ' muted' : ''}`}>{formatPrice(camp.price_cents, camp.currency)}</span>
+          <span className="c-price num">{formatPrice(camp.price_cents, camp.currency)}</span>
           <span className="c-go">{camp.is_full ? 'Auf die Warteliste' : 'Ansehen'}</span>
         </span>
       </span>

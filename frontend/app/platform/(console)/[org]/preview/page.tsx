@@ -52,6 +52,9 @@ export default async function PlatformOrgPreviewPage({ params }: { params: Promi
     contact_phone: org.contact_phone,
     logo_url: org.logo_url,
     primary_color: org.primary_color,
+    intro_heading: org.intro_heading,
+    intro_text: org.intro_text,
+    hero_image_url: org.hero_image_url,
     theme: (org.theme as OrganizationPublic['theme']) ?? 'tradition',
     iban: org.iban,
   }

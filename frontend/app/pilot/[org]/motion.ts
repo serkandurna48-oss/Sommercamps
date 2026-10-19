@@ -134,6 +134,7 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
     let cleanup: (() => void) | undefined
     let cancelled = false
     const playedTweens: ReturnType<Gsap['to']>[] = []
+    const allTweens: ReturnType<Gsap['to']>[] = []
 
     Promise.all([import('gsap'), import('gsap/ScrollTrigger')]).then(([{ default: gsap }, { ScrollTrigger }]) => {
       if (cancelled) return
@@ -156,6 +157,7 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
             { yPercent: 118 },
             { yPercent: 0, duration: dur, ease: eas, stagger: stag, paused: true },
           )
+          allTweens.push(tween)
           revealOnScroll(ScrollTrigger, h, 0.9, tween, playedTweens)
         })
 
@@ -163,6 +165,7 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
           const y = theme === 'kompakt' ? 14 : 26
           const riseDur = theme === 'kompakt' ? 0.5 : 0.9
           const tween = gsap.fromTo(el, { y, opacity: 0 }, { y: 0, opacity: 1, duration: riseDur, ease: 'expo.out', paused: true })
+          allTweens.push(tween)
           revealOnScroll(ScrollTrigger, el, 0.94, tween, playedTweens)
         })
 
@@ -220,7 +223,7 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
       // bereits gestartete Einblendung spätestens nach 1,5 s in ihren
       // Endzustand — lieber sofort fertig als dauerhaft kaputt aussehend.
       const safety = window.setTimeout(() => {
-        playedTweens.forEach((t) => t.progress(1))
+        allTweens.forEach((t) => t.progress(1))
       }, 1500)
 
       cleanup = () => {

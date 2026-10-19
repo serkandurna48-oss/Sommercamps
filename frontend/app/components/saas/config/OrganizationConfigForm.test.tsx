@@ -15,7 +15,8 @@ const org: OrganizationAdmin = {
   id: 'review-org', slug: 'review', name: 'Review e. V.', legal_name: null, legal_address: null,
   contact_email: 'kontakt@review.example', contact_phone: null, contact_person_name: null,
   logo_url: null, primary_color: null, plan_status: 'pilot', theme: 'tradition', iban: null,
-  intro_heading: null, intro_text: null, hero_image_url: null, billing_notes: null,
+  intro_heading: null, intro_text: null, hero_image_url: null,
+  trainer_image_url: null, trainer_text: null, billing_notes: null,
   site_published: true,
 }
 

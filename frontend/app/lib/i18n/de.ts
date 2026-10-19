@@ -251,6 +251,9 @@ export function formatDateRange(startIso: string, endIso: string): string {
 
 /** Vereinsneutrale Texte für die öffentliche Org-Seite (Parent Flow) */
 export const publicUI = {
+  trainer: {
+    heading: 'Dein Trainer',
+  },
   howItWorks: {
     heading: 'So einfach geht\'s',
     steps: [

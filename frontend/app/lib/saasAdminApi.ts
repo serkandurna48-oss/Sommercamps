@@ -61,6 +61,8 @@ export interface OrganizationAdmin {
   intro_heading: string | null
   intro_text: string | null
   hero_image_url: string | null
+  trainer_image_url: string | null
+  trainer_text: string | null
   billing_notes: string | null
   site_published: boolean
   camp_count?: number

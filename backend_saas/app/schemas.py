@@ -42,6 +42,11 @@ class OrganizationPublic(BaseModel):
     intro_heading: Optional[str] = None
     intro_text: Optional[str] = None
     hero_image_url: Optional[str] = None
+    # Trainer-Sektion (L1e): Porträt-URL und Kurztext für die Trainer-Sektion
+    # im Eltern-Flow. NULL = Sektion nicht anzeigen — kein Platzhaltertext
+    # (Abschnitt 9.1-Prinzip).
+    trainer_image_url: Optional[str] = None
+    trainer_text: Optional[str] = None
     # Für die Überweisungs-Zahlungsart auf der Bestätigungsseite (Abschnitt
     # 6.4). Öffentlich absichtlich, nicht schützenswert — eine IBAN, die
     # explizit zum Bezahlen herausgegeben wird, ist kein Geheimnis. NULL =

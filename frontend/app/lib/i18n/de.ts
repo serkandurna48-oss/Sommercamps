@@ -248,3 +248,23 @@ export function formatDateRange(startIso: string, endIso: string): string {
   const full = end.toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })
   return `${day(start)}.–${full}`
 }
+
+/** Vereinsneutrale Texte für die öffentliche Org-Seite (Parent Flow) */
+export const publicUI = {
+  howItWorks: {
+    heading: 'So einfach geht\'s',
+    steps: [
+      { num: '1', title: 'Platz wählen', body: 'Suchen Sie den Termin, der passt, und klicken Sie auf „Ansehen".' },
+      { num: '2', title: 'Anmelden', body: 'Füllen Sie das Formular in ca. 4 Minuten aus — kein Konto nötig.' },
+      { num: '3', title: 'Bestätigung', body: 'Sie erhalten Ihre Anmeldebestätigung mit allen Infos zum Camp.' },
+    ],
+  },
+  faq: [
+    { q: 'Wie läuft die Bezahlung ab?', a: 'Nach der Anmeldung erhalten Sie die Bankdaten und überweisen den Betrag selbst. Ihr Platz ist bereits reserviert, sobald das Formular abgeschickt wurde.' },
+    { q: 'Was passiert, wenn ein Camp ausgebucht ist?', a: 'Sie können sich auf die Warteliste setzen. Sobald ein Platz frei wird, rücken Sie automatisch nach und werden benachrichtigt.' },
+    { q: 'Wie kann ich stornieren?', a: 'Schreiben Sie dem Camp-Team einfach eine E-Mail. Die genauen Stornobedingungen stehen in den Teilnahmebedingungen.' },
+    { q: 'Wer darf mein Kind abholen?', a: 'Die abholberechtigten Personen geben Sie direkt im Anmeldeformular an. Bitte halten Sie bei der Abholung einen Lichtbildausweis bereit.' },
+    { q: 'Wie erreiche ich das Camp-Team?', a: 'Die E-Mail-Adresse des Vereins finden Sie am Ende dieser Seite. Wir antworten in der Regel am selben Tag.' },
+    { q: 'Kommen Kinder ohne Vereinsmitgliedschaft?', a: 'Ja, die Camps stehen allen Kindern offen — eine Mitgliedschaft ist nicht erforderlich.' },
+  ],
+}

@@ -9,6 +9,7 @@ import CampRow from './CampRow'
 import RegistrationFormScreen from './RegistrationFormScreen'
 import DoneScreen from './DoneScreen'
 import { useParentFlowMotion } from './motion'
+import { publicUI } from '../../lib/i18n/de'
 
 type ScreenName = 'org' | 'camp' | 'form' | 'done' | 'wait'
 
@@ -191,6 +192,36 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
         </header>
       )}
 
+      {camps.length > 0 && (
+        <div className="factsstrip pad">
+          <div className="factsstrip-in">
+            <div className="fstat">
+              <b className="num">{camps.length}</b>
+              <span>{camps.length === 1 ? 'Camp' : 'Camps'}</span>
+            </div>
+            {(() => {
+              const ageMin = Math.min(...camps.map(c => c.age_min))
+              const ageMax = Math.max(...camps.map(c => c.age_max))
+              return (
+                <div className="fstat">
+                  <b className="num">{ageMin}–{ageMax}</b>
+                  <span>Jahre</span>
+                </div>
+              )
+            })()}
+            {(() => {
+              const locs = [...new Set(camps.map(c => c.location).filter(Boolean))]
+              return locs.length > 0 ? (
+                <div className="fstat fstat-loc">
+                  <b>{locs.join(' · ')}</b>
+                  <span>{locs.length === 1 ? 'Ort' : 'Orte'}</span>
+                </div>
+              ) : null
+            })()}
+          </div>
+        </div>
+      )}
+
       <div className="assure">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ opacity: 0.55 }}>
           <circle cx="12" cy="12" r="9" />
@@ -212,6 +243,31 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
           ) : (
             camps.map((camp) => <CampRow key={camp.slug} camp={camp} onSelect={openCamp} />)
           )}
+        </div>
+      </div>
+
+      <div className="pad how-sec">
+        <h2 className="d2" data-split>{publicUI.howItWorks.heading}</h2>
+        <div className="how-steps">
+          {publicUI.howItWorks.steps.map((step) => (
+            <div key={step.num} className="how-step" data-rise>
+              <span className="how-num">{step.num}</span>
+              <h3 className="d3">{step.title}</h3>
+              <p>{step.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="pad faq-sec">
+        <h2 className="d2" data-split>Häufige Fragen</h2>
+        <div className="faq">
+          {publicUI.faq.map((item, i) => (
+            <details key={i} className="faq-item">
+              <summary>{item.q}</summary>
+              <p>{item.a}</p>
+            </details>
+          ))}
         </div>
       </div>
 

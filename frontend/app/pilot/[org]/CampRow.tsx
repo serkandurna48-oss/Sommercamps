@@ -53,7 +53,15 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
           <span className="tag">
             {camp.age_min} bis {camp.age_max} Jahre
           </span>
+          {camp.care_info && <span className="tag">{camp.care_info}</span>}
+          {camp.meals_info && <span className="tag">{camp.meals_info}</span>}
         </span>
+        {camp.includes && camp.includes.length > 0 && (
+          <ul className="inc">
+            {camp.includes.slice(0, 3).map((item, i) => <li key={i}>{item}</li>)}
+            {camp.includes.length > 3 && <li className="more">+{camp.includes.length - 3} weitere</li>}
+          </ul>
+        )}
         <span className="cap">
           <span className={`bar${camp.is_full ? ' full' : ''}`}>
             <i ref={barRef} />

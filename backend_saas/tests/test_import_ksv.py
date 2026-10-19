@@ -67,10 +67,17 @@ class ImportTests(unittest.TestCase):
                             age_min,age_max,capacity,price_cents) VALUES
                             (%s,%s,%s,'Synthetic','2027-07-01','2027-07-05',5,12,100,1000)''',
                             (camp, org, slug))
-        self.temp = tempfile.TemporaryDirectory()
+        self.temp = tempfile.TemporaryDirectory(prefix='.l5-import-', dir=Path(__file__).parent)
         with SAMPLE.open(encoding='utf-8', newline='') as stream:
             reader = csv.DictReader(stream)
             self.headers, self.rows = reader.fieldnames, list(reader)
+        # Preserve fixture duplicates while avoiding collisions with manual sample imports
+        # or data left by an interrupted test. Never delete unrelated registrations.
+        ids, tokens = {}, {}
+        for row in self.rows:
+            row['id'] = ids.setdefault(row['id'], str(uuid4()))
+            row['registration_token'] = tokens.setdefault(row['registration_token'], str(uuid4()))
+        self.sample = self.file(self.rows)
 
     def tearDown(self):
         self.temp.cleanup()
@@ -94,7 +101,7 @@ class ImportTests(unittest.TestCase):
 
     def test_fixture_counts_and_atomic_rejection(self):
         for apply in (False, True):
-            report = importer.run(SAMPLE, self.slug, URL, apply)
+            report = importer.run(self.sample, self.slug, URL, apply)
             self.assertEqual((report['rows'],report['valid'],report['duplicates'],len(report['errors'])), (30,26,1,4))
             self.assertEqual(report['written'],0)
             self.assertEqual(self.counts(),{})
@@ -193,7 +200,7 @@ class ImportTests(unittest.TestCase):
 
     def test_process_cli_and_row_diagnostics(self):
         process = subprocess.run([sys.executable,str(ROOT/'backend_saas/scripts/import_ksv.py'),
-            '--csv',str(SAMPLE),'--org-slug',self.slug],
+            '--csv',str(self.sample),'--org-slug',self.slug],
             env={**os.environ,'DATABASE_URL':URL},capture_output=True,text=True,timeout=15)
         self.assertEqual(process.returncode,2,process.stderr)
         import json
@@ -203,6 +210,19 @@ class ImportTests(unittest.TestCase):
         self.assertEqual(report['rows'],30)
         self.assertEqual(self.counts(),{})
         self.assertNotIn('Synthetisch',process.stdout)
+
+    def test_process_cli_apply_and_repeat(self):
+        import json
+        path=self.file(self.rows[:3])
+        command=[sys.executable,str(ROOT/'backend_saas/scripts/import_ksv.py'),
+                 '--csv',str(path),'--org-slug',self.slug,'--apply']
+        for written,existing in ((3,0),(0,3)):
+            process=subprocess.run(command,env={**os.environ,'DATABASE_URL':URL},
+                                   capture_output=True,text=True,timeout=15)
+            self.assertEqual(process.returncode,0,process.stderr)
+            report=json.loads(process.stdout)
+            self.assertEqual((report['written'],report['existing']),(written,existing))
+            self.assertEqual(self.counts(),{self.org:3})
 
     def test_unicode_duplicate_matches_across_runs(self):
         row=self.rows[0].copy()
@@ -218,6 +238,9 @@ class ImportTests(unittest.TestCase):
         path=self.file([row])
         path.write_bytes(b'\xef\xbb\xbf'+path.read_bytes())
         self.assertEqual(importer.run(path,self.slug,URL,True)['written'],1)
+        with self.conn,self.conn.cursor() as cur:
+            cur.execute('SELECT allergies,medical_notes,pickup_authorized FROM camp_registrations WHERE organization_id=%s',(self.org,))
+            self.assertEqual(cur.fetchone(),('Synthetic\nsecond line',None,None))
         for suffix in (',extra',''):
             if suffix:
                 content=','.join(self.headers)+'\n'+','.join(self.rows[1][h] for h in self.headers)+suffix+'\n'
@@ -226,7 +249,32 @@ class ImportTests(unittest.TestCase):
             path.write_text(content,encoding='utf-8')
             self.assertEqual(len(importer.run(path,self.slug,URL,True)['errors']),1)
         path.write_text(','.join(self.headers)+'\n"unclosed',encoding='utf-8')
-        with self.assertRaises(csv.Error): importer.run(path,self.slug,URL,True)
+        with self.assertRaisesRegex(importer.InputError,'CSV-Formatfehler bei Zeile'):
+            importer.run(path,self.slug,URL,True)
+
+    def test_csv_cannot_choose_tenant_and_sql_is_parameterized(self):
+        row=self.rows[0].copy()
+        row['child_first_name']="Synthetic'); DELETE FROM organizations; --"
+        self.assertEqual(importer.run(self.file([row]),self.slug,URL,True)['written'],1)
+        self.assertEqual(self.counts(),{self.org:1})
+        with self.conn,self.conn.cursor() as cur:
+            cur.execute('SELECT child_first_name FROM camp_registrations WHERE organization_id=%s',(self.org,))
+            self.assertEqual(cur.fetchone()[0],row['child_first_name'])
+        path=self.file([row])
+        content=path.read_text(encoding='utf-8')
+        path.write_text(content.replace('id,birth_date','organization_id,birth_date',1),encoding='utf-8')
+        with self.assertRaises(importer.InputError): importer.run(path,self.slug,URL,True)
+        self.assertEqual(self.counts(),{self.org:1})
+
+    def test_unicode_jersey_sizes_preserved(self):
+        rows=[r.copy() for r in self.rows[:6]]
+        sizes=('6XS\u20135XS (104\u2013116)','4XS\u20133XS (128\u2013140)',
+               '2XS (152)','XS (164)','S','M')
+        for row,size in zip(rows,sizes): row['jersey_size']=size
+        self.assertEqual(importer.run(self.file(rows),self.slug,URL,True)['written'],6)
+        with self.conn,self.conn.cursor() as cur:
+            cur.execute('SELECT jersey_size FROM camp_registrations WHERE organization_id=%s ORDER BY child_first_name',(self.org,))
+            self.assertEqual([r[0] for r in cur.fetchall()],list(sizes))
 
     def test_libpq_environment_cannot_redirect_hostaddr(self):
         clean_url='postgresql://postgres@127.0.0.1:55443/dev_l5?connect_timeout=99'
@@ -262,6 +310,7 @@ class ImportTests(unittest.TestCase):
     def test_negative_cli_exit_and_no_personal_output(self):
         for field,value in (('birth_date','broken'),('email',''),('parent_first_name',''),
                             ('terms_accepted','false'),('notes','sensitive-note'),
+                            ('selected_camp_week',''),
                             ('parent_last_name','Wrong'),('consent_privacy','false'),
                             ('photo_permission','yes'),('registration_token','invalid'),
                             ('id','invalid'),('paid_at','yesterday'),
@@ -302,6 +351,7 @@ class ImportTests(unittest.TestCase):
             ('postgresql://postgres@prod.example:5432/prod','prod.example'),
             ('postgresql://postgres@127.0.0.1:55443/dev_l5?hostaddr=10.0.0.1',None),
             ('postgresql://postgres@127.0.0.1:55443/other',None),
+            ('postgresql://sommercamps%2d0aod@127.0.0.1:55443/dev_l5',None),
             ('postgresql://postgres@wkmckfbzhmihyfwiekct:55443/dev_l5',None)):
             with self.subTest(url=url), patch.object(importer.psycopg2,'connect') as connect:
                 with patch.dict(os.environ,DATABASE_URL=url), contextlib.redirect_stdout(io.StringIO()):

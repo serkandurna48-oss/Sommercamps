@@ -1,7 +1,7 @@
 ﻿# KSV-CSV-Import – lokale Vorbereitung (L5)
 
-BASE_SHA `62abb4c`. Nach dem ersten Mapping-Stopp hat Serkan die lokale Umsetzung
-freigegeben. Offene Fachfragen werden durch einen explizit angereicherten CSV-Vertrag
+BASE_SHA `62abb4c`. Das Skript dient ausschließlich lokalen Importproben.
+Offene Fachfragen werden durch einen explizit angereicherten CSV-Vertrag
 abgesichert: Keine Namensaufteilung, Einwilligung oder medizinische Zuordnung wird geraten.
 
 ## Schemaquellen
@@ -71,6 +71,15 @@ optionale leere Inhalte werden NULL. Booleans exakt `true`/`false`.
 Zeitstempel brauchen ISO-Format mit Zeitzone. Pflichtfelder dürfen nicht leer sein.
 Die CSV ist ein angereicherter Exportvertrag, kein unverändert importierbarer Altexport.
 
+Der Admin-Export aus `backend/main.py::export_registrations_csv` verwendet dagegen
+Semikolon und deutsche Header (z. B. Geburtsdatum, Elternteil, Termin), exportiert keine
+stripe_session_id und maskiert mögliche Formeln durch ein führendes Apostroph.
+Dieser Export allein ist daher keine vollständige Quelle. Für eine spätere Übernahme
+braucht es einen freigegebenen vollständigen CSV-Export mit Stripe-IDs sowie die geprüften
+Zusatzfelder. Maskierte Werte nicht automatisch entmaskieren: Ein echtes führendes
+Apostroph lässt sich ohne Originalbeleg nicht sicher unterscheiden. Keine Quelle
+wurde hier abgerufen; alle Beispiele und Tests sind synthetisch.
+
 ## Sicherheit, Bericht und Idempotenz
 
 DATABASE_URL ausschließlich aus der Umgebung; keine .env-Datei und kein App-Import.
@@ -89,7 +98,7 @@ Exit 0 bei fehlerfreiem Lauf, Exit 2 bei Validierungs-, Konflikt-, Ziel- oder DB
 Apply ist atomar: Eine fehlerhafte Zeile verhindert sämtliche Inserts.
 Ein zweiter identischer Lauf meldet existing statt neue Zeilen anzulegen; abweichende
 Daten zur selben Import-ID sind ein Konflikt. Gleiche Quell-ID oder Kind/Camp
-(Namen ohne Beachtung der Großschreibung + Geburtsdatum), Token und Stripe-ID
+(Namen mit Unicode-NFC und casefold + Geburtsdatum), Token und Stripe-ID
 werden auf Duplikate geprüft. Gleichnamige gleichaltrige Kinder erfordern manuelle
 Klärung; kein stilles Zusammenführen. Globale Token-/Stripe-Kollisionen werden ohne
 Ausgabe fremder Inhalte gemeldet. Die Import-ID enthält den Mandanten.

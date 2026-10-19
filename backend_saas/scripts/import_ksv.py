@@ -49,6 +49,8 @@ def target(url, apply=False, confirm=None):
         raise InputError('DATABASE_URL ungültig') from None
     host = config.get('host', '')
     decoded = ' '.join(config.values())
+    if any(word in decoded.lower() for word in FORBIDDEN):
+        raise InputError('Ziel ist gesperrt')
     if apply and re.search(r'prod|stag|(?:^|[^a-z])stg(?:$|[^a-z])', decoded, re.I) and confirm != host:
         raise InputError('Prod/Staging benötigt --target-confirm mit exaktem Host')
     if (host != '127.0.0.1' or config.get('port') != '55443'
@@ -68,9 +70,11 @@ def boolean(value, field):
 
 
 def mapped(row, org, camp):
-    if any(not row.get(key) for key in ('id', 'birth_date', 'email', 'phone',
-           'child_first_name', 'child_last_name') + EXTRA):
-        raise RowError('Pflichtfeld fehlt')
+    required = ('id', 'birth_date', 'email', 'phone', 'selected_camp_week',
+                'child_first_name', 'child_last_name') + EXTRA
+    missing = [key for key in required if not row.get(key)]
+    if missing:
+        raise RowError('Pflichtfelder fehlen: ' + ', '.join(missing))
     if row.get('notes'):
         raise RowError('notes: verlustfreie Zielablage ungeklärt')
     if ' '.join(row['parent_name'].split()) != ' '.join(
@@ -134,7 +138,10 @@ def run(path, slug, url, apply=False, confirm=None):
         headers = reader.fieldnames or []
         if len(headers) != len(set(headers)) or set(headers) != set(SOURCE + EXTRA):
             raise InputError('CSV-Spalten stimmen nicht mit dem dokumentierten Vertrag überein')
-        rows = [(reader.line_num, row) for row in reader]
+        try:
+            rows = [(reader.line_num, row) for row in reader]
+        except csv.Error:
+            raise InputError(f'CSV-Formatfehler bei Zeile {reader.line_num}') from None
     connection = psycopg2.connect(**config)
     try:
         connection.set_session(readonly=not apply)

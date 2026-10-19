@@ -35,6 +35,6 @@ it.each(['tradition', 'akademie', 'kompakt'] as const)(
 )
 
 it('publicTheme.css enthält eine prefers-reduced-motion-Regel', () => {
-  const css = readFileSync('frontend/app/pilot/[org]/publicTheme.css', 'utf-8')
+  const css = readFileSync(new URL('./publicTheme.css', import.meta.url), 'utf-8')
   expect(css).toContain('prefers-reduced-motion: reduce')
 })

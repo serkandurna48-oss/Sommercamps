@@ -2,7 +2,7 @@ design/m1-motion-r1
 
 STATUS: fertig zur Prüfung
 
-COMMIT: (wird nach Erstellung dieser Datei gesetzt)
+COMMIT: a7e0c9abb480ca4d43be0351f2096f7e2180f80f
 
 TESTS:
   Befehl: npm run test --prefix frontend

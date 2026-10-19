@@ -5,7 +5,11 @@ foreach ($name in @('frontend','backend')) {
     if (-not (Test-Path $record)) { continue }
     $saved = Get-Content -Raw -LiteralPath $record | ConvertFrom-Json
     $process = Get-Process -Id $saved.Id -ErrorAction SilentlyContinue
-    if ($process -and $process.StartTime.ToUniversalTime().Ticks -eq $saved.StartTime) {
+    $processStart = if ($process) { $process.StartTime } else { $null }
+    if ($processStart -and $processStart.ToUniversalTime().Ticks -eq $saved.StartTime) {
+        # Keep the verified process handle: a fresh PID lookup after taskkill
+        # can still see a disappearing Windows process with no StartTime.
+        $null = $process.Handle
         $info = New-Object Diagnostics.ProcessStartInfo
         $info.FileName = Join-Path $env:SystemRoot 'System32/taskkill.exe'
         $info.Arguments = "/PID $($process.Id) /T /F"
@@ -16,8 +20,7 @@ foreach ($name in @('frontend','backend')) {
         if (-not $killer.WaitForExit(10000)) { $killer.Kill(); throw "Stop timed out for $name" }
         # Windows venv redirectors may exit when their child exits, before taskkill
         # reaches the parent. Its nonzero result then still means the tree stopped.
-        $remaining = Get-Process -Id $saved.Id -ErrorAction SilentlyContinue
-        if ($remaining -and $remaining.StartTime.ToUniversalTime().Ticks -eq $saved.StartTime) { throw "Failed to stop local $name" }
+        if (-not $process.WaitForExit(3000)) { throw "Failed to stop local $name" }
     }
     Remove-Item -LiteralPath $record
 }

@@ -176,6 +176,8 @@ export interface OrganizationConfigUpdate {
   intro_heading?: string | null
   intro_text?: string | null
   hero_image_url?: string | null
+  trainer_image_url?: string | null
+  trainer_text?: string | null
   billing_notes?: string | null
   /** Der "Veröffentlichen"/"Zurückziehen"-Schalter — siehe
    * backend_saas admin_schemas.OrganizationUpdate.site_published. */

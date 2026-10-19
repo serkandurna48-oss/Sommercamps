@@ -90,6 +90,19 @@ it('keeps the typed value after a failed save instead of falling back to the sto
   expect(container.querySelector<HTMLInputElement>('[name="name"]')!.value).toBe('Review und Freunde e. V.')
 })
 
+it('renders trainer_image_url and trainer_text fields with stored org values', async () => {
+  const orgWithTrainer = {
+    ...org,
+    trainer_image_url: 'https://example.com/trainer.jpg',
+    trainer_text: 'Unser Trainer hat 10 Jahre Erfahrung.',
+  }
+  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={orgWithTrainer} brandStrong="#112233" brandOn="#ffffff" />))
+  expect(container.querySelector('label[for="trainer_image_url"]')?.textContent).toBe('Trainer-Bild-URL')
+  expect(container.querySelector<HTMLInputElement>('[name="trainer_image_url"]')!.value).toBe('https://example.com/trainer.jpg')
+  expect(container.querySelector('label[for="trainer_text"]')?.textContent).toBe('Trainer-Text')
+  expect(container.querySelector<HTMLTextAreaElement>('[name="trainer_text"]')!.value).toBe('Unser Trainer hat 10 Jahre Erfahrung.')
+})
+
 it('keeps the submit button reachable and labelled while a save runs', async () => {
   let release: (state: ConfigActionState) => void = () => {}
   vi.mocked(updateOrganizationConfigAction).mockImplementation(() => new Promise<ConfigActionState>(resolve => { release = resolve }))

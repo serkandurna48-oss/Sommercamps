@@ -13,6 +13,13 @@ import { publicUI } from '../../lib/i18n/de'
 
 type ScreenName = 'org' | 'camp' | 'form' | 'done' | 'wait'
 
+export function headlineScale(text: string): 'xl' | 'lg' | 'md' {
+  const len = text.length
+  if (len <= 24) return 'xl'
+  if (len <= 48) return 'lg'
+  return 'md'
+}
+
 interface DoneState {
   result: RegistrationCreated
   childName: string
@@ -141,7 +148,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
         const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
         const totalSeats = camps.reduce((s, c) => s + c.capacity, 0)
         return (
-          <header className="hero h-akad">
+          <header className="hero h-akad" lang="de">
             <nav className="h-akad-nav" aria-label="Seitennavigation">
               <div className="nav-left">
                 <span className="nav-logo">
@@ -158,7 +165,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
             <div className="in">
               <div className="in-main">
                 <span className="hero-label">{org.name}</span>
-                <h1 className="d1" data-split>{heading}</h1>
+                <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
                 <p className="intro">{intro}</p>
                 <div className="hero-btns">
                   <button className="h-btn-glass" type="button" onClick={scrollToCamps}>Camps ansehen</button>

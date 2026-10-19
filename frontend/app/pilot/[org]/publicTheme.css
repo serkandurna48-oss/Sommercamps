@@ -392,14 +392,14 @@
 .cp-public .h-akad .in {
   position: relative;
   z-index: 2;
-  padding: 0 24px 40px;
+  padding: 96px 24px 10vh;
   display: flex;
   flex-direction: column;
   gap: 28px;
 }
 @media (min-width: 900px) {
   .cp-public .h-akad .in {
-    padding: 0 7vw 10vh;
+    padding: 96px 7vw 10vh;
     flex-direction: row;
     align-items: flex-end;
     justify-content: space-between;
@@ -407,11 +407,13 @@
 }
 .cp-public .h-akad h1 {
   color: #fff;
-  font-size: clamp(2.8rem, 8vw, 7.5rem);
-  line-height: .9;
+  line-height: .92;
   letter-spacing: -.03em;
-  max-width: 14ch;
+  max-width: 20ch;
 }
+.cp-public .h-akad h1[data-scale='xl'] { font-size: clamp(2.8rem, 8vw, 7.5rem); }
+.cp-public .h-akad h1[data-scale='lg'] { font-size: clamp(2.4rem, 6vw, 5.5rem); }
+.cp-public .h-akad h1[data-scale='md'] { font-size: clamp(2rem, 4.6vw, 4.25rem); }
 .cp-public .h-akad .mark {
   display: inline-flex;
   align-items: center;
@@ -1790,6 +1792,18 @@
 @media (max-width: 599px) {
   .cp-public .h-akad-nav .nav-name {
     display: none;
+  }
+}
+@media (max-width: 599px) {
+  .cp-public .h-akad .veil {
+    background: linear-gradient(to top, rgba(0,0,0,.85) 0%, transparent 70%);
+  }
+  .cp-public .h-akad h1 {
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+  .cp-public .h-akad .intro {
+    font-size: 17px;
   }
 }
 .cp-public .nav-cta {

@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it, vi } from 'vitest'
 import type { OrganizationPublic } from '../../lib/saasApi'
-import ParentFlow from './ParentFlow'
+import ParentFlow, { headlineScale } from './ParentFlow'
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
 vi.mock('./motion', () => ({ useParentFlowMotion: () => {} }))
@@ -77,4 +77,24 @@ it('akademie hero contains label, headline, both buttons and stats bar', () => {
 it.each(['tradition', 'kompakt'] as const)('%s still renders heading in its own hero', theme => {
   const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme }} camps={[]} />)
   expect(html).toContain('Unser Fußballsommer')
+})
+
+// ── headlineScale unit tests ──
+const jkLeitsatz = 'DU willst DICH weiterentwickeln, wir bringen DICH auf DEIN nächstes Level.'
+
+it('headlineScale: ≤24 Zeichen → xl', () => {
+  expect(headlineScale('Unser Fußballsommer')).toBe('xl')
+})
+
+it('headlineScale: 40 Zeichen → lg', () => {
+  expect(headlineScale('Starte jetzt mit dem besten Fußballcamp!')).toBe('lg')
+})
+
+it('headlineScale: JKs langer Leitsatz (>48 Zeichen) → md', () => {
+  expect(headlineScale(jkLeitsatz)).toBe('md')
+})
+
+it('akademie h1 trägt data-scale="md" bei JKs Leitsatz', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'akademie', intro_heading: jkLeitsatz }} camps={[]} />)
+  expect(html).toContain('data-scale="md"')
 })

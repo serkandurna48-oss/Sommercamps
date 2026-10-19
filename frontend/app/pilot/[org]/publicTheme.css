@@ -393,7 +393,7 @@
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: linear-gradient(to top, rgba(8, 11, 10, 0.97) 8%, rgba(8, 11, 10, 0.22) 52%, rgba(8, 11, 10, 0.36) 100%);
+  background: linear-gradient(to top, rgba(8, 11, 10, 0.97) 8%, rgba(8, 11, 10, 0.82) 40%, rgba(8, 11, 10, 0.60) 62%, rgba(8, 11, 10, 0.78) 100%);
 }
 .cp-public .h-akad .in {
   position: relative;
@@ -1514,10 +1514,6 @@
 .cp-public .fstat-loc b {
   font-size: 14px;
   font-weight: 600;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* ── „So einfach geht's" ── */
@@ -1573,6 +1569,15 @@
   font-size: 14px;
   line-height: 1.55;
   color: var(--ink-2);
+}
+
+/* ── Formular-Spaltenbreite (Desktop) ── */
+@media (min-width: 900px) {
+  .cp-public .form-body {
+    --form-max: 760px;
+    max-width: var(--form-max);
+    margin-inline: auto;
+  }
 }
 
 /* ── FAQ ── */

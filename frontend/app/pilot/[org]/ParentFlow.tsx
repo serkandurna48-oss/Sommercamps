@@ -151,10 +151,6 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
                   <b className="num">{camps.reduce((s, c) => s + c.capacity, 0)}</b>
                   <span>Plätze gesamt</span>
                 </div>
-                <div className="stat">
-                  <b className="num">{camps.length}</b>
-                  <span>{camps.length === 1 ? 'Camp' : 'Camps'}</span>
-                </div>
               </div>
             )}
           </div>

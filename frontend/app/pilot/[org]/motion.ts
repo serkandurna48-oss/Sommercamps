@@ -113,9 +113,9 @@ interface MotionKind {
 
 // §8.2 — Kennwerte pro Theme, wortgleich aus der Referenz.
 const MOTION_KIND: Record<PublicTheme, MotionKind> = {
-  tradition: { stag: 0.065, dur: 0.9, eas: 'expo.out' },
-  akademie: { stag: 0.05, dur: 1.0, eas: 'expo.out' },
-  kompakt: { stag: 0.028, dur: 0.62, eas: 'power3.out' },
+  tradition: { stag: 0.12, dur: 0.6, eas: 'expo.out' },
+  akademie: { stag: 0.12, dur: 0.6, eas: 'expo.out' },
+  kompakt: { stag: 0.12, dur: 0.6, eas: 'power3.out' },
 }
 
 /**
@@ -167,7 +167,46 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
       const { stag, dur, eas } = MOTION_KIND[theme]
 
       const ctx = gsap.context(() => {
+        if (theme === 'akademie') {
+          const heroEl = container.querySelector<HTMLElement>('.h-akad')
+          if (heroEl) {
+            const seqEls: { el: HTMLElement; isHeadline?: boolean }[] = []
+            const heroLabel = heroEl.querySelector<HTMLElement>('.hero-label')
+            const heroH1 = heroEl.querySelector<HTMLElement>('[data-split]')
+            const heroIntro = heroEl.querySelector<HTMLElement>('.intro')
+            const heroBtns = heroEl.querySelector<HTMLElement>('.hero-btns')
+            const heroStats = heroEl.querySelector<HTMLElement>('.hero-stats')
+
+            if (heroLabel) seqEls.push({ el: heroLabel })
+            if (heroH1) seqEls.push({ el: heroH1, isHeadline: true })
+            if (heroIntro) seqEls.push({ el: heroIntro })
+            if (heroBtns) seqEls.push({ el: heroBtns })
+            if (heroStats) seqEls.push({ el: heroStats })
+
+            const seqDur = 0.6
+            const seqStag = 0.12
+            const seqEas = 'expo.out'
+
+            seqEls.forEach(({ el, isHeadline }, i) => {
+              const delay = i * seqStag
+              if (isHeadline) {
+                const words = splitWords(el)
+                if (words.length) {
+                  const t = gsap.fromTo(words, { yPercent: 118 }, { yPercent: 0, duration: seqDur, ease: seqEas, stagger: 0.04, delay })
+                  allTweens.push(t)
+                }
+                el.dataset.riseHandled = '1'
+              } else {
+                const t = gsap.fromTo(el, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: seqDur, ease: seqEas, delay })
+                allTweens.push(t)
+                el.dataset.riseHandled = '1'
+              }
+            })
+          }
+        }
+
         container.querySelectorAll<HTMLElement>('[data-split]').forEach((h) => {
+          if (h.dataset.riseHandled) return
           const words = splitWords(h)
           if (!words.length) return
           // fromTo statt from: explizite Zielwerte statt GSAPs Auto-Erkennung

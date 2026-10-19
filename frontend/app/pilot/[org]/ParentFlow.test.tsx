@@ -55,3 +55,26 @@ it.each(['tradition', 'akademie', 'kompakt'] as const)('%s does not render img-s
   const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme }} camps={[]} />)
   expect(html).not.toContain('img-strip')
 })
+
+const mockCamp = {
+  slug: 'camp-a', title: 'Sommercamp A', start_date: '2026-07-07', end_date: '2026-07-11',
+  registration_start: null, registration_end: null,
+  age_min: 8, age_max: 14, capacity: 30, price_cents: 19900, currency: 'EUR',
+  registration_open: true, location: 'Kassel', care_info: null, meals_info: null, includes: null,
+  registered_count: 10, waitlist_count: 0, spots_remaining: 20, is_full: false,
+} as const
+
+it('akademie hero contains label, headline, both buttons and stats bar', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'akademie' }} camps={[mockCamp]} />)
+  expect(html).toContain('hero-label')
+  expect(html).toContain('Unser Fußballsommer')
+  expect(html).toContain('Camps ansehen')
+  expect(html).toContain('Jetzt anmelden')
+  expect(html).toContain('hero-stats')
+  expect(html).toContain('Plätze gesamt')
+})
+
+it.each(['tradition', 'kompakt'] as const)('%s still renders heading in its own hero', theme => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme }} camps={[]} />)
+  expect(html).toContain('Unser Fußballsommer')
+})

@@ -139,6 +139,17 @@ python backend_saas/scripts/import_ksv.py --csv <gepruefte-datei.csv> --org-slug
 ```
 
 Die Tests prüfen einen bereinigten Ausschnitt auch mit Apply und Wiederholung.
+Quell-IDs und Token werden je Test zufällig ersetzt, wobei die Duplikatbeziehung
+der Fixture erhalten bleibt. So kollidieren Tests nicht mit manuellen Proben.
+
+Zusätzlich lokal per CLI mit dem exakten Slug `ksv-baunatal` geprüft (synthetische
+Organisation/Camp und temporäre CSV danach entfernt):
+
+| Lauf | rows | valid | duplicates | existing | written | errors | Exit |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Fixture, Dry-Run | 30 | 26 | 1 | 0 | 0 | 4 | 2 |
+| Bereinigte Fixture, Apply | 26 | 26 | 0 | 0 | 26 | 0 | 0 |
+| Derselbe Apply erneut | 26 | 26 | 0 | 26 | 0 | 0 | 0 |
 
 ## Rollback
 

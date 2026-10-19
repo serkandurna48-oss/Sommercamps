@@ -1,81 +1,140 @@
-﻿# KSV-CSV-Import – Mapping und offene Entscheidungen (L5)
+﻿# KSV-CSV-Import – lokale Vorbereitung (L5)
 
-Status: **blockiert vor Implementierung**, BASE_SHA `62abb4c`.
-Der Auftrag verlangt STOPP bei uneindeutigem Mapping. Es existiert noch kein Import-Skript.
+BASE_SHA `62abb4c`. Nach dem ersten Mapping-Stopp hat Serkan die lokale Umsetzung
+freigegeben. Offene Fachfragen werden durch einen explizit angereicherten CSV-Vertrag
+abgesichert: Keine Namensaufteilung, Einwilligung oder medizinische Zuordnung wird geraten.
 
-## Quellen
+## Schemaquellen
 
-- `backend/schema.sql`: vollständiges Ausgangsschema.
-- `backend/migration_*.sql`: Token/Mail/Stripe, photo_permission, paid_at,
-  Zahlungsstatus cancelled, Trikotgrößen und Geburtsdatum-Plausibilität.
-- `backend/main.py`: RegistrationIn/RegistrationOut und Registrierungsschreibpfad.
-- `supabase/migrations/20260917133748_create_saas_schema_v1.sql`: Zielbasis.
-- `supabase/migrations/20260922143506_add_theme_and_parent_flow_fields.sql`:
-  jersey_size und pickup_authorized.
-- `supabase/migrations/20261018000000_add_email_tracking_to_camp_registrations.sql`:
-  Mail-Tracking. Weitere Zielmigrationen schaffen keine Lösung für die unten genannten Lücken.
+`backend/schema.sql`, sämtliche `backend/migration_*.sql` und
+`backend/main.py` (RegistrationIn/RegistrationOut, Registrierungsschreibpfad).
+Ziel: `supabase/migrations/20260917133748_create_saas_schema_v1.sql`, ergänzt durch
+`20260922143506_add_theme_and_parent_flow_fields.sql` (Trikotgröße) und
+`20261018000000_add_email_tracking_to_camp_registrations.sql` (Mail-Tracking).
+Weitere Zielmigrationen lösen die unten genannten fachlichen Lücken nicht.
 
-## Feldmapping der KSV-Anmeldungen
+## Vollständiger Feldabgleich der KSV-Anmeldungen
 
-Direkte Zuordnungen sind Schemafeststellungen, noch keine ausgeführten Transformationen.
-
-| Legacy-Feld | SaaS-Ziel | Umwandlung / Lücke |
+| Legacy-Feld | SaaS-Feld | Regel / Lücke |
 |---|---|---|
-| id | id oder Importidentität | Entscheidung: Quell-ID erhalten oder deterministische Ziel-ID? Mandant und Quellsystem müssen zum Schlüssel gehören. |
-| created_at | created_at | Zeitzonenbehafteten Zeitstempel erhalten. |
-| child_first_name | child_first_name | Direkt. |
-| child_last_name | child_last_name | Direkt. |
-| birth_date | child_birth_date | DATE; CSV-Format festlegen (Vorschlag ISO YYYY-MM-DD), ungültiges Datum ablehnen. Nicht aus Alter berechnen. |
-| parent_name | parent_first_name + parent_last_name | **STOPP:** Ein Freitextname ist nicht eindeutig teilbar; keine automatische Wortaufteilung. |
-| email | parent_email | Direkt; Format validieren. |
-| phone | parent_phone | Direkt als Text, führende Nullen erhalten. |
-| selected_camp_week | camp_id | **STOPP:** Freier Wochenstring ist kein Camp-Schlüssel. Explizite Zuordnung zu bestehenden Camps derselben Org erforderlich. |
-| jersey_size | jersey_size | Exakten Text erhalten, inklusive Joma-Größen und Gedankenstrich; NULL bleibt NULL. Keine Größenumrechnung. |
-| allergies | allergies | Direkt; sensible Daten nicht in Berichte/Logs aufnehmen. |
-| notes | kein allgemeines Notizfeld | **STOPP:** Sonstige Elternhinweise sind nicht zwingend medical_notes oder pickup_authorized. Keine medizinische Umdeutung und kein Weglassen. |
-| consent_privacy | privacy_accepted | Inhaltlich Datenschutz; Nachweisumfang der historischen Zustimmung prüfen. |
-| consent_privacy | terms_accepted | **STOPP:** Getrennte Zielpflicht; keine belegte eigenständige AGB-Zustimmung im Quellfeld. Nicht stillschweigend true setzen. |
-| status | status | registered, confirmed, cancelled, waitlist identisch. |
-| payment_status | payment_status | open, paid, refunded, waived, cancelled identisch; unbekannte Werte ablehnen. |
-| registration_token | registration_token | UUID erhalten, Kollisionsbehandlung festlegen; keine neuen öffentlichen Token ohne Entscheidung. |
-| email_sent_at | email_sent_at | Zeitstempel erhalten; Import löst keine E-Mail aus. |
-| stripe_session_id | stripe_session_id | Text erhalten; globale Ziel-Unique-Constraint beachten. Keine Stripe-Anfragen. |
-| photo_permission | photo_permission | Boolean erhalten; fehlend nicht als Zustimmung interpretieren. |
-| paid_at | paid_at | Zeitstempel/NULL erhalten; nicht aus Status erfinden. |
+| id | id | UUIDv5 im Namespace NAMESPACE_URL aus `ksv-import:<organization_id>:<Legacy-id>`. Quell-ID muss UUID sein. |
+| created_at | created_at | ISO-Zeitstempel mit Zeitzone erhalten. |
+| child_first_name | child_first_name | Text übernehmen. |
+| child_last_name | child_last_name | Text übernehmen. |
+| birth_date | child_birth_date | Strikt YYYY-MM-DD, Datum auf Gültigkeit/Plausibilität prüfen. Kein Alter umrechnen. |
+| parent_name | parent_first_name + parent_last_name | Separate CSV-Zusatzfelder erforderlich. Zusammengesetzt müssen sie parent_name entsprechen (Leerraum normalisiert). Keine automatische Aufteilung. |
+| email | parent_email | Text übernehmen, Format validieren. |
+| phone | parent_phone | Text übernehmen, führende Nullen erhalten. |
+| selected_camp_week | camp_id | Manuell geprüftes Zusatzfeld camp_slug muss ein bestehendes Camp derselben Org bezeichnen. Wochenstring bleibt Quellbeleg in der CSV. |
+| jersey_size | jersey_size | Exakten Größenwert übernehmen, auch Joma-Werte; keine Größenumrechnung. Leer = NULL. |
+| allergies | allergies | Text übernehmen; niemals im Bericht ausgeben. |
+| notes | kein allgemeines Notizfeld | Nichtleere Werte ablehnen. Sonstige Elternhinweise sind nicht automatisch medical_notes oder pickup_authorized. Entscheidung für Serkan. |
+| consent_privacy | privacy_accepted | Explizites true erforderlich; historischen Nachweis prüfen. |
+| consent_privacy | kein belegtes terms_accepted | Zusatzspalte terms_accepted muss separat belegt true enthalten. Keine Verdopplung einer Zustimmung. |
+| status | status | registered, confirmed, cancelled, waitlist unverändert. Unbekannt = Fehler. |
+| payment_status | payment_status | open, paid, refunded, waived, cancelled unverändert. Unbekannt = Fehler. |
+| registration_token | registration_token | UUID erhalten; Kollision als Fehler melden. |
+| email_sent_at | email_sent_at | Zeitstempel/NULL erhalten; kein Mailversand. |
+| stripe_session_id | stripe_session_id | Text/NULL erhalten; Kollision als Fehler, keine Stripe-Anfrage. |
+| photo_permission | photo_permission | Boolean explizit erhalten; kein stillschweigendes true. |
+| paid_at | paid_at | Zeitstempel/NULL erhalten; nicht aus Zahlstatus erfinden. |
 
 `bank_account_holder`, `bank_iban`, `bank_bic`, `bank_name`, `bank_purpose` aus
-RegistrationOut sind berechnete Antwort-/Konfigurationswerte, keine Spalten aus
-camp_registrations. Kein stilles Überschreiben von organizations.iban.
-`training_inquiries` aus migration_inquiries.sql ist ausdrücklich JK-only und kein
-KSV-Anmeldedatensatz (siehe Kommentar der Migration und INQUIRIES_ENABLED).
+RegistrationOut sind berechnete Antwort-/Konfigurationswerte, keine Legacy-Tabellenspalten.
+Kein Überschreiben von organizations.iban.
+`training_inquiries` aus migration_inquiries.sql ist ausdrücklich JK-only, keine
+KSV-Anmeldung (siehe Migrationskommentar und INQUIRIES_ENABLED).
 
-Zusätzliche Zielfelder: organization_id wird ausschließlich über den geprüften org-slug
-aufgelöst. emergency_contact_name/phone, medical_notes, pickup_authorized,
-stripe_payment_intent_id und email_error haben keine eindeutige Legacy-Quelle.
-updated_at ist Zielmetadatum. Keine Inhalte oder Einwilligungen erfinden.
+Zusätzliche Zielspalten: organization_id ausschließlich aus geprüftem org-slug.
+emergency_contact_name/phone, medical_notes, pickup_authorized,
+stripe_payment_intent_id und email_error ohne eindeutige Legacy-Quelle bleiben NULL.
+updated_at ist Zielmetadatum. Organisationen, Camps und Konfiguration werden nicht importiert.
 
-## Entscheidungen für Serkan vor Fortsetzung
+## Offene Entscheidungen vor echter Datenübernahme
 
-1. Soll der CSV-Export geprüfte separate parent_first_name/parent_last_name enthalten?
-2. Wie wird die historische AGB-Einwilligung nachgewiesen oder nachgeholt?
-   consent_privacy alleine wird nicht automatisch zu zwei Einwilligungen.
-3. Welche verlustfreie Ablage ist für allgemeine notes freigegeben?
-   Das aktuelle Zielschema enthält dafür keine Spalte; Schemaänderungen sind außerhalb L5.
-4. Welche explizite Tabelle ordnet historische selected_camp_week-Werte den Ziel-Camps zu?
-5. Welcher Importidentitätsschlüssel und welche Konfliktregel gelten bei geänderten
-   Quelldaten? Vorschlag zur Entscheidung: deterministische UUID aus Quellsystem,
-   organization_id und Legacy-id; vorhandene abweichende Daten als Konflikt ablehnen.
-   Kindname/Geburtsdatum alleine sind kein sicherer Idempotenzschlüssel.
+1. Geprüfte separate Elternnamen bereitstellen; keine Heuristik für Mehrfachnamen.
+2. Historische AGB-Zustimmung gesondert nachweisen oder nachholen. Eine CSV-Spalte ist
+   kein Ersatz für diesen Nachweis.
+3. Verlustfreie Zielablage allgemeiner notes festlegen. Schemaänderungen liegen außerhalb L5.
+4. Historische selected_camp_week-Werte explizit den Ziel-Camp-Slugs zuordnen.
+5. Lokalen Identitätsschlüssel (UUIDv5 wie oben) und Konfliktverhalten vor echter Übernahme
+   bestätigen. Abweichende vorhandene Daten werden nicht überschrieben.
 
-## Noch ausstehende Umsetzung und Nachweise
+## CSV-Vertrag
 
-Nach Entscheidungen: CSV-Vertrag festlegen, Dry-Run-Bericht ohne personenbezogene Inhalte,
-atomarer Apply, exakte Hostbestätigung für Prod/Staging und Sperre der im Auftrag
-verbotenen Ziele, mandantengeprüfte Camps, Idempotenz und Konflikterkennung.
-Synthetische Fixture mit mindestens 30 Zeilen und echte PG-Tests ausschließlich auf
-127.0.0.1:55443/dev_l5. Tests sollen Pflichtfelder, kaputte Daten, doppelte Kinder,
-zweiten Lauf, fremde Org und URL-Schutz prüfen. Keine Tests ausgeführt, keine
-DB-Verbindung aufgebaut; SKIPPED_TESTS=0 bedeutet hier ausdrücklich keine Testabdeckung.
+UTF-8 mit optionalem BOM, Komma, Kopfzeile. Alle Quellspalten aus der Tabelle müssen
+vorhanden sein (optionale Inhalte dürfen leer sein), zusätzlich
+`parent_first_name,parent_last_name,camp_slug,terms_accepted`. Vollständiger Header:
+`backend_saas/tests/fixtures/ksv_sample.csv`. Keine zusätzlichen oder doppelten Header;
+fehlende/überzählige Zellen führen zum Fehler. Äußerer Leerraum wird entfernt,
+optionale leere Inhalte werden NULL. Booleans exakt `true`/`false`.
+Zeitstempel brauchen ISO-Format mit Zeitzone. Pflichtfelder dürfen nicht leer sein.
+Die CSV ist ein angereicherter Exportvertrag, kein unverändert importierbarer Altexport.
 
-Rollback dieses Dokumentationsstands: Dokumentationscommit revertieren.
-Kein Datenrollback erforderlich, da kein Import stattgefunden hat.
+## Sicherheit, Bericht und Idempotenz
+
+DATABASE_URL ausschließlich aus der Umgebung; keine .env-Datei und kein App-Import.
+L5 akzeptiert nur **127.0.0.1:55443/dev_l5**. Andere Hosts, Datenbanken,
+hostaddr-Umleitungen und libpq-Services werden vor Verbindungsaufbau abgelehnt.
+Die verbotenen Ziele des Auftrags bleiben unabhängig von Bestätigungen gesperrt.
+Enthält die URL Prod-/Staging-Kennungen, erfordert Apply zusätzlich
+`--target-confirm 127.0.0.1` (exakt Host ohne Port). Diese Bestätigung erweitert
+nicht die lokale Freigabe auf entfernte Systeme.
+
+Standard ist ein DB-seitig schreibgeschützter Dry-Run. JSON: rows, valid, duplicates,
+existing, written und errors mit statischem Fehlergrund und Zeilennummer; bei mehrzeiligen
+CSV-Zellen die letzte physische Zeile des Datensatzes. Keine Personen-/Gesundheitsdaten.
+Exit 0 bei fehlerfreiem Lauf, Exit 2 bei Validierungs-, Konflikt-, Ziel- oder DB-Fehlern.
+
+Apply ist atomar: Eine fehlerhafte Zeile verhindert sämtliche Inserts.
+Ein zweiter identischer Lauf meldet existing statt neue Zeilen anzulegen; abweichende
+Daten zur selben Import-ID sind ein Konflikt. Gleiche Quell-ID oder Kind/Camp
+(Namen ohne Beachtung der Großschreibung + Geburtsdatum), Token und Stripe-ID
+werden auf Duplikate geprüft. Gleichnamige gleichaltrige Kinder erfordern manuelle
+Klärung; kein stilles Zusammenführen. Globale Token-/Stripe-Kollisionen werden ohne
+Ausgabe fremder Inhalte gemeldet. Die Import-ID enthält den Mandanten.
+
+Ein transaktionaler Advisory-Lock serialisiert parallele Läufe dieses Skripts.
+Constraints sichern Token und Mandant/Camp zusätzlich ab. Kein Ersatz für einen
+Wartungsmodus gegenüber anderen Schreibern. Keine Mails, Stripe-Anfragen,
+Schemaänderungen oder Organisations-/Camp-Erstellung durch den Import.
+
+## Lokal ausprobieren
+
+Python mit bestehendem psycopg2-binary; keine neue Dependency. PostgreSQL über das im
+Auftrag benannte pg-start.ps1 starten. Die Tests benötigen keine App und kein pytest.
+Sie erzeugen bei Bedarf dev_l5 und wenden die unveränderten relevanten Migrationen an
+(Basisschema, Eltern-Flow-Felder, Mail-Tracking). Bestehende Schemata bleiben erhalten.
+Synthetische Testorganisationen/-camps mit Zufalls-IDs werden je Test wieder entfernt.
+
+```powershell
+$env:REVIEW_POSTGRES_PORT='55443'
+python -m unittest discover -s backend_saas/tests -p test_import_ksv.py -v
+```
+
+Ein fehlender lokaler DB-Zugang ist ein Testfehler, kein Skip. Belege: Zählung, Mapping
+aller Zahlstatus, Idempotenz, andere Org unverändert, parallele Läufe, Konflikte,
+Datum/Pflichtfelder, Einwilligungen, Token/Stripe, Header und Zielschutz.
+
+Für manuellen Import müssen Organisation ksv-baunatal und Camp sample-week bereits
+in dev_l5 angelegt sein (ausschließlich synthetische Kontaktdaten verwenden).
+Die Fixture hat 30 Datensätze: 26 gültige, ein kaputtes Datum, eine fehlende Pflichtangabe,
+eine doppelte Anmeldung und eine ungeklärte notes-Zeile. Dry-Run meldet vier Fehler
+und Exit 2; auch Apply schreibt damit nichts:
+
+```powershell
+$env:DATABASE_URL='postgresql://postgres@127.0.0.1:55443/dev_l5'
+python backend_saas/scripts/import_ksv.py --csv backend_saas/tests/fixtures/ksv_sample.csv --org-slug ksv-baunatal
+# Nach Klärung/Korrektur fehlerhafter Zeilen in einer separaten CSV:
+python backend_saas/scripts/import_ksv.py --csv <gepruefte-datei.csv> --org-slug ksv-baunatal --apply
+```
+
+Die Tests prüfen einen bereinigten Ausschnitt auch mit Apply und Wiederholung.
+
+## Rollback
+
+Tests räumen ihre Datensätze auf; dev_l5 und Schema bleiben erhalten.
+Vor manuellem Apply geprüfte Quell-CSV, Bericht und Ziel-Backup aufbewahren.
+Rücknahme ausschließlich nach Prüfung der aus Org-ID/Quell-ID berechneten Import-IDs;
+kein pauschales Löschen aller Organisations-Anmeldungen. Kein automatischer DB-Rollback.
+Code-Rollback: L5-Commits revertieren.

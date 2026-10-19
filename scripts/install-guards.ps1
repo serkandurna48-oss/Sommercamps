@@ -1,4 +1,4 @@
-# install-guards.ps1 — installs the post-checkout guard in the MAIN repo.
+﻿# install-guards.ps1 — installs the post-checkout guard in the MAIN repo.
 # NOT called automatically — run once manually:
 #   pwsh -NoProfile -File scripts/install-guards.ps1
 #
@@ -6,8 +6,35 @@
 # in the main worktree. It is a no-op in linked worktrees (cp-t3-guards, etc.).
 
 param(
-    [string]$MainRepoPath = "C:\Users\serka\Desktop\Projekte\Sommercamps"
+    [string]$MainRepoPath = "C:\Users\serka\Desktop\Projekte\Sommercamps",
+    [switch]$ValidateOnly
 )
+
+$projectRoot = Split-Path $PSScriptRoot -Parent
+$guardPath = Join-Path $projectRoot '.claude/hooks/guard-prod.ps1'
+$settingsPath = Join-Path $projectRoot '.claude/settings.json'
+try {
+    if (-not (Test-Path -LiteralPath $guardPath -PathType Leaf)) { throw 'Prod guard script missing' }
+    $settings = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+    $registration = @($settings.hooks.PreToolUse | Where-Object { $_.matcher -eq 'Bash|PowerShell' })
+    $expectedArgs = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', '${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-prod.ps1')
+    if ($registration.Count -ne 1 -or $registration[0].hooks[0].command -ne 'powershell.exe' -or
+        $registration[0].hooks[0].onFailure -ne 'block' -or
+        ($registration[0].hooks[0].args -join '|') -cne ($expectedArgs -join '|')) {
+        throw 'Prod guard registration invalid'
+    }
+    foreach ($rule in @('Bash(git push*)', 'Bash(gh pr merge*)', 'PowerShell(git push*)', 'PowerShell(gh pr merge*)')) {
+        if ($settings.permissions.deny -notcontains $rule) { throw "Missing deny rule: $rule" }
+    }
+} catch {
+    Write-Error $_
+    exit 1
+}
+Write-Host 'Prod guard tracked and registered. Requires Claude Code >= 2.1.295 and Windows PowerShell 5.1.'
+if ($ValidateOnly) {
+    Write-Host 'Validation only; no Git hook installation.'
+    exit 0
+}
 
 $hooksDir = Join-Path $MainRepoPath ".git\hooks"
 if (-not (Test-Path $hooksDir)) {
@@ -46,8 +73,5 @@ $hookPath = Join-Path $hooksDir "post-checkout"
 [System.IO.File]::WriteAllText($hookPath, $hookContent)
 
 Write-Host "Installiert: $hookPath"
-Write-Host ""
-Write-Host "Test (vom Hauptordner aus):"
-Write-Host "  cd $MainRepoPath"
-Write-Host "  git checkout -b probe-checkout-$(Get-Random)"
-Write-Host "  # Hook sollte warnen und zu demo/jan zurueckwechseln"
+Write-Host 'Prod guard uses tracked .claude/settings.json; restart Claude Code after applying the commit.'
+Write-Host 'Payload-only tests: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-guards.ps1'

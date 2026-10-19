@@ -66,6 +66,8 @@ class OrganizationCreate(BaseModel):
     intro_heading: Optional[str] = None
     intro_text: Optional[str] = None
     hero_image_url: Optional[str] = None
+    trainer_image_url: Optional[str] = None
+    trainer_text: Optional[str] = None
     billing_notes: Optional[str] = None
     # Default false, für JEDEN Aufrufer dieses Endpunkts (auch bestehende
     # Skripte wie onboard_tenant.py/scripts/seed_demo.py, die dieses Feld
@@ -120,6 +122,8 @@ class OrganizationUpdate(BaseModel):
     intro_heading: Optional[str] = None
     intro_text: Optional[str] = None
     hero_image_url: Optional[str] = None
+    trainer_image_url: Optional[str] = None
+    trainer_text: Optional[str] = None
     billing_notes: Optional[str] = None
     # Der "Veröffentlichen"/"Zurückziehen"-Schalter läuft über denselben
     # PATCH wie jedes andere Feld — kein eigener /publish-Endpunkt nötig,
@@ -309,6 +313,8 @@ class OrganizationAdminOut(BaseModel):
     intro_heading: Optional[str] = None
     intro_text: Optional[str] = None
     hero_image_url: Optional[str] = None
+    trainer_image_url: Optional[str] = None
+    trainer_text: Optional[str] = None
     billing_notes: Optional[str] = None
     site_published: bool = False
 

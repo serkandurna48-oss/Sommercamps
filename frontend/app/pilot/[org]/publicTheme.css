@@ -1571,23 +1571,44 @@
   color: var(--ink-2);
 }
 
-/* ── Bildstreifen (JK-spezifisch, nur wenn Hero gesetzt) ── */
-.cp-public .img-strip {
-  position: relative;
-  height: 240px;
-  overflow: hidden;
+/* ── Trainer-Sektion ── */
+.cp-public .trainer-sec {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-block: 28px;
+  border-top: 1px solid var(--line-2);
+  border-bottom: 1px solid var(--line-2);
 }
-@media (min-width: 900px) {
-  .cp-public .img-strip {
-    height: 320px;
-    margin-inline: calc(50% - 50vw);
-    width: 100vw;
+.cp-public .trainer-img {
+  width: 96px;
+  height: 96px;
+  border-radius: 9999px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+@media (min-width: 600px) {
+  .cp-public .trainer-img {
+    width: 120px;
+    height: 120px;
   }
 }
-.cp-public .img-strip-veil {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, var(--band) 0%, transparent 20%, transparent 80%, var(--band) 100%);
+.cp-public .trainer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cp-public .trainer-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+}
+.cp-public .trainer-bio {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  margin: 0;
 }
 
 /* ── Formular-Spaltenbreite (Desktop) ── */

@@ -117,6 +117,8 @@ def test_get_organization_response_includes_only_declared_public_fields(monkeypa
         "intro_heading",
         "intro_text",
         "hero_image_url",
+        "trainer_image_url",
+        "trainer_text",
         "iban",
     }
 
@@ -136,3 +138,33 @@ def test_public_editorial_content_is_returned_without_billing_notes(monkeypatch)
     assert response.status_code == 200
     assert {key: response.json()[key] for key in content} == content
     assert "billing_notes" not in response.json()
+
+
+def test_get_organization_includes_trainer_fields(monkeypatch):
+    monkeypatch.setattr(
+        organizations,
+        "get_organization_by_slug",
+        lambda slug: _org_row(
+            slug,
+            "active",
+            trainer_image_url="/jk/camp.jpg",
+            trainer_text="Leitet die Academy und trainiert jede Camp-Gruppe selbst.",
+        ),
+    )
+    with TestClient(app) as client:
+        response = client.get("/api/v1/organizations/demo-fc")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["trainer_image_url"] == "/jk/camp.jpg"
+    assert body["trainer_text"] == "Leitet die Academy und trainiert jede Camp-Gruppe selbst."
+
+
+def test_get_organization_trainer_fields_null_by_default(monkeypatch):
+    monkeypatch.setattr(
+        organizations, "get_organization_by_slug", lambda slug: _org_row(slug, "active")
+    )
+    with TestClient(app) as client:
+        response = client.get("/api/v1/organizations/demo-fc")
+    body = response.json()
+    assert body["trainer_image_url"] is None
+    assert body["trainer_text"] is None

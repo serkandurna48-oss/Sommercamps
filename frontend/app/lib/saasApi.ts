@@ -30,6 +30,9 @@ export interface OrganizationPublic {
   intro_heading: string | null
   intro_text: string | null
   hero_image_url: string | null
+  // Trainer-Sektion (L1e). null = Sektion nicht anzeigen.
+  trainer_image_url: string | null
+  trainer_text: string | null
   // Für die Zahlungsdaten auf der Bestätigungsseite (§6.4). null = kein Überweisungshinweis.
   iban: string | null
 }

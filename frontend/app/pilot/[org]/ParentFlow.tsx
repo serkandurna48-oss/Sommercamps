@@ -242,10 +242,22 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
         </div>
       </div>
 
-      {hero && (
-        <div className="img-strip">
-          <Image src={hero} alt="" unoptimized fill style={{ objectFit: 'cover', objectPosition: 'center 35%' }} />
-          <div className="img-strip-veil" />
+      {org.trainer_image_url?.trim() && (
+        <div className="trainer-sec pad" data-rise>
+          <Image
+            src={org.trainer_image_url}
+            alt={org.contact_person_name ?? ''}
+            unoptimized
+            width={120}
+            height={120}
+            className="trainer-img"
+            style={{ objectFit: 'cover' }}
+          />
+          <div className="trainer-body">
+            <h2 className="d3">{publicUI.trainer.heading}</h2>
+            {org.contact_person_name && <p className="trainer-name">{org.contact_person_name}</p>}
+            {org.trainer_text?.trim() && <p className="trainer-bio">{org.trainer_text}</p>}
+          </div>
         </div>
       )}
 

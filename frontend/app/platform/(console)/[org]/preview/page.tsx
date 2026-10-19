@@ -55,6 +55,8 @@ export default async function PlatformOrgPreviewPage({ params }: { params: Promi
     intro_heading: org.intro_heading,
     intro_text: org.intro_text,
     hero_image_url: org.hero_image_url,
+    trainer_image_url: org.trainer_image_url,
+    trainer_text: org.trainer_text,
     theme: (org.theme as OrganizationPublic['theme']) ?? 'tradition',
     iban: org.iban,
   }

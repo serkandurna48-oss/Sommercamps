@@ -112,6 +112,7 @@ it('CampScreen rendert Camp-Titel, Preis und CTA', () => {
     <CampScreen org={{ ...org, theme: 'tradition' }} camp={camp} onBack={() => {}} onRegister={() => {}} />,
   )
   expect(html).toContain('Sommercamp A')
+  expect(html).toContain('dock')  // Preis/CTA-Leiste vorhanden
   expect(html).toContain('199') // Preis 199,00 € enthält "199"
   expect(html).toContain('Jetzt anmelden')
 })

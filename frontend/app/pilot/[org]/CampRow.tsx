@@ -49,6 +49,7 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
         </span>
         <span className="tags">
           {camp.is_full && <span className="chip info">Ausgebucht</span>}
+          {camp.location && <span className="tag">{camp.location}</span>}
           <span className="tag">
             {camp.age_min} bis {camp.age_max} Jahre
           </span>

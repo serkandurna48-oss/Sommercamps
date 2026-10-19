@@ -437,7 +437,7 @@
   text-align: right;
 }
 .cp-public[data-theme='akademie'] .h-akad .mark .c {
-  background: #0F172A;
+  background: var(--band);
   overflow: hidden;
 }
 

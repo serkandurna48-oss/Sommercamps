@@ -129,7 +129,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
 
       {org.theme === 'akademie' && (
         <header className="hero h-akad">
-          <div className="bg">{hero && <Image id="shotB" src={hero} alt="" unoptimized fill priority style={{ objectFit: 'cover', opacity: 0.46 }} />}</div>
+          <div className="bg">{hero && <Image id="shotB" src={hero} alt="" unoptimized fill priority style={{ objectFit: 'cover' }} />}</div>
           <div className="veil" />
           <div className="in">
             <span className="mark">
@@ -144,6 +144,18 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
             <p className="intro" data-rise style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--on-band-2)', maxWidth: '40ch' }}>
               {intro}
             </p>
+            {camps.length > 0 && (
+              <div className="stats">
+                <div className="stat">
+                  <b className="num">{camps.reduce((s, c) => s + c.capacity, 0)}</b>
+                  <span>Plätze gesamt</span>
+                </div>
+                <div className="stat">
+                  <b className="num">{camps.length}</b>
+                  <span>{camps.length === 1 ? 'Camp' : 'Camps'}</span>
+                </div>
+              </div>
+            )}
           </div>
         </header>
       )}

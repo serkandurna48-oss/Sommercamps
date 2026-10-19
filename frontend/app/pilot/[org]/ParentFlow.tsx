@@ -242,6 +242,13 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
         </div>
       </div>
 
+      {hero && (
+        <div className="img-strip">
+          <Image src={hero} alt="" unoptimized fill style={{ objectFit: 'cover', objectPosition: 'center 35%' }} />
+          <div className="img-strip-veil" />
+        </div>
+      )}
+
       <div className="pad how-sec">
         <h2 className="d2" data-split>{publicUI.howItWorks.heading}</h2>
         <div className="how-steps">

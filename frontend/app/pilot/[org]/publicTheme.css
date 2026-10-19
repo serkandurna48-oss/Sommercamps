@@ -557,7 +557,7 @@
 }
 @media (min-width: 900px) {
   .cp-public .assure {
-    padding-inline: 40px;
+    padding-inline: max(40px, calc(50% - 380px));
   }
 }
 .cp-public[data-theme='kompakt'] .assure {
@@ -949,7 +949,7 @@
 }
 @media (min-width: 900px) {
   .cp-public .prog {
-    padding-inline: 40px;
+    padding-inline: max(40px, calc(50% - 380px));
   }
 }
 .cp-public .prog .bars {
@@ -1241,7 +1241,7 @@
 }
 @media (min-width: 900px) {
   .cp-public .dock {
-    padding-inline: 40px;
+    padding-inline: max(40px, calc(50% - 380px));
   }
 }
 .cp-public[data-theme='kompakt'] .dock {
@@ -1274,7 +1274,7 @@
 }
 @media (min-width: 900px) {
   .cp-public .ok-band {
-    padding-inline: 40px;
+    padding-inline: max(40px, calc(50% - 380px));
   }
 }
 .cp-public[data-theme='tradition'] .ok-band {
@@ -1518,7 +1518,7 @@
 
 /* ── „So einfach geht's" ── */
 .cp-public .how-sec {
-  padding-block: 48px;
+  padding-block: 36px 52px;
   border-top: 1px solid var(--line-2);
 }
 .cp-public .how-sec .d2 {
@@ -1569,6 +1569,25 @@
   font-size: 14px;
   line-height: 1.55;
   color: var(--ink-2);
+}
+
+/* ── Bildstreifen (JK-spezifisch, nur wenn Hero gesetzt) ── */
+.cp-public .img-strip {
+  position: relative;
+  height: 240px;
+  overflow: hidden;
+}
+@media (min-width: 900px) {
+  .cp-public .img-strip {
+    height: 320px;
+    margin-inline: calc(50% - 50vw);
+    width: 100vw;
+  }
+}
+.cp-public .img-strip-veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, var(--band) 0%, transparent 20%, transparent 80%, var(--band) 100%);
 }
 
 /* ── Formular-Spaltenbreite (Desktop) ── */

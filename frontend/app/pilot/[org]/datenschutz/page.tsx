@@ -115,8 +115,9 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
               <li>
                 <strong>Brevo</strong> (Sendinblue SAS, 55 rue d&apos;Amsterdam, 75008 Paris,
                 Frankreich) – für den Versand der Bestätigungsmail. Übermittelt werden die
-                E-Mail-Adresse der Eltern sowie Camp, Termin und Zahlungsdetails des Anbieters.
-                Keine Namen, Geburtsdaten, Allergien oder medizinischen Hinweise.
+                E-Mail-Adresse der Eltern sowie Camp, Termin, Zahlungsdetails und Kontaktdaten des
+                Anbieters. Keine Namen von Eltern oder Kindern, keine Geburtsdaten, Allergien oder
+                medizinischen Hinweise.
               </li>
             </ul>
             <p>

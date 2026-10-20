@@ -50,6 +50,7 @@ _EXPECTED_PAYMENT_REF = f"CP-{str(_TOKEN)[:8].upper()}"
 def _ctx() -> dict:
     return {
         "org_name": "JK Performance Academy",
+        "payee_name": "JK Performance Academy e. V.",
         "org_email": "info@jk.example",
         "org_phone": "+49 123 456",
         "iban": "DE89370400440532013000",
@@ -150,7 +151,7 @@ def test_registered_mail_body_contains_camp_title_and_payment_ref():
     assert "DE89370400440532013000" in msg.html_content
 
 
-def test_registered_mail_without_iban_omits_payment_block():
+def test_registered_mail_without_iban_shows_ref_but_no_iban_field():
     msg = build_registration_mail(
         status="registered",
         org_name="JK Academy",
@@ -163,7 +164,8 @@ def test_registered_mail_without_iban_omits_payment_block():
         payment_reference="CP-ABCD1234",
         iban=None,
     )
-    assert "CP-ABCD1234" not in msg.html_content
+    assert "CP-ABCD1234" in msg.html_content
+    assert "IBAN" not in msg.html_content
 
 
 def test_waitlist_mail_subject_contains_warteliste():
@@ -253,7 +255,7 @@ def test_registered_mail_without_iban_shows_provider_hint():
     )
     assert "Zahlungsdetails" in msg.html_content
     assert "JK Academy" in msg.html_content
-    assert "CP-ABCD1234" not in msg.html_content
+    assert "CP-ABCD1234" in msg.html_content
 
 
 def test_waitlist_mail_body_has_no_iban_block():
@@ -497,7 +499,6 @@ def _brevo(status_code: int) -> BrevoProvider:
 def _sample_msg() -> MailMessage:
     return MailMessage(
         to_email="to@test.com",
-        to_name="Test User",
         subject="Test Subject",
         html_content="<p>Test</p>",
     )
@@ -677,3 +678,121 @@ def test_app_env_process_env_wins(monkeypatch):
     monkeypatch.setattr(config, "get_settings", lambda: _S())
     provider = mail_mod._build_provider()
     provider.send(mail_mod.MailMessage(to_email="a@campspilot.example", subject="s", html_content="h"))
+
+
+# ---------------------------------------------------------------------------
+# C11 F2: payee_name in templates (COALESCE(legal_name, name))
+# ---------------------------------------------------------------------------
+
+
+def test_payee_name_distinct_from_org_name_used_as_recipient():
+    """When payee_name (= legal_name) differs from org_name, it appears in Empfänger field."""
+    msg = build_registration_mail(
+        status="registered",
+        org_name="JK Academy",
+        payee_name="JK Performance Academy e. V.",
+        org_email="info@jk.example",
+        org_phone=None,
+        camp_title="Sommercamp 2027",
+        camp_start=date(2027, 7, 5),
+        camp_end=date(2027, 7, 9),
+        parent_email="max@example.com",
+        payment_reference="CP-ABCD1234",
+        iban="DE89370400440532013000",
+    )
+    assert "JK Performance Academy e. V." in msg.html_content
+    assert "Empfänger" in msg.html_content
+
+
+def test_payee_name_used_in_no_iban_hint():
+    """payee_name also appears in the no-IBAN payment hint."""
+    msg = build_registration_mail(
+        status="registered",
+        org_name="JK Academy",
+        payee_name="JK Performance Academy e. V.",
+        org_email="info@jk.example",
+        org_phone=None,
+        camp_title="Sommercamp 2027",
+        camp_start=date(2027, 7, 5),
+        camp_end=date(2027, 7, 9),
+        parent_email="max@example.com",
+        payment_reference="CP-ABCD1234",
+        iban=None,
+    )
+    assert "JK Performance Academy e. V." in msg.html_content
+
+
+# ---------------------------------------------------------------------------
+# C11 F5: Brevo payload — to[0] contains only {"email"}, no name field
+# ---------------------------------------------------------------------------
+
+
+def test_brevo_payload_to_has_only_email_key():
+    import json
+
+    transport = _CapturingTransport()
+    client = httpx.Client(transport=transport)
+    brevo = BrevoProvider("test-key", "noreply@test.com", "Test Sender", _http_client=client)
+    brevo.send(_sample_msg())
+
+    assert len(transport.requests) == 1
+    payload = json.loads(transport.requests[0].content)
+    assert set(payload["to"][0].keys()) == {"email"}
+
+
+# ---------------------------------------------------------------------------
+# C11 F6: Parametrisierter Orchestrierungstest — Provider fehlend/unbekannt ×
+# APP_ENV aus Prozess-Env oder nur aus Settings (staging, production):
+# genau ein _mark_error, kein _mark_sent.
+# ---------------------------------------------------------------------------
+
+import app.config as _config_mod
+from app.notifications import mail as _mail_mod
+
+
+@pytest.mark.parametrize(
+    "provider_value,env_source,app_env_value",
+    [
+        (None, "process", "staging"),
+        (None, "process", "production"),
+        ("unknown_smtp", "process", "staging"),
+        ("unknown_smtp", "process", "production"),
+        (None, "settings", "staging"),
+        (None, "settings", "production"),
+        ("unknown_smtp", "settings", "staging"),
+        ("unknown_smtp", "settings", "production"),
+    ],
+)
+def test_unconfigured_provider_marks_error_in_nonlocal_env(
+    monkeypatch, provider_value, env_source, app_env_value
+):
+    """Missing or unknown NOTIFICATION_PROVIDER in staging/production → _mark_error once, no _mark_sent."""
+
+    class _FakeSettings:
+        app_env = app_env_value
+
+    if provider_value is None:
+        monkeypatch.delenv("NOTIFICATION_PROVIDER", raising=False)
+    else:
+        monkeypatch.setenv("NOTIFICATION_PROVIDER", provider_value)
+
+    if env_source == "process":
+        monkeypatch.setenv("APP_ENV", app_env_value)
+    else:
+        monkeypatch.delenv("APP_ENV", raising=False)
+        monkeypatch.setattr(_config_mod, "get_settings", lambda: _FakeSettings())
+
+    reset_provider_for_testing(None)  # force rebuild with new env
+
+    errors: list[str] = []
+    marked: list = []
+    _patch(
+        monkeypatch,
+        mark_error=lambda token, err, org_id: errors.append(err),
+        mark_sent=lambda token, org_id: marked.append(token),
+    )
+
+    _call_send()
+
+    assert len(errors) == 1, f"Expected 1 _mark_error, got {errors}"
+    assert marked == [], f"_mark_sent must not be called, got {marked}"

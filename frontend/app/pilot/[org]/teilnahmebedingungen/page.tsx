@@ -26,15 +26,12 @@ export default async function OrgTeilnahmebedingungenPage({ params }: { params: 
         <span className="legal-label">{entityName}</span>
         <h1 className="legal-h1">Teilnahme&shy;bedingungen</h1>
 
-        {/* Sprungmarken-Inhaltsverzeichnis (5 Abschnitte > 4) */}
         <nav className="legal-toc" aria-label="Inhaltsverzeichnis">
           <p className="legal-toc-label">Inhalt</p>
           <ol>
             <li><a href="#tb-1">Geltungsbereich</a></li>
             <li><a href="#tb-2">Anmeldung</a></li>
             <li><a href="#tb-3">Zahlung</a></li>
-            <li><a href="#tb-4">Stornierung</a></li>
-            <li><a href="#tb-5">Haftung und Verhalten</a></li>
           </ol>
         </nav>
 
@@ -64,39 +61,18 @@ export default async function OrgTeilnahmebedingungenPage({ params }: { params: 
           <section id="tb-3">
             <h2>3. Zahlung</h2>
             <p>
-              Der Teilnahmebetrag und die Zahlungsdetails werden in der Bestätigungs-E-Mail
-              mitgeteilt. Maßgeblich ist die dort genannte Angabe.
+              Bei einem festen Platz stehen Betrag und Zahlungsdetails in der Bestätigungs-E-Mail;
+              ist dort keine Bankverbindung angegeben, sendet {entityName} die Zahlungsdetails
+              direkt. Auf der Warteliste ist noch keine Zahlung fällig.
             </p>
           </section>
 
-          <section id="tb-4">
-            <h2>4. Stornierung</h2>
-            <p>
-              Ein Rücktritt ist schriftlich per E-Mail an {entityName} zu erklären.
-            </p>
-            <p>
-              Es gelten die Teilnahme- und Stornobedingungen von {entityName}. Bei Fragen wenden
-              Sie sich direkt an {entityName}:{' '}
-              <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>
-              {org.contact_phone ? ` oder ${org.contact_phone}` : ''}.
-            </p>
-          </section>
-
-          <section id="tb-5">
-            <h2>5. Haftung und Verhalten</h2>
-            <p>
-              {entityName} haftet nicht für Schäden an mitgebrachten Gegenständen. Die Teilnehmer
-              sind verpflichtet, die Anweisungen der Trainer zu befolgen und respektvoll mit allen
-              Beteiligten umzugehen. Bei wiederholten schwerwiegenden Verstößen kann ein
-              Teilnehmer vom Camp ausgeschlossen werden, ohne dass ein Anspruch auf Erstattung
-              besteht.
-            </p>
-            <p>
-              Gesetzliche Vertreter versichern mit der Anmeldung, dass keine gesundheitlichen
-              Einschränkungen bestehen, die einer Teilnahme entgegenstehen, sofern diese nicht
-              im Anmeldeformular angegeben wurden.
-            </p>
-          </section>
+          <p>
+            Es gelten die Teilnahme-, Storno- und Haftungsbedingungen von {entityName}.{' '}
+            Bei Fragen:{' '}
+            <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>
+            {org.contact_phone ? ` oder ${org.contact_phone}` : ''}.
+          </p>
         </div>
       </main>
     </LegalShell>

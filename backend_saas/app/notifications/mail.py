@@ -32,7 +32,6 @@ class MailMessage:
     to_email: str
     subject: str
     html_content: str
-    to_name: str = ""
     reply_to: Optional[str] = None
     sender_name: Optional[str] = None  # overrides provider default when set
 
@@ -105,8 +104,6 @@ class BrevoProvider:
 
     def send(self, message: MailMessage) -> None:
         to_entry: dict = {"email": message.to_email}
-        if message.to_name:
-            to_entry["name"] = message.to_name
         payload: dict = {
             "sender": {"email": self._from_email, "name": message.sender_name or self._from_name},
             "to": [to_entry],

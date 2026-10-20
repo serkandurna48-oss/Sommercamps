@@ -71,7 +71,7 @@ export default async function OrgTeilnahmebedingungenPage({ params }: { params: 
           {org.terms_text ? (
             <section id="tb-4">
               <h2>Bedingungen von {entityName}</h2>
-              {org.terms_text.split(/\n\n+/).filter(Boolean).map((para, i) => (
+              {org.terms_text.split(/\r?\n[ \t]*\r?\n/).map((s) => s.trim()).filter(Boolean).map((para, i) => (
                 <p key={i}>{para}</p>
               ))}
             </section>

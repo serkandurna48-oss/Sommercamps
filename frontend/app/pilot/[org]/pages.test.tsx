@@ -99,6 +99,17 @@ it('Teilnahmebedingungen: mit terms_text zeigt Abschnitt mit zwei Absätzen', as
   expect(html).not.toContain('Es gelten die Teilnahme-')
 })
 
+it('Teilnahmebedingungen: CRLF aus Formular ergibt ebenfalls zwei Absätze', async () => {
+  vi.mocked(fetchOrganization).mockResolvedValueOnce({
+    ...DEFAULT_ORG,
+    terms_text: 'Erster Absatz.\r\n\r\nZweiter Absatz.',
+  })
+  const el = await TeilnahmebedingungenPage({ params })
+  const html = renderToStaticMarkup(el)
+  expect(html).toContain('<p>Erster Absatz.</p>')
+  expect(html).toContain('<p>Zweiter Absatz.</p>')
+})
+
 it('Teilnahmebedingungen: terms_text mit spitzen Klammern wird escaped', async () => {
   vi.mocked(fetchOrganization).mockResolvedValueOnce({
     ...DEFAULT_ORG,

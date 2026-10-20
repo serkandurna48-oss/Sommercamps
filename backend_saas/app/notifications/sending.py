@@ -56,8 +56,14 @@ _FETCH_REGISTRATION = """
       AND r.organization_id = %s
 """
 
-_MARK_SENT = "UPDATE camp_registrations SET email_sent_at = %s, email_error = NULL WHERE registration_token = %s"
-_MARK_ERROR = "UPDATE camp_registrations SET email_error = %s WHERE registration_token = %s"
+_MARK_SENT = (
+    "UPDATE camp_registrations SET email_sent_at = %s, email_error = NULL"
+    " WHERE registration_token = %s AND organization_id = %s"
+)
+_MARK_ERROR = (
+    "UPDATE camp_registrations SET email_error = %s"
+    " WHERE registration_token = %s AND organization_id = %s"
+)
 
 
 def _fetch_mail_context(organization_id: UUID, camp_id: UUID) -> Optional[dict]:
@@ -72,14 +78,14 @@ def _fetch_registration(registration_token: UUID, organization_id: UUID) -> Opti
         return cur.fetchone()
 
 
-def _mark_sent(registration_token: UUID) -> None:
+def _mark_sent(registration_token: UUID, organization_id: UUID) -> None:
     with db.get_cursor() as cur:
-        cur.execute(_MARK_SENT, (datetime.now(timezone.utc), registration_token))
+        cur.execute(_MARK_SENT, (datetime.now(timezone.utc), registration_token, organization_id))
 
 
-def _mark_error(registration_token: UUID, error: str) -> None:
+def _mark_error(registration_token: UUID, error: str, organization_id: UUID) -> None:
     with db.get_cursor() as cur:
-        cur.execute(_MARK_ERROR, (error[:500], registration_token))
+        cur.execute(_MARK_ERROR, (error[:500], registration_token, organization_id))
 
 
 def _do_send(
@@ -119,8 +125,10 @@ def _do_send(
         iban=ctx.get("iban"),
     )
     msg.sender_name = f"{ctx['org_name']} über CampsPilot"
-    get_provider().send(msg)
-    _mark_sent(registration_token)
+    provider = get_provider()
+    provider.send(msg)
+    if getattr(provider, "delivers", True):
+        _mark_sent(registration_token, organization_id)
 
 
 def send_registration_notification(
@@ -159,7 +167,7 @@ def send_registration_notification(
             exc,
         )
         try:
-            _mark_error(registration_token, str(exc))
+            _mark_error(registration_token, str(exc), organization_id)
         except Exception:
             pass
 

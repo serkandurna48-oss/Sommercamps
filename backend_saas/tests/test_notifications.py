@@ -12,12 +12,29 @@ from __future__ import annotations
 from datetime import date
 from uuid import uuid4
 
+import httpx
 import pytest
 
 from app.notifications import sending
-from app.notifications.mail import FakeProvider, reset_provider_for_testing
+from app.notifications.mail import (
+    BrevoProvider,
+    FakeProvider,
+    MailMessage,
+    reset_provider_for_testing,
+)
 from app.notifications.templates import build_registration_mail
-from app.notifications.mail import MailMessage
+
+
+class _RealMockProvider:
+    """Test-only stand-in with delivers=True: records sent messages without network calls."""
+
+    delivers: bool = True
+
+    def __init__(self) -> None:
+        self.sent: list[MailMessage] = []
+
+    def send(self, message: MailMessage) -> None:
+        self.sent.append(message)
 
 
 # ---------------------------------------------------------------------------
@@ -232,8 +249,12 @@ def test_waitlist_sends_one_mail_with_waitlist_subject(monkeypatch, fake_provide
 
 
 def test_send_marks_sent_on_success(monkeypatch, fake_provider):
+    # FakeProvider.delivers=False; use a real-delivering provider to verify _mark_sent is called.
+    real = _RealMockProvider()
+    reset_provider_for_testing(real)
+
     marked = []
-    _patch(monkeypatch, mark_sent=lambda token: marked.append(token))
+    _patch(monkeypatch, mark_sent=lambda token, org_id: marked.append(token))
     _call_send()
 
     assert marked == [_TOKEN]
@@ -255,7 +276,7 @@ def test_send_marks_error_when_provider_fails(monkeypatch, fake_provider):
 
     fake_provider.send = failing_send
     errors = []
-    _patch(monkeypatch, mark_error=lambda token, err: errors.append(err))
+    _patch(monkeypatch, mark_error=lambda token, err, org_id: errors.append(err))
 
     _call_send()
 
@@ -308,10 +329,12 @@ def test_retry_idempotent_double_call(monkeypatch, fake_provider):
     """Second call after first success sends nothing."""
     from datetime import datetime, timezone
 
-    call_count = [0]
-    original_mark_sent = lambda token: None
+    real = _RealMockProvider()
+    reset_provider_for_testing(real)
 
-    def counting_mark_sent(token):
+    call_count = [0]
+
+    def counting_mark_sent(token, org_id):
         call_count[0] += 1
 
     # First call: reg has no sent_at, send succeeds
@@ -322,4 +345,180 @@ def test_retry_idempotent_double_call(monkeypatch, fake_provider):
     _patch(monkeypatch, reg=_reg(email_sent_at=datetime.now(timezone.utc)))
     sending.retry_registration_notification(_TOKEN, _ORG_ID)
 
-    assert len(fake_provider.sent) == 1  # only first call sent
+    assert len(real.sent) == 1  # only first call sent
+    assert call_count[0] == 1  # _mark_sent called exactly once
+
+
+# ---------------------------------------------------------------------------
+# B1: BrevoProvider — httpx, no real network
+# ---------------------------------------------------------------------------
+
+
+class _StatusTransport(httpx.BaseTransport):
+    def __init__(self, status_code: int) -> None:
+        self._status_code = status_code
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        return httpx.Response(self._status_code, json={"messageId": "test-id"})
+
+
+class _NetworkErrorTransport(httpx.BaseTransport):
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("simulated network failure")
+
+
+def _brevo(status_code: int) -> BrevoProvider:
+    client = httpx.Client(transport=_StatusTransport(status_code))
+    return BrevoProvider("test-key", "noreply@test.com", "Test Sender", _http_client=client)
+
+
+def _sample_msg() -> MailMessage:
+    return MailMessage(
+        to_email="to@test.com",
+        to_name="Test User",
+        subject="Test Subject",
+        html_content="<p>Test</p>",
+    )
+
+
+def test_brevo_2xx_succeeds():
+    _brevo(200).send(_sample_msg())  # no exception
+
+
+def test_brevo_201_succeeds():
+    _brevo(201).send(_sample_msg())  # no exception
+
+
+def test_brevo_4xx_raises():
+    with pytest.raises(httpx.HTTPStatusError):
+        _brevo(422).send(_sample_msg())
+
+
+def test_brevo_5xx_raises():
+    with pytest.raises(httpx.HTTPStatusError):
+        _brevo(500).send(_sample_msg())
+
+
+def test_brevo_network_error_raises():
+    client = httpx.Client(transport=_NetworkErrorTransport())
+    provider = BrevoProvider("test-key", "noreply@test.com", "Sender", _http_client=client)
+    with pytest.raises(httpx.ConnectError):
+        provider.send(_sample_msg())
+
+
+# ---------------------------------------------------------------------------
+# B2: Provider configuration — email_sent_at invariants
+# ---------------------------------------------------------------------------
+
+
+def test_missing_provider_does_not_mark_email_sent_at(monkeypatch):
+    """Missing NOTIFICATION_PROVIDER in test env must not set email_sent_at."""
+    monkeypatch.delenv("NOTIFICATION_PROVIDER", raising=False)
+    reset_provider_for_testing(None)  # force _build_provider() to run
+
+    marked = []
+    _patch(monkeypatch, mark_sent=lambda token, org_id: marked.append(token))
+    _call_send()
+
+    assert marked == [], "email_sent_at must not be set when NOTIFICATION_PROVIDER is unconfigured"
+
+
+def test_fake_provider_does_not_mark_email_sent_at(monkeypatch, fake_provider):
+    """FakeProvider.send() must not cause email_sent_at to be set (delivers=False)."""
+    marked = []
+    _patch(monkeypatch, mark_sent=lambda token, org_id: marked.append(token))
+    _call_send()
+
+    assert marked == [], "FakeProvider must not set email_sent_at so the send remains retry-able"
+
+
+def test_retry_reaches_registration_after_provider_switch(monkeypatch, fake_provider):
+    """After switching to a real (delivers=True) provider, retry finds the unsent registration."""
+    real = _RealMockProvider()
+    reset_provider_for_testing(real)
+
+    marked = []
+    _patch(
+        monkeypatch,
+        reg=_reg(email_sent_at=None),
+        mark_sent=lambda token, org_id: marked.append(token),
+    )
+    sending.retry_registration_notification(_TOKEN, _ORG_ID)
+
+    assert marked == [_TOKEN], "retry must mark email_sent_at when a real provider is active"
+    assert len(real.sent) == 1
+
+
+# ---------------------------------------------------------------------------
+# B7: organization_id threaded through _mark_sent / _mark_error
+# ---------------------------------------------------------------------------
+
+_ORG_A_ID = uuid4()
+_ORG_B_ID = uuid4()
+
+
+def test_mark_sent_receives_organization_id(monkeypatch, fake_provider):
+    """_do_send passes the caller's organization_id to _mark_sent (WHERE guards tenant boundary)."""
+    real = _RealMockProvider()
+    reset_provider_for_testing(real)
+
+    sent_args: list[tuple] = []
+    monkeypatch.setattr(sending, "_fetch_mail_context", lambda *_: _ctx())
+    monkeypatch.setattr(sending, "_fetch_registration", lambda *_: None)
+    monkeypatch.setattr(sending, "_mark_sent", lambda token, org_id: sent_args.append((token, org_id)))
+    monkeypatch.setattr(sending, "_mark_error", lambda *_: None)
+
+    sending.send_registration_notification(
+        registration_token=_TOKEN,
+        status="registered",
+        organization_id=_ORG_A_ID,
+        camp_id=_CAMP_ID,
+        start_date=date(2027, 7, 5),
+        end_date=date(2027, 7, 9),
+        parent_email="max@example.com",
+        parent_first_name="Max",
+        parent_last_name="Mustermann",
+        child_first_name="Lena",
+        child_last_name="Mustermann",
+    )
+
+    assert len(sent_args) == 1
+    assert sent_args[0] == (_TOKEN, _ORG_A_ID)
+    assert sent_args[0][1] != _ORG_B_ID
+
+
+def test_mark_error_receives_organization_id(monkeypatch, fake_provider):
+    """On provider failure, _mark_error receives organization_id so the UPDATE WHERE scopes to org."""
+    real = _RealMockProvider()
+
+    def failing_send(msg: MailMessage) -> None:
+        raise RuntimeError("provider down")
+
+    real.send = failing_send
+    reset_provider_for_testing(real)
+
+    error_args: list[tuple] = []
+    monkeypatch.setattr(sending, "_fetch_mail_context", lambda *_: _ctx())
+    monkeypatch.setattr(sending, "_fetch_registration", lambda *_: None)
+    monkeypatch.setattr(sending, "_mark_sent", lambda *_: None)
+    monkeypatch.setattr(
+        sending, "_mark_error", lambda token, err, org_id: error_args.append((token, org_id))
+    )
+
+    sending.send_registration_notification(
+        registration_token=_TOKEN,
+        status="registered",
+        organization_id=_ORG_B_ID,
+        camp_id=_CAMP_ID,
+        start_date=date(2027, 7, 5),
+        end_date=date(2027, 7, 9),
+        parent_email="max@example.com",
+        parent_first_name="Max",
+        parent_last_name="Mustermann",
+        child_first_name="Lena",
+        child_last_name="Mustermann",
+    )
+
+    assert len(error_args) == 1
+    assert error_args[0] == (_TOKEN, _ORG_B_ID)
+    assert error_args[0][1] != _ORG_A_ID

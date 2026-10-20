@@ -2,7 +2,7 @@ design/m7-legal
 
 STATUS: fertig zur Prüfung
 
-COMMIT: noch ausstehend (wird direkt nach dieser Datei angelegt)
+COMMIT: 185bb4a43b5283683896e48a76d5b151abe29394
 
 TESTS:
   npm run test --prefix frontend → 19 passed, 149 Tests, 0 failed

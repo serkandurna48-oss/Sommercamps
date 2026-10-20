@@ -70,7 +70,7 @@ export const de = {
         count === 1
           ? `Eine Anmeldung wartet bei „${campTitle}" auf einen Platz`
           : `${count} Anmeldungen warten bei „${campTitle}" auf einen Platz`,
-      hint: 'Das nächste Kind rückt sofort nach. Der Verein informiert — keine automatische Nachricht.',
+      hint: 'Beim Nachrücken werden die Eltern nicht automatisch benachrichtigt. Der Verein meldet sich bei ihnen.',
     },
     review: 'Ansehen',
     markDone: 'Erledigt',
@@ -127,10 +127,10 @@ export const de = {
     position: (n: number) => `Platz ${n}`,
     waitingSince: (days: number) => (days <= 0 ? 'wartet seit heute' : days === 1 ? 'wartet seit 1 Tag' : `wartet seit ${days} Tagen`),
     familiesWaiting: (n: number) => (n === 1 ? '1 Familie wartet' : `${n} Familien warten`),
-    promote: 'Platz vergeben',
+    promote: (name: string) => `Platz an ${name} vergeben`,
     promoting: 'Wird vergeben …',
-    promoteHint: 'Das nächste Kind rückt sofort nach. Der Verein informiert — keine automatische Nachricht.',
-    promoteNoCapacity: 'Kein freier Platz gerade — später erneut versuchen.',
+    promoteHint: 'Beim Nachrücken werden die Eltern nicht automatisch benachrichtigt. Der Verein meldet sich bei ihnen.',
+    promoteNoCapacity: 'Alle Plätze belegt – nach einer Stornierung rückt das nächste Kind automatisch nach.',
     promoteSuccess: (name: string) => `${name} ist jetzt angemeldet.`,
     promoteError: 'Konnte nicht aufrücken — erneut versuchen.',
     emptyOrg: 'Aktuell wartet niemand auf einen Platz.',
@@ -264,7 +264,7 @@ export const publicUI = {
   },
   faq: [
     { q: 'Wie läuft die Bezahlung ab?', a: 'Nach der Anmeldung erhalten Sie die Bankdaten und überweisen den Betrag selbst. Ihr Platz ist bereits reserviert, sobald das Formular abgeschickt wurde.' },
-    { q: 'Was passiert, wenn ein Camp ausgebucht ist?', a: 'Sie können sich auf die Warteliste setzen. Sobald ein Platz frei wird, rücken Sie automatisch nach und werden benachrichtigt.' },
+    { q: 'Was passiert, wenn ein Camp ausgebucht ist?', a: 'Sie können sich auf die Warteliste setzen. Sobald ein Platz frei wird, rückt das nächste Kind automatisch nach. Es wird keine automatische E-Mail versendet; der Verein meldet sich bei Ihnen, wenn Ihr Kind einen Platz erhält.' },
     { q: 'Wie kann ich stornieren?', a: 'Schreiben Sie dem Camp-Team einfach eine E-Mail. Die genauen Stornobedingungen stehen in den Teilnahmebedingungen.' },
     { q: 'Wer darf mein Kind abholen?', a: 'Die abholberechtigten Personen geben Sie direkt im Anmeldeformular an. Bitte halten Sie bei der Abholung einen Lichtbildausweis bereit.' },
     { q: 'Wie erreiche ich das Camp-Team?', a: 'Die E-Mail-Adresse des Vereins finden Sie am Ende dieser Seite. Wir antworten in der Regel am selben Tag.' },

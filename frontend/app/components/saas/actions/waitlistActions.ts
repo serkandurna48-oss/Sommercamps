@@ -33,7 +33,7 @@ export async function promoteWaitlistAction(
       return { error: 'Kein freier Platz gerade — später erneut versuchen.', success: null }
     }
     revalidatePath(`/pilot/${orgSlug}`, 'layout')
-    return { error: null, success: 'Nächste Familie ist jetzt angemeldet.' }
+    return { error: null, success: 'Platz vergeben.', promoted: result.promoted }
   } catch {
     return { error: 'Konnte nicht aufrücken — erneut versuchen.', success: null }
   }
@@ -61,9 +61,8 @@ export async function cancelRegistrationAction(
     revalidatePath(`/pilot/${orgSlug}`, 'layout')
     return {
       error: null,
-      success: result.promoted
-        ? 'Storniert — die nächste Familie von der Warteliste ist jetzt angemeldet.'
-        : 'Anmeldung storniert.',
+      success: 'Anmeldung storniert.',
+      promoted: result.promoted,
     }
   } catch {
     return { error: 'Konnte nicht storniert werden — erneut versuchen.', success: null }

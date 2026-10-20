@@ -11,6 +11,7 @@ import FilterButton from '../ui/FilterButton'
 import SelectionBar from '../ui/SelectionBar'
 import Button from '../ui/Button'
 import ParticipantRow from './ParticipantRow'
+import RegistrationActionFeedback from '../ui/RegistrationActionFeedback'
 
 const PARTICIPANT_COLUMNS: ExportColumn<RegistrationAdmin>[] = [
   { header: 'Status', value: r => registrationStatusLabel[r.status] ?? r.status },
@@ -37,11 +38,13 @@ export default function ParticipantList({
   brandColor,
   orgSlug,
   campSlug,
+  campTitle,
 }: {
   registrations: RegistrationAdmin[]
   brandColor: string
   orgSlug: string
   campSlug: string
+  campTitle: string
 }) {
   const [filter, setFilter] = useState<ParticipantFilter>('all')
   const [search, setSearch] = useState('')
@@ -61,12 +64,9 @@ export default function ParticipantList({
 
   const selectedEmails = registrations.filter(r => selected.has(r.id)).map(r => r.parent_email)
 
-  if (registrations.length === 0) {
-    return <EmptyState title={de.command.noParticipants} />
-  }
-
   return (
-    <div>
+    <RegistrationActionFeedback registrations={registrations} waitlistHref={`/pilot/${orgSlug}/camps/${campSlug}/warteliste`}>
+      {registrations.length === 0 ? <EmptyState title={de.command.noParticipants} /> : <div>
       <ExportBar
         rows={filtered}
         columns={PARTICIPANT_COLUMNS}
@@ -125,6 +125,7 @@ export default function ParticipantList({
               brandColor={brandColor}
               orgSlug={orgSlug}
               campSlug={campSlug}
+              campTitle={campTitle}
             />
           ))}
         </div>
@@ -137,6 +138,7 @@ export default function ParticipantList({
           </Button>
         </a>
       </SelectionBar>
-    </div>
+      </div>}
+    </RegistrationActionFeedback>
   )
 }

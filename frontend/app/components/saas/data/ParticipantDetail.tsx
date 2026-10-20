@@ -1,12 +1,13 @@
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'
-import { de } from '../../../lib/i18n/de'
+import { de, paymentStatusLabel } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { cancelRegistrationAction, updateRegistrationDetailsAction } from '../actions/waitlistActions'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import { hasMissingEmergencyContact, hasNotes, isOpenPayment } from '../commandCenterLogic'
 import ActionForm from '../ui/ActionForm'
+import { useRegistrationActionFeedback } from '../ui/RegistrationActionFeedback'
 import Button from '../ui/Button'
 import Field from '../ui/Field'
 import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
@@ -27,6 +28,7 @@ export default function ParticipantDetail({
   registration,
   orgSlug,
   campSlug,
+  campTitle,
   brandStrong,
   brandOn,
   onDetailsSaved,
@@ -34,13 +36,19 @@ export default function ParticipantDetail({
   registration: RegistrationAdmin
   orgSlug: string
   campSlug: string
+  campTitle: string
   brandStrong: string
   brandOn: string
   onDetailsSaved?: (registration: RegistrationAdmin) => void
 }) {
   const missingContact = hasMissingEmergencyContact(registration)
   const notes = hasNotes(registration)
-  const cancel = cancelRegistrationAction.bind(null, orgSlug, campSlug, registration.registration_token)
+  const reportResult = useRegistrationActionFeedback()
+  const childName = `${registration.child_first_name} ${registration.child_last_name}`
+  const cancel: React.ComponentProps<typeof ActionForm>['action'] = async (previous) => {
+    const result = await cancelRegistrationAction(orgSlug, campSlug, registration.registration_token, previous)
+    return result.success ? { ...result, success: `${childName} storniert.` } : result
+  }
   const markPaid = setPaymentStatusAction.bind(null, orgSlug, campSlug, registration.registration_token, 'paid', de.paymentsPage.markPaidSuccess)
   const markWaived = setPaymentStatusAction.bind(null, orgSlug, campSlug, registration.registration_token, 'waived', de.paymentsPage.markWaivedSuccess)
   const markRefunded = setPaymentStatusAction.bind(null, orgSlug, campSlug, registration.registration_token, 'refunded', de.paymentsPage.markRefundedSuccess)
@@ -223,12 +231,24 @@ export default function ParticipantDetail({
           </div>
         )}
 
-        {registration.status !== 'cancelled' && (
-          <div className="mt-4">
-            <ActionForm action={cancel} label="Anmeldung stornieren" pendingLabel="Wird storniert …" variant="quiet" />
-          </div>
-        )}
       </div>
+      {registration.status !== 'cancelled' && (
+        <section className="md:col-span-2 border-t pt-5" style={{ borderColor: 'var(--cp-line-2)' }} aria-label="Anmeldung stornieren">
+          <ActionForm
+            action={cancel}
+            onResult={reportResult}
+            label="Anmeldung stornieren"
+            pendingLabel="Wird storniert …"
+            variant="quiet-danger"
+            cancelLabel="Behalten"
+            requireConfirm={<>
+              <p className="cp-subheading">Anmeldung von {childName} für {campTitle} stornieren?</p>
+              <p>Zahlungsstatus: {paymentStatusLabel[registration.payment_status] ?? registration.payment_status}</p>
+              <p>Ein frei werdender Platz geht automatisch an die nächste Anmeldung auf der Warteliste. Eine Rückzahlung wird dadurch nicht ausgeführt.</p>
+            </>}
+          />
+        </section>
+      )}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { computeBrandTokens } from '../../../../components/saas/brandPipeline'
 import { loadOrgAdminData } from '../../../../components/saas/orgAdminData'
 import MatchdayBand from '../../../../components/saas/shell/MatchdayBand'
+import RegistrationActionFeedback from '../../../../components/saas/ui/RegistrationActionFeedback'
 import WaitlistCard from '../../../../components/saas/data/WaitlistCard'
 import WaitlistExportBar from '../../../../components/saas/data/WaitlistExportBar'
 import EmptyState from '../../../../components/saas/state/EmptyState'
@@ -14,7 +15,7 @@ export default async function OrgWaitlistPage({ params }: { params: Promise<{ or
 
   const brand = computeBrandTokens(org.primary_color)
   const groups = camps
-    .map((camp, i) => ({ camp, waitlisted: registrationsByCamp[i].filter(r => r.status === 'waitlist') }))
+    .map((camp, i) => ({ camp, registeredCount: registrationsByCamp[i].filter(r => r.status === 'registered' || r.status === 'confirmed').length, waitlisted: registrationsByCamp[i].filter(r => r.status === 'waitlist') }))
     .filter(g => g.waitlisted.length > 0)
   const totalWaiting = groups.reduce((sum, g) => sum + g.waitlisted.length, 0)
 
@@ -43,31 +44,37 @@ export default async function OrgWaitlistPage({ params }: { params: Promise<{ or
           {de.waitlistPage.subtitleOrg}
         </p>
 
-        {groups.length === 0 ? (
-          <EmptyState title={de.waitlistPage.emptyOrg} />
-        ) : (
-          <div className="flex flex-col gap-4">
-            <WaitlistExportBar
-              rows={exportRows}
-              showCampTitle
-              csvFilename={`${orgSlug}-warteliste.csv`}
-              xlsxHref={`/pilot/${orgSlug}/export?view=waitlist`}
-            />
-            {groups.map(g => (
-              <WaitlistCard
-                key={g.camp.slug}
-                orgSlug={orgSlug}
-                campSlug={g.camp.slug}
-                campTitle={g.camp.title}
-                waitlisted={g.waitlisted}
-                brandColor={brand.brand}
-                brandStrong={brand.brandStrong}
-                brandOn={brand.brandOn}
+        <RegistrationActionFeedback registrations={groups.flatMap(g => g.waitlisted)} waitlistHref={`/pilot/${orgSlug}/warteliste`}>
+          {groups.length === 0 ? (
+            <EmptyState title={de.waitlistPage.emptyOrg} />
+          ) : (
+            <div className="flex flex-col gap-4">
+              <WaitlistExportBar
+                rows={exportRows}
                 showCampTitle
+                csvFilename={`${orgSlug}-warteliste.csv`}
+                xlsxHref={`/pilot/${orgSlug}/export?view=waitlist`}
               />
-            ))}
-          </div>
-        )}
+              {groups.map(g => (
+                <WaitlistCard
+                  key={g.camp.slug}
+                  orgSlug={orgSlug}
+                  campSlug={g.camp.slug}
+                  campTitle={g.camp.title}
+                  capacity={g.camp.capacity}
+                  registeredCount={g.registeredCount}
+                  priceCents={g.camp.price_cents}
+                  currency={g.camp.currency}
+                  waitlisted={g.waitlisted}
+                  brandColor={brand.brand}
+                  brandStrong={brand.brandStrong}
+                  brandOn={brand.brandOn}
+                  showCampTitle
+                />
+              ))}
+            </div>
+          )}
+        </RegistrationActionFeedback>
       </main>
     </>
   )

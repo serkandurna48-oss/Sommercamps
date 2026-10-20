@@ -41,7 +41,7 @@ afterEach(async () => {
 
 async function render(row = registration) {
   await act(() => root.render(<ParticipantRow registration={row} selected={false} onToggleSelect={() => {}}
-    brandColor="#112233" orgSlug="review-club" campSlug="review-camp" />))
+    brandColor="#112233" orgSlug="review-club" campSlug="review-camp" campTitle="Review Camp" />))
 }
 
 async function click(label: string) {

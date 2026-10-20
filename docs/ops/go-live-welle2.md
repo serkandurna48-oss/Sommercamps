@@ -16,24 +16,28 @@
   Im Supabase SQL-Editor ausführen:
 
   ```sql
-  -- backend_saas/scripts/check_db_role.sql
-  -- Zeigt Rolle, RLS-Flags und Policy-Anzahl je Tabelle.
-  -- Keine Daten, keine Änderung.
+  -- Backend-Rolle muss RLS umgehen, sonst bricht das Backend nach der RLS-Datei.
+  SELECT rolname, rolbypassrls FROM pg_roles
+  WHERE rolname IN ('postgres','service_role','authenticator');
+  -- Erwartung: postgres = true, service_role = true (wie auf Staging am 20.10.)
   ```
 
-  → Datei: `backend_saas/scripts/check_db_role.sql`
-
-- [ ] **Policy-Bestand prüfen** (Fremdpolicies erkennen, bevor die RLS-Migration läuft)  
+- [ ] **Policy-Bestand prüfen** (Fremdpolicies erkennen, bevor die RLS-Datei läuft)  
   Im Supabase SQL-Editor ausführen:
 
   ```sql
-  -- supabase/check_db_role.sql
-  -- Gibt Zeilen zurück, wenn Policies ohne s3_-Präfix existieren.
-  -- Migration würde sonst sofort abbrechen.
+  SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual
+  FROM pg_policies
+  WHERE schemaname = 'public'
+    AND tablename IN ('platform_owners','organization_members','organizations',
+                      'camps','camp_registrations','audit_log')
+    AND policyname NOT LIKE 's3\_%' ESCAPE '\'
+  ORDER BY tablename, policyname;
+  -- Erwartung: 0 Zeilen
   ```
 
-  → Datei: `supabase/check_db_role.sql`  
   Gibt die Abfrage Zeilen zurück: **Stop**, mit Serkan entscheiden (Fremdpolicy entfernen oder umbenennen).
+  Zusätzlich vorhandene `s3_*`-Policies werden von der Datei nicht geprüft – Liste aller Policies einmal ansehen.
 
 ---
 
@@ -41,8 +45,8 @@
 
 | # | Wer | Schritt | Prüfung |
 |---|---|---|---|
-| 1 | Serkan | Migrations 1–3 auf Prod anwenden (SQL-Editor, **vor** Deploy) | Spalten-Check (siehe unten) |
-| 2 | Serkan | Render Deploy starten (Branch `integration/welle2` oder freigegebener SHA) | `/health` → 200 |
+| 1 | Serkan | Migrations 1–3 auf Prod anwenden (SQL-Editor, **vor** Deploy; dieselbe Ein-Transaktions-Datei wie auf Staging: `_reports/staging/2-migrationen-welle2.sql`) | Spalten-Check (siehe unten) |
+| 2 | Serkan | Freigegebenen welle2-SHA auf `feat/platform-foundation` bringen (davon deployt Render „Sommercamps“ und Vercel Prod) | Render-Deploy grün, `/health` → 200 |
 | 3 | Serkan | Env-Vars prüfen (siehe Abschnitt 3) | Backend-Log zeigt keinen FakeProvider-Hinweis |
 | 4 | Beide | Abnahme durchführen (siehe Abschnitt 4) | Checkliste unten |
 
@@ -104,6 +108,7 @@ Keine Werte in dieses Dokument eintragen.
 
 | Variable | Erwarteter Wert |
 |---|---|
+| `APP_ENV` | nicht `local`/`test` (sonst wird fehlende Mail-Konfiguration nur still übersprungen) |
 | `NOTIFICATION_PROVIDER` | `brevo` |
 | `BREVO_API_KEY` | *(Key im Render-Dashboard hinterlegt — Name des Render-Secrets)* |
 | `NOTIFICATION_FROM_EMAIL` | Adresse der verifizierten Brevo-Domain |
@@ -154,10 +159,13 @@ DROP POLICY IF EXISTS s3_audit_owner_read     ON public.audit_log;
 
 ## 6. Offene Punkte (vor Freigabe zu klären)
 
-| ID | Thema | Zuständig |
+| ID | Thema | Stand |
 |---|---|---|
-| REVIEW-C9 B3 | Texte Trainer-Abschnitt (Elternseite) — Formulierung freigeben | Serkan / Jan |
-| REVIEW-C9 B4 | Texte Datenschutz/Impressum Trainer-Kontext — Formulierung freigeben | Serkan / Jan |
+| REVIEW-C9 B1/B2/B7 | Mailversand (httpx, ehrlicher Versandnachweis, Mandantenfilter) | K1 behoben |
+| REVIEW-C9 B5/B6 | Externe Logos, Wartelisten-Bestätigung | K2 behoben |
+| REVIEW-C9 B3 | Bestätigungsseite/Mail/Teilnahmebedingungen einheitlich; keine festen Konditionen (Entscheidung Serkan 20.10.: Bedingungen legt der Anbieter fest, Mail ist Pflicht) | K3 |
+| REVIEW-C9 B4 | Datenschutz: Brevo als Dienstleister, Admin-Lesezugriff | K3 |
+| AVV | AVV mit Brevo (Unterauftragsverarbeiter) annehmen; Brevo im AVV mit den Vereinen nennen | Serkan |
+| Mail-Test | Echte Testmail auf Staging an synthetische/eigene Adresse angekommen | vor Live-Gang |
 
-Diese Punkte blockieren den Live-Gang, wenn die betreffenden Texte für Endnutzer sichtbar
-sind. Vor Abnahme klären und Freigabe dokumentieren.
+Bei der RLS-Rücknahme bleibt RLS auf den Tabellen aktiviert; das Backend umgeht RLS (rolbypassrls), direkte Client-Lesezugriffe sind dann gesperrt.

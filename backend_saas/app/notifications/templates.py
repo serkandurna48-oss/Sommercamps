@@ -28,9 +28,7 @@ def build_registration_mail(
     camp_title: str,
     camp_start: date,
     camp_end: date,
-    parent_name: str,
     parent_email: str,
-    child_name: str,
     payment_reference: str,
     iban: Optional[str],
     price_cents: Optional[int] = None,
@@ -40,8 +38,6 @@ def build_registration_mail(
     e_org_name = escape(org_name)
     e_org_email = escape(org_email)
     e_camp_title = escape(camp_title)
-    e_parent_name = escape(parent_name)
-    e_child_name = escape(child_name)
     e_payment_ref = escape(payment_reference)
     e_iban = escape(iban) if iban else None
     e_phone = escape(org_phone) if org_phone else None
@@ -69,8 +65,8 @@ def build_registration_mail(
                 f"E-Mail: {e_org_email}{phone_line}</p>"
             )
         html = f"""\
-<p>Hallo {e_parent_name},</p>
-<p>die Anmeldung von <strong>{e_child_name}</strong> für <strong>{e_camp_title}</strong>
+<p>Hallo,</p>
+<p>deine Anmeldung für <strong>{e_camp_title}</strong>
 ({dates}) ist bei uns eingegangen.</p>
 {payment_block}
 <p>Bei Fragen wende dich direkt an {e_org_name}:<br>
@@ -79,10 +75,10 @@ E-Mail: {e_org_email}{phone_line}</p>
     else:
         subject = f"Wartelistenbestätigung – {camp_title}"
         html = f"""\
-<p>Hallo {e_parent_name},</p>
-<p>die Anmeldung von <strong>{e_child_name}</strong> für <strong>{e_camp_title}</strong>
+<p>Hallo,</p>
+<p>deine Anmeldung für <strong>{e_camp_title}</strong>
 ({dates}) ist bei uns eingegangen. Das Camp ist aktuell ausgebucht –
-{e_child_name} steht auf der Warteliste. Es sind noch keine Kosten fällig.</p>
+die Anmeldung steht auf der Warteliste. Es sind noch keine Kosten fällig.</p>
 <p>Sollte ein Platz frei werden, meldet sich {e_org_name} direkt bei dir.</p>
 <p>Bei Fragen wende dich direkt an {e_org_name}:<br>
 E-Mail: {e_org_email}{phone_line}</p>
@@ -90,7 +86,6 @@ E-Mail: {e_org_email}{phone_line}</p>
 
     return MailMessage(
         to_email=parent_email,
-        to_name=parent_name,
         subject=subject,
         html_content=html,
         reply_to=org_email,

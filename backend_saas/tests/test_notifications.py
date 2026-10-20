@@ -54,6 +54,8 @@ def _ctx() -> dict:
         "org_phone": "+49 123 456",
         "iban": "DE89370400440532013000",
         "camp_title": "Sommercamp 2027",
+        "price_cents": 14900,
+        "currency": "EUR",
     }
 
 
@@ -122,9 +124,7 @@ def test_registered_mail_subject_contains_camp_title():
         camp_title="Sommercamp 2027",
         camp_start=date(2027, 7, 5),
         camp_end=date(2027, 7, 9),
-        parent_name="Max Mustermann",
         parent_email="max@example.com",
-        child_name="Lena Mustermann",
         payment_reference="CP-ABCD1234",
         iban="DE89370400440532013000",
     )
@@ -132,7 +132,7 @@ def test_registered_mail_subject_contains_camp_title():
     assert "Sommercamp 2027" in msg.subject
 
 
-def test_registered_mail_body_contains_child_name_and_payment_ref():
+def test_registered_mail_body_contains_camp_title_and_payment_ref():
     msg = build_registration_mail(
         status="registered",
         org_name="JK Academy",
@@ -141,13 +141,11 @@ def test_registered_mail_body_contains_child_name_and_payment_ref():
         camp_title="Sommercamp 2027",
         camp_start=date(2027, 7, 5),
         camp_end=date(2027, 7, 9),
-        parent_name="Max Mustermann",
         parent_email="max@example.com",
-        child_name="Lena Mustermann",
         payment_reference="CP-ABCD1234",
         iban="DE89370400440532013000",
     )
-    assert "Lena Mustermann" in msg.html_content
+    assert "Sommercamp 2027" in msg.html_content
     assert "CP-ABCD1234" in msg.html_content
     assert "DE89370400440532013000" in msg.html_content
 
@@ -161,9 +159,7 @@ def test_registered_mail_without_iban_omits_payment_block():
         camp_title="Sommercamp 2027",
         camp_start=date(2027, 7, 5),
         camp_end=date(2027, 7, 9),
-        parent_name="Max Mustermann",
         parent_email="max@example.com",
-        child_name="Lena Mustermann",
         payment_reference="CP-ABCD1234",
         iban=None,
     )
@@ -179,9 +175,7 @@ def test_waitlist_mail_subject_contains_warteliste():
         camp_title="Sommercamp 2027",
         camp_start=date(2027, 7, 5),
         camp_end=date(2027, 7, 9),
-        parent_name="Max Mustermann",
         parent_email="max@example.com",
-        child_name="Lena Mustermann",
         payment_reference="CP-ABCD1234",
         iban="DE89370400440532013000",
     )
@@ -197,9 +191,7 @@ def test_waitlist_mail_body_has_no_payment_details():
         camp_title="Sommercamp 2027",
         camp_start=date(2027, 7, 5),
         camp_end=date(2027, 7, 9),
-        parent_name="Max Mustermann",
         parent_email="max@example.com",
-        child_name="Lena Mustermann",
         payment_reference="CP-ABCD1234",
         iban="DE89370400440532013000",
     )
@@ -216,9 +208,7 @@ def test_waitlist_mail_body_has_no_deadline_promise():
         camp_title="Sommercamp 2027",
         camp_start=date(2027, 7, 5),
         camp_end=date(2027, 7, 9),
-        parent_name="Max Mustermann",
         parent_email="max@example.com",
-        child_name="Lena Mustermann",
         payment_reference="CP-ABCD1234",
         iban=None,
     )
@@ -235,9 +225,7 @@ def test_registered_mail_with_iban_shows_amount_and_recipient():
         camp_title="Sommercamp 2027",
         camp_start=date(2027, 7, 5),
         camp_end=date(2027, 7, 9),
-        parent_name="Max Mustermann",
         parent_email="max@example.com",
-        child_name="Lena Mustermann",
         payment_reference="CP-ABCD1234",
         iban="DE89370400440532013000",
         price_cents=14900,
@@ -259,9 +247,7 @@ def test_registered_mail_without_iban_shows_provider_hint():
         camp_title="Sommercamp 2027",
         camp_start=date(2027, 7, 5),
         camp_end=date(2027, 7, 9),
-        parent_name="Max Mustermann",
         parent_email="max@example.com",
-        child_name="Lena Mustermann",
         payment_reference="CP-ABCD1234",
         iban=None,
     )
@@ -279,9 +265,7 @@ def test_waitlist_mail_body_has_no_iban_block():
         camp_title="Sommercamp 2027",
         camp_start=date(2027, 7, 5),
         camp_end=date(2027, 7, 9),
-        parent_name="Max Mustermann",
         parent_email="max@example.com",
-        child_name="Lena Mustermann",
         payment_reference="CP-ABCD1234",
         iban="DE89370400440532013000",
     )
@@ -289,18 +273,16 @@ def test_waitlist_mail_body_has_no_iban_block():
     assert "DE89370400440532013000" not in msg.html_content
 
 
-def test_html_escaping_of_malicious_child_name():
+def test_html_escaping_of_malicious_camp_title():
     msg = build_registration_mail(
         status="registered",
         org_name="JK Academy",
         org_email="info@jk.example",
         org_phone=None,
-        camp_title="Sommercamp 2027",
+        camp_title='<script>alert("xss")</script>',
         camp_start=date(2027, 7, 5),
         camp_end=date(2027, 7, 9),
-        parent_name="Max Mustermann",
         parent_email="max@example.com",
-        child_name='<script>alert("xss")</script>',
         payment_reference="CP-ABCD1234",
         iban="DE89370400440532013000",
     )
@@ -370,6 +352,64 @@ def test_send_does_not_raise_when_context_missing(monkeypatch, fake_provider):
     _patch(monkeypatch, ctx=None)
     monkeypatch.setattr(sending, "_fetch_mail_context", lambda *_: None)
     _call_send()  # must not raise
+
+
+def test_do_send_with_iban_shows_amount_from_camp_context(monkeypatch, fake_provider):
+    """price_cents and currency from the DB context must appear in the rendered HTML."""
+    real = _RealMockProvider()
+    reset_provider_for_testing(real)
+    _patch(monkeypatch)  # _ctx() already includes price_cents=14900, currency="EUR"
+
+    _call_send("registered")
+
+    assert len(real.sent) == 1
+    assert "149,00" in real.sent[0].html_content
+    assert "EUR" in real.sent[0].html_content
+
+
+class _CapturingTransport(httpx.BaseTransport):
+    """Captures outgoing requests without making network calls."""
+
+    def __init__(self) -> None:
+        self.requests: list[httpx.Request] = []
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        return httpx.Response(201, json={"messageId": "test-id"})
+
+
+def test_no_names_in_mail_subject_html_or_brevo_payload(monkeypatch, fake_provider):
+    """Synthetic child and parent names must not appear in subject, HTML, or Brevo HTTP payload."""
+    CHILD_FIRST = "Yxqtkindrst"
+    CHILD_LAST = "Vwrtuvwxyz"
+    PARENT_FIRST = "Xqrtelterntl"
+    PARENT_LAST = "Zrvwxyzabc"
+
+    transport = _CapturingTransport()
+    client = httpx.Client(transport=transport)
+    brevo = BrevoProvider("test-key", "noreply@test.com", "Test Sender", _http_client=client)
+    reset_provider_for_testing(brevo)
+    _patch(monkeypatch)
+
+    sending.send_registration_notification(
+        registration_token=_TOKEN,
+        status="registered",
+        organization_id=_ORG_ID,
+        camp_id=_CAMP_ID,
+        start_date=date(2027, 7, 5),
+        end_date=date(2027, 7, 9),
+        parent_email="max@example.com",
+        parent_first_name=PARENT_FIRST,
+        parent_last_name=PARENT_LAST,
+        child_first_name=CHILD_FIRST,
+        child_last_name=CHILD_LAST,
+    )
+
+    assert len(transport.requests) == 1
+    payload_str = transport.requests[0].content.decode()
+
+    for name in (CHILD_FIRST, CHILD_LAST, PARENT_FIRST, PARENT_LAST):
+        assert name not in payload_str, f"Name '{name}' must not appear in Brevo payload"
 
 
 # ---------------------------------------------------------------------------

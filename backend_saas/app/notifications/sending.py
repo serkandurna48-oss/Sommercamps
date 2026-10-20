@@ -31,7 +31,9 @@ _FETCH_CONTEXT = """
         o.contact_email AS org_email,
         o.contact_phone AS org_phone,
         o.iban,
-        c.title         AS camp_title
+        c.title         AS camp_title,
+        c.price_cents,
+        c.currency
     FROM organizations o
     JOIN camps c ON c.id = %s AND c.organization_id = o.id
     WHERE o.id = %s
@@ -107,8 +109,6 @@ def _do_send(
         raise RuntimeError(f"org/camp context not found (org={organization_id}, camp={camp_id})")
 
     payment_reference = f"CP-{str(registration_token)[:8].upper()}"
-    parent_name = f"{parent_first_name} {parent_last_name}"
-    child_name = f"{child_first_name} {child_last_name}"
 
     msg = build_registration_mail(
         status=status,
@@ -118,11 +118,11 @@ def _do_send(
         camp_title=ctx["camp_title"],
         camp_start=start_date,
         camp_end=end_date,
-        parent_name=parent_name,
         parent_email=parent_email,
-        child_name=child_name,
         payment_reference=payment_reference,
         iban=ctx.get("iban"),
+        price_cents=ctx.get("price_cents"),
+        currency=ctx.get("currency"),
     )
     msg.sender_name = f"{ctx['org_name']} über CampsPilot"
     provider = get_provider()

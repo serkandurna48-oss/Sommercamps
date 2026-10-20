@@ -40,7 +40,7 @@ it('renders trainer section when trainer_image_url is set', () => {
     trainer_image_url: '/jk/camp.jpg',
     trainer_text: 'Leitet die Academy und trainiert jede Camp-Gruppe selbst.',
   }} camps={[]} />)
-  expect(html).toContain('Dein Trainer')
+  expect(html).toContain('Ihr Trainer')
   expect(html).toContain('Jan Koch')
   expect(html).toContain('Leitet die Academy und trainiert jede Camp-Gruppe selbst.')
   expect(html).toContain('/jk/camp.jpg')
@@ -48,7 +48,7 @@ it('renders trainer section when trainer_image_url is set', () => {
 
 it('does not render trainer section when trainer_image_url is null', () => {
   const html = renderToStaticMarkup(<ParentFlow org={{ ...org, trainer_image_url: null }} camps={[]} />)
-  expect(html).not.toContain('Dein Trainer')
+  expect(html).not.toContain('Ihr Trainer')
 })
 
 it.each(['tradition', 'akademie', 'kompakt'] as const)('%s does not render img-strip', theme => {

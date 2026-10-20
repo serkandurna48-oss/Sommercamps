@@ -293,6 +293,54 @@ def test_html_escaping_of_malicious_camp_title():
 
 
 # ---------------------------------------------------------------------------
+# K5 — Anrede-Regression: Beide Mails müssen Sie-Form verwenden
+# ---------------------------------------------------------------------------
+
+import re as _re
+
+_DU_RE = _re.compile(
+    r"\b(du|dir|dich|dein|deine|deinen|deinem|deiner|deines|Du|Dir|Dein|euch|euer|eure)\b"
+)
+
+
+def test_registered_mail_uses_sie_form():
+    """Bestätigungsmail darf keine Du-Anrede enthalten."""
+    for iban in ("DE89370400440532013000", None):
+        msg = build_registration_mail(
+            status="registered",
+            org_name="JK Academy",
+            org_email="info@jk.example",
+            org_phone=None,
+            camp_title="Sommercamp 2027",
+            camp_start=date(2027, 7, 5),
+            camp_end=date(2027, 7, 9),
+            parent_email="max@example.com",
+            payment_reference="CP-ABCD1234",
+            iban=iban,
+        )
+        m = _DU_RE.search(msg.html_content)
+        assert m is None, f"Du-Form in Bestätigungsmail (iban={iban!r}): „{m.group() if m else ''}"
+
+
+def test_waitlist_mail_uses_sie_form():
+    """Wartelistenmail darf keine Du-Anrede enthalten."""
+    msg = build_registration_mail(
+        status="waitlist",
+        org_name="JK Academy",
+        org_email="info@jk.example",
+        org_phone=None,
+        camp_title="Sommercamp 2027",
+        camp_start=date(2027, 7, 5),
+        camp_end=date(2027, 7, 9),
+        parent_email="max@example.com",
+        payment_reference="CP-ABCD1234",
+        iban=None,
+    )
+    m = _DU_RE.search(msg.html_content)
+    assert m is None, f"Du-Form in Wartelistenmail: „{m.group() if m else ''}"
+
+
+# ---------------------------------------------------------------------------
 # send_registration_notification
 # ---------------------------------------------------------------------------
 

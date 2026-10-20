@@ -136,7 +136,7 @@ export default function DoneScreen({
                 <p className="done-ref-note" style={{ marginTop: 8 }}>
                   {iban
                     ? `Bitte den Verwendungszweck mit angeben — damit ordnet ${payTo} die Zahlung Ihrem Kind zu.`
-                    : `${payTo} sendet dir die Zahlungsdetails direkt. Bei Fragen: ${org.contact_email}${org.contact_phone ? ` oder ${org.contact_phone}` : ''}.`}
+                    : `${payTo} sendet Ihnen die Zahlungsdetails direkt. Bei Fragen: ${org.contact_email}${org.contact_phone ? ` oder ${org.contact_phone}` : ''}.`}
                 </p>
               </div>
             </div>
@@ -158,7 +158,7 @@ export default function DoneScreen({
             </div>
             <div className="txt">
               <b>{waitlisted ? 'Auf der Warteliste eingetragen' : 'Anmeldung gespeichert'}</b>
-              <span>Wir schicken dir eine Bestätigung an {parentEmail}. Schau auch im Spam-Ordner nach.</span>
+              <span>Wir schicken Ihnen eine Bestätigung an {parentEmail}. Bitte sehen Sie auch im Spam-Ordner nach.</span>
             </div>
           </li>
           {waitlisted ? (

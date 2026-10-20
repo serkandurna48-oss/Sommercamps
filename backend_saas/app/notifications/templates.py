@@ -66,26 +66,26 @@ def build_registration_mail(
             payment_block = (
                 f"{amount_line}"
                 f"<p>Verwendungszweck: <strong>{e_payment_ref}</strong></p>\n"
-                f"<p>{e_payee} sendet dir die Zahlungsdetails direkt.<br>"
+                f"<p>{e_payee} sendet Ihnen die Zahlungsdetails direkt.<br>"
                 f"E-Mail: {e_org_email}{phone_line}</p>"
             )
         html = f"""\
-<p>Hallo,</p>
-<p>deine Anmeldung für <strong>{e_camp_title}</strong>
+<p>Guten Tag,</p>
+<p>Ihre Anmeldung für <strong>{e_camp_title}</strong>
 ({dates}) ist bei uns eingegangen.</p>
 {payment_block}
-<p>Bei Fragen wende dich direkt an {e_org_name}:<br>
+<p>Bei Fragen wenden Sie sich direkt an {e_org_name}:<br>
 E-Mail: {e_org_email}{phone_line}</p>
 <p>Viele Grüße,<br>{e_org_name}</p>"""
     else:
         subject = f"Wartelistenbestätigung – {camp_title}"
         html = f"""\
-<p>Hallo,</p>
-<p>deine Anmeldung für <strong>{e_camp_title}</strong>
+<p>Guten Tag,</p>
+<p>Ihre Anmeldung für <strong>{e_camp_title}</strong>
 ({dates}) ist bei uns eingegangen. Das Camp ist aktuell ausgebucht –
 die Anmeldung steht auf der Warteliste. Es sind noch keine Kosten fällig.</p>
-<p>Sollte ein Platz frei werden, meldet sich {e_org_name} direkt bei dir.</p>
-<p>Bei Fragen wende dich direkt an {e_org_name}:<br>
+<p>Sollte ein Platz frei werden, meldet sich {e_org_name} direkt bei Ihnen.</p>
+<p>Bei Fragen wenden Sie sich direkt an {e_org_name}:<br>
 E-Mail: {e_org_email}{phone_line}</p>
 <p>Viele Grüße,<br>{e_org_name}</p>"""
 

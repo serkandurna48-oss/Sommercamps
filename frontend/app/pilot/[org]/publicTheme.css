@@ -435,6 +435,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center 30%;
   will-change: transform;
 }
 .cp-public .h-akad .veil {
@@ -557,7 +558,7 @@
   letter-spacing: -.03em;
   max-width: 20ch;
   overflow-wrap: anywhere;
-  hyphens: auto;
+  hyphens: manual;
 }
 .cp-public .h-komp h1[data-scale='xl'] { font-size: clamp(2.8rem, 8vw, 7.5rem); }
 .cp-public .h-komp h1[data-scale='lg'] { font-size: clamp(2.4rem, 6vw, 5.5rem); }
@@ -609,12 +610,15 @@
 /* tradition .assure hidden via shared rule above */
 
 .cp-public .sec {
-  padding-block: 72px;
+  padding-block: 56px;
 }
 @media (min-width: 900px) {
   .cp-public .sec {
-    padding-block: 128px;
+    padding-block: 88px;
   }
+}
+.cp-public #s-camps {
+  padding-top: 64px;
 }
 .cp-public .sec-head {
   display: flex;
@@ -671,6 +675,11 @@
 }
 .cp-public[data-theme='tradition'] .camp:hover {
   background: var(--surface-2);
+  transform: translateY(-4px);
+}
+.cp-public[data-theme='tradition'] .camp:hover .c-date b {
+  color: var(--brand-strong);
+  transition: color 0.25s var(--ease);
 }
 .cp-public[data-theme='tradition'] .c-date {
   text-align: right;
@@ -710,6 +719,11 @@
 }
 .cp-public[data-theme='kompakt'] .camp:hover {
   background: var(--surface-2);
+  transform: translateY(-4px);
+}
+.cp-public[data-theme='kompakt'] .camp:hover .c-date b {
+  color: var(--brand-strong);
+  transition: color 0.25s var(--ease);
 }
 .cp-public[data-theme='kompakt'] .c-date {
   text-align: right;
@@ -1481,12 +1495,28 @@
   }
 }
 
-/* ── 2-Spalten Camp-Liste (≥900 px, Akademie-Theme) ── */
-@media (min-width: 900px) {
-  .cp-public[data-theme='akademie'] .camps {
+/* ── M5 Responsive Camp-Grid (alle Themes) ── */
+@media (min-width: 700px) {
+  .cp-public .camps {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
+    gap: 12px;
+  }
+  .cp-public[data-theme='tradition'] .camp,
+  .cp-public[data-theme='kompakt'] .camp {
+    padding: 22px;
+    border: 1px solid var(--line-2);
+    border-top: 1px solid var(--line-2);
+    border-radius: 24px;
+    background: var(--surface);
+  }
+  .cp-public[data-theme='tradition'] .camps .camp:last-child {
+    border-bottom: 1px solid var(--line-2);
+  }
+}
+@media (min-width: 1100px) {
+  .cp-public .camps {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -1557,12 +1587,11 @@
 
 /* ── „So einfach geht's" ── */
 .cp-public .how-sec {
-  padding-block: 72px;
-  border-top: 1px solid var(--line-2);
+  padding-block: 56px;
 }
 @media (min-width: 900px) {
   .cp-public .how-sec {
-    padding-block: 128px;
+    padding-block: 88px;
   }
 }
 .cp-public .how-sec .d2 {
@@ -1582,32 +1611,15 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 20px;
-  background: var(--surface);
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-card);
-}
-.cp-public[data-theme='akademie'] .how-step {
-  border-color: var(--line);
-}
-.cp-public[data-theme='kompakt'] .how-step {
-  border-width: 2px;
+  padding: 20px 0;
 }
 .cp-public .how-num {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--brand-strong);
-  color: var(--brand-on);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
+  font-size: 40px;
   font-weight: 700;
+  line-height: 1;
+  opacity: 0.5;
+  display: block;
   flex-shrink: 0;
-}
-.cp-public[data-theme='kompakt'] .how-num {
-  border-radius: 0;
 }
 .cp-public .how-step p {
   font-size: 14px;
@@ -1665,12 +1677,11 @@
 
 /* ── FAQ ── */
 .cp-public .faq-sec {
-  padding-block: 72px;
-  border-top: 1px solid var(--line-2);
+  padding-block: 56px;
 }
 @media (min-width: 900px) {
   .cp-public .faq-sec {
-    padding-block: 128px;
+    padding-block: 88px;
   }
 }
 .cp-public .faq-sec .d2 {
@@ -1767,32 +1778,33 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
-/* ── M2 Nav-Pill (Akademie-Hero) ── */
+/* ── M2/M5 Nav — free-floating pills ── */
 .cp-public .h-akad-nav {
   position: absolute;
-  top: 18px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 16px;
+  left: 0;
+  right: 0;
+  padding-inline: 20px;
   z-index: 10;
-  width: calc(100% - 40px);
-  max-width: 1120px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 18px;
+  pointer-events: none;
+}
+.cp-public .h-akad-nav .nav-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+  max-height: 48px;
+  padding: 8px 14px 8px 8px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 9999px;
   box-shadow: inset 0 1px 1px rgba(255,255,255,.18);
-}
-.cp-public .h-akad-nav .nav-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
 }
 .cp-public .h-akad-nav .nav-logo {
   width: 32px;
@@ -1844,39 +1856,38 @@
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  pointer-events: auto;
+  max-height: 48px;
   transition: transform 0.18s var(--ease);
 }
 .cp-public .nav-cta:hover {
   transform: scale(1.03);
 }
 
-/* ── M4 Nav pill — tradition / kompakt (weiß, 1px Linie) ── */
+/* ── M4/M5 Nav pill — tradition / kompakt, free-floating ── */
 .cp-public .h-trad-nav {
   position: absolute;
-  top: 18px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 16px;
+  left: 0;
+  right: 0;
+  padding-inline: 20px;
   z-index: 10;
-  width: calc(100% - 40px);
-  max-width: 1120px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 18px;
-  background: #fff;
-  border: 1px solid var(--line-2);
-  border-radius: 9999px;
-}
-.cp-public .h-komp-nav {
-  background: #fff;
-  border-color: var(--line-2);
+  pointer-events: none;
 }
 .cp-public .h-trad-nav .nav-left {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 0;
+  pointer-events: auto;
+  max-height: 48px;
+  padding: 8px 14px 8px 8px;
+  background: #fff;
+  border: 1px solid var(--line-2);
+  border-radius: 9999px;
 }
 .cp-public .nav-logo-trad {
   width: 32px;
@@ -1915,6 +1926,8 @@
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  pointer-events: auto;
+  max-height: 48px;
   transition: transform 0.18s var(--ease);
 }
 .cp-public .nav-cta-brand:hover { transform: scale(1.03); }
@@ -2084,35 +2097,39 @@
   letter-spacing: -.02em;
 }
 
-/* ── M2 Camp Cards — Akademie (Glas, 28 px Radius) ── */
+/* ── M2/M5 Camp Cards — Akademie (Glas, 24 px Radius) ── */
 .cp-public[data-theme='akademie'] .camp {
-  padding: 28px;
+  padding: 22px;
   background: rgba(255,255,255,.06);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255,255,255,.1);
-  border-radius: 28px;
+  border-radius: 24px;
   box-shadow: inset 0 1px 1px rgba(255,255,255,.18);
   transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
 }
 .cp-public[data-theme='akademie'] .camp:hover,
 .cp-public[data-theme='akademie'] .camp:focus-visible {
-  transform: scale(1.02);
+  transform: translateY(-4px);
   box-shadow: 0 8px 32px rgba(0,0,0,.4), inset 0 1px 1px rgba(255,255,255,.18);
   background: rgba(255,255,255,.09);
 }
+.cp-public[data-theme='akademie'] .camp:hover .c-date b {
+  color: var(--brand-strong);
+}
 .cp-public[data-theme='akademie'] .c-date b {
-  font-size: clamp(2.5rem, 3.5vw, 3.5rem);
+  font-size: clamp(2rem, 2.6vw, 2.6rem);
+  transition: color 0.25s var(--ease);
 }
 .cp-public[data-theme='akademie'] .c-name {
-  font-size: 24px;
+  font-size: 20px;
 }
 .cp-public[data-theme='akademie'] .c-go {
   border-radius: 9999px;
   padding: 8px 18px;
 }
-.cp-public[data-theme='akademie'] .tags .chip:nth-child(n+4),
-.cp-public[data-theme='akademie'] .tags .tag:nth-child(n+4) {
+.cp-public[data-theme='akademie'] .tags .chip:nth-child(n+3),
+.cp-public[data-theme='akademie'] .tags .tag:nth-child(n+3) {
   display: none;
 }
 
@@ -2127,14 +2144,7 @@
   padding: 28px;
   gap: 24px;
 }
-.cp-public[data-theme='akademie'] .how-step {
-  background: rgba(255,255,255,.06);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 24px;
-  box-shadow: inset 0 1px 1px rgba(255,255,255,.18);
-}
+/* how-step: no card frame — large digit + title + text only */
 .cp-public[data-theme='akademie'] .faq {
   background: rgba(255,255,255,.06);
   backdrop-filter: blur(12px);
@@ -2152,13 +2162,7 @@
   border-bottom: none;
 }
 
-/* ── M4 Tradition/Kompakt: weiße Karten, 24 px Radius ── */
-.cp-public[data-theme='tradition'] .how-step,
-.cp-public[data-theme='kompakt'] .how-step {
-  background: var(--surface);
-  border: 1px solid var(--line-2);
-  border-radius: 24px;
-}
+/* M5: how-step has no card frame — see base rule */
 .cp-public[data-theme='tradition'] .trainer-sec,
 .cp-public[data-theme='kompakt'] .trainer-sec {
   background: var(--surface);
@@ -2184,11 +2188,7 @@
 .cp-public[data-theme='kompakt'] .faq-item:last-child {
   border-bottom: none;
 }
-/* how-num: pill for tradition/kompakt (not circle badge, already round via 50%) */
-.cp-public[data-theme='tradition'] .how-num,
-.cp-public[data-theme='kompakt'] .how-num {
-  border-radius: 9999px;
-}
+/* M5: how-num is now a large digit — no border-radius override needed */
 
 /* ══════════════════════════════════════════════
    M3 — Camp-Detail, Formular, Bestätigung
@@ -2534,4 +2534,75 @@
   font-size: 13px;
   line-height: 1.5;
   color: var(--muted);
+}
+
+/* ── M5 Hero-Hint ── */
+.cp-public .hero-hint {
+  font-size: 13px;
+  line-height: 1.4;
+  opacity: .7;
+  margin-top: 4px;
+  max-width: 36ch;
+}
+.cp-public .h-akad .hero-hint {
+  color: rgba(255,255,255,.85);
+}
+.cp-public .h-trad .hero-hint {
+  color: rgba(255,255,255,.75);
+}
+.cp-public .h-komp .hero-hint {
+  color: var(--ink-2);
+}
+
+/* ── M5 Line-mask for headline reveal ── */
+.cp-public .mask-l {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.04em;
+  margin-bottom: -0.04em;
+}
+.cp-public .mask-l .l {
+  display: block;
+  will-change: transform;
+}
+
+/* ── M5 Marquee-Band ── */
+.cp-public .marquee-band {
+  background: var(--brand-strong);
+  overflow: hidden;
+  padding: 11px 0;
+}
+.cp-public .marquee-track {
+  display: flex;
+  width: max-content;
+  animation: cp-marquee 40s linear infinite;
+}
+.cp-public .marquee-track:hover {
+  animation-play-state: paused;
+}
+.cp-public .marquee-inner {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand-on);
+  letter-spacing: .04em;
+}
+@keyframes cp-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cp-public .marquee-track {
+    animation: none;
+  }
+}
+
+/* ── M5 hero-btns gap — tradition / kompakt ── */
+.cp-public .h-trad .hero-btns,
+.cp-public .h-komp .hero-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }

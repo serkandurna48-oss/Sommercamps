@@ -160,6 +160,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
                   <button className="h-btn-line" type="button" onClick={scrollToCamps}>Camps ansehen</button>
                   <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
                 </div>
+                <p className="hero-hint">Die Anmeldung dauert etwa vier Minuten. Kein Benutzerkonto nötig.</p>
               </div>
               {camps.length > 0 && (
                 <div className="h-trad-stats">
@@ -212,6 +213,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
                   <button className="h-btn-glass" type="button" onClick={scrollToCamps}>Camps ansehen</button>
                   <button className="h-btn-solid" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
                 </div>
+                <p className="hero-hint">Die Anmeldung dauert etwa vier Minuten. Kein Benutzerkonto nötig.</p>
               </div>
               {camps.length > 0 && (
                 <div className="hero-stats">
@@ -229,7 +231,6 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
                     <b className="num" data-count={totalSeats}>{totalSeats}</b>
                     <span>Plätze gesamt</span>
                   </div>
-                  <span className="hero-assure">Anmeldung in ca. 4 Minuten — kein Konto nötig</span>
                 </div>
               )}
             </div>
@@ -263,6 +264,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
                   <button className="h-btn-line" type="button" onClick={scrollToCamps}>Camps ansehen</button>
                   <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
                 </div>
+                <p className="hero-hint">Die Anmeldung dauert etwa vier Minuten. Kein Benutzerkonto nötig.</p>
               </div>
               {camps.length > 0 && (
                 <div className="h-komp-stats">
@@ -284,6 +286,22 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
               )}
             </div>
           </header>
+        )
+      })()}
+
+      {camps.length > 0 && (() => {
+        const marqueeText = camps
+          .map(c => [c.location, formatCampDateRange(c.start_date, c.end_date)].filter(Boolean).join(' · '))
+          .filter(Boolean)
+          .join(' · ')
+        if (!marqueeText.trim()) return null
+        return (
+          <div className="marquee-band" aria-hidden="true">
+            <div className="marquee-track">
+              <span className="marquee-inner">{marqueeText} &nbsp;·&nbsp; </span>
+              <span className="marquee-inner">{marqueeText} &nbsp;·&nbsp; </span>
+            </div>
+          </div>
         )
       })()}
 

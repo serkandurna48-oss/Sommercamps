@@ -71,6 +71,62 @@ function splitWords(el: HTMLElement): HTMLElement[] {
 }
 
 /**
+ * Zeilenweise Maskierung — misst nach DOM-Einbindung die Y-Positionen der
+ * temporären Wort-Spans und gruppiert sie in .mask-l > .l Blöcke.
+ * Idempotent (data-split="done"-Guard). Erzwingt ein synchrones Layout-
+ * Reflow via getBoundingClientRect (nur im Browser, nicht im SSR-Pfad).
+ */
+function splitLinesSync(el: HTMLElement): HTMLElement[] {
+  if (el.dataset.split === 'done') {
+    return Array.prototype.slice.call(el.querySelectorAll('.l'))
+  }
+  const text = (el.textContent || '').trim()
+  if (!text) return []
+
+  el.textContent = ''
+  const wordEls: HTMLSpanElement[] = []
+  text.split(/\s+/).forEach((word, i) => {
+    if (i > 0) el.appendChild(document.createTextNode(' '))
+    const sp = document.createElement('span')
+    sp.textContent = word
+    sp.style.display = 'inline'
+    el.appendChild(sp)
+    wordEls.push(sp)
+  })
+
+  // Group words into lines by their top Y position (forces layout)
+  const lineGroups: string[][] = []
+  let currentY = -Infinity
+  let currentGroup: string[] = []
+  wordEls.forEach(w => {
+    const top = w.getBoundingClientRect().top
+    if (top - currentY > 4) {
+      if (currentGroup.length) lineGroups.push(currentGroup)
+      currentY = top
+      currentGroup = [w.textContent || '']
+    } else {
+      currentGroup.push(w.textContent || '')
+    }
+  })
+  if (currentGroup.length) lineGroups.push(currentGroup)
+
+  el.textContent = ''
+  const lineInners: HTMLElement[] = []
+  lineGroups.forEach(words => {
+    const mask = document.createElement('span')
+    mask.className = 'mask-l'
+    const inner = document.createElement('span')
+    inner.className = 'l'
+    inner.textContent = words.join(' ')
+    mask.appendChild(inner)
+    el.appendChild(mask)
+    lineInners.push(inner)
+  })
+  el.dataset.split = 'done'
+  return lineInners
+}
+
+/**
  * Spielt eine bereits erstellte, pausierte Tween ab, sobald `trigger` die
  * Schwelle `startPercent` (Anteil der Viewport-Höhe von oben) erreicht —
  * sofort, wenn das schon beim Aufruf der Fall ist, sonst über einen
@@ -190,9 +246,9 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
             seqEls.forEach(({ el, isHeadline }, i) => {
               const delay = i * seqStag
               if (isHeadline) {
-                const words = splitWords(el)
-                if (words.length) {
-                  const t = gsap.fromTo(words, { yPercent: 118 }, { yPercent: 0, duration: seqDur, ease: seqEas, stagger: 0.04, delay })
+                const lines = splitLinesSync(el)
+                if (lines.length) {
+                  const t = gsap.fromTo(lines, { yPercent: 115 }, { yPercent: 0, duration: 0.8, ease: 'expo.out', stagger: 0.09, delay })
                   allTweens.push(t)
                 }
                 el.dataset.riseHandled = '1'
@@ -272,9 +328,9 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
             seqEls.forEach(({ el, isHeadline }, i) => {
               const delay = i * 0.12
               if (isHeadline) {
-                const words = splitWords(el)
-                if (words.length) {
-                  const t = gsap.fromTo(words, { yPercent: 118 }, { yPercent: 0, duration: 0.6, ease: 'expo.out', stagger: 0.04, delay })
+                const lines = splitLinesSync(el)
+                if (lines.length) {
+                  const t = gsap.fromTo(lines, { yPercent: 115 }, { yPercent: 0, duration: 0.8, ease: 'expo.out', stagger: 0.09, delay })
                   allTweens.push(t)
                 }
                 el.dataset.riseHandled = '1'
@@ -297,19 +353,19 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
               },
             )
           }
-          runCounters(gsap, ScrollTrigger, container, 1.0, 'power2.out', playedTweens)
+          runCounters(gsap, ScrollTrigger, container, 1.2, 'expo.out', playedTweens)
         }
 
         if (theme === 'akademie') {
           const shot = container.querySelector<HTMLElement>('#shotB')
-          if (shot?.offsetParent) {
+          if (shot?.offsetParent && window.innerWidth >= 900) {
             gsap.fromTo(
               shot,
-              { yPercent: -8 },
-              { yPercent: 10, ease: 'none', scrollTrigger: { trigger: '.h-akad', start: 'top top', end: 'bottom top', scrub: true } },
+              { yPercent: 0 },
+              { yPercent: 8, ease: 'none', scrollTrigger: { trigger: '.h-akad', start: 'top top', end: 'bottom top', scrub: true } },
             )
           }
-          runCounters(gsap, ScrollTrigger, container, 1.3, 'power3.out', playedTweens)
+          runCounters(gsap, ScrollTrigger, container, 1.2, 'expo.out', playedTweens)
         }
 
         if (theme === 'kompakt') {
@@ -329,9 +385,9 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
             seqEls.forEach(({ el, isHeadline }, i) => {
               const delay = i * 0.12
               if (isHeadline) {
-                const words = splitWords(el)
-                if (words.length) {
-                  const t = gsap.fromTo(words, { yPercent: 118 }, { yPercent: 0, duration: 0.6, ease: 'power3.out', stagger: 0.04, delay })
+                const lines = splitLinesSync(el)
+                if (lines.length) {
+                  const t = gsap.fromTo(lines, { yPercent: 115 }, { yPercent: 0, duration: 0.8, ease: 'power3.out', stagger: 0.09, delay })
                   allTweens.push(t)
                 }
                 el.dataset.riseHandled = '1'
@@ -342,7 +398,7 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
               }
             })
           }
-          runCounters(gsap, ScrollTrigger, container, 0.9, 'power2.out', playedTweens)
+          runCounters(gsap, ScrollTrigger, container, 1.2, 'expo.out', playedTweens)
         }
 
         ScrollTrigger.refresh()

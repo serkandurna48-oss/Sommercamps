@@ -61,6 +61,8 @@ export async function updateOrganizationConfigAction(
       intro_heading: optionalStr(formData, 'intro_heading'),
       intro_text: optionalStr(formData, 'intro_text'),
       hero_image_url: optionalStr(formData, 'hero_image_url'),
+      trainer_image_url: optionalStr(formData, 'trainer_image_url'),
+      trainer_text: optionalStr(formData, 'trainer_text'),
       billing_notes: optionalStr(formData, 'billing_notes'),
     })
   } catch {

@@ -6,7 +6,7 @@ import { parseZonedDateTime } from './dateTimeInput'
 
 // Run the real helper under independent device timezones, also on Node 20
 // where native TypeScript imports are not supported.
-const javascript = transpileModule(readFileSync('app/lib/dateTimeInput.ts', 'utf8'), {
+const javascript = transpileModule(readFileSync(new URL('./dateTimeInput.ts', import.meta.url), 'utf8'), {
   compilerOptions: { module: ModuleKind.ESNext },
 }).outputText
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(javascript).toString('base64')}`

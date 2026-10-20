@@ -161,6 +161,26 @@ export default function OrganizationConfigForm({
               style={INPUT_STYLE}
             />
           </Field>
+          <Field label="Trainer-Bild-URL" htmlFor="trainer_image_url" hint="Kein Upload in dieser Version — Bild extern hochladen und die URL hier eintragen.">
+            <input
+              id="trainer_image_url"
+              name="trainer_image_url"
+              type="url"
+              defaultValue={inputValue('trainer_image_url', org.trainer_image_url ?? '')}
+              className={INPUT_CLASS}
+              style={INPUT_STYLE}
+            />
+          </Field>
+          <Field label="Trainer-Text" htmlFor="trainer_text" hint="Ein bis zwei Sätze. Erscheint auf der Elternseite zusammen mit dem Ansprechpartner als Name. Ohne Trainer-Bild-URL wird die Sektion nicht angezeigt.">
+            <textarea
+              id="trainer_text"
+              name="trainer_text"
+              rows={2}
+              defaultValue={inputValue('trainer_text', org.trainer_text ?? '')}
+              className={INPUT_CLASS}
+              style={INPUT_STYLE}
+            />
+          </Field>
         </section>
 
         <section className="flex flex-col gap-4">

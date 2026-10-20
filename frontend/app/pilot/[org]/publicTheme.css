@@ -2543,7 +2543,6 @@
 .cp-public .hero-hint {
   font-size: 13px;
   line-height: 1.4;
-  opacity: .7;
   margin-top: 4px;
   max-width: 36ch;
 }
@@ -2960,4 +2959,49 @@
   font-size: 13px;
   color: var(--error);
   line-height: 1.5;
+}
+
+/* ══════════════════════════════════════════════
+   M8 — Barrierefreiheit & Mobile
+   ══════════════════════════════════════════════ */
+
+/* Fokusring: weiß auf dunklen Hero- und Band-Flächen */
+.cp-public .h-akad :focus-visible,
+.cp-public .h-trad :focus-visible,
+.cp-public .ok-band :focus-visible {
+  outline-color: #fff;
+}
+
+/* Touch-Ziele: mindestens 44 × 44 px */
+.cp-public .nav-cta,
+.cp-public .nav-cta-brand {
+  min-height: 44px;
+}
+.cp-public .h-btn-brand,
+.cp-public .h-btn-line,
+.cp-public .h-btn-glass,
+.cp-public .h-btn-solid {
+  min-height: 44px;
+}
+.cp-public .back-link {
+  min-height: 44px;
+  padding-block: 8px;
+}
+
+/* Platzhaltertexte: explizite Farbe statt Browser-Default-Transparenz (≥ 4,5:1) */
+.cp-public .field input::placeholder,
+.cp-public .field textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+/* Scroll-Abstand unten: verhindert, dass die sticky Preis-Leiste Formularfehler überdeckt */
+.cp-public #s-form .field,
+.cp-public #s-form .consent {
+  scroll-margin-bottom: 120px;
+}
+
+/* Marquee: Animation pausiert wenn ein fokussierbares Kind-Element Fokus erhält */
+.cp-public .marquee-track:focus-within {
+  animation-play-state: paused;
 }

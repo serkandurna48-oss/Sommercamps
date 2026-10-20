@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CampPublic, OrganizationPublic, RegistrationCreated } from '../../lib/saasApi'
 import { formatCampDateRange, formatPrice } from '../../lib/parentFlowFormat'
 import { useParentFlowMotion } from './motion'
@@ -36,6 +36,8 @@ export default function DoneScreen({
   const iban = org.iban
   const containerRef = useRef<HTMLElement>(null)
   useParentFlowMotion(org.theme, containerRef)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  useEffect(() => { headingRef.current?.focus() }, [])
 
   async function handleCopy() {
     try {
@@ -55,7 +57,14 @@ export default function DoneScreen({
             <path d="M5 12.5l4.5 4.5L19 7" />
           </svg>
         </div>
-        <h1 className="d1 done-headline" lang="de" style={{ color: 'var(--on-band)' }}>
+        <h1
+          ref={headingRef}
+          tabIndex={-1}
+          role="status"
+          className="d1 done-headline"
+          lang="de"
+          style={{ color: 'var(--on-band)' }}
+        >
           {waitlisted ? `${childName} ist auf der Warteliste` : 'Anmeldung eingegangen'}
         </h1>
         <p className="done-sub" style={{ color: 'var(--on-band-2)' }}>

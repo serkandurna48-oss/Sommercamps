@@ -47,6 +47,11 @@ class OrganizationPublic(BaseModel):
     # (Abschnitt 9.1-Prinzip).
     trainer_image_url: Optional[str] = None
     trainer_text: Optional[str] = None
+    # Teilnahmebedingungen (F1): eigene Bedingungen des Anbieters. Öffentlich,
+    # da die Teilnahmebedingungen-Seite ohne Admin-Login lesbar sein muss.
+    # NULL = Verweis-Platzhalter ("Es gelten die Bedingungen von …") statt
+    # eigenem Text — kein Fallback auf einen anderen Verein.
+    terms_text: Optional[str] = None
     # Für die Überweisungs-Zahlungsart auf der Bestätigungsseite (Abschnitt
     # 6.4). Öffentlich absichtlich, nicht schützenswert — eine IBAN, die
     # explizit zum Bezahlen herausgegeben wird, ist kein Geheimnis. NULL =

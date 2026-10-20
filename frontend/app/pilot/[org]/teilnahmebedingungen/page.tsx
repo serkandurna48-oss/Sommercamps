@@ -32,6 +32,7 @@ export default async function OrgTeilnahmebedingungenPage({ params }: { params: 
             <li><a href="#tb-1">Geltungsbereich</a></li>
             <li><a href="#tb-2">Anmeldung</a></li>
             <li><a href="#tb-3">Zahlung</a></li>
+            {org.terms_text && <li><a href="#tb-4">Bedingungen von {entityName}</a></li>}
           </ol>
         </nav>
 
@@ -67,12 +68,21 @@ export default async function OrgTeilnahmebedingungenPage({ params }: { params: 
             </p>
           </section>
 
-          <p>
-            Es gelten die Teilnahme-, Storno- und Haftungsbedingungen von {entityName}.{' '}
-            Bei Fragen:{' '}
-            <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>
-            {org.contact_phone ? ` oder ${org.contact_phone}` : ''}.
-          </p>
+          {org.terms_text ? (
+            <section id="tb-4">
+              <h2>Bedingungen von {entityName}</h2>
+              {org.terms_text.split(/\n\n+/).filter(Boolean).map((para, i) => (
+                <p key={i}>{para}</p>
+              ))}
+            </section>
+          ) : (
+            <p>
+              Es gelten die Teilnahme-, Storno- und Haftungsbedingungen von {entityName}.{' '}
+              Bei Fragen:{' '}
+              <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>
+              {org.contact_phone ? ` oder ${org.contact_phone}` : ''}.
+            </p>
+          )}
         </div>
       </main>
     </LegalShell>

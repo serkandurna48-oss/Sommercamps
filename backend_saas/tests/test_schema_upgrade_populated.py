@@ -1,9 +1,10 @@
-"""Upgrade probe: three 2026-10-18/19 migrations on a pre-populated database.
+"""Upgrade probe: four 2026-10-18/20 migrations on a pre-populated database.
 
 Verifies that the Welle-2 schema additions are data-safe:
   20261018000000_add_email_tracking_to_camp_registrations.sql
   20261018154831_tenant_read_policies.sql
   20261019203000_org_trainer.sql
+  20261020170000_org_terms_text.sql
 
 Run:
   REVIEW_POSTGRES_PORT=<port> python -m pytest \
@@ -33,6 +34,7 @@ _WELLE2_FILES = [
     "20261018000000_add_email_tracking_to_camp_registrations.sql",
     "20261018154831_tenant_read_policies.sql",
     "20261019203000_org_trainer.sql",
+    "20261020170000_org_terms_text.sql",
 ]
 
 # Baseline: all migrations whose filenames sort before the first Welle-2 file.
@@ -230,6 +232,12 @@ def test_upgrade_preserves_data(pg_config):
                     " WHERE trainer_image_url IS NOT NULL OR trainer_text IS NOT NULL"
                 )
                 assert cur.fetchone()["n"] == 0, "trainer columns must be NULL for all pre-existing orgs"
+
+                cur.execute(
+                    "SELECT count(*) AS n FROM organizations"
+                    " WHERE terms_text IS NOT NULL"
+                )
+                assert cur.fetchone()["n"] == 0, "terms_text must be NULL for all pre-existing orgs"
 
         assert count_after == count_before, "Row count changed"
         assert digest_after == digest_before, "Registration data (stable columns) changed"

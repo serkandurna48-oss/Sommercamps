@@ -22,6 +22,7 @@ function org(overrides: Partial<OrganizationAdmin> = {}): OrganizationAdmin {
     hero_image_url: null,
     trainer_image_url: null,
     trainer_text: null,
+    terms_text: null,
     billing_notes: null,
     site_published: false,
     ...overrides,

@@ -30,6 +30,7 @@ const BASE_FIELDS = {
   hero_image_url: '',
   trainer_image_url: '',
   trainer_text: '',
+  terms_text: '',
   billing_notes: '',
 }
 
@@ -58,4 +59,20 @@ it('sends null for trainer_image_url and trainer_text when inputs are empty', as
   const [, , payload] = vi.mocked(updateOrganizationAdmin).mock.calls[0]
   expect(payload.trainer_image_url).toBeNull()
   expect(payload.trainer_text).toBeNull()
+})
+
+it('passes terms_text to updateOrganizationAdmin', async () => {
+  const fd = makeFormData({ ...BASE_FIELDS, terms_text: 'Unsere Stornobedingungen.' })
+  await updateOrganizationConfigAction('demo', { error: null, saved: false }, fd)
+  expect(updateOrganizationAdmin).toHaveBeenCalledOnce()
+  const [, , payload] = vi.mocked(updateOrganizationAdmin).mock.calls[0]
+  expect(payload.terms_text).toBe('Unsere Stornobedingungen.')
+})
+
+it('sends null for terms_text when input is empty', async () => {
+  const fd = makeFormData({ ...BASE_FIELDS, terms_text: '' })
+  await updateOrganizationConfigAction('demo', { error: null, saved: false }, fd)
+  expect(updateOrganizationAdmin).toHaveBeenCalledOnce()
+  const [, , payload] = vi.mocked(updateOrganizationAdmin).mock.calls[0]
+  expect(payload.terms_text).toBeNull()
 })

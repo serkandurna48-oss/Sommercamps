@@ -9,7 +9,7 @@ const org = {
   slug: 'testverein', name: 'Testverein', legal_name: 'Testverein e. V.', legal_address: null,
   contact_person_name: null, contact_email: 'kontakt@testverein.example', contact_phone: '0561 1234',
   intro_heading: null, intro_text: null, hero_image_url: null,
-  trainer_image_url: null, trainer_text: null,
+  trainer_image_url: null, trainer_text: null, terms_text: null,
   logo_url: null, primary_color: null, theme: 'tradition', iban: 'DE89370400440532013000',
 } satisfies OrganizationPublic
 

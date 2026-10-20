@@ -68,6 +68,9 @@ class OrganizationCreate(BaseModel):
     hero_image_url: Optional[str] = None
     trainer_image_url: Optional[str] = None
     trainer_text: Optional[str] = None
+    # Teilnahmebedingungen (F1): eigene Bedingungen des Anbieters, optional,
+    # max. 20 000 Zeichen; leer/None → NULL in der DB.
+    terms_text: Optional[str] = None
     billing_notes: Optional[str] = None
     # Default false, für JEDEN Aufrufer dieses Endpunkts (auch bestehende
     # Skripte wie onboard_tenant.py/scripts/seed_demo.py, die dieses Feld
@@ -100,6 +103,15 @@ class OrganizationCreate(BaseModel):
             raise ValueError("iban must look like a real IBAN, e.g. 'DE89370400440532013000'")
         return value
 
+    @field_validator("terms_text")
+    @classmethod
+    def _terms_text_validate(cls, value: Optional[str]) -> Optional[str]:
+        if not value:
+            return None
+        if len(value) > 20_000:
+            raise ValueError("terms_text must not exceed 20 000 characters")
+        return value
+
 
 class OrganizationUpdate(BaseModel):
     """Same fields as OrganizationCreate minus `slug` (immutable — a slug
@@ -124,6 +136,7 @@ class OrganizationUpdate(BaseModel):
     hero_image_url: Optional[str] = None
     trainer_image_url: Optional[str] = None
     trainer_text: Optional[str] = None
+    terms_text: Optional[str] = None
     billing_notes: Optional[str] = None
     # Der "Veröffentlichen"/"Zurückziehen"-Schalter läuft über denselben
     # PATCH wie jedes andere Feld — kein eigener /publish-Endpunkt nötig,
@@ -143,6 +156,15 @@ class OrganizationUpdate(BaseModel):
     def _iban_format(cls, value: Optional[str]) -> Optional[str]:
         if value is not None and not _IBAN_RE.match(value):
             raise ValueError("iban must look like a real IBAN, e.g. 'DE89370400440532013000'")
+        return value
+
+    @field_validator("terms_text")
+    @classmethod
+    def _terms_text_validate(cls, value: Optional[str]) -> Optional[str]:
+        if not value:
+            return None
+        if len(value) > 20_000:
+            raise ValueError("terms_text must not exceed 20 000 characters")
         return value
 
 
@@ -315,6 +337,7 @@ class OrganizationAdminOut(BaseModel):
     hero_image_url: Optional[str] = None
     trainer_image_url: Optional[str] = None
     trainer_text: Optional[str] = None
+    terms_text: Optional[str] = None
     billing_notes: Optional[str] = None
     site_published: bool = False
 

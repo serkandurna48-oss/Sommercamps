@@ -53,6 +53,7 @@ const org: OrganizationPublic = {
   hero_image_url: null,
   trainer_image_url: null,
   trainer_text: null,
+  terms_text: null,
 }
 
 // ── LegalShell: Nav + Footer ──

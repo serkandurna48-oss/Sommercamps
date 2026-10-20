@@ -20,6 +20,7 @@ const org: OrganizationPublic = {
   hero_image_url: 'https://images.example.com/jk-hero.jpg',
   trainer_image_url: null,
   trainer_text: null,
+  terms_text: null,
 }
 
 const camp: CampPublic = {

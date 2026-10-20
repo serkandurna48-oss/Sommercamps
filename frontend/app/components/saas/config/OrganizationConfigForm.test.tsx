@@ -16,7 +16,7 @@ const org: OrganizationAdmin = {
   contact_email: 'kontakt@review.example', contact_phone: null, contact_person_name: null,
   logo_url: null, primary_color: null, plan_status: 'pilot', theme: 'tradition', iban: null,
   intro_heading: null, intro_text: null, hero_image_url: null,
-  trainer_image_url: null, trainer_text: null, billing_notes: null,
+  trainer_image_url: null, trainer_text: null, terms_text: null, billing_notes: null,
   site_published: true,
 }
 
@@ -101,6 +101,14 @@ it('renders trainer_image_url and trainer_text fields with stored org values', a
   expect(container.querySelector<HTMLInputElement>('[name="trainer_image_url"]')!.value).toBe('https://example.com/trainer.jpg')
   expect(container.querySelector('label[for="trainer_text"]')?.textContent).toBe('Trainer-Text')
   expect(container.querySelector<HTMLTextAreaElement>('[name="trainer_text"]')!.value).toBe('Unser Trainer hat 10 Jahre Erfahrung.')
+})
+
+it('renders terms_text field with stored org value', async () => {
+  const orgWithTerms = { ...org, terms_text: 'Unsere Stornobedingungen.' }
+  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={orgWithTerms} brandStrong="#112233" brandOn="#ffffff" />))
+  const ta = container.querySelector<HTMLTextAreaElement>('[name="terms_text"]')!
+  expect(ta).not.toBeNull()
+  expect(ta.value).toBe('Unsere Stornobedingungen.')
 })
 
 it('keeps the submit button reachable and labelled while a save runs', async () => {

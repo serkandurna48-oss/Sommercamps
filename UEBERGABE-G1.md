@@ -2,7 +2,7 @@ docs/g1-golive-welle2
 
 STATUS: fertig zur Prüfung
 
-COMMIT: folgt (noch kein Commit in dieser Session)
+COMMIT: 3140541 — docs: G1 Go-live-Plan Welle 2 und Schema-Probe befüllte DB
 
 TESTS:
   python -m pytest backend_saas/tests -q

@@ -76,6 +76,7 @@ ORGANIZATION = {
     "intro_text": "Individuelles Training. Starke Camps. Dein nächstes Level.",
     "trainer_image_url": "/jk/camp.jpg",
     "trainer_text": "Leitet die Academy und trainiert jede Camp-Gruppe selbst.",
+    "contact_person_name": "Jan Krug",
     "plan_status": "pilot",
     "iban": "DE89370400440532013000",
 }
@@ -297,6 +298,7 @@ def _update_organization_branding(client: httpx.Client, api_url: str, token: str
         "intro_text": ORGANIZATION["intro_text"],
         "trainer_image_url": ORGANIZATION["trainer_image_url"],
         "trainer_text": ORGANIZATION["trainer_text"],
+        "contact_person_name": ORGANIZATION["contact_person_name"],
     }
     response = client.patch(
         f"{api_url}/admin/organizations/{DEMO_ORG_SLUG}",

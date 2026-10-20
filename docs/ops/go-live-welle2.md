@@ -117,6 +117,36 @@ Keine Werte in dieses Dokument eintragen.
 
 ## 4. Abnahme nach Live-Gang
 
+### 4.1 Automatisierter Smoke-Check (zuerst ausführen)
+
+```bash
+python scripts/smoke_check.py \
+    --api-url https://BACKEND_API_URL \
+    --frontend-url https://FRONTEND_URL \
+    --org jk-performance-academy \
+    --org ksv-baunatal
+```
+
+Alle Zeilen müssen mit `OK` beginnen. Exitcode ≠ 0 → Fehler beheben, bevor mit den
+manuellen Schritten weitergemacht wird.
+
+Optionaler Schritt mit Testanmeldung (nur mit synthetischen Daten, E-Mail muss
+`@campspilot.example`-Domain haben):
+
+```bash
+python scripts/smoke_check.py \
+    --api-url https://BACKEND_API_URL \
+    --frontend-url https://FRONTEND_URL \
+    --org jk-performance-academy \
+    --register-email smoke@campspilot.example \
+    --camp CAMP_SLUG
+```
+
+Das Skript gibt ein fertiges `DELETE`-SQL aus — Serkan führt es selbst aus, um den
+Testdatensatz zu löschen (L3e-Verfahren).
+
+### 4.2 Manuelle Abnahme
+
 - [ ] **Health:** `GET /health` → 200, kein FakeProvider-Hinweis im Log
 - [ ] **Öffentliche Elternseite JK:** `/pilot/jk-performance-academy` → lädt, kein 404/500
 - [ ] **Öffentliche Elternseite KSV:** öffentliche Anmeldeseite (falls konfiguriert) → lädt

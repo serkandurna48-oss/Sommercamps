@@ -7,8 +7,8 @@ export default function OrgNotFound() {
           Diese Organisation gibt es hier nicht
         </h1>
         <p className="mt-4 text-[15px] leading-relaxed text-[#5B6158]">
-          Der Link, dem du gefolgt bist, verweist auf keine hinterlegte Organisation. Prüf den
-          Link noch einmal, oder frag bei der Person nach, die ihn dir geschickt hat.
+          Der Link, dem Sie gefolgt sind, verweist auf keine hinterlegte Organisation. Bitte
+          prüfen Sie den Link, oder fragen Sie bei der Person nach, die ihn Ihnen geschickt hat.
         </p>
       </div>
     </main>

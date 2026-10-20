@@ -95,3 +95,47 @@ E-Mail: {e_org_email}{phone_line}</p>
         html_content=html,
         reply_to=org_email,
     )
+
+
+def build_provider_mail(
+    *,
+    status: str,
+    camp_title: str,
+    camp_start: date,
+    camp_end: date,
+    payment_reference: str,
+    registered_count: int,
+    capacity: int,
+    waitlist_count: int,
+    contact_email: str,
+    org_name: str,
+) -> MailMessage:
+    e_camp_title = escape(camp_title)
+    e_payment_ref = escape(payment_reference)
+    e_org_name = escape(org_name)
+    dates = _date_range(camp_start, camp_end)
+
+    if status == "registered":
+        subject = f"Neue Anmeldung – {camp_title}"
+        status_label = "Angemeldet"
+    else:
+        subject = f"Neue Wartelisten-Anmeldung – {camp_title}"
+        status_label = "Warteliste"
+
+    html = (
+        f"<p>Es ist eine neue Anmeldung eingegangen.</p>\n"
+        f"<p>Camp: <strong>{e_camp_title}</strong><br>\n"
+        f"Termin: {dates}<br>\n"
+        f"Status: <strong>{status_label}</strong></p>\n"
+        f"<p>Belegung: <strong>{registered_count} von {capacity} Plätzen belegt, "
+        f"{waitlist_count} auf der Warteliste</strong></p>\n"
+        f"<p>Verwendungszweck: <strong>{e_payment_ref}</strong></p>\n"
+        f"<p>Details finden Sie im Admin-Bereich.</p>\n"
+        f"<p>Mit freundlichen Grüßen,<br>{e_org_name} über CampsPilot</p>"
+    )
+
+    return MailMessage(
+        to_email=contact_email,
+        subject=subject,
+        html_content=html,
+    )

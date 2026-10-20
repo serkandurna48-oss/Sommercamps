@@ -20,10 +20,13 @@ from typing import Optional
 from uuid import UUID
 
 from .. import db
+from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES
 from .mail import get_provider
-from .templates import build_registration_mail
+from .templates import build_provider_mail, build_registration_mail
 
 logger = logging.getLogger(__name__)
+
+_CAPACITY_COUNTING_STATUSES_LIST = list(CAPACITY_COUNTING_STATUSES)
 
 _FETCH_CONTEXT = """
     SELECT
@@ -67,6 +70,27 @@ _MARK_ERROR = (
     "UPDATE camp_registrations SET email_error = %s"
     " WHERE registration_token = %s AND organization_id = %s"
 )
+
+# Same subquery logic as _OCCUPANCY_SUBQUERIES in repositories/camps.py —
+# single source of truth for what counts against capacity (CAPACITY_COUNTING_STATUSES).
+_FETCH_OCCUPANCY = """
+    SELECT
+        (SELECT COUNT(*) FROM camp_registrations r2
+           WHERE r2.camp_id = c.id AND r2.organization_id = c.organization_id
+             AND r2.status = ANY(%s)) AS registered_count,
+        (SELECT COUNT(*) FROM camp_registrations r2
+           WHERE r2.camp_id = c.id AND r2.organization_id = c.organization_id
+             AND r2.status = 'waitlist') AS waitlist_count,
+        c.capacity
+    FROM camps c
+    WHERE c.id = %s AND c.organization_id = %s
+"""
+
+
+def _fetch_occupancy(organization_id: UUID, camp_id: UUID) -> Optional[dict]:
+    with db.get_cursor() as cur:
+        cur.execute(_FETCH_OCCUPANCY, (_CAPACITY_COUNTING_STATUSES_LIST, camp_id, organization_id))
+        return cur.fetchone()
 
 
 def _fetch_mail_context(organization_id: UUID, camp_id: UUID) -> Optional[dict]:
@@ -133,6 +157,60 @@ def _do_send(
         _mark_sent(registration_token, organization_id)
 
 
+def _send_provider_notification(
+    *,
+    registration_token: UUID,
+    status: str,
+    organization_id: UUID,
+    camp_id: UUID,
+    start_date: date,
+    end_date: date,
+) -> None:
+    """Best-effort provider notification. Never raises, never modifies email_sent_at/email_error."""
+    try:
+        ctx = _fetch_mail_context(organization_id, camp_id)
+        if ctx is None:
+            raise RuntimeError(
+                f"org/camp context not found for provider mail "
+                f"(org={organization_id}, camp={camp_id})"
+            )
+        contact_email = ctx.get("org_email")
+        if not contact_email:
+            logger.info(
+                "send_provider_notification skipped: no contact_email (org=%s)",
+                organization_id,
+            )
+            return
+        occupancy = _fetch_occupancy(organization_id, camp_id)
+        if occupancy is None:
+            raise RuntimeError(
+                f"occupancy data not found for provider mail "
+                f"(org={organization_id}, camp={camp_id})"
+            )
+        payment_reference = f"CP-{str(registration_token)[:8].upper()}"
+        msg = build_provider_mail(
+            status=status,
+            camp_title=ctx["camp_title"],
+            camp_start=start_date,
+            camp_end=end_date,
+            payment_reference=payment_reference,
+            registered_count=int(occupancy["registered_count"]),
+            capacity=int(occupancy["capacity"]),
+            waitlist_count=int(occupancy["waitlist_count"]),
+            contact_email=contact_email,
+            org_name=ctx["org_name"],
+        )
+        msg.sender_name = f"{ctx['org_name']} über CampsPilot"
+        provider = get_provider()
+        provider.send(msg)
+    except Exception as exc:
+        logger.warning(
+            "send_provider_notification failed (token=%s): %s",
+            registration_token,
+            exc,
+        )
+
+
 def send_registration_notification(
     *,
     registration_token: UUID,
@@ -146,8 +224,12 @@ def send_registration_notification(
     parent_last_name: str,
     child_first_name: str,
     child_last_name: str,
+    notify_provider: bool = True,
 ) -> None:
-    """Best-effort notification after registration creation. Never raises."""
+    """Best-effort notification after registration creation. Never raises.
+
+    notify_provider=False is used by the parent-mail retry, so the provider
+    is informed exactly once per registration."""
     try:
         _do_send(
             registration_token=registration_token,
@@ -172,6 +254,17 @@ def send_registration_notification(
             _mark_error(registration_token, str(exc), organization_id)
         except Exception:
             pass
+
+    if not notify_provider:
+        return
+    _send_provider_notification(
+        registration_token=registration_token,
+        status=status,
+        organization_id=organization_id,
+        camp_id=camp_id,
+        start_date=start_date,
+        end_date=end_date,
+    )
 
 
 def retry_registration_notification(
@@ -199,4 +292,5 @@ def retry_registration_notification(
         parent_last_name=reg["parent_last_name"],
         child_first_name=reg["child_first_name"],
         child_last_name=reg["child_last_name"],
+        notify_provider=False,
     )

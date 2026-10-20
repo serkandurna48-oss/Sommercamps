@@ -13,6 +13,13 @@ import { publicUI } from '../../lib/i18n/de'
 
 type ScreenName = 'org' | 'camp' | 'form' | 'done' | 'wait'
 
+export function headlineScale(text: string): 'xl' | 'lg' | 'md' {
+  const len = text.length
+  if (len <= 24) return 'xl'
+  if (len <= 48) return 'lg'
+  return 'md'
+}
+
 interface DoneState {
   result: RegistrationCreated
   childName: string
@@ -55,6 +62,14 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
     setSelectedSlug(null)
     setDone(null)
     window.scrollTo(0, 0)
+  }
+
+  function scrollToCamps() {
+    if (camps.length === 1) {
+      openCamp(camps[0])
+    } else {
+      document.getElementById('s-camps')?.scrollIntoView({ behavior: 'smooth' })
+    }
   }
 
   if (screen === 'form' && selectedCamp) {
@@ -114,79 +129,163 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
 
   return (
     <section className="screen" id="s-org" ref={orgContainerRef}>
-      {org.theme === 'tradition' && (
-        <header className="hero h-trad">
-          <div className="shield">{shortCode}</div>
-          <h1 className="d1" data-split>{heading}</h1>
-          <div className="rule" />
-          <p className="intro" data-rise>{intro}</p>
-          {hero && (
-            <div className="shot">
-              <Image id="shotA" src={hero} alt="" unoptimized width={1040} height={680} priority style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-          )}
-        </header>
-      )}
-
-      {org.theme === 'akademie' && (
-        <header className="hero h-akad">
-          <div className="bg">{hero && <Image id="shotB" src={hero} alt="" unoptimized fill priority style={{ objectFit: 'cover' }} />}</div>
-          <div className="veil" />
-          <div className="in">
-            <span className="mark">
-              <span className="c">
-                {org.logo_url
-                  ? <Image src={org.logo_url} alt={org.name} width={30} height={30} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : shortCode}
-              </span>
-              <span className="t">{org.name}</span>
-            </span>
-            <h1 className="d1" data-split>{heading}</h1>
-            <p className="intro" data-rise style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--on-band-2)', maxWidth: '40ch' }}>
-              {intro}
-            </p>
-            {camps.length > 0 && (
-              <div className="stats">
-                <div className="stat">
-                  <b className="num">{camps.reduce((s, c) => s + c.capacity, 0)}</b>
-                  <span>Plätze gesamt</span>
-                </div>
+      {org.theme === 'tradition' && (() => {
+        const ageMin = camps.length > 0 ? Math.min(...camps.map(c => c.age_min)) : null
+        const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
+        const totalSeats = camps.reduce((s, c) => s + c.capacity, 0)
+        return (
+          <header className="hero h-trad" lang="de">
+            <nav className="h-trad-nav" aria-label="Seitennavigation">
+              <div className="nav-left">
+                <span className="nav-logo-trad">
+                  {org.logo_url
+                    ? <Image src={org.logo_url} alt={org.name} width={32} height={32} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : shortCode}
+                </span>
+                <span className="nav-name-trad">{org.name}</span>
+              </div>
+              <button className="nav-cta-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+            </nav>
+            {hero && (
+              <div className="h-trad-shot">
+                <Image id="shotA" src={hero} alt="" unoptimized fill priority style={{ objectFit: 'cover', objectPosition: 'center 25%' }} />
               </div>
             )}
-          </div>
-        </header>
-      )}
-
-      {org.theme === 'kompakt' && (
-        <header className="hero h-komp">
-          <div className="in">
-            <div className="side">
-              <span className="sq">{shortCode}</span>
-              <span className="lab">Feriencamps</span>
-            </div>
-            <div>
-              <h1 className="d1" data-split>{heading}</h1>
-              <p className="intro" data-rise>{intro}</p>
-              <div className="facts">
-                <div data-rise>
-                  <b className="num" data-count={camps.length}>{camps.length}</b>
-                  <span>{camps.length === 1 ? 'Camp' : 'Camps'}</span>
-                </div>
-                <div data-rise>
-                  <b className="num" data-count={camps.reduce((sum, c) => sum + c.capacity, 0)}>
-                    {camps.reduce((sum, c) => sum + c.capacity, 0)}
-                  </b>
-                  <span>Plätze</span>
-                </div>
-                <div data-rise>
-                  <b className="num" data-count={4}>4</b>
-                  <span>Minuten Anmeldung</span>
+            <div className="h-trad-in">
+              <div className="in-main">
+                <span className="hero-label">{org.name}</span>
+                <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
+                <p className="intro">{intro}</p>
+                <div className="hero-btns">
+                  <button className="h-btn-line" type="button" onClick={scrollToCamps}>Camps ansehen</button>
+                  <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
                 </div>
               </div>
+              {camps.length > 0 && (
+                <div className="h-trad-stats">
+                  <div className="hstat-w">
+                    <b className="num" data-count={camps.length}>{camps.length}</b>
+                    <span>{camps.length === 1 ? 'Camp' : 'Camps'}</span>
+                  </div>
+                  {ageMin !== null && ageMax !== null && (
+                    <div className="hstat-w">
+                      <b className="num">{ageMin}–{ageMax}</b>
+                      <span>Jahre</span>
+                    </div>
+                  )}
+                  <div className="hstat-w">
+                    <b className="num" data-count={totalSeats}>{totalSeats}</b>
+                    <span>Plätze gesamt</span>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        </header>
-      )}
+          </header>
+        )
+      })()}
+
+      {org.theme === 'akademie' && (() => {
+        const ageMin = camps.length > 0 ? Math.min(...camps.map(c => c.age_min)) : null
+        const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
+        const totalSeats = camps.reduce((s, c) => s + c.capacity, 0)
+        return (
+          <header className="hero h-akad" lang="de">
+            <nav className="h-akad-nav" aria-label="Seitennavigation">
+              <div className="nav-left">
+                <span className="nav-logo">
+                  {org.logo_url
+                    ? <Image src={org.logo_url} alt={org.name} width={32} height={32} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : shortCode}
+                </span>
+                <span className="nav-name">{org.name}</span>
+              </div>
+              <button className="nav-cta" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+            </nav>
+            <div className="bg">{hero && <Image id="shotB" src={hero} alt="" unoptimized fill priority style={{ objectFit: 'cover' }} />}</div>
+            <div className="veil" />
+            <div className="in">
+              <div className="in-main">
+                <span className="hero-label">{org.name}</span>
+                <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
+                <p className="intro">{intro}</p>
+                <div className="hero-btns">
+                  <button className="h-btn-glass" type="button" onClick={scrollToCamps}>Camps ansehen</button>
+                  <button className="h-btn-solid" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+                </div>
+              </div>
+              {camps.length > 0 && (
+                <div className="hero-stats">
+                  <div className="hstat">
+                    <b className="num" data-count={camps.length}>{camps.length}</b>
+                    <span>{camps.length === 1 ? 'Camp' : 'Camps'}</span>
+                  </div>
+                  {ageMin !== null && ageMax !== null && (
+                    <div className="hstat">
+                      <b className="num">{ageMin}–{ageMax}</b>
+                      <span>Jahre</span>
+                    </div>
+                  )}
+                  <div className="hstat">
+                    <b className="num" data-count={totalSeats}>{totalSeats}</b>
+                    <span>Plätze gesamt</span>
+                  </div>
+                  <span className="hero-assure">Anmeldung in ca. 4 Minuten — kein Konto nötig</span>
+                </div>
+              )}
+            </div>
+          </header>
+        )
+      })()}
+
+      {org.theme === 'kompakt' && (() => {
+        const ageMin = camps.length > 0 ? Math.min(...camps.map(c => c.age_min)) : null
+        const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
+        const totalSeats = camps.reduce((s, c) => s + c.capacity, 0)
+        return (
+          <header className="hero h-komp" lang="de">
+            <nav className="h-trad-nav h-komp-nav" aria-label="Seitennavigation">
+              <div className="nav-left">
+                <span className="nav-logo-trad">
+                  {org.logo_url
+                    ? <Image src={org.logo_url} alt={org.name} width={32} height={32} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : shortCode}
+                </span>
+                <span className="nav-name-trad">{org.name}</span>
+              </div>
+              <button className="nav-cta-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+            </nav>
+            <div className="h-komp-in">
+              <div className="in-main">
+                <span className="hero-label">{org.name}</span>
+                <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
+                <p className="intro">{intro}</p>
+                <div className="hero-btns">
+                  <button className="h-btn-line" type="button" onClick={scrollToCamps}>Camps ansehen</button>
+                  <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+                </div>
+              </div>
+              {camps.length > 0 && (
+                <div className="h-komp-stats">
+                  <div className="hstat-w hstat-w-dark">
+                    <b className="num" data-count={camps.length}>{camps.length}</b>
+                    <span>{camps.length === 1 ? 'Camp' : 'Camps'}</span>
+                  </div>
+                  {ageMin !== null && ageMax !== null && (
+                    <div className="hstat-w hstat-w-dark">
+                      <b className="num">{ageMin}–{ageMax}</b>
+                      <span>Jahre</span>
+                    </div>
+                  )}
+                  <div className="hstat-w hstat-w-dark">
+                    <b className="num" data-count={totalSeats}>{totalSeats}</b>
+                    <span>Plätze gesamt</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </header>
+        )
+      })()}
 
       {camps.length > 0 && (
         <div className="factsstrip pad">
@@ -226,10 +325,12 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
         <span>Die Anmeldung dauert etwa vier Minuten. Sie brauchen kein Benutzerkonto.</span>
       </div>
 
-      <div className="pad sec">
+      <div className="pad sec" id="s-camps">
         <div className="sec-head">
-          <h2 className="d2" data-split>Camps{campsByYear ? ` ${campsByYear}` : ''}</h2>
-          <span className="lab num">{camps.length} {camps.length === 1 ? 'Termin' : 'Termine'}</span>
+          <div>
+            <span className="sec-label">{camps.length} {camps.length === 1 ? 'Termin' : 'Termine'}</span>
+            <h2 className="d2" data-split>Camps{campsByYear ? ` ${campsByYear}` : ''}</h2>
+          </div>
         </div>
         <div className="camps">
           {camps.length === 0 ? (
@@ -243,26 +344,33 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
       </div>
 
       {org.trainer_image_url?.trim() && (
-        <div className="trainer-sec pad" data-rise>
-          <Image
-            src={org.trainer_image_url}
-            alt={org.contact_person_name ?? ''}
-            unoptimized
-            width={120}
-            height={120}
-            className="trainer-img"
-            style={{ objectFit: 'cover' }}
-          />
-          <div className="trainer-body">
-            <h2 className="d3">{publicUI.trainer.heading}</h2>
-            {org.contact_person_name && <p className="trainer-name">{org.contact_person_name}</p>}
-            {org.trainer_text?.trim() && <p className="trainer-bio">{org.trainer_text}</p>}
+        <div className="pad sec" data-section>
+          <div className="sec-head" style={{ marginBottom: 24 }}>
+            <span className="sec-label">{publicUI.trainer.heading}</span>
+          </div>
+          <div className="trainer-sec" data-rise>
+            <Image
+              src={org.trainer_image_url}
+              alt={org.contact_person_name ?? ''}
+              unoptimized
+              width={120}
+              height={120}
+              className="trainer-img"
+              style={{ objectFit: 'cover' }}
+            />
+            <div className="trainer-body">
+              {org.contact_person_name && <h2 className="trainer-name">{org.contact_person_name}</h2>}
+              {org.trainer_text?.trim() && <p className="trainer-bio">{org.trainer_text}</p>}
+            </div>
           </div>
         </div>
       )}
 
       <div className="pad how-sec">
-        <h2 className="d2" data-split>{publicUI.howItWorks.heading}</h2>
+        <div>
+          <span className="sec-label">In 3 Schritten</span>
+          <h2 className="d2" data-split>{publicUI.howItWorks.heading}</h2>
+        </div>
         <div className="how-steps">
           {publicUI.howItWorks.steps.map((step) => (
             <div key={step.num} className="how-step" data-rise>
@@ -275,7 +383,10 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
       </div>
 
       <div className="pad faq-sec">
-        <h2 className="d2" data-split>Häufige Fragen</h2>
+        <div>
+          <span className="sec-label">FAQ</span>
+          <h2 className="d2" data-split>Häufige Fragen</h2>
+        </div>
         <div className="faq">
           {publicUI.faq.map((item, i) => (
             <details key={i} className="faq-item" data-rise>
@@ -307,7 +418,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
   )
 }
 
-function CampScreen({
+export function CampScreen({
   org,
   camp,
   onBack,
@@ -322,41 +433,52 @@ function CampScreen({
   const tight = !camp.is_full && camp.spots_remaining <= 3
   const containerRef = useRef<HTMLElement>(null)
   useParentFlowMotion(org.theme, containerRef)
+  const startDay = parseInt(camp.start_date.slice(8, 10))
+  const startMonth = new Date(camp.start_date + 'T12:00:00').toLocaleString('de-DE', { month: 'long' })
 
   return (
     <section className="screen" id="s-camp" ref={containerRef}>
-      <div className="top">
-        <button className="back" type="button" onClick={onBack} aria-label="Zurück zur Übersicht">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <div className="camp-back pad">
+        <button className="back-link" type="button" onClick={onBack} aria-label="Zurück zur Übersicht">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M15 5l-7 7 7 7" />
           </svg>
+          Zurück zur Übersicht
         </button>
-        <div className="who">
-          <b>{org.name}</b>
-          <span>{camp.title}</span>
-        </div>
       </div>
 
-      <div className="pad sec" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <div className="tags">
-          <span className={`chip ${camp.registration_open ? 'ok' : 'info'}`}>{camp.registration_open ? 'Anmeldung geöffnet' : 'Anmeldung geschlossen'}</span>
-          <span className="tag">
-            {camp.age_min} bis {camp.age_max} Jahre
-          </span>
-        </div>
-        <h1 className="d1" data-split style={{ fontSize: 'clamp(28px,6.4vw,46px)' }}>
-          {camp.title}
-        </h1>
-        <span className="num" style={{ fontSize: 17, fontWeight: 600, color: 'var(--ink-2)' }}>
-          {formatCampDateRange(camp.start_date, camp.end_date)}
-        </span>
-        <div className="cap">
-          <div className={`bar${camp.is_full ? ' full' : ''}`}>
-            <i style={{ width: `${pct}%` }} />
+      <div className="camp-hd pad">
+        <div className="camp-hd-in">
+          <div className="camp-hd-main">
+            <span className="sec-label">
+              {[camp.location, formatCampDateRange(camp.start_date, camp.end_date)].filter(Boolean).join(' · ')}
+            </span>
+            <h1 className="d1" data-split data-scale={headlineScale(camp.title)} lang="de">
+              {camp.title}
+            </h1>
+            <p className="camp-hd-intro">
+              {camp.age_min}–{camp.age_max} Jahre
+            </p>
           </div>
-          <span className={`t num${tight ? ' tight' : ''}`}>
-            {tight ? `Nur noch ${camp.spots_remaining} Plätze frei` : `${camp.spots_remaining} von ${camp.capacity} Plätzen frei`}
-          </span>
+          <div className="camp-date-block">
+            <b className="camp-date-num num">{startDay}</b>
+            <span className="camp-date-month">{startMonth}</span>
+          </div>
+        </div>
+        <div className="camp-hd-meta">
+          <div className="tags">
+            <span className={`chip ${camp.registration_open ? 'ok' : 'info'}`}>
+              {camp.registration_open ? 'Anmeldung geöffnet' : 'Anmeldung geschlossen'}
+            </span>
+          </div>
+          <div className="cap">
+            <div className={`bar${camp.is_full ? ' full' : ''}`}>
+              <i style={{ width: `${pct}%` }} />
+            </div>
+            <span className={`t num${tight ? ' tight' : ''}`}>
+              {tight ? `Nur noch ${camp.spots_remaining} Plätze frei` : `${camp.spots_remaining} von ${camp.capacity} Plätzen frei`}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -369,10 +491,12 @@ function CampScreen({
             </div>
           )}
           <div className="r">
+            <dt>Zeitraum</dt>
+            <dd>{formatCampDateRange(camp.start_date, camp.end_date)}</dd>
+          </div>
+          <div className="r">
             <dt>Jahrgänge</dt>
-            <dd className="num">
-              {camp.age_min} bis {camp.age_max} Jahre
-            </dd>
+            <dd className="num">{camp.age_min} bis {camp.age_max} Jahre</dd>
           </div>
           {camp.care_info && (
             <div className="r">
@@ -390,16 +514,11 @@ function CampScreen({
       </div>
 
       {camp.includes && camp.includes.length > 0 && (
-        <div className="pad" style={{ paddingBottom: 28, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <h2 className="d3">Im Preis enthalten</h2>
-          <ul className="list-check">
+        <div className="pad" style={{ paddingBottom: 28 }}>
+          <span className="sec-label">Im Preis enthalten</span>
+          <ul className="camp-incl">
             {camp.includes.map((item, i) => (
-              <li key={i} data-rise>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: 3 }}>
-                  <path d="M5 12.5l4.5 4.5L19 7" />
-                </svg>
-                <span>{item}</span>
-              </li>
+              <li key={i} data-rise>{item}</li>
             ))}
           </ul>
         </div>
@@ -409,18 +528,16 @@ function CampScreen({
         <div className="line">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <span className="sum num">{formatPrice(camp.price_cents, camp.currency)}</span>
-            <span className="muted" style={{ fontSize: 12 }}>
-              pro Kind
-            </span>
+            <span className="muted" style={{ fontSize: 12 }}>pro Kind</span>
           </div>
           <button
-            className="btn primary"
+            className="btn primary btn-pill"
             type="button"
             onClick={onRegister}
             disabled={!camp.registration_open}
             style={{ width: 'auto', flexGrow: 1, maxWidth: 250 }}
           >
-            Kind anmelden
+            Jetzt anmelden
           </button>
         </div>
       </div>

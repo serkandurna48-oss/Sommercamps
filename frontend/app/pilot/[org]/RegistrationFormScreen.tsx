@@ -184,20 +184,15 @@ export default function RegistrationFormScreen({
         </div>
       </div>
 
-      <div className="prog">
-        <div className="bars">
-          {[1, 2, 3, 4].map((n) => (
-            <i key={n} className={n <= doneCount ? 'on' : ''} />
-          ))}
-        </div>
-        <span className="t num">{doneCount} von 4 Abschnitten ausgefüllt</span>
+      <div className="prog prog-m3">
+        <span className="prog-text">Schritt {Math.min(doneCount + 1, 4)} von 4</span>
       </div>
 
       <form onSubmit={handleSubmit} noValidate>
         <div className="pad form-body">
           <section className="fsec">
             <div className="fsec-head">
-              <span className={`step${sectionDone[1] ? ' done' : ''}`}>1</span>
+              <span className="sec-label">Kind</span>
               <h2 className="d3">Angaben zum Kind</h2>
             </div>
             <div className="f">
@@ -254,7 +249,7 @@ export default function RegistrationFormScreen({
 
           <section className="fsec">
             <div className="fsec-head">
-              <span className={`step${sectionDone[2] ? ' done' : ''}`}>2</span>
+              <span className="sec-label">Erziehungsberechtigte</span>
               <h2 className="d3">Kontakt der Eltern</h2>
             </div>
             <div className="f">
@@ -303,7 +298,7 @@ export default function RegistrationFormScreen({
 
           <section className="fsec">
             <div className="fsec-head">
-              <span className={`step${sectionDone[3] ? ' done' : ''}`}>3</span>
+              <span className="sec-label">Abholung</span>
               <h2 className="d3">Sicherheit im Camp</h2>
             </div>
             <div className="f">
@@ -346,7 +341,7 @@ export default function RegistrationFormScreen({
 
           <section className="fsec">
             <div className="fsec-head">
-              <span className={`step${sectionDone[4] ? ' done' : ''}`}>4</span>
+              <span className="sec-label">Einwilligungen</span>
               <h2 className="d3">Einwilligungen</h2>
             </div>
             <div className="f">
@@ -430,7 +425,7 @@ export default function RegistrationFormScreen({
             <span style={{ fontSize: 14, color: 'var(--ink-2)' }}>{camp.title}, 1 Kind</span>
             <span className="sum num">{formatPrice(camp.price_cents, camp.currency)}</span>
           </div>
-          <button className={`btn primary${submitting ? ' done' : ''}`} type="submit" disabled={submitting}>
+          <button className={`btn primary btn-pill${submitting ? ' done' : ''}`} type="submit" disabled={submitting}>
             {submitting
               ? camp.is_full
                 ? 'Wird eingetragen …'

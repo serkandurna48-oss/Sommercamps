@@ -55,13 +55,13 @@ export default function DoneScreen({
             <path d="M5 12.5l4.5 4.5L19 7" />
           </svg>
         </div>
-        <h1 className="d1" style={{ fontSize: 'clamp(27px,6vw,42px)', color: 'var(--on-band)' }}>
-          {waitlisted ? `${childName} ist auf der Warteliste` : `${childName} ist angemeldet`}
+        <h1 className="d1 done-headline" lang="de" style={{ color: 'var(--on-band)' }}>
+          {waitlisted ? `${childName} ist auf der Warteliste` : 'Anmeldung eingegangen'}
         </h1>
-        <p style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--on-band-2)', maxWidth: '40ch' }}>
+        <p className="done-sub" style={{ color: 'var(--on-band-2)' }}>
           {waitlisted
             ? `${payTo} meldet sich bei Ihnen — unter ${parentEmail} oder telefonisch —, sobald beim ${camp.title} ein Platz frei wird. Es entstehen noch keine Kosten.`
-            : `Der Platz beim ${camp.title} vom ${formatCampDateRange(camp.start_date, camp.end_date)} ist reserviert.`}
+            : `${childName} ist angemeldet — der Platz beim ${camp.title} vom ${formatCampDateRange(camp.start_date, camp.end_date)} ist reserviert.`}
         </p>
       </header>
 
@@ -70,55 +70,72 @@ export default function DoneScreen({
         {!waitlisted && <span className="chip pending">Zahlung offen</span>}
       </div>
 
-      {!waitlisted && (
-        <div className="pad sec">
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 17 }}>
-            <h2 className="d3">{iban ? 'Jetzt überweisen' : 'Die Bezahlung'}</h2>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-              <span className="num" style={{ fontFamily: 'var(--display)', fontSize: 34, fontWeight: 'var(--dw)' as never, letterSpacing: 'var(--dtrack)' }}>
-                {formatPrice(camp.price_cents, camp.currency)}
-              </span>
+      <div className="pad" style={{ paddingTop: 28, paddingBottom: 0 }}>
+        <div className="done-summary">
+          <p className="done-summary-title">Buchungsdetails</p>
+          <dl className="done-summary-rows">
+            <div className="done-summary-row">
+              <dt>Kind</dt>
+              <dd>{childName}</dd>
             </div>
-            <dl className="pay">
-              <div className="r">
-                <dt>Empfänger</dt>
-                <dd>{payTo}</dd>
-              </div>
-              {iban && (
-                <div className="r">
-                  <dt>IBAN</dt>
-                  <dd className="num">{iban}</dd>
-                </div>
-              )}
-              <div className="r">
-                <dt>Verwendungszweck</dt>
-                <dd className="num" style={{ fontWeight: 600 }}>
-                  {result.payment_reference}
-                </dd>
-                <button className="copy" type="button" onClick={handleCopy} aria-label="Verwendungszweck kopieren">
-                  {copied ? (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M5 12.5l4.5 4.5L19 7" />
-                    </svg>
-                  ) : (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ opacity: 0.7 }}>
-                      <rect x="9" y="9" width="11" height="11" rx="2" />
-                      <path d="M6 15H5a1 1 0 01-1-1V5a1 1 0 011-1h9a1 1 0 011 1v1" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </dl>
-            <p style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--ink-2)' }}>
-              {iban
-                ? `Bitte den Verwendungszweck mit angeben — damit ordnet ${payTo} die Zahlung Ihrem Kind zu.`
-                : `Die Bankverbindung ist hier noch nicht hinterlegt. Bitte erfragen Sie sie bei ${payTo} unter ${org.contact_email}${org.contact_phone ? ` oder ${org.contact_phone}` : ''} und geben Sie den Verwendungszweck mit an.`}
-            </p>
-          </div>
-        </div>
-      )}
+            <div className="done-summary-row">
+              <dt>Camp</dt>
+              <dd>{camp.title}</dd>
+            </div>
+            <div className="done-summary-row">
+              <dt>Zeitraum</dt>
+              <dd>{formatCampDateRange(camp.start_date, camp.end_date)}</dd>
+            </div>
+            <div className="done-summary-row">
+              <dt>Preis</dt>
+              <dd className="num">{formatPrice(camp.price_cents, camp.currency)}</dd>
+            </div>
+          </dl>
 
-      <div className="pad" style={{ paddingBottom: 30, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {!waitlisted && (
+            <div className="done-transfer">
+              <span className="done-transfer-label">Überweisung</span>
+              <dl className="done-transfer-rows">
+                <div className="done-transfer-row">
+                  <dt>Empfänger</dt>
+                  <dd>{payTo}</dd>
+                </div>
+                {iban && (
+                  <div className="done-transfer-row">
+                    <dt>IBAN</dt>
+                    <dd className="num">{iban}</dd>
+                  </div>
+                )}
+              </dl>
+              <div style={{ marginTop: 8 }}>
+                <span className="done-transfer-label" style={{ fontSize: 11, display: 'block', marginBottom: 6 }}>Verwendungszweck</span>
+                <div className="done-ref-wrap">
+                  <span className="done-ref num">{result.payment_reference}</span>
+                  <button className="copy" type="button" onClick={handleCopy} aria-label="Verwendungszweck kopieren">
+                    {copied ? (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M5 12.5l4.5 4.5L19 7" />
+                      </svg>
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ opacity: 0.7 }}>
+                        <rect x="9" y="9" width="11" height="11" rx="2" />
+                        <path d="M6 15H5a1 1 0 01-1-1V5a1 1 0 011-1h9a1 1 0 011 1v1" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                <p className="done-ref-note" style={{ marginTop: 8 }}>
+                  {iban
+                    ? `Bitte den Verwendungszweck mit angeben — damit ordnet ${payTo} die Zahlung Ihrem Kind zu.`
+                    : `Die Bankverbindung ist hier noch nicht hinterlegt. Bitte erfragen Sie sie bei ${payTo} unter ${org.contact_email}${org.contact_phone ? ` oder ${org.contact_phone}` : ''} und geben Sie den Verwendungszweck mit an.`}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="pad" style={{ paddingBottom: 30, display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 28 }}>
         <h2 className="d3">Was als Nächstes passiert</h2>
         <ol className="steps">
           <li data-rise>
@@ -190,8 +207,8 @@ export default function DoneScreen({
             </>
           )}
         </ol>
-        <button className="btn" type="button" onClick={onBackToOrg} style={{ marginTop: 6 }}>
-          Weitere Camps ansehen
+        <button className="btn btn-pill" type="button" onClick={onBackToOrg} style={{ marginTop: 6 }}>
+          Zurück zur Übersicht
         </button>
       </div>
     </section>

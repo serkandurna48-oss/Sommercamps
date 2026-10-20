@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useRef } from 'react'
+import { Fragment, useEffect, useRef } from 'react'
 import type { CampPublic, OrganizationPublic } from '../../../lib/saasApi'
 
 // Replicated from ParentFlow.tsx — pure function, no import needed
@@ -57,33 +57,49 @@ function HlNav({ org, glass }: { org: OrganizationPublic; glass: boolean }) {
 }
 
 // ── Line-split helper (browser-only, called inside useEffect) ──
+// When the h1 already contains word-level <span> children (pre-rendered in JSX),
+// reads their positions without touching React-managed nodes first.
+// Falls back to the text-split path for plain-text h1 elements (e.g. V2).
 
 function splitLinesForMotion(h1: HTMLElement): HTMLElement[] {
-  const text = (h1.textContent || '').trim()
-  if (!text) return []
+  const preSpans = Array.from(h1.querySelectorAll<HTMLSpanElement>(':scope > span'))
 
-  h1.textContent = ''
-  const wordSpans: HTMLSpanElement[] = []
-  text.split(/\s+/).forEach((word, i) => {
-    if (i > 0) h1.appendChild(document.createTextNode(' '))
-    const sp = document.createElement('span')
-    sp.textContent = word
-    sp.style.display = 'inline'
-    h1.appendChild(sp)
-    wordSpans.push(sp)
-  })
+  let wordData: Array<{ text: string; top: number }>
+
+  if (preSpans.length > 0) {
+    wordData = preSpans.map(sp => ({
+      text: sp.textContent ?? '',
+      top: sp.getBoundingClientRect().top,
+    }))
+  } else {
+    const text = (h1.textContent ?? '').trim()
+    if (!text) return []
+    h1.textContent = ''
+    const tmpSpans: HTMLSpanElement[] = []
+    text.split(/\s+/).forEach((word, i) => {
+      if (i > 0) h1.appendChild(document.createTextNode(' '))
+      const sp = document.createElement('span')
+      sp.textContent = word
+      sp.style.display = 'inline'
+      h1.appendChild(sp)
+      tmpSpans.push(sp)
+    })
+    wordData = tmpSpans.map(sp => ({
+      text: sp.textContent ?? '',
+      top: sp.getBoundingClientRect().top,
+    }))
+  }
 
   const lineGroups: string[][] = []
   let currentY = -Infinity
   let currentGroup: string[] = []
-  wordSpans.forEach(w => {
-    const top = w.getBoundingClientRect().top
+  wordData.forEach(({ text, top }) => {
     if (top - currentY > 4) {
       if (currentGroup.length) lineGroups.push(currentGroup)
       currentY = top
-      currentGroup = [w.textContent || '']
+      currentGroup = [text]
     } else {
-      currentGroup.push(w.textContent || '')
+      currentGroup.push(text)
     }
   })
   if (currentGroup.length) lineGroups.push(currentGroup)
@@ -190,7 +206,12 @@ function V1({ org, camps }: { org: OrganizationPublic; camps: CampPublic[] }) {
         <div className="hl-v1-text">
           <span className="hl-sup-label">{org.name}</span>
           <h1 className="hl-v1-h1" data-hl-split data-scale={headlineScale(heading)}>
-            {heading}
+            {heading.split(/\s+/).map((word, i, arr) => (
+              <Fragment key={i}>
+                <span>{word}</span>
+                {i < arr.length - 1 ? ' ' : null}
+              </Fragment>
+            ))}
           </h1>
           <div className="hl-btns">
             <button className="hl-btn-glass" type="button">Camps ansehen</button>
@@ -433,9 +454,9 @@ function V3({ org, camps: _camps }: { org: OrganizationPublic; camps: CampPublic
   const heading = org.intro_heading?.trim() || org.name
   const ref = useRef<HTMLDivElement>(null)
 
-  // Build mosaic: use JK photos, fall back to hero if JK photos unavailable
-  const photoSrcs = hero ? JK_PHOTOS : []
-  const tilePhotos = (photoSrcs.length > 0 ? photoSrcs : (hero ? [hero] : [])).slice(0, 3)
+  // JK photos only when the org's own hero lives under /jk/; no duplicate images
+  const isJKHero = hero?.startsWith('/jk/') ?? false
+  const tilePhotos = (isJKHero ? JK_PHOTOS : hero ? [hero] : []).slice(0, 3)
 
   useV3Motion(ref)
 

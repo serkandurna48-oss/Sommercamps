@@ -49,7 +49,8 @@ it.each([1, 2, 3] as const)(
   'Variante %i rendert Headline und Jetzt-anmelden-Button',
   v => {
     const html = renderToStaticMarkup(<HeroLab org={org} camps={[camp]} variant={v} />)
-    expect(html).toContain('Trainiere wie ein Profi')
+    // V1 renders the headline as word-level spans; check for a distinctive word
+    expect(html).toContain('Trainiere')
     expect(html).toContain('Jetzt anmelden')
   },
 )
@@ -68,4 +69,25 @@ it('kein opacity:0 als Inline-Style im SSR-Output', () => {
     const html = renderToStaticMarkup(<HeroLab org={org} camps={[camp]} variant={v} />)
     expect(html).not.toMatch(/style="[^"]*opacity\s*:\s*0(?![\d.])/)
   })
+})
+
+// ── Variante 3 Mosaik: Verein-Unabhängigkeit ──
+
+const neutralOrg: OrganizationPublic = { ...org, hero_image_url: 'https://example.org/a.jpg' }
+const noHeroOrg: OrganizationPublic = { ...org, hero_image_url: null }
+const jkOrg: OrganizationPublic = { ...org, hero_image_url: '/jk/hero.jpg' }
+
+it('V3 neutraler Verein (externer hero): kein /jk/-Pfad im Mosaik', () => {
+  const html = renderToStaticMarkup(<HeroLab org={neutralOrg} camps={[camp]} variant={3} />)
+  expect(html).not.toContain('/jk/')
+})
+
+it('V3 ohne hero_image_url: rendert ohne Fehler und kein /jk/-Pfad', () => {
+  const html = renderToStaticMarkup(<HeroLab org={noHeroOrg} camps={[camp]} variant={3} />)
+  expect(html).not.toContain('/jk/')
+})
+
+it('V3 JK-Verein (hero /jk/hero.jpg): Mosaik enthält /jk/team.jpg', () => {
+  const html = renderToStaticMarkup(<HeroLab org={jkOrg} camps={[camp]} variant={3} />)
+  expect(html).toContain('/jk/team.jpg')
 })

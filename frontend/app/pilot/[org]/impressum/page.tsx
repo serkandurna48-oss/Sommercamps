@@ -1,21 +1,8 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { fetchOrganization } from '../../../lib/saasApi'
+import LegalShell from '../LegalShell'
 
-/**
- * MVP-Oberflächenauftrag, Blocker "Impressum/Datenschutz sind hart auf KSV
- * Baunatal verdrahtet": bis hierhin verlinkte JEDER Verein auf der SaaS-
- * Plattform (ParentFlow.tsx) auf die globalen, mit KSV-Rechtsdaten
- * codierten Seiten /impressum und /datenschutz (die bleiben unverändert —
- * sie gehören zum separaten, alten `backend/`-System, siehe root
- * CLAUDE.md). Diese Seite hier ist neu und pro Verein: zeigt AUSSCHLIESS-
- * LICH echte Felder dieses Vereins (organizations.legal_address/
- * legal_name/contact_person_name/contact_email/contact_phone). Fehlt ein
- * Feld, erscheint ein ehrlicher Hinweis — NIE ein Fallback auf einen
- * anderen Verein oder erfundener Text (siehe docs/saas/legal-data-needed.md
- * für das, was der jeweilige Verein noch liefern muss).
- */
 export async function generateMetadata({ params }: { params: Promise<{ org: string }> }): Promise<Metadata> {
   const { org: orgSlug } = await params
   try {
@@ -34,52 +21,42 @@ export default async function OrgImpressumPage({ params }: { params: Promise<{ o
   const entityName = org.legal_name ?? org.name
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b border-gray-100 px-6 py-4">
-        <div className="mx-auto max-w-2xl">
-          <Link href={`/pilot/${orgSlug}`} className="text-sm text-gray-500 transition-colors hover:text-gray-900">
-            ← Zurück zu {org.name}
-          </Link>
-        </div>
-      </header>
+    <LegalShell org={org}>
+      <main className="legal-col" lang="de">
+        <span className="legal-label">Angaben gemäß § 5 TMG</span>
+        <h1 className="legal-h1">Impressum</h1>
 
-      <main className="mx-auto max-w-2xl px-6 py-12">
-        <h1 className="mb-2 text-3xl font-bold text-gray-900">Impressum</h1>
-        <p className="mb-10 text-sm text-gray-500">Angaben gemäß § 5 TMG</p>
-
-        <div className="space-y-8 text-sm leading-relaxed text-gray-700">
+        <div className="legal-body">
           <section>
-            <h2 className="mb-3 text-lg font-semibold text-gray-900">Anbieter</h2>
-            <address className="not-italic">
-              <p className="font-medium">{entityName}</p>
+            <h2>Anbieter</h2>
+            <address>
+              <p style={{ fontWeight: 600 }}>{entityName}</p>
               {org.legal_address ? (
                 org.legal_address.split('\n').map((line, i) => <p key={i}>{line}</p>)
               ) : (
-                <p className="italic text-gray-400">Anschrift noch nicht angegeben.</p>
+                <p style={{ fontStyle: 'italic', opacity: 0.6 }}>Anschrift noch nicht angegeben.</p>
               )}
             </address>
           </section>
 
           <section>
-            <h2 className="mb-3 text-lg font-semibold text-gray-900">Kontakt</h2>
+            <h2>Kontakt</h2>
             {org.contact_person_name && <p>Ansprechpartner: {org.contact_person_name}</p>}
             <p>
               E-Mail:{' '}
-              <a href={`mailto:${org.contact_email}`} className="underline hover:text-gray-900">
-                {org.contact_email}
-              </a>
+              <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>
             </p>
             {org.contact_phone && <p>Telefon: {org.contact_phone}</p>}
           </section>
 
           {!org.legal_address && (
-            <p className="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+            <p className="legal-notice">
               Dieser Verein hat noch keine vollständige Anschrift für das Impressum hinterlegt.
-              Vereinsadmin: unter „Konfiguration&rdquo; → „Anschrift (für Impressum/Datenschutz)&rdquo; ergänzen.
+              Vereinsadmin: unter „Konfiguration" → „Anschrift (für Impressum/Datenschutz)" ergänzen.
             </p>
           )}
         </div>
       </main>
-    </div>
+    </LegalShell>
   )
 }

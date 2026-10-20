@@ -10,6 +10,7 @@ import RegistrationFormScreen from './RegistrationFormScreen'
 import DoneScreen from './DoneScreen'
 import { useParentFlowMotion } from './motion'
 import { publicUI } from '../../lib/i18n/de'
+import PublicFooter from './PublicFooter'
 
 type ScreenName = 'org' | 'camp' | 'form' | 'done' | 'wait'
 
@@ -431,7 +432,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
         </div>
       </div>
 
-      <PublicFooter orgSlug={org.slug} />
+      <PublicFooter org={org} />
     </section>
   )
 }
@@ -634,33 +635,8 @@ function WaitScreen({
           </div>
         </div>
       )}
-      <PublicFooter orgSlug={org.slug} />
+      <PublicFooter org={org} />
     </section>
   )
 }
 
-function PublicFooter({ orgSlug }: { orgSlug: string }) {
-  return (
-    <footer className="foot">
-      <nav>
-        {/* Bug, gefunden im MVP-Oberflächenauftrag: zeigte bisher IMMER
-         * KSV Baunatals Rechtsdaten, für jeden Verein auf der Plattform
-         * (siehe /impressum, /datenschutz — die bleiben für das separate
-         * `backend/`-System unverändert). Jetzt pro Verein, siehe
-         * app/pilot/[org]/impressum bzw. datenschutz/page.tsx. */}
-        <a href={`/pilot/${orgSlug}/impressum`}>Impressum</a>
-        <a href={`/pilot/${orgSlug}/datenschutz`}>Datenschutz</a>
-        <a href="#agb">Teilnahmebedingungen</a>
-      </nav>
-      <span className="by">
-        <svg width="23" height="16" viewBox="0 0 112 76" aria-hidden="true">
-          <rect x="6" y="6" width="100" height="64" rx="10" fill="none" stroke="currentColor" strokeWidth="6" />
-          <path d="M56 6V33M56 43V70" fill="none" stroke="currentColor" strokeWidth="6" />
-          <circle cx="56" cy="38" r="15" fill="none" stroke="currentColor" strokeWidth="6" />
-          <circle cx="56" cy="38" r="4.5" fill="#D4581F" />
-        </svg>
-        Anmeldung und Verwaltung über CampsPilot
-      </span>
-    </footer>
-  )
-}

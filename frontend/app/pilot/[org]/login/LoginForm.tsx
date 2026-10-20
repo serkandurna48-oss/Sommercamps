@@ -1,76 +1,107 @@
 'use client'
 
 import { useActionState } from 'react'
-import { archivo } from '../../../components/saas/fonts'
-import GrainOverlay from '../../../components/saas/GrainOverlay'
-import '../../../components/saas/tokens.css'
+import Image from 'next/image'
+import GrainOverlay from '../GrainOverlay'
+import { publicFontClassName, type PublicTheme } from '../publicFonts'
+import '../publicTheme.css'
 import { loginAction, type LoginState } from './actions'
+import { orgShortCode } from '../../../lib/parentFlowFormat'
+
+interface LoginFormProps {
+  orgSlug: string
+  orgName?: string
+  orgLogoUrl?: string | null
+  orgTheme?: PublicTheme
+  brandStrong?: string
+  brandOn?: string
+}
 
 const initialState: LoginState = { error: null }
 
-export default function LoginForm({ orgSlug }: { orgSlug: string }) {
+export default function LoginForm({
+  orgSlug,
+  orgName,
+  orgLogoUrl,
+  orgTheme = 'tradition',
+  brandStrong,
+  brandOn,
+}: LoginFormProps) {
   const boundAction = loginAction.bind(null, orgSlug)
   const [state, formAction, pending] = useActionState(boundAction, initialState)
+  const short = orgName ? orgShortCode(orgName) : null
 
   return (
-    <div className={`${archivo.variable} cp-scope flex min-h-screen items-center justify-center p-6`}>
+    <div
+      className={`cp-public ${publicFontClassName(orgTheme)}`}
+      data-theme={orgTheme}
+      style={
+        {
+          '--brand-strong': brandStrong ?? '#2B6F4C',
+          '--brand-on': brandOn ?? '#FFFFFF',
+        } as React.CSSProperties
+      }
+    >
       <GrainOverlay />
-      <form
-        action={formAction}
-        className="w-full max-w-sm rounded-[var(--cp-r-card)] border p-8"
-        style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}
-      >
-        <p className="cp-label" style={{ color: 'var(--cp-muted)' }}>
-          CampsPilot
-        </p>
-        <h1 className="cp-title mt-1 mb-6">Vereins-Anmeldung</h1>
+      <div className="login-wrap">
+        <form action={formAction} className="login-card">
+          {/* Logo */}
+          <div className="login-logo">
+            {orgLogoUrl ? (
+              <Image
+                src={orgLogoUrl}
+                alt={orgName ?? 'Logo'}
+                width={56}
+                height={56}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            ) : (
+              short
+            )}
+          </div>
 
-        <label className="cp-label mb-1.5 block" style={{ color: 'var(--cp-ink-2)' }} htmlFor="email">
-          E-Mail
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          required
-          autoFocus
-          autoComplete="username"
-          className="cp-subheading mb-4 w-full rounded-[var(--cp-r-field)] border px-4 py-3 outline-none"
-          style={{ borderColor: 'var(--cp-field-line)', fontSize: '16px' }}
-        />
+          {orgName && (
+            <p className="login-brand-label">{orgName}</p>
+          )}
 
-        <label className="cp-label mb-1.5 block" style={{ color: 'var(--cp-ink-2)' }} htmlFor="password">
-          Passwort
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          required
-          autoComplete="current-password"
-          className="cp-subheading w-full rounded-[var(--cp-r-field)] border px-4 py-3 outline-none"
-          style={{ borderColor: 'var(--cp-field-line)', fontSize: '16px' }}
-        />
+          <h1 className="login-h1">Anmelden</h1>
 
-        {state.error && (
-          <p
-            className="cp-body mt-3 rounded-[var(--cp-r-chip)] border px-3 py-2 text-sm"
-            style={{ color: 'var(--cp-error)', background: 'var(--cp-error-bg)', borderColor: 'var(--cp-error-line)' }}
-            role="alert"
-          >
-            {state.error}
-          </p>
-        )}
+          <label className="login-label" htmlFor="email">
+            E-Mail
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoFocus
+            autoComplete="username"
+            className="login-field"
+          />
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="cp-subheading mt-6 w-full rounded-[var(--cp-r-field)] py-3.5 disabled:opacity-50"
-          style={{ background: 'var(--cp-ink)', color: '#FFFFFF' }}
-        >
-          {pending ? 'Wird geprüft …' : 'Anmelden'}
-        </button>
-      </form>
+          <label className="login-label" htmlFor="password">
+            Passwort
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            autoComplete="current-password"
+            className="login-field"
+          />
+
+          {state.error && (
+            <p className="login-error" role="alert">
+              {state.error}
+            </p>
+          )}
+
+          <button type="submit" disabled={pending} className="login-btn">
+            {pending ? 'Wird geprüft …' : 'Anmelden'}
+          </button>
+        </form>
+      </div>
     </div>
   )
 }

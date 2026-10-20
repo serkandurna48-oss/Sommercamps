@@ -1,5 +1,7 @@
 'use client'
 
+import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
+
 import { useActionState, useState } from 'react'
 import { de } from '../../../lib/i18n/de'
 import type { OrganizationAdmin } from '../../../lib/saasAdminApi'
@@ -34,7 +36,8 @@ export default function OrganizationConfigForm({
     setSubmitted(null)
   }
   const inputValue = (field: string, fallback: string) => submitted?.[field] ?? fallback
-  const boundAction = updateOrganizationConfigAction.bind(null, orgSlug)
+  const preview = useAdminPreview()
+  const boundAction = preview ? previewNoopAction : updateOrganizationConfigAction.bind(null, orgSlug)
   const [state, formAction, pending] = useActionState<ConfigActionState, FormData>(async (previous, data) => {
     // React resets uncontrolled fields after a resolved action, including
     // failures. Keep submitted defaults until fresh props arrive.

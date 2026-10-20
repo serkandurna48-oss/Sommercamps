@@ -1,5 +1,6 @@
 'use client'
 
+import { useAdminPreview } from '../preview/AdminPreviewContext'
 import { useEffect, useRef, useState } from 'react'
 import { downloadCsv, toCsv, type ExportColumn } from '../../../lib/exportCsv'
 import { IconChevronDown, IconDocument, IconDownload, IconPrinter, IconTable } from '../icons'
@@ -25,6 +26,7 @@ export default function ExportBar<T>({
   csvFilename: string
   xlsxHref: string
 }) {
+  const preview = useAdminPreview()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -79,7 +81,9 @@ export default function ExportBar<T>({
           </button>
           <a
             role="menuitem"
-            href={xlsxHref}
+            href={preview ? undefined : xlsxHref}
+            aria-disabled={preview ? true : undefined}
+            title={preview ? 'Excel-Export ist in der Vorschau nicht verfügbar' : undefined}
             onClick={() => setOpen(false)}
             className="cp-body flex items-center gap-2.5 border-t px-3.5 py-2.5 transition-colors motion-reduce:transition-none hover:bg-[var(--cp-surface-2)]"
             style={{ color: 'var(--cp-ink)', borderColor: 'var(--cp-line-2)' }}

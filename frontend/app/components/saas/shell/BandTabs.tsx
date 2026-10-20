@@ -1,6 +1,8 @@
 'use client'
 
-import Link, { useLinkStatus } from 'next/link'
+import { useLinkStatus } from 'next/link'
+import Link from '../preview/AdminLink'
+import { useAdminPreview, previewHref } from '../preview/AdminPreviewContext'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { IconBoard, IconCoin, IconFlag, IconGear, IconHourglass, IconJersey } from '../icons'
@@ -60,6 +62,7 @@ function TabHint() {
  */
 export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandColor: string }) {
   const pathname = usePathname()
+  const preview = useAdminPreview()
   const containerRef = useRef<HTMLDivElement>(null)
   const [underline, setUnderline] = useState<{ left: number; width: number } | null>(null)
   // --cp-tab-mark: die Vereinsfarbe für die Aktiv-Markierung der schmalen
@@ -88,7 +91,7 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
       aria-label="Bereiche"
     >
       {tabs.map(tab => {
-        const active = pathname === tab.href
+        const active = pathname === (preview ? previewHref(tab.href, preview.empty).split('?')[0] : tab.href)
         const Icon = tab.icon ? ICONS[tab.icon] : undefined
         return (
           <Link

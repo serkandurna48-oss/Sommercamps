@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { useActionState, useState } from 'react'
+import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
 import Button from './Button'
 
 export interface ActionFormState {
@@ -41,13 +42,15 @@ export default function ActionForm({
   /** Wenn gesetzt: Text der BestÃ¤tigungsfrage. Zeigt erst nach Klick. */
   requireConfirm?: string
 }) {
+  const preview = useAdminPreview()
+  const effectiveAction = preview ? previewNoopAction : action
   const [confirming, setConfirming] = useState(false)
   // BestÃ¤tigungszustand wird nach jeder abgeschlossenen Aktion zurÃ¼ckgesetzt â€“
   // unabhÃ¤ngig davon, ob der Ergebnistext derselbe ist wie zuvor.
   const [state, formAction, pending] = useActionState(
     async (prev: ActionFormState, formData: FormData) => {
       try {
-        return { ...(await action(prev, formData)) }
+        return { ...(await effectiveAction(prev, formData)) }
       } finally {
         setConfirming(false)
       }

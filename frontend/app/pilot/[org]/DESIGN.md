@@ -11,7 +11,7 @@ Stand: 19.10.2026, Judge. Änderungen nur mit Begründung in der Übergabe.
 4. Zeilenlänge 42–72 Zeichen für Fließtext; Headlines maximal 20ch.
 5. Kontrast ≥ 4,5:1 für Text; Text auf Fotos nur über Verlauf (siehe 4.1).
 6. Radien aus einer Familie: 9999px (Pill), 28px (große Karte), 24px (Karte), 12px (Chip).
-7. Bewegung ruhig: Reveal 0,6 s, Hover 0,25 s, nie als Bedingung für Sichtbarkeit (SSR vollständig sichtbar), `prefers-reduced-motion` schaltet alles ab.
+7. Bewegung ruhig: Headline-Reveal 0,8 s zeilenweise (90 ms Versatz), Scroll-Reveal 0,6 s, Hover 0,25 s, nie als Bedingung für Sichtbarkeit (SSR vollständig sichtbar), `prefers-reduced-motion` schaltet alles ab.
 8. Keine Template-Signale: keine nummerierten Kreise in gleichen Kästen, keine Bootstrap-Akkordeons, keine Icon-Reihen, keine „Features“-Grids.
 
 ## 2. Typografie
@@ -27,9 +27,10 @@ Stand: 19.10.2026, Judge. Änderungen nur mit Begründung in der Übergabe.
 
 ## 3. Abstände und Raster
 - Seitenränder: 24px mobil, `7vw` ab 900px; Inhaltsbreite max. 1120px (Navigation) bzw. 1200px (Abschnitte).
-- Abschnittsabstand (`.sec`): 72px mobil, 128px ab 900px.
-- Kartenabstand im Grid: 20px; Camp-Grid 2 Spalten ab 900px.
-- Innenabstand Karte: 28px (groß), 24px (normal), 16px (kompakt).
+- Abschnittsabstand (`.sec`): 56px mobil, 88px ab 900px.
+- Abstand Hero → erster Abschnitt: 64px (padding-top von `#s-camps`).
+- Camp-Grid: 1 Spalte bis 699px, 2 Spalten 700–1099px, 3 Spalten ab 1100px; Abstand 12px.
+- Innenabstand Karte: 22px (Camp-Karte), 24px (normal), 16px (kompakt).
 
 ## 4. Hero
 1. Füllt den Viewport: `min-height: 100svh` (Fallback `100vh`), nie feste Höhe, Inhalt wächst statt abzuschneiden; `padding-top` ≥ Navigationshöhe + 24px.
@@ -42,7 +43,7 @@ Stand: 19.10.2026, Judge. Änderungen nur mit Begründung in der Übergabe.
 ## 5. Komponenten-Rezepte
 - **Glas** (dunkle Themes): `background: rgba(255,255,255,.06); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.12); box-shadow: inset 0 1px 1px rgba(255,255,255,.18)`. Helle Themes: `background: var(--surface); border: 1px solid var(--line-2)` – kein Glas auf hellem Grund.
 - **Pill-Button**: `border-radius: 9999px; padding: 12px 22px; font-weight: 600`; solid = Weiß auf Dunkel (bzw. `--brand-strong` auf Hell), Glas = Glas-Rezept; Hover `scale(1.03)`, Fokusring 2px sichtbar.
-- **Camp-Karte**: 28px Radius, Glas/Weiß, Padding 28px, Datum als große Ziffer (`clamp(2.5rem, 3.5vw, 3.5rem)`) oben rechts, Titel 24px, max. 3 Chips, Leistungsliste, Preis + Pill-CTA unten. Hover `scale(1.02)` + Schatten.
+- **Camp-Karte**: 24px Radius, Glas/Weiß, Padding 22px, Datum als große Ziffer (`clamp(2rem, 2.6vw, 2.6rem)`) oben rechts, Titel 20px, max. 2 Chips, max. 3 Leistungen + „+N weitere", Preis + Pill-CTA unten. Hover `translateY(-4px)` + Datumsziffer in `--brand-strong`.
 - **Abschnittskopf**: Label (13px, Großbuchstaben) über h2; darunter optional ein Satz.
 - **Trainer**: Glas-/Weiß-Karte, Porträt rund 120px (96px mobil), Name 15/600, Text 14–15px; Höhe ≤ 200px.
 - **Schritte („So einfach geht's“)**: drei Karten im gleichen Rezept, Ziffer als große Zahl (40px, Deckung .5) statt Kreis-Badge.

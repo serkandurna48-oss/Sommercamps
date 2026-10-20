@@ -154,3 +154,35 @@ it('kompakt hero rendert Kennzahlen-Zeile wenn Camps vorhanden', () => {
   expect(html).toContain('h-komp-stats')
   expect(html).toContain('hstat-w')
 })
+
+// ── M5: Navigation logo / Initialen ──
+it.each(['tradition', 'akademie', 'kompakt'] as const)('%s zeigt img mit alt=Vereinsname wenn logo_url gesetzt', theme => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme, logo_url: 'https://example.com/logo.png' }} camps={[]} />)
+  expect(html).toContain('alt="Demo FC"')
+  expect(html).not.toContain('>DF<') // keine Initialen wenn Logo gesetzt
+})
+
+// ── M5: Marquee ──
+it('marquee rendert Orte der Camps', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'akademie' }} camps={[mockCamp]} />)
+  expect(html).toContain('marquee-band')
+  expect(html).toContain('Kassel')
+})
+
+it('kein marquee ohne Camps', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'akademie' }} camps={[]} />)
+  expect(html).not.toContain('marquee-band')
+})
+
+it('marquee-band trägt Klasse fullbleed für Vollbreite', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'akademie' }} camps={[mockCamp]} />)
+  expect(html).toContain('fullbleed')
+})
+
+// ── M5: Kennzahlen-Leiste enthält keine Hinweiszeile ──
+it('akademie hero-stats enthält keine Anmeldungshinweiszeile', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'akademie' }} camps={[mockCamp]} />)
+  expect(html).toContain('hero-stats')
+  expect(html).not.toContain('hero-assure')
+  expect(html).not.toContain('Anmeldung in ca. 4 Minuten')
+})

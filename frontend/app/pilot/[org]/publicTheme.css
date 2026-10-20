@@ -57,9 +57,9 @@
   --dstretch: 100%;
   --dtrack: -0.018em;
   --dline: 1.08;
-  --r-card: 5px;
-  --r-field: 5px;
-  --r-chip: 3px;
+  --r-card: 28px;
+  --r-field: 12px;
+  --r-chip: 12px;
   --track: #ddd8cc;
   --track-full: #a9a496;
   --grain: 0.045;
@@ -125,9 +125,9 @@
   --dstretch: 100%;
   --dtrack: -0.035em;
   --dline: 0.98;
-  --r-card: 0px;
-  --r-field: 0px;
-  --r-chip: 0px;
+  --r-card: 28px;
+  --r-field: 12px;
+  --r-chip: 12px;
   --track: #dde0dc;
   --track-full: #9aa39e;
   --grain: 0.03;
@@ -296,72 +296,126 @@
   }
 }
 
+/* ── Tradition Hero — M4 redesign ── */
 .cp-public .h-trad {
-  background: var(--brand-strong);
-  color: #fff;
-  padding: 34px 20px 0;
-  text-align: center;
-}
-@media (min-width: 900px) {
-  .cp-public .h-trad {
-    padding-top: 56px;
-    padding-inline: max(40px, calc(50vw - 600px));
-  }
-}
-.cp-public .h-trad .shield {
-  width: 64px;
-  height: 76px;
-  margin: 0 auto 20px;
-  background: #fff;
-  clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
+  background: var(--band);
+  color: var(--on-band);
+  min-height: 100vh;
+  min-height: 100svh;
+  position: relative;
+  overflow: hidden;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 19px;
-  font-family: var(--ui);
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--brand-strong);
+  flex-direction: column;
+}
+
+/* Mobile: photo on top */
+.cp-public .h-trad-shot {
+  position: relative;
+  width: 100%;
+  height: 260px;
+  flex-shrink: 0;
+  overflow: hidden;
+  order: -1;
+}
+.cp-public .h-trad-shot img {
+  object-fit: cover;
+  object-position: center 25%;
+  will-change: transform;
+}
+.cp-public .h-trad-in {
+  position: relative;
+  z-index: 2;
+  padding: 24px 24px 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  flex: 1;
+  justify-content: flex-end;
+}
+.cp-public .h-trad .in-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 .cp-public .h-trad h1 {
-  color: #fff;
-  max-width: 14ch;
-  margin: 0 auto;
+  color: var(--on-band);
+  line-height: .92;
+  letter-spacing: -.03em;
+  max-width: 20ch;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
-.cp-public .h-trad .est {
-  margin-top: 14px;
+.cp-public .h-trad h1[data-scale='xl'] { font-size: clamp(2.8rem, 8vw, 7.5rem); }
+.cp-public .h-trad h1[data-scale='lg'] { font-size: clamp(2.4rem, 6vw, 5.5rem); }
+.cp-public .h-trad h1[data-scale='md'] { font-size: clamp(2rem, 4.6vw, 4.25rem); }
+.cp-public .h-trad .hero-label {
+  display: block;
   font-size: 13px;
-  letter-spacing: 0.2em;
-  color: rgba(255, 255, 255, 0.72);
-}
-.cp-public .h-trad .rule {
-  width: 56px;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.45);
-  margin: 20px auto 0;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .65);
 }
 .cp-public .h-trad .intro {
-  margin: 20px auto 0;
-  max-width: 38ch;
-  font-size: 16px;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 17px;
+  line-height: 1.55;
+  max-width: 42ch;
+  color: rgba(255, 255, 255, .85);
 }
-.cp-public .h-trad .shot {
-  margin-top: 34px;
-  height: 210px;
-  overflow: hidden;
+
+/* Stats bar: white card with 1px line */
+.cp-public .h-trad-stats {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid var(--line-2);
+  border-radius: 20px;
+  padding: 14px 20px;
+  align-self: flex-start;
 }
+.cp-public .hstat-w {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 12px;
+  border-right: 1px solid var(--line-2);
+}
+.cp-public .hstat-w:first-child { padding-left: 0; }
+.cp-public .hstat-w:last-child { padding-right: 0; border-right: none; }
+.cp-public .hstat-w b {
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
+}
+.cp-public .hstat-w span {
+  font-size: 12px;
+  color: var(--muted);
+}
+/* Dark variant (kompakt) */
+.cp-public .hstat-w-dark b { color: var(--ink); }
+
+/* Desktop: photo right, text left */
 @media (min-width: 900px) {
-  .cp-public .h-trad .shot {
-    height: 340px;
+  .cp-public .h-trad {
+    flex-direction: row;
+    align-items: stretch;
   }
-}
-.cp-public .h-trad .shot img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  will-change: transform;
+  .cp-public .h-trad-shot {
+    position: absolute;
+    top: 72px;
+    right: 5vw;
+    width: 44vw;
+    max-width: 620px;
+    height: calc(100% - 72px - 48px);
+    border-radius: 28px;
+    order: 0;
+  }
+  .cp-public .h-trad-in {
+    padding: 100px 7vw 96px;
+    max-width: 54vw;
+  }
 }
 
 .cp-public .h-akad {
@@ -469,86 +523,66 @@
   color: #95a09b;
 }
 
-.cp-public .h-komp .rail {
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 10px;
-  background: var(--brand);
-  z-index: 15;
-  transform-origin: top;
-  transform: scaleY(var(--sp, 0.02));
-}
-.cp-public .h-komp .in {
-  padding: 52px 20px 34px;
-  border-bottom: 2px solid var(--line);
-}
-@media (min-width: 900px) {
-  .cp-public .h-komp .in {
-    padding: 80px max(40px, calc(50vw - 600px)) 46px;
-    display: grid;
-    grid-template-columns: 190px minmax(0, 1fr);
-    column-gap: 40px;
-  }
-}
-.cp-public .h-komp .side {
+/* ── Kompakt Hero — M4 redesign ── */
+.cp-public .h-komp {
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 70vh;
+  min-height: 70svh;
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 22px;
+  justify-content: flex-end;
+}
+.cp-public .h-komp-in {
+  position: relative;
+  z-index: 2;
+  padding: 96px 24px 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
 }
 @media (min-width: 900px) {
-  .cp-public .h-komp .side {
-    margin-bottom: 0;
-    text-align: right;
-    align-items: flex-end;
+  .cp-public .h-komp-in {
+    padding: 100px 7vw 96px;
   }
 }
-.cp-public .h-komp .side .sq {
-  width: 34px;
-  height: 34px;
-  background: var(--brand);
+.cp-public .h-komp .in-main {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: #fff;
+  flex-direction: column;
+  gap: 20px;
 }
 .cp-public .h-komp h1 {
-  max-width: 12ch;
+  line-height: .92;
+  letter-spacing: -.03em;
+  max-width: 20ch;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+.cp-public .h-komp h1[data-scale='xl'] { font-size: clamp(2.8rem, 8vw, 7.5rem); }
+.cp-public .h-komp h1[data-scale='lg'] { font-size: clamp(2.4rem, 6vw, 5.5rem); }
+.cp-public .h-komp h1[data-scale='md'] { font-size: clamp(2rem, 4.6vw, 4.25rem); }
+.cp-public .h-komp .hero-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 .cp-public .h-komp .intro {
-  margin-top: 18px;
+  font-size: 17px;
+  line-height: 1.55;
   max-width: 42ch;
-  font-size: 16px;
-  line-height: 1.6;
   color: var(--ink-2);
 }
-.cp-public .h-komp .facts {
-  margin-top: 26px;
+/* Kompakt stats: plain row with 1px top border */
+.cp-public .h-komp-stats {
   display: flex;
-  border-top: 1px solid var(--line-2);
   flex-wrap: wrap;
-}
-.cp-public .h-komp .facts div {
-  flex: 1 1 120px;
-  padding: 14px 0;
-  border-right: 1px solid var(--line-2);
-}
-.cp-public .h-komp .facts div:last-child {
-  border-right: 0;
-}
-.cp-public .h-komp .facts b {
-  display: block;
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1;
-}
-.cp-public .h-komp .facts span {
-  font-size: 12px;
-  color: var(--muted);
+  gap: 0;
+  border-top: 1px solid var(--line-2);
+  padding-top: 16px;
 }
 
 .cp-public .assure {
@@ -572,11 +606,7 @@
   border-width: 1px 0 2px;
   background: var(--surface);
 }
-.cp-public[data-theme='tradition'] .assure {
-  justify-content: center;
-  text-align: center;
-  border-top: 0;
-}
+/* tradition .assure hidden via shared rule above */
 
 .cp-public .sec {
   padding-block: 72px;
@@ -1592,11 +1622,7 @@
   gap: 20px;
   padding: 28px 0;
 }
-.cp-public[data-theme='tradition'] .trainer-sec,
-.cp-public[data-theme='kompakt'] .trainer-sec {
-  border-top: 1px solid var(--line-2);
-  border-bottom: 1px solid var(--line-2);
-}
+/* tradition/kompakt trainer styling moved to M4 block above */
 .cp-public .trainer-img {
   width: 96px;
   height: 96px;
@@ -1824,6 +1850,108 @@
   transform: scale(1.03);
 }
 
+/* ── M4 Nav pill — tradition / kompakt (weiß, 1px Linie) ── */
+.cp-public .h-trad-nav {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: calc(100% - 40px);
+  max-width: 1120px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px;
+  background: #fff;
+  border: 1px solid var(--line-2);
+  border-radius: 9999px;
+}
+.cp-public .h-komp-nav {
+  background: #fff;
+  border-color: var(--line-2);
+}
+.cp-public .h-trad-nav .nav-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.cp-public .nav-logo-trad {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brand-on);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.cp-public .nav-name-trad {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 599px) {
+  .cp-public .nav-name-trad { display: none; }
+}
+/* Nav CTA in brand color */
+.cp-public .nav-cta-brand {
+  padding: 8px 18px;
+  background: var(--brand-strong);
+  color: var(--brand-on);
+  border: none;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: transform 0.18s var(--ease);
+}
+.cp-public .nav-cta-brand:hover { transform: scale(1.03); }
+
+/* ── M4 Hero buttons — tradition / kompakt ── */
+/* Solid brand pill */
+.cp-public .h-btn-brand {
+  padding: 12px 24px;
+  background: var(--brand-strong);
+  border: none;
+  border-radius: 9999px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--brand-on);
+  cursor: pointer;
+  transition: transform 0.18s var(--ease);
+}
+.cp-public .h-btn-brand:hover { transform: scale(1.03); }
+/* Outline pill — default: brand color on light bg (kompakt) */
+.cp-public .h-btn-line {
+  padding: 12px 24px;
+  background: transparent;
+  border: 1.5px solid var(--brand-strong);
+  border-radius: 9999px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--brand-strong);
+  cursor: pointer;
+  transition: transform 0.18s var(--ease);
+}
+.cp-public .h-btn-line:hover { transform: scale(1.03); }
+/* Override on dark band (tradition hero) */
+.cp-public .h-trad .h-btn-line {
+  border-color: rgba(255, 255, 255, .45);
+  color: rgba(255, 255, 255, .9);
+}
+
 /* ── M2 Hero content (Akademie) ── */
 .cp-public .h-akad .in-main {
   display: flex;
@@ -1929,11 +2057,15 @@
   margin-top: 4px;
 }
 
-/* Hide factsstrip + assure for akademie (content is in hero) */
-.cp-public[data-theme='akademie'] .factsstrip {
+/* Hide factsstrip + assure for themes with stats in hero */
+.cp-public[data-theme='akademie'] .factsstrip,
+.cp-public[data-theme='tradition'] .factsstrip,
+.cp-public[data-theme='kompakt'] .factsstrip {
   display: none;
 }
-.cp-public[data-theme='akademie'] .assure {
+.cp-public[data-theme='akademie'] .assure,
+.cp-public[data-theme='tradition'] .assure,
+.cp-public[data-theme='kompakt'] .assure {
   display: none;
 }
 
@@ -2020,11 +2152,42 @@
   border-bottom: none;
 }
 
-/* ── M2 Tradition/Kompakt: weiße Karten (wie bisher, explizit) ── */
+/* ── M4 Tradition/Kompakt: weiße Karten, 24 px Radius ── */
 .cp-public[data-theme='tradition'] .how-step,
 .cp-public[data-theme='kompakt'] .how-step {
   background: var(--surface);
   border: 1px solid var(--line-2);
+  border-radius: 24px;
+}
+.cp-public[data-theme='tradition'] .trainer-sec,
+.cp-public[data-theme='kompakt'] .trainer-sec {
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 24px;
+  padding: 28px;
+  border-top: none;
+  border-bottom: none;
+}
+.cp-public[data-theme='tradition'] .faq,
+.cp-public[data-theme='kompakt'] .faq {
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 24px;
+  padding: 0 20px;
+  overflow: hidden;
+}
+.cp-public[data-theme='tradition'] .faq-item,
+.cp-public[data-theme='kompakt'] .faq-item {
+  border-color: var(--line-2);
+}
+.cp-public[data-theme='tradition'] .faq-item:last-child,
+.cp-public[data-theme='kompakt'] .faq-item:last-child {
+  border-bottom: none;
+}
+/* how-num: pill for tradition/kompakt (not circle badge, already round via 50%) */
+.cp-public[data-theme='tradition'] .how-num,
+.cp-public[data-theme='kompakt'] .how-num {
+  border-radius: 9999px;
 }
 
 /* ══════════════════════════════════════════════

@@ -256,6 +256,35 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
         })
 
         if (theme === 'tradition') {
+          const heroEl = container.querySelector<HTMLElement>('.h-trad')
+          if (heroEl) {
+            const seqEls: { el: HTMLElement; isHeadline?: boolean }[] = []
+            const heroLabel = heroEl.querySelector<HTMLElement>('.hero-label')
+            const heroH1 = heroEl.querySelector<HTMLElement>('[data-split]')
+            const heroIntro = heroEl.querySelector<HTMLElement>('.intro')
+            const heroBtns = heroEl.querySelector<HTMLElement>('.hero-btns')
+            const heroStats = heroEl.querySelector<HTMLElement>('.h-trad-stats')
+            if (heroLabel) seqEls.push({ el: heroLabel })
+            if (heroH1) seqEls.push({ el: heroH1, isHeadline: true })
+            if (heroIntro) seqEls.push({ el: heroIntro })
+            if (heroBtns) seqEls.push({ el: heroBtns })
+            if (heroStats) seqEls.push({ el: heroStats })
+            seqEls.forEach(({ el, isHeadline }, i) => {
+              const delay = i * 0.12
+              if (isHeadline) {
+                const words = splitWords(el)
+                if (words.length) {
+                  const t = gsap.fromTo(words, { yPercent: 118 }, { yPercent: 0, duration: 0.6, ease: 'expo.out', stagger: 0.04, delay })
+                  allTweens.push(t)
+                }
+                el.dataset.riseHandled = '1'
+              } else {
+                const t = gsap.fromTo(el, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'expo.out', delay })
+                allTweens.push(t)
+                el.dataset.riseHandled = '1'
+              }
+            })
+          }
           const shot = container.querySelector<HTMLElement>('#shotA')
           if (shot?.offsetParent) {
             gsap.fromTo(
@@ -268,6 +297,7 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
               },
             )
           }
+          runCounters(gsap, ScrollTrigger, container, 1.0, 'power2.out', playedTweens)
         }
 
         if (theme === 'akademie') {
@@ -283,15 +313,33 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
         }
 
         if (theme === 'kompakt') {
-          const rail = container.querySelector<HTMLElement>('#rail')
-          if (rail) {
-            rail.style.setProperty('--sp', '0.02')
-            ScrollTrigger.create({
-              start: 0,
-              end: 'max',
-              onUpdate: (self) => {
-                rail.style.setProperty('--sp', Math.max(0.02, self.progress).toFixed(4))
-              },
+          const heroEl = container.querySelector<HTMLElement>('.h-komp')
+          if (heroEl) {
+            const seqEls: { el: HTMLElement; isHeadline?: boolean }[] = []
+            const heroLabel = heroEl.querySelector<HTMLElement>('.hero-label')
+            const heroH1 = heroEl.querySelector<HTMLElement>('[data-split]')
+            const heroIntro = heroEl.querySelector<HTMLElement>('.intro')
+            const heroBtns = heroEl.querySelector<HTMLElement>('.hero-btns')
+            const heroStats = heroEl.querySelector<HTMLElement>('.h-komp-stats')
+            if (heroLabel) seqEls.push({ el: heroLabel })
+            if (heroH1) seqEls.push({ el: heroH1, isHeadline: true })
+            if (heroIntro) seqEls.push({ el: heroIntro })
+            if (heroBtns) seqEls.push({ el: heroBtns })
+            if (heroStats) seqEls.push({ el: heroStats })
+            seqEls.forEach(({ el, isHeadline }, i) => {
+              const delay = i * 0.12
+              if (isHeadline) {
+                const words = splitWords(el)
+                if (words.length) {
+                  const t = gsap.fromTo(words, { yPercent: 118 }, { yPercent: 0, duration: 0.6, ease: 'power3.out', stagger: 0.04, delay })
+                  allTweens.push(t)
+                }
+                el.dataset.riseHandled = '1'
+              } else {
+                const t = gsap.fromTo(el, { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out', delay })
+                allTweens.push(t)
+                el.dataset.riseHandled = '1'
+              }
             })
           }
           runCounters(gsap, ScrollTrigger, container, 0.9, 'power2.out', playedTweens)

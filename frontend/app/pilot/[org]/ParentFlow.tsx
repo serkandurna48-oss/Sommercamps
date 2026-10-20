@@ -129,19 +129,60 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
 
   return (
     <section className="screen" id="s-org" ref={orgContainerRef}>
-      {org.theme === 'tradition' && (
-        <header className="hero h-trad">
-          <div className="shield">{shortCode}</div>
-          <h1 className="d1" data-split>{heading}</h1>
-          <div className="rule" />
-          <p className="intro" data-rise>{intro}</p>
-          {hero && (
-            <div className="shot">
-              <Image id="shotA" src={hero} alt="" unoptimized width={1040} height={680} priority style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      {org.theme === 'tradition' && (() => {
+        const ageMin = camps.length > 0 ? Math.min(...camps.map(c => c.age_min)) : null
+        const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
+        const totalSeats = camps.reduce((s, c) => s + c.capacity, 0)
+        return (
+          <header className="hero h-trad" lang="de">
+            <nav className="h-trad-nav" aria-label="Seitennavigation">
+              <div className="nav-left">
+                <span className="nav-logo-trad">
+                  {org.logo_url
+                    ? <Image src={org.logo_url} alt={org.name} width={32} height={32} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : shortCode}
+                </span>
+                <span className="nav-name-trad">{org.name}</span>
+              </div>
+              <button className="nav-cta-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+            </nav>
+            {hero && (
+              <div className="h-trad-shot">
+                <Image id="shotA" src={hero} alt="" unoptimized fill priority style={{ objectFit: 'cover', objectPosition: 'center 25%' }} />
+              </div>
+            )}
+            <div className="h-trad-in">
+              <div className="in-main">
+                <span className="hero-label">{org.name}</span>
+                <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
+                <p className="intro">{intro}</p>
+                <div className="hero-btns">
+                  <button className="h-btn-line" type="button" onClick={scrollToCamps}>Camps ansehen</button>
+                  <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+                </div>
+              </div>
+              {camps.length > 0 && (
+                <div className="h-trad-stats">
+                  <div className="hstat-w">
+                    <b className="num" data-count={camps.length}>{camps.length}</b>
+                    <span>{camps.length === 1 ? 'Camp' : 'Camps'}</span>
+                  </div>
+                  {ageMin !== null && ageMax !== null && (
+                    <div className="hstat-w">
+                      <b className="num">{ageMin}–{ageMax}</b>
+                      <span>Jahre</span>
+                    </div>
+                  )}
+                  <div className="hstat-w">
+                    <b className="num" data-count={totalSeats}>{totalSeats}</b>
+                    <span>Plätze gesamt</span>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </header>
-      )}
+          </header>
+        )
+      })()}
 
       {org.theme === 'akademie' && (() => {
         const ageMin = camps.length > 0 ? Math.min(...camps.map(c => c.age_min)) : null
@@ -196,36 +237,55 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
         )
       })()}
 
-      {org.theme === 'kompakt' && (
-        <header className="hero h-komp">
-          <div className="in">
-            <div className="side">
-              <span className="sq">{shortCode}</span>
-              <span className="lab">Feriencamps</span>
-            </div>
-            <div>
-              <h1 className="d1" data-split>{heading}</h1>
-              <p className="intro" data-rise>{intro}</p>
-              <div className="facts">
-                <div data-rise>
-                  <b className="num" data-count={camps.length}>{camps.length}</b>
-                  <span>{camps.length === 1 ? 'Camp' : 'Camps'}</span>
-                </div>
-                <div data-rise>
-                  <b className="num" data-count={camps.reduce((sum, c) => sum + c.capacity, 0)}>
-                    {camps.reduce((sum, c) => sum + c.capacity, 0)}
-                  </b>
-                  <span>Plätze</span>
-                </div>
-                <div data-rise>
-                  <b className="num" data-count={4}>4</b>
-                  <span>Minuten Anmeldung</span>
+      {org.theme === 'kompakt' && (() => {
+        const ageMin = camps.length > 0 ? Math.min(...camps.map(c => c.age_min)) : null
+        const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
+        const totalSeats = camps.reduce((s, c) => s + c.capacity, 0)
+        return (
+          <header className="hero h-komp" lang="de">
+            <nav className="h-trad-nav h-komp-nav" aria-label="Seitennavigation">
+              <div className="nav-left">
+                <span className="nav-logo-trad">
+                  {org.logo_url
+                    ? <Image src={org.logo_url} alt={org.name} width={32} height={32} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : shortCode}
+                </span>
+                <span className="nav-name-trad">{org.name}</span>
+              </div>
+              <button className="nav-cta-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+            </nav>
+            <div className="h-komp-in">
+              <div className="in-main">
+                <span className="hero-label">{org.name}</span>
+                <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
+                <p className="intro">{intro}</p>
+                <div className="hero-btns">
+                  <button className="h-btn-line" type="button" onClick={scrollToCamps}>Camps ansehen</button>
+                  <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
                 </div>
               </div>
+              {camps.length > 0 && (
+                <div className="h-komp-stats">
+                  <div className="hstat-w hstat-w-dark">
+                    <b className="num" data-count={camps.length}>{camps.length}</b>
+                    <span>{camps.length === 1 ? 'Camp' : 'Camps'}</span>
+                  </div>
+                  {ageMin !== null && ageMax !== null && (
+                    <div className="hstat-w hstat-w-dark">
+                      <b className="num">{ageMin}–{ageMax}</b>
+                      <span>Jahre</span>
+                    </div>
+                  )}
+                  <div className="hstat-w hstat-w-dark">
+                    <b className="num" data-count={totalSeats}>{totalSeats}</b>
+                    <span>Plätze gesamt</span>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        </header>
-      )}
+          </header>
+        )
+      })()}
 
       {camps.length > 0 && (
         <div className="factsstrip pad">

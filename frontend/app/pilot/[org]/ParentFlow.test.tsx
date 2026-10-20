@@ -116,3 +116,41 @@ it('CampScreen rendert Camp-Titel, Preis und CTA', () => {
   expect(html).toContain('199') // Preis 199,00 € enthält "199"
   expect(html).toContain('Jetzt anmelden')
 })
+
+// ── M4: tradition und kompakt Hero-Struktur ──
+it.each(['tradition', 'kompakt'] as const)('%s hero rendert hero-label, Headline und beide Buttons', theme => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme }} camps={[mockCamp]} />)
+  expect(html).toContain('hero-label')
+  expect(html).toContain('Unser Fußballsommer')
+  expect(html).toContain('Camps ansehen')
+  expect(html).toContain('Jetzt anmelden')
+})
+
+it('tradition hero rendert Foto wenn hero_image_url gesetzt', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'tradition' }} camps={[]} />)
+  expect(html).toContain('h-trad-shot')
+  expect(html).toContain(org.hero_image_url)
+})
+
+it('tradition hero rendert kein Foto-Element ohne hero_image_url', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'tradition', hero_image_url: null }} camps={[]} />)
+  expect(html).not.toContain('h-trad-shot')
+})
+
+it('kompakt hero rendert kein Foto (Text-Hero)', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'kompakt' }} camps={[mockCamp]} />)
+  expect(html).not.toContain('h-trad-shot')
+  expect(html).not.toContain(org.hero_image_url)
+})
+
+it('tradition hero rendert Kennzahlen-Leiste wenn Camps vorhanden', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'tradition' }} camps={[mockCamp]} />)
+  expect(html).toContain('h-trad-stats')
+  expect(html).toContain('hstat-w')
+})
+
+it('kompakt hero rendert Kennzahlen-Zeile wenn Camps vorhanden', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'kompakt' }} camps={[mockCamp]} />)
+  expect(html).toContain('h-komp-stats')
+  expect(html).toContain('hstat-w')
+})

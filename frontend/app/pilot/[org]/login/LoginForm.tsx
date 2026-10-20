@@ -53,6 +53,7 @@ export default function LoginForm({
                 alt={orgName ?? 'Logo'}
                 width={56}
                 height={56}
+                unoptimized
                 style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
             ) : (

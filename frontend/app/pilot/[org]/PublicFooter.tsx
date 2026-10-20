@@ -15,6 +15,7 @@ export default function PublicFooter({ org }: { org: OrganizationPublic }) {
                 alt={org.name}
                 width={28}
                 height={28}
+                unoptimized
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : short}

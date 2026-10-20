@@ -2,7 +2,7 @@ design/m8-a11y
 
 STATUS: fertig zur Prüfung
 
-COMMIT: (nach diesem Commit vergeben – siehe git log)
+COMMIT: 5fb86fe2fcd1945e1173a6527e28219bc28c5d85
 
 TESTS: npm run test --prefix frontend → 155 passed, 0 failed
        npx tsc --noEmit → keine Fehler

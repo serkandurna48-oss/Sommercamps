@@ -33,6 +33,8 @@ export interface OrganizationPublic {
   // Trainer-Sektion (L1e). null = Sektion nicht anzeigen.
   trainer_image_url: string | null
   trainer_text: string | null
+  // Teilnahmebedingungen (F1). null = Verweis-Platzhalter statt eigenem Text.
+  terms_text: string | null
   // Für die Zahlungsdaten auf der Bestätigungsseite (§6.4). null = kein Überweisungshinweis.
   iban: string | null
 }

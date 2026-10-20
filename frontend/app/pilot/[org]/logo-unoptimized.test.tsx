@@ -35,7 +35,7 @@ const base: OrganizationPublic = {
   contact_person_name: null, contact_email: 'demo@example.com', contact_phone: null,
   logo_url: null, primary_color: '#cc0000', theme: 'tradition', iban: null,
   intro_heading: null, intro_text: null, hero_image_url: null,
-  trainer_image_url: null, trainer_text: null,
+  trainer_image_url: null, trainer_text: null, terms_text: null,
 }
 
 const EXT = 'https://cdn.campspilot.example/logo.png'

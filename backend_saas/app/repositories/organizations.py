@@ -28,7 +28,7 @@ from ..admin_schemas import OrganizationCreate, OrganizationUpdate
 _ORGANIZATION_FIELDS = """
     id, slug, name, legal_name, legal_address, contact_email, contact_phone, contact_person_name,
     logo_url, primary_color, plan_status, theme, iban,
-    intro_heading, intro_text, hero_image_url, trainer_image_url, trainer_text, billing_notes, site_published
+    intro_heading, intro_text, hero_image_url, trainer_image_url, trainer_text, terms_text, billing_notes, site_published
 """
 
 _SELECT_BY_SLUG = f"""
@@ -56,8 +56,8 @@ _INSERT_ORGANIZATION = f"""
     insert into organizations (
         slug, name, legal_name, legal_address, contact_email, contact_phone, contact_person_name,
         logo_url, primary_color, plan_status, iban,
-        intro_heading, intro_text, hero_image_url, trainer_image_url, trainer_text, billing_notes, site_published
-    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        intro_heading, intro_text, hero_image_url, trainer_image_url, trainer_text, terms_text, billing_notes, site_published
+    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     returning {_ORGANIZATION_FIELDS}
 """
 
@@ -137,6 +137,7 @@ def create_organization(data: OrganizationCreate) -> dict:
                     data.hero_image_url,
                     data.trainer_image_url,
                     data.trainer_text,
+                    data.terms_text,
                     data.billing_notes,
                     data.site_published,
                 ),

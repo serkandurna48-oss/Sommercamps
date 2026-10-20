@@ -12,7 +12,7 @@ const org: OrganizationPublic = {
   logo_url: null, primary_color: '#cc0000', theme: 'tradition', iban: null,
   intro_heading: 'Unser Fußballsommer', intro_text: 'Trainieren bei Demo FC.',
   hero_image_url: 'https://images.example.com/demo.jpg',
-  trainer_image_url: null, trainer_text: null,
+  trainer_image_url: null, trainer_text: null, terms_text: null,
 }
 
 it.each(['tradition', 'akademie', 'kompakt'] as const)('%s uses the organization heading and intro', theme => {

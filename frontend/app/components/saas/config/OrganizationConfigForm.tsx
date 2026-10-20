@@ -185,6 +185,26 @@ export default function OrganizationConfigForm({
 
         <section className="flex flex-col gap-4">
           <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
+            Teilnahmebedingungen
+          </h3>
+          <Field
+            label="Teilnahme- und Stornobedingungen (wird Eltern auf der Seite Teilnahmebedingungen angezeigt)"
+            htmlFor="terms_text"
+            hint="Absätze durch Leerzeile trennen."
+          >
+            <textarea
+              id="terms_text"
+              name="terms_text"
+              rows={6}
+              defaultValue={inputValue('terms_text', org.terms_text ?? '')}
+              className={INPUT_CLASS}
+              style={INPUT_STYLE}
+            />
+          </Field>
+        </section>
+
+        <section className="flex flex-col gap-4">
+          <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
             {de.configPage.section.payment}
           </h3>
           <Field label={de.configPage.field.iban} htmlFor="iban">

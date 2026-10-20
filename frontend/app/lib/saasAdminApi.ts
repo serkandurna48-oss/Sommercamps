@@ -63,6 +63,7 @@ export interface OrganizationAdmin {
   hero_image_url: string | null
   trainer_image_url: string | null
   trainer_text: string | null
+  terms_text: string | null
   billing_notes: string | null
   site_published: boolean
   camp_count?: number
@@ -178,6 +179,7 @@ export interface OrganizationConfigUpdate {
   hero_image_url?: string | null
   trainer_image_url?: string | null
   trainer_text?: string | null
+  terms_text?: string | null
   billing_notes?: string | null
   /** Der "Veröffentlichen"/"Zurückziehen"-Schalter — siehe
    * backend_saas admin_schemas.OrganizationUpdate.site_published. */

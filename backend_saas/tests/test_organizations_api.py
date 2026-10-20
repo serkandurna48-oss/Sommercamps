@@ -119,6 +119,7 @@ def test_get_organization_response_includes_only_declared_public_fields(monkeypa
         "hero_image_url",
         "trainer_image_url",
         "trainer_text",
+        "terms_text",
         "iban",
     }
 
@@ -168,3 +169,25 @@ def test_get_organization_trainer_fields_null_by_default(monkeypatch):
     body = response.json()
     assert body["trainer_image_url"] is None
     assert body["trainer_text"] is None
+
+
+def test_get_organization_includes_terms_text(monkeypatch):
+    """F1: terms_text wird in der öffentlichen Antwort mitgeliefert."""
+    monkeypatch.setattr(
+        organizations,
+        "get_organization_by_slug",
+        lambda slug: _org_row(slug, "active", terms_text="Unsere Bedingungen."),
+    )
+    with TestClient(app) as client:
+        response = client.get("/api/v1/organizations/demo-fc")
+    assert response.status_code == 200
+    assert response.json()["terms_text"] == "Unsere Bedingungen."
+
+
+def test_get_organization_terms_text_null_by_default(monkeypatch):
+    monkeypatch.setattr(
+        organizations, "get_organization_by_slug", lambda slug: _org_row(slug, "active")
+    )
+    with TestClient(app) as client:
+        response = client.get("/api/v1/organizations/demo-fc")
+    assert response.json()["terms_text"] is None

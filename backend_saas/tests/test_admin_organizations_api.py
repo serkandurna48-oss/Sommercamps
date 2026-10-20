@@ -297,3 +297,62 @@ def test_platform_owner_can_read_any_organization(monkeypatch):
         response = client.get("/admin/organizations/demo-fc", headers=headers)
 
     assert response.status_code == 200
+
+
+def test_patch_organization_sets_terms_text(monkeypatch):
+    """F1: Admin-Update setzt terms_text und gibt es im Response zurück."""
+    captured = {}
+
+    def _update(slug, data):
+        captured["terms_text"] = data.terms_text
+        return _org_row(slug, terms_text=data.terms_text)
+
+    monkeypatch.setattr(organizations, "update_organization", _update)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            "/admin/organizations/demo-fc",
+            json={"terms_text": "Abschnitt 1\n\nAbschnitt 2"},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    assert captured["terms_text"] == "Abschnitt 1\n\nAbschnitt 2"
+    assert response.json()["terms_text"] == "Abschnitt 1\n\nAbschnitt 2"
+
+
+def test_patch_organization_clears_terms_text_when_empty(monkeypatch):
+    """F1: Leerer String → terms_text wird NULL (Validator konvertiert '' → None)."""
+    captured = {}
+
+    def _update(slug, data):
+        captured["terms_text"] = data.terms_text
+        return _org_row(slug, terms_text=None)
+
+    monkeypatch.setattr(organizations, "update_organization", _update)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            "/admin/organizations/demo-fc",
+            json={"terms_text": ""},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    assert captured["terms_text"] is None
+
+
+def test_patch_organization_terms_text_too_long_returns_422():
+    """F1: terms_text > 20 000 Zeichen → 422."""
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            "/admin/organizations/demo-fc",
+            json={"terms_text": "x" * 20_001},
+            headers=headers,
+        )
+
+    assert response.status_code == 422

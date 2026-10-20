@@ -157,6 +157,26 @@ DROP POLICY IF EXISTS s3_audit_owner_read     ON public.audit_log;
 
 ---
 
+## Nachtrag F1: Eigene Teilnahmebedingungen je Anbieter
+
+**Vor dem Code-Deploy dieser Änderung anwenden.**
+
+```sql
+-- Datei: supabase/migrations/20261020170000_org_terms_text.sql
+ALTER TABLE public.organizations
+    ADD COLUMN IF NOT EXISTS terms_text text;
+```
+
+Prüfabfrage (Spalte vorhanden):
+```sql
+SELECT column_name FROM information_schema.columns
+WHERE table_name = 'organizations'
+  AND column_name = 'terms_text';
+-- Erwartung: 1 Zeile
+```
+
+---
+
 ## 6. Offene Punkte (vor Freigabe zu klären)
 
 | ID | Thema | Stand |

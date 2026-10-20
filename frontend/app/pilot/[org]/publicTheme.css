@@ -2615,3 +2615,349 @@
   flex-wrap: wrap;
   gap: 10px;
 }
+
+/* ── M7 Legal pages — nav, reading column, typography ── */
+.cp-public .legal-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  gap: 12px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+@media (min-width: 900px) {
+  .cp-public .legal-nav {
+    padding-inline: 40px;
+  }
+}
+.cp-public[data-theme='akademie'] .legal-nav {
+  background: rgba(14, 18, 17, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.cp-public .legal-nav .nav-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+.cp-public .legal-back-pill {
+  flex-shrink: 0;
+  padding: 8px 18px;
+  background: var(--brand-strong);
+  color: var(--brand-on);
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: transform 0.18s var(--ease);
+}
+.cp-public .legal-back-pill:hover { transform: scale(1.03); }
+@media (prefers-reduced-motion: reduce) {
+  .cp-public .legal-back-pill { transition: none; }
+}
+
+.cp-public .legal-col {
+  max-width: 68ch;
+  margin-inline: auto;
+  padding: 48px 24px 72px;
+}
+@media (min-width: 900px) {
+  .cp-public .legal-col {
+    padding-inline: 0;
+    padding-block: 56px 88px;
+  }
+}
+.cp-public .legal-label {
+  display: block;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .22em;
+  color: var(--muted);
+  opacity: 0.65;
+  margin-bottom: 8px;
+}
+.cp-public .legal-h1 {
+  font-family: var(--display);
+  font-weight: var(--dw);
+  font-size: clamp(2.4rem, 6vw, 5.5rem);
+  line-height: .92;
+  letter-spacing: var(--dtrack);
+  color: var(--ink);
+  margin-bottom: 40px;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+.cp-public .legal-toc {
+  margin-bottom: 40px;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-card);
+}
+.cp-public .legal-toc-label {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.cp-public .legal-toc ol {
+  list-style: decimal;
+  padding-left: 1.3em;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cp-public .legal-toc li {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.cp-public .legal-toc a {
+  color: var(--brand-strong);
+  text-decoration: none;
+}
+.cp-public .legal-toc a:hover { text-decoration: underline; }
+.cp-public .legal-body {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.cp-public .legal-body section {
+  margin-top: 40px;
+}
+.cp-public .legal-body section:first-child {
+  margin-top: 0;
+}
+.cp-public .legal-body h2 {
+  font-family: var(--ui);
+  font-weight: 600;
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  color: var(--ink);
+  margin-bottom: 12px;
+  letter-spacing: -.01em;
+}
+.cp-public .legal-body p {
+  line-height: 1.6;
+  font-size: 17px;
+  color: var(--ink-2);
+}
+.cp-public .legal-body p + p { margin-top: 12px; }
+.cp-public .legal-body address {
+  font-style: normal;
+  line-height: 1.7;
+}
+.cp-public .legal-body ul,
+.cp-public .legal-body ol {
+  padding-left: 1.5em;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+.cp-public .legal-body ol { list-style: decimal; }
+.cp-public .legal-body li {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.cp-public .legal-body a {
+  color: var(--brand-strong);
+  text-decoration: underline;
+}
+.cp-public .legal-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  margin-top: 8px;
+}
+.cp-public .legal-body th,
+.cp-public .legal-body td {
+  text-align: left;
+  padding: 8px 12px;
+  border: 1px solid var(--line-2);
+}
+.cp-public .legal-body th {
+  font-weight: 600;
+  background: var(--surface);
+  color: var(--ink);
+}
+.cp-public .legal-notice {
+  border: 1px solid var(--pending-line);
+  background: var(--pending-bg);
+  border-radius: var(--r-chip);
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--pending);
+  line-height: 1.55;
+  margin-top: 12px;
+}
+
+/* ── M7 Footer — two-line layout ── */
+.cp-public .foot-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.cp-public .foot-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.cp-public .foot-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.cp-public .foot-name {
+  font-weight: 600;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.cp-public .foot-email {
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.cp-public .foot-email:hover { color: var(--ink); }
+.cp-public .foot-links {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--muted);
+}
+.cp-public .foot-links a:hover { color: var(--ink); }
+
+/* ── M7 Login card ── */
+.cp-public .login-wrap {
+  min-height: 100svh;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.cp-public .login-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: 40px 32px;
+  position: relative;
+  z-index: 1;
+}
+.cp-public[data-theme='akademie'] .login-card {
+  background: rgba(255,255,255,.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.18);
+}
+.cp-public .login-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 16px;
+  background: var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.cp-public .login-brand-label {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .22em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.cp-public .login-h1 {
+  font-family: var(--display);
+  font-weight: var(--dw);
+  font-size: clamp(2rem, 4.6vw, 3.25rem);
+  line-height: .92;
+  letter-spacing: var(--dtrack);
+  color: var(--ink);
+  margin-bottom: 32px;
+}
+.cp-public .login-label {
+  display: block;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+}
+.cp-public .login-field {
+  display: block;
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  font-size: 16px;
+  font-family: var(--ui);
+  background: transparent;
+  border: 1px solid var(--field);
+  border-radius: var(--r-field);
+  color: var(--ink);
+  outline: none;
+  margin-bottom: 16px;
+  transition: border-color 0.18s var(--ease);
+}
+.cp-public .login-field:focus { border-color: var(--brand-strong); }
+@media (prefers-reduced-motion: reduce) {
+  .cp-public .login-field { transition: none; }
+}
+.cp-public .login-btn {
+  display: block;
+  width: 100%;
+  height: 48px;
+  border-radius: 9999px;
+  background: var(--brand-strong);
+  color: var(--brand-on);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--ui);
+  border: none;
+  cursor: pointer;
+  margin-top: 24px;
+  transition: transform 0.18s var(--ease);
+}
+.cp-public .login-btn:hover { transform: scale(1.03); }
+.cp-public .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) {
+  .cp-public .login-btn { transition: none; }
+}
+.cp-public .login-error {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--error-bg);
+  border: 1px solid var(--error-line);
+  border-radius: var(--r-chip);
+  font-size: 13px;
+  color: var(--error);
+  line-height: 1.5;
+}

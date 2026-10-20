@@ -57,8 +57,9 @@ it('Teilnahmebedingungen: keine feste Gebühr (20) und keine feste Frist (vier/4
   expect(html).not.toContain('4 Wochen')
 })
 
-it('Datenschutz: Brevo als Dienstleister genannt', async () => {
+it('Datenschutz: Brevo als Dienstleister genannt, keine Kinderdaten übermittelt', async () => {
   const el = await DatenschutzPage({ params })
   const html = renderToStaticMarkup(el)
   expect(html).toContain('Brevo')
+  expect(html).not.toContain('Vorname und Nachname des Kindes')
 })

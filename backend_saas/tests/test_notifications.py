@@ -22,7 +22,7 @@ from app.notifications.mail import (
     MailMessage,
     reset_provider_for_testing,
 )
-from app.notifications.templates import build_registration_mail
+from app.notifications.templates import build_provider_mail, build_registration_mail
 
 
 class _RealMockProvider:
@@ -46,6 +46,8 @@ _CAMP_ID = uuid4()
 _TOKEN = uuid4()
 _EXPECTED_PAYMENT_REF = f"CP-{str(_TOKEN)[:8].upper()}"
 
+_UNSET = object()
+
 
 def _ctx() -> dict:
     return {
@@ -58,6 +60,10 @@ def _ctx() -> dict:
         "price_cents": 14900,
         "currency": "EUR",
     }
+
+
+def _occupancy() -> dict:
+    return {"registered_count": 5, "waitlist_count": 2, "capacity": 20}
 
 
 def _reg(
@@ -88,11 +94,13 @@ def fake_provider():
     reset_provider_for_testing(None)
 
 
-def _patch(monkeypatch, ctx=None, reg=None, mark_sent=None, mark_error=None):
+def _patch(monkeypatch, ctx=None, reg=None, mark_sent=None, mark_error=None, occupancy=_UNSET):
     monkeypatch.setattr(sending, "_fetch_mail_context", lambda *_: ctx if ctx is not None else _ctx())
     monkeypatch.setattr(sending, "_fetch_registration", lambda *_: reg)
     monkeypatch.setattr(sending, "_mark_sent", mark_sent or (lambda *_: None))
     monkeypatch.setattr(sending, "_mark_error", mark_error or (lambda *_: None))
+    _occ = _occupancy() if occupancy is _UNSET else occupancy
+    monkeypatch.setattr(sending, "_fetch_occupancy", lambda *_: _occ)
 
 
 def _call_send(status: str = "registered"):
@@ -301,7 +309,7 @@ def test_registered_sends_one_mail_with_correct_subject(monkeypatch, fake_provid
     _patch(monkeypatch)
     _call_send("registered")
 
-    assert len(fake_provider.sent) == 1
+    assert len(fake_provider.sent) == 2  # sent[0]=parent, sent[1]=provider
     assert "Anmeldebestätigung" in fake_provider.sent[0].subject
     assert "Sommercamp 2027" in fake_provider.sent[0].subject
 
@@ -310,7 +318,7 @@ def test_waitlist_sends_one_mail_with_waitlist_subject(monkeypatch, fake_provide
     _patch(monkeypatch)
     _call_send("waitlist")
 
-    assert len(fake_provider.sent) == 1
+    assert len(fake_provider.sent) == 2  # sent[0]=parent, sent[1]=provider
     assert "Warteliste" in fake_provider.sent[0].subject
 
 
@@ -364,7 +372,7 @@ def test_do_send_with_iban_shows_amount_from_camp_context(monkeypatch, fake_prov
 
     _call_send("registered")
 
-    assert len(real.sent) == 1
+    assert len(real.sent) == 2  # sent[0]=parent, sent[1]=provider
     assert "149,00" in real.sent[0].html_content
     assert "EUR" in real.sent[0].html_content
 
@@ -407,11 +415,11 @@ def test_no_names_in_mail_subject_html_or_brevo_payload(monkeypatch, fake_provid
         child_last_name=CHILD_LAST,
     )
 
-    assert len(transport.requests) == 1
-    payload_str = transport.requests[0].content.decode()
-
-    for name in (CHILD_FIRST, CHILD_LAST, PARENT_FIRST, PARENT_LAST):
-        assert name not in payload_str, f"Name '{name}' must not appear in Brevo payload"
+    assert len(transport.requests) == 2  # parent mail + provider mail
+    for req in transport.requests:
+        payload_str = req.content.decode()
+        for name in (CHILD_FIRST, CHILD_LAST, PARENT_FIRST, PARENT_LAST):
+            assert name not in payload_str, f"Name '{name}' must not appear in Brevo payload"
 
 
 # ---------------------------------------------------------------------------
@@ -423,7 +431,7 @@ def test_retry_sends_if_not_yet_sent(monkeypatch, fake_provider):
     _patch(monkeypatch, reg=_reg(email_sent_at=None))
     sending.retry_registration_notification(_TOKEN, _ORG_ID)
 
-    assert len(fake_provider.sent) == 1
+    assert len(fake_provider.sent) == 2  # parent + provider mail
 
 
 def test_retry_is_noop_when_already_sent(monkeypatch, fake_provider):
@@ -445,8 +453,9 @@ def test_sender_name_contains_org_name(monkeypatch, fake_provider):
     _patch(monkeypatch)
     _call_send()
 
-    assert len(fake_provider.sent) == 1
+    assert len(fake_provider.sent) == 2  # sent[0]=parent, sent[1]=provider
     assert fake_provider.sent[0].sender_name == "JK Performance Academy über CampsPilot"
+    assert fake_provider.sent[1].sender_name == "JK Performance Academy über CampsPilot"
 
 
 def test_retry_idempotent_double_call(monkeypatch, fake_provider):
@@ -469,8 +478,8 @@ def test_retry_idempotent_double_call(monkeypatch, fake_provider):
     _patch(monkeypatch, reg=_reg(email_sent_at=datetime.now(timezone.utc)))
     sending.retry_registration_notification(_TOKEN, _ORG_ID)
 
-    assert len(real.sent) == 1  # only first call sent
-    assert call_count[0] == 1  # _mark_sent called exactly once
+    assert len(real.sent) == 2  # first retry: parent + provider; second: noop
+    assert call_count[0] == 1  # _mark_sent called exactly once (parent mail)
 
 
 # ---------------------------------------------------------------------------
@@ -569,7 +578,7 @@ def test_retry_reaches_registration_after_provider_switch(monkeypatch, fake_prov
     sending.retry_registration_notification(_TOKEN, _ORG_ID)
 
     assert marked == [_TOKEN], "retry must mark email_sent_at when a real provider is active"
-    assert len(real.sent) == 1
+    assert len(real.sent) == 2  # parent + provider mail
 
 
 # ---------------------------------------------------------------------------
@@ -796,3 +805,178 @@ def test_unconfigured_provider_marks_error_in_nonlocal_env(
 
     assert len(errors) == 1, f"Expected 1 _mark_error, got {errors}"
     assert marked == [], f"_mark_sent must not be called, got {marked}"
+
+
+# ---------------------------------------------------------------------------
+# C11 F2: Anbieter-Info bei neuer Anmeldung
+# ---------------------------------------------------------------------------
+
+
+def test_provider_mail_template_registered():
+    msg = build_provider_mail(
+        status="registered",
+        camp_title="Sommercamp 2027",
+        camp_start=date(2027, 7, 5),
+        camp_end=date(2027, 7, 9),
+        payment_reference="CP-ABCD1234",
+        registered_count=5,
+        capacity=20,
+        waitlist_count=2,
+        contact_email="info@jk.example",
+        org_name="JK Academy",
+    )
+    assert "Neue Anmeldung" in msg.subject
+    assert "Sommercamp 2027" in msg.subject
+    assert "5 von 20 Plätzen belegt" in msg.html_content
+    assert "2 auf der Warteliste" in msg.html_content
+    assert "CP-ABCD1234" in msg.html_content
+    assert msg.to_email == "info@jk.example"
+
+
+def test_provider_mail_template_waitlisted():
+    msg = build_provider_mail(
+        status="waitlist",
+        camp_title="Sommercamp 2027",
+        camp_start=date(2027, 7, 5),
+        camp_end=date(2027, 7, 9),
+        payment_reference="CP-ABCD1234",
+        registered_count=20,
+        capacity=20,
+        waitlist_count=1,
+        contact_email="info@jk.example",
+        org_name="JK Academy",
+    )
+    assert "Wartelisten-Anmeldung" in msg.subject
+    assert "Sommercamp 2027" in msg.subject
+    assert "20 von 20 Plätzen belegt" in msg.html_content
+    assert "1 auf der Warteliste" in msg.html_content
+    assert "CP-ABCD1234" in msg.html_content
+
+
+def test_provider_mail_sent_for_registered(monkeypatch, fake_provider):
+    _patch(monkeypatch)
+    _call_send("registered")
+    provider_msg = fake_provider.sent[1]
+    assert "Neue Anmeldung" in provider_msg.subject
+    assert "Sommercamp 2027" in provider_msg.subject
+
+
+def test_provider_mail_sent_for_waitlisted(monkeypatch, fake_provider):
+    _patch(monkeypatch)
+    _call_send("waitlist")
+    provider_msg = fake_provider.sent[1]
+    assert "Neue Wartelisten-Anmeldung" in provider_msg.subject
+    assert "Sommercamp 2027" in provider_msg.subject
+
+
+def test_provider_mail_sent_to_contact_email(monkeypatch, fake_provider):
+    _patch(monkeypatch)
+    _call_send("registered")
+    provider_msg = fake_provider.sent[1]
+    assert provider_msg.to_email == "info@jk.example"
+
+
+def test_provider_mail_contains_no_pii(monkeypatch, fake_provider):
+    """Provider mail must not contain child/parent names or parent email."""
+    CHILD_FIRST = "Yxqtkindrst"
+    CHILD_LAST = "Vwrtuvwxyz99"
+    PARENT_FIRST = "Xqrtelterntl"
+    PARENT_LAST = "Zrvwxyzabc77"
+    PARENT_EMAIL = "unique_parent_xyz891@example.com"
+
+    _patch(monkeypatch)
+    sending.send_registration_notification(
+        registration_token=_TOKEN,
+        status="registered",
+        organization_id=_ORG_ID,
+        camp_id=_CAMP_ID,
+        start_date=date(2027, 7, 5),
+        end_date=date(2027, 7, 9),
+        parent_email=PARENT_EMAIL,
+        parent_first_name=PARENT_FIRST,
+        parent_last_name=PARENT_LAST,
+        child_first_name=CHILD_FIRST,
+        child_last_name=CHILD_LAST,
+    )
+
+    assert len(fake_provider.sent) == 2
+    provider_msg = fake_provider.sent[1]
+    for pii in (CHILD_FIRST, CHILD_LAST, PARENT_FIRST, PARENT_LAST, PARENT_EMAIL):
+        assert pii not in provider_msg.subject, f"PII '{pii}' in subject"
+        assert pii not in provider_msg.html_content, f"PII '{pii}' in html_content"
+
+
+def test_provider_mail_occupancy_counts(monkeypatch, fake_provider):
+    _patch(monkeypatch, occupancy={"registered_count": 12, "waitlist_count": 3, "capacity": 20})
+    _call_send("registered")
+    provider_msg = fake_provider.sent[1]
+    assert "12 von 20 Plätzen belegt" in provider_msg.html_content
+    assert "3 auf der Warteliste" in provider_msg.html_content
+
+
+def test_provider_mail_error_does_not_affect_parent_email_status(monkeypatch, fake_provider):
+    """Fehler beim Anbieterversand ändert email_sent_at/email_error der Anmeldung nicht."""
+    real = _RealMockProvider()
+    call_count = [0]
+
+    def fail_on_second(msg):
+        call_count[0] += 1
+        if call_count[0] == 2:
+            raise RuntimeError("provider mail failed")
+        real.sent.append(msg)
+
+    real.send = fail_on_second
+    reset_provider_for_testing(real)
+
+    mark_errors: list = []
+    mark_sents: list = []
+    _patch(
+        monkeypatch,
+        mark_sent=lambda token, org_id: mark_sents.append(token),
+        mark_error=lambda token, err, org_id: mark_errors.append(err),
+    )
+    _call_send("registered")
+
+    assert call_count[0] == 2
+    assert mark_sents == [_TOKEN], "Parent mail must be marked sent"
+    assert mark_errors == [], "Provider mail failure must not call _mark_error"
+
+
+def test_parent_mail_failure_does_not_prevent_provider_mail(monkeypatch, fake_provider):
+    """Elternmail-Fehler verhindert Anbieter-Mail nicht."""
+    call_count = [0]
+
+    def fail_on_first(msg):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            raise RuntimeError("parent mail failed")
+        fake_provider.sent.append(msg)
+
+    fake_provider.send = fail_on_first
+    _patch(monkeypatch)
+    _call_send("registered")
+
+    assert call_count[0] == 2, "Both parent and provider send must be attempted"
+    assert len(fake_provider.sent) == 1, "Provider mail must be sent despite parent failure"
+    assert "Neue Anmeldung" in fake_provider.sent[0].subject
+
+
+def test_provider_notification_uses_organization_id(monkeypatch, fake_provider):
+    """_fetch_occupancy muss organization_id korrekt übergeben bekommen."""
+    query_args: list = []
+
+    def capturing_fetch_occupancy(organization_id, camp_id):
+        query_args.append((organization_id, camp_id))
+        return _occupancy()
+
+    monkeypatch.setattr(sending, "_fetch_mail_context", lambda *_: _ctx())
+    monkeypatch.setattr(sending, "_fetch_registration", lambda *_: None)
+    monkeypatch.setattr(sending, "_mark_sent", lambda *_: None)
+    monkeypatch.setattr(sending, "_mark_error", lambda *_: None)
+    monkeypatch.setattr(sending, "_fetch_occupancy", capturing_fetch_occupancy)
+
+    _call_send("registered")
+
+    assert len(query_args) == 1
+    assert query_args[0][0] == _ORG_ID
+    assert query_args[0][1] == _CAMP_ID

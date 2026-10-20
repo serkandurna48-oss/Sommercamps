@@ -174,6 +174,11 @@ it('kein marquee ohne Camps', () => {
   expect(html).not.toContain('marquee-band')
 })
 
+it('marquee-band trägt Klasse fullbleed für Vollbreite', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'akademie' }} camps={[mockCamp]} />)
+  expect(html).toContain('fullbleed')
+})
+
 // ── M5: Kennzahlen-Leiste enthält keine Hinweiszeile ──
 it('akademie hero-stats enthält keine Anmeldungshinweiszeile', () => {
   const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'akademie' }} camps={[mockCamp]} />)

@@ -195,7 +195,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
               <div className="nav-left">
                 <span className="nav-logo">
                   {org.logo_url
-                    ? <Image src={org.logo_url} alt={org.name} width={32} height={32} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <Image src={org.logo_url} alt={org.name} width={36} height={36} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     : shortCode}
                 </span>
                 <span className="nav-name">{org.name}</span>
@@ -296,7 +296,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
           .join(' · ')
         if (!marqueeText.trim()) return null
         return (
-          <div className="marquee-band" aria-hidden="true">
+          <div className="marquee-band fullbleed" aria-hidden="true">
             <div className="marquee-track">
               <span className="marquee-inner">{marqueeText} &nbsp;·&nbsp; </span>
               <span className="marquee-inner">{marqueeText} &nbsp;·&nbsp; </span>

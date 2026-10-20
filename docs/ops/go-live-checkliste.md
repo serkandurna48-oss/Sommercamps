@@ -19,6 +19,23 @@
 
 ---
 
+## Welle 2 — zusätzliche Migrationen und Go-Live-Plan
+
+Die ursprüngliche Checkliste oben deckt nur Schritt 2 (E-Mail-Tracking) ab.
+Der vollständige Go-Live-Plan für Welle 2 (inkl. RLS-Policies, Trainer-Spalten,
+Rollback-SQL, Abnahme-Checkliste und offene Punkte) liegt in:
+
+- **[docs/ops/go-live-welle2.md](go-live-welle2.md)** — vollständige Checkliste für den
+  Abend-Go-Live mit Serkan
+
+Zusätzliche Migration in Welle 2 (nach Schritt 2 dieser Liste):
+- `supabase/migrations/20261018154831_tenant_read_policies.sql` — RLS-Lesepolicies (S3)
+- `supabase/migrations/20261019203000_org_trainer.sql` — Trainer-Bild und -Text auf
+  `organizations` (Reihenfolge: Schemaänderungen vor Code-Deploy, da
+  `repositories/organizations.py` diese Spalten bereits liest)
+
+---
+
 ## Integrationssperre (aus KOORDINATION-jan.md)
 
 `pilot/mail` darf erst in einen Stand mit Cloud-DB gemergt und deployed werden, **nachdem**

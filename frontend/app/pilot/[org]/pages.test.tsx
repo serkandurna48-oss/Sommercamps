@@ -57,6 +57,15 @@ it('Teilnahmebedingungen: keine feste Gebühr (20) und keine feste Frist (vier/4
   expect(html).not.toContain('4 Wochen')
 })
 
+it('Teilnahmebedingungen: keine Haftungs-, Erstattungs- oder Gesundheitsregeln auf der Plattformseite', async () => {
+  const el = await TeilnahmebedingungenPage({ params })
+  const html = renderToStaticMarkup(el)
+  // "haftet" (Verb) zeigt eine eigene Haftungsregel an; "Haftungsbedingungen" (Verweis) ist erlaubt
+  expect(html).not.toMatch(/haftet/i)
+  expect(html).not.toMatch(/erstattet|Erstattung/i)
+  expect(html).not.toMatch(/Gesundheit/i)
+})
+
 it('Datenschutz: Brevo als Dienstleister genannt, keine Kinderdaten übermittelt', async () => {
   const el = await DatenschutzPage({ params })
   const html = renderToStaticMarkup(el)

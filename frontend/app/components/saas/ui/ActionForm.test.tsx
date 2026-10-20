@@ -97,6 +97,36 @@ it('nach Fehler ist kein unbestätigter Submit erreichbar', async () => {
   expect(action).toHaveBeenCalledTimes(2)
 })
 
+it('Abbrechen ist disabled während pending, danach zurück zum Einstiegsbutton', async () => {
+  let resolveAction!: (v: ActionFormState) => void
+  const action = vi.fn<ActionFn>().mockReturnValueOnce(
+    new Promise<ActionFormState>(r => { resolveAction = r }),
+  )
+  await renderForm(action)
+  await clickButton('Aufrücken')
+
+  const form = container.querySelector('form')!
+  // Non-awaited act: dispatches submit → transition starts (pending=true) without waiting for action
+  act(() => {
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+
+  const cancelBtn = [...container.querySelectorAll('button')].find(
+    (b) => b.textContent?.trim() === 'Abbrechen',
+  )
+  expect(cancelBtn, 'Abbrechen-Button muss sichtbar bleiben').toBeDefined()
+  expect(cancelBtn!.disabled).toBe(true)
+  expect(cancelBtn!.getAttribute('aria-disabled')).toBe('true')
+
+  // Resolve the action — state resets to entry button
+  await act(async () => { resolveAction({ error: null, success: null }) })
+  expect(container.querySelector('form')).toBeNull()
+  const entryBtn = [...container.querySelectorAll('button')].find(
+    (b) => b.textContent?.trim() === 'Aufrücken',
+  )
+  expect(entryBtn, 'Einstiegsbutton muss nach Abschluss wieder da sein').toBeDefined()
+})
+
 it('nach Abbrechen ist kein unbestätigter Submit erreichbar', async () => {
   const action = vi.fn<ActionFn>()
   await renderForm(action)

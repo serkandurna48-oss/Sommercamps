@@ -23,6 +23,7 @@ def build_registration_mail(
     *,
     status: str,
     org_name: str,
+    payee_name: Optional[str] = None,
     org_email: str,
     org_phone: Optional[str],
     camp_title: str,
@@ -36,6 +37,7 @@ def build_registration_mail(
 ) -> MailMessage:
     # Escape all user-supplied strings before interpolating into HTML.
     e_org_name = escape(org_name)
+    e_payee = escape(payee_name) if payee_name else e_org_name
     e_org_email = escape(org_email)
     e_camp_title = escape(camp_title)
     e_payment_ref = escape(payment_reference)
@@ -45,23 +47,26 @@ def build_registration_mail(
     dates = _date_range(camp_start, camp_end)
     phone_line = f"<br>Telefon: {e_phone}" if e_phone else ""
 
+    amount_line = ""
+    if price_cents is not None and currency:
+        e_cur = escape(currency)
+        formatted = f"{price_cents // 100},{price_cents % 100:02d}"
+        amount_line = f"<p>Betrag: <strong>{formatted}&nbsp;{e_cur}</strong></p>\n"
+
     if status == "registered":
         subject = f"Anmeldebestätigung – {camp_title}"
         if e_iban:
-            amount_line = ""
-            if price_cents is not None and currency:
-                e_cur = escape(currency)
-                formatted = f"{price_cents // 100},{price_cents % 100:02d}"
-                amount_line = f"<p>Betrag: <strong>{formatted}&nbsp;{e_cur}</strong></p>\n"
             payment_block = (
                 f"{amount_line}"
-                f"<p>Empfänger: <strong>{e_org_name}</strong>"
+                f"<p>Empfänger: <strong>{e_payee}</strong>"
                 f"<br>IBAN: <strong>{e_iban}</strong>"
                 f"<br>Verwendungszweck: <strong>{e_payment_ref}</strong></p>"
             )
         else:
             payment_block = (
-                f"<p>Die Zahlungsdetails erhältst du direkt von {e_org_name}.<br>"
+                f"{amount_line}"
+                f"<p>Verwendungszweck: <strong>{e_payment_ref}</strong></p>\n"
+                f"<p>{e_payee} sendet dir die Zahlungsdetails direkt.<br>"
                 f"E-Mail: {e_org_email}{phone_line}</p>"
             )
         html = f"""\

@@ -89,7 +89,7 @@ export default function ActionForm({
           {pending ? pendingLabel : label}
         </Button>
         {effectiveConfirming && (
-          <Button type="button" variant="quiet" onClick={() => setConfirming(false)}>
+          <Button type="button" variant="quiet" disabled={pending} aria-disabled={pending} onClick={() => setConfirming(false)}>
             Abbrechen
           </Button>
         )}

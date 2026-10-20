@@ -103,6 +103,19 @@ it('rendert Überweisungsblock mit kopierbarem Verwendungszweck bei gesetzter IB
   expect(html).toContain('CP-1234') // Verwendungszweck
 })
 
+it('F7: kündigt Bestätigungsmail an statt Versand zu behaupten', () => {
+  const html = render()
+  expect(html).toContain('schicken')
+  expect(html).not.toContain('geschickt')
+})
+
+it('F4: ohne IBAN kündigt Verein Zahlungsdetails an statt nachfragen zu fordern', () => {
+  const html = render({ org: { iban: null } })
+  expect(html).toContain('sendet')
+  expect(html).not.toContain('Bitte erfragen')
+  expect(html).not.toContain('Bankverbindung ist hier noch nicht hinterlegt')
+})
+
 it('zeigt keinen Überweisungsblock bei Warteliste', () => {
   const html = render({ result: { status: 'waitlist' } })
   expect(html).not.toContain('done-transfer')

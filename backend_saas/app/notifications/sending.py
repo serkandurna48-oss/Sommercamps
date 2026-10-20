@@ -27,11 +27,12 @@ logger = logging.getLogger(__name__)
 
 _FETCH_CONTEXT = """
     SELECT
-        o.name          AS org_name,
-        o.contact_email AS org_email,
-        o.contact_phone AS org_phone,
+        o.name                            AS org_name,
+        COALESCE(o.legal_name, o.name)    AS payee_name,
+        o.contact_email                   AS org_email,
+        o.contact_phone                   AS org_phone,
         o.iban,
-        c.title         AS camp_title,
+        c.title                           AS camp_title,
         c.price_cents,
         c.currency
     FROM organizations o
@@ -113,6 +114,7 @@ def _do_send(
     msg = build_registration_mail(
         status=status,
         org_name=ctx["org_name"],
+        payee_name=ctx["payee_name"],
         org_email=ctx["org_email"],
         org_phone=ctx.get("org_phone"),
         camp_title=ctx["camp_title"],

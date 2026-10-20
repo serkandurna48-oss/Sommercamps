@@ -1,6 +1,6 @@
-'use client'
+﻿'use client'
 
-import { useActionState, useEffect, useState } from 'react'
+import { useActionState, useState } from 'react'
 import Button from './Button'
 
 export interface ActionFormState {
@@ -11,17 +11,17 @@ export interface ActionFormState {
 export const initialActionFormState: ActionFormState = { error: null, success: null }
 
 /**
- * Ein Server-Action-Button ohne eigene Formularfelder (Aufrücken,
- * Zahlungsstatus setzen, Stornieren) — mit Pending- und Fehler-/Erfolgs-
- * Feedback über useActionState, gleiches Muster wie LoginForm. Kein
- * eigenes Fetch/State-Handling pro Aufrufstelle nötig.
+ * Ein Server-Action-Button ohne eigene Formularfelder (AufrÃ¼cken,
+ * Zahlungsstatus setzen, Stornieren) â€” mit Pending- und Fehler-/Erfolgs-
+ * Feedback Ã¼ber useActionState, gleiches Muster wie LoginForm. Kein
+ * eigenes Fetch/State-Handling pro Aufrufstelle nÃ¶tig.
  *
  * `requireConfirm` (optional): wenn gesetzt, zeigt ein erster Klick
- * eine Inline-Bestätigungsfrage — zweiter Klick löst die Aktion aus.
- * Verhindert unbeabsichtigte Klicks bei nicht rückgängig zu machenden
- * Aktionen (Warteliste aufrücken, Zahlung erlassen).
- * Der Bestätigungszustand wird nach jeder abgeschlossenen Aktion
- * (Erfolg, Fehler, Abbrechen) zurückgesetzt.
+ * eine Inline-BestÃ¤tigungsfrage â€” zweiter Klick lÃ¶st die Aktion aus.
+ * Verhindert unbeabsichtigte Klicks bei nicht rÃ¼ckgÃ¤ngig zu machenden
+ * Aktionen (Warteliste aufrÃ¼cken, Zahlung erlassen).
+ * Der BestÃ¤tigungszustand wird nach jeder abgeschlossenen Aktion
+ * (Erfolg, Fehler, Abbrechen) zurÃ¼ckgesetzt.
  */
 export default function ActionForm({
   action,
@@ -38,20 +38,22 @@ export default function ActionForm({
   variant?: 'primary' | 'secondary' | 'quiet' | 'quiet-danger'
   brandStrong?: string
   brandOn?: string
-  /** Wenn gesetzt: Text der Bestätigungsfrage. Zeigt erst nach Klick. */
+  /** Wenn gesetzt: Text der BestÃ¤tigungsfrage. Zeigt erst nach Klick. */
   requireConfirm?: string
 }) {
-  // Jede abgeschlossene Aktion liefert ein neues State-Objekt (Kopie), damit
-  // der Reset unten auch bei identischem Erfolgs-/Fehlertext greift.
+  const [confirming, setConfirming] = useState(false)
+  // BestÃ¤tigungszustand wird nach jeder abgeschlossenen Aktion zurÃ¼ckgesetzt â€“
+  // unabhÃ¤ngig davon, ob der Ergebnistext derselbe ist wie zuvor.
   const [state, formAction, pending] = useActionState(
-    async (prev: ActionFormState, formData: FormData) => ({ ...(await action(prev, formData)) }),
+    async (prev: ActionFormState, formData: FormData) => {
+      try {
+        return { ...(await action(prev, formData)) }
+      } finally {
+        setConfirming(false)
+      }
+    },
     initialActionFormState,
   )
-  const [confirming, setConfirming] = useState(false)
-
-  useEffect(() => {
-    if (state.success || state.error) setConfirming(false)
-  }, [state])
 
   const effectiveConfirming = !!requireConfirm && confirming
 

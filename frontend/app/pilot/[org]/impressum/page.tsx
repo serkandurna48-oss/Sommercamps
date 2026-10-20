@@ -52,7 +52,7 @@ export default async function OrgImpressumPage({ params }: { params: Promise<{ o
           {!org.legal_address && (
             <p className="legal-notice">
               Dieser Verein hat noch keine vollständige Anschrift für das Impressum hinterlegt.
-              Vereinsadmin: unter „Konfiguration" → „Anschrift (für Impressum/Datenschutz)" ergänzen.
+              Vereinsadmin: unter „Konfiguration“ → „Anschrift (für Impressum/Datenschutz)“ ergänzen.
             </p>
           )}
         </div>

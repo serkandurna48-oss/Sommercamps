@@ -140,6 +140,19 @@ def reset_provider_for_testing(provider: Optional[MailProvider]) -> None:
     _provider = provider
 
 
+def _app_env() -> str:
+    """Same source as the app: process env first, else Settings (reads .env)."""
+    value = os.getenv("APP_ENV")
+    if not value:
+        try:
+            from ..config import get_settings
+
+            value = get_settings().app_env
+        except Exception:  # settings incomplete (e.g. isolated tests)
+            value = "local"
+    return (value or "local").lower()
+
+
 def _build_provider() -> MailProvider:
     value = (os.getenv("NOTIFICATION_PROVIDER") or "").lower()
     if value == "brevo":
@@ -150,7 +163,7 @@ def _build_provider() -> MailProvider:
         )
     if value == "fake":
         return FakeProvider()
-    app_env = (os.getenv("APP_ENV") or "local").lower()
+    app_env = _app_env()
     if app_env in ("local", "test"):
         logger.warning(
             "NOTIFICATION_PROVIDER is %r — no mail will be sent in %s environment",

@@ -644,3 +644,36 @@ def test_mark_error_receives_organization_id(monkeypatch, fake_provider):
     assert len(error_args) == 1
     assert error_args[0] == (_TOKEN, _ORG_B_ID)
     assert error_args[0][1] != _ORG_A_ID
+
+
+# --- C10 B2: APP_ENV aus Settings (.env), nicht nur aus dem Prozess-Env -------
+
+def test_app_env_from_settings_when_process_env_missing(monkeypatch):
+    """APP_ENV nur in .env (Settings) = staging, Provider fehlt -> Ablehnung, kein Skip."""
+    import app.config as config
+    from app.notifications import mail as mail_mod
+
+    class _S:
+        app_env = "staging"
+
+    monkeypatch.delenv("APP_ENV", raising=False)
+    monkeypatch.delenv("NOTIFICATION_PROVIDER", raising=False)
+    monkeypatch.setattr(config, "get_settings", lambda: _S())
+    provider = mail_mod._build_provider()
+    assert provider.delivers is False
+    with pytest.raises(RuntimeError):
+        provider.send(mail_mod.MailMessage(to_email="a@campspilot.example", subject="s", html_content="h"))
+
+
+def test_app_env_process_env_wins(monkeypatch):
+    import app.config as config
+    from app.notifications import mail as mail_mod
+
+    class _S:
+        app_env = "staging"
+
+    monkeypatch.setenv("APP_ENV", "test")
+    monkeypatch.delenv("NOTIFICATION_PROVIDER", raising=False)
+    monkeypatch.setattr(config, "get_settings", lambda: _S())
+    provider = mail_mod._build_provider()
+    provider.send(mail_mod.MailMessage(to_email="a@campspilot.example", subject="s", html_content="h"))

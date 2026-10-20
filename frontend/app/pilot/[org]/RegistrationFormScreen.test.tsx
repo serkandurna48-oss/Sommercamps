@@ -16,6 +16,7 @@ vi.mock('react', () => ({
     return hooks.slots[index]
   },
   useMemo: (factory: () => unknown) => factory(),
+  useEffect: () => { /* no-op: this test context invokes the component function directly without a DOM */ },
 }))
 
 vi.mock('../../lib/saasApi', () => ({

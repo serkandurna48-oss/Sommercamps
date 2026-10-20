@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, OrganizationPublic, RegistrationCreated } from '../../lib/saasApi'
 import { formatCampDateRange, formatPrice, orgShortCode } from '../../lib/parentFlowFormat'
 import CampRow from './CampRow'
@@ -452,6 +452,8 @@ export function CampScreen({
   const tight = !camp.is_full && camp.spots_remaining <= 3
   const containerRef = useRef<HTMLElement>(null)
   useParentFlowMotion(org.theme, containerRef)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  useEffect(() => { headingRef.current?.focus() }, [])
   const startDay = parseInt(camp.start_date.slice(8, 10))
   const startMonth = new Date(camp.start_date + 'T12:00:00').toLocaleString('de-DE', { month: 'long' })
 
@@ -472,7 +474,7 @@ export function CampScreen({
             <span className="sec-label">
               {[camp.location, formatCampDateRange(camp.start_date, camp.end_date)].filter(Boolean).join(' · ')}
             </span>
-            <h1 className="d1" data-split data-scale={headlineScale(camp.title)} lang="de">
+            <h1 ref={headingRef} tabIndex={-1} className="d1" data-split data-scale={headlineScale(camp.title)} lang="de">
               {camp.title}
             </h1>
             <p className="camp-hd-intro">
@@ -581,6 +583,8 @@ function WaitScreen({
 }) {
   const containerRef = useRef<HTMLElement>(null)
   useParentFlowMotion(org.theme, containerRef)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  useEffect(() => { headingRef.current?.focus() }, [])
 
   return (
     <section className="screen" id="s-wait" ref={containerRef}>
@@ -599,7 +603,7 @@ function WaitScreen({
         <span className="chip info" style={{ alignSelf: 'flex-start' }}>
           Ausgebucht
         </span>
-        <h1 className="d1" data-split style={{ fontSize: 'clamp(27px,6vw,44px)' }}>
+        <h1 ref={headingRef} tabIndex={-1} className="d1" data-split style={{ fontSize: 'clamp(27px,6vw,44px)' }}>
           Alle {camp.capacity} Plätze sind vergeben
         </h1>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--ink-2)', maxWidth: '42ch' }}>

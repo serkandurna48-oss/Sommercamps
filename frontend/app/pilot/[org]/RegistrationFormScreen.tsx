@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, RegistrationCreated } from '../../lib/saasApi'
 import { submitRegistration } from '../../lib/saasApi'
 import { formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
@@ -72,6 +72,8 @@ export default function RegistrationFormScreen({
   const [submitting, setSubmitting] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
   const fieldRefs = useRef<Partial<Record<FieldKey, HTMLElement | null>>>({})
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  useEffect(() => { headingRef.current?.focus() }, [])
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -170,6 +172,7 @@ export default function RegistrationFormScreen({
 
   return (
     <section className="screen" id="s-form">
+      <h1 ref={headingRef} tabIndex={-1} className="sr">Anmeldung: {camp.title}</h1>
       <div className="top">
         <button className="back" type="button" onClick={onBack} aria-label="Zurück zum Camp">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

@@ -66,6 +66,13 @@
   border: 1px solid rgba(255, 255, 255, .12);
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, .18);
 }
+.cp-public .hl-nav-dark .hl-nav-left {
+  background: rgba(0, 0, 0, .38);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, .10);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .08);
+}
 .cp-public .hl-nav-light .hl-nav-left {
   background: #fff;
   border: 1px solid var(--line-2, #eae7df);
@@ -84,7 +91,8 @@
   flex-shrink: 0;
   overflow: hidden;
 }
-.cp-public .hl-nav-glass .hl-nav-name {
+.cp-public .hl-nav-glass .hl-nav-name,
+.cp-public .hl-nav-dark .hl-nav-name {
   font-size: 14px;
   font-weight: 600;
   color: rgba(255, 255, 255, .9);
@@ -259,8 +267,9 @@
   line-height: .92;
   letter-spacing: -.03em;
   max-width: 20ch;
-  overflow-wrap: anywhere;
-  hyphens: auto;
+  hyphens: manual;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 .cp-public .hl-v1 h1[data-scale='xl'] { font-size: clamp(2.8rem, 8vw, 7.5rem); }
 .cp-public .hl-v1 h1[data-scale='lg'] { font-size: clamp(2.4rem, 6vw, 5.5rem); }
@@ -372,13 +381,16 @@
 }
 .cp-public .hl-v2 h1 {
   color: #fff;
-  font-size: clamp(3rem, 9vw, 6rem);
   line-height: 0.9;
   letter-spacing: -.035em;
   max-width: 16ch;
-  overflow-wrap: anywhere;
-  hyphens: auto;
+  hyphens: manual;
+  overflow-wrap: normal;
+  word-break: normal;
 }
+.cp-public .hl-v2 h1[data-scale='xl'] { font-size: clamp(3rem, 9vw, 6rem); }
+.cp-public .hl-v2 h1[data-scale='lg'] { font-size: clamp(2.4rem, 6vw, 5rem); }
+.cp-public .hl-v2 h1[data-scale='md'] { font-size: clamp(2rem, 3.8vw, 3.6rem); }
 .cp-public .hl-v2-intro {
   font-size: 17px;
   line-height: 1.55;
@@ -510,8 +522,9 @@
   line-height: .92;
   letter-spacing: -.03em;
   max-width: 20ch;
-  overflow-wrap: anywhere;
-  hyphens: auto;
+  hyphens: manual;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 .cp-public .hl-v3 h1[data-scale='xl'] { font-size: clamp(2.8rem, 8vw, 7.5rem); }
 .cp-public .hl-v3 h1[data-scale='lg'] { font-size: clamp(2.4rem, 6vw, 5.5rem); }

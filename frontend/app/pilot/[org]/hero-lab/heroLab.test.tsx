@@ -91,3 +91,19 @@ it('V3 JK-Verein (hero /jk/hero.jpg): Mosaik enthält /jk/team.jpg', () => {
   const html = renderToStaticMarkup(<HeroLab org={jkOrg} camps={[camp]} variant={3} />)
   expect(html).toContain('/jk/team.jpg')
 })
+
+// ── Headline-Skalierung bei langem Leitsatz ──
+
+const jk71Org: OrganizationPublic = {
+  ...org,
+  // 71 Zeichen — überschreitet die 48-Zeichen-Schwelle → headlineScale gibt 'md'
+  intro_heading: 'Trainiere wie ein Profi und erreiche dein volles Potenzial im Camp 2027',
+}
+
+it.each([1, 2, 3] as const)(
+  'Variante %i: JK-71-Zeichen-Leitsatz trägt data-scale="md"',
+  v => {
+    const html = renderToStaticMarkup(<HeroLab org={jk71Org} camps={[camp]} variant={v} />)
+    expect(html).toContain('data-scale="md"')
+  },
+)

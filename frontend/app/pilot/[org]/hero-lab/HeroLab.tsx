@@ -3,14 +3,7 @@
 import Image from 'next/image'
 import { Fragment, useEffect, useRef } from 'react'
 import type { CampPublic, OrganizationPublic } from '../../../lib/saasApi'
-
-// Replicated from ParentFlow.tsx — pure function, no import needed
-function headlineScale(text: string): 'xl' | 'lg' | 'md' {
-  const len = text.length
-  if (len <= 24) return 'xl'
-  if (len <= 48) return 'lg'
-  return 'md'
-}
+import { headlineScale } from '../ParentFlow'
 
 function campStats(camps: CampPublic[]) {
   return {
@@ -27,10 +20,10 @@ function orgCode(name: string): string {
 
 // ── Shared navigation pill ──
 
-function HlNav({ org, glass }: { org: OrganizationPublic; glass: boolean }) {
+function HlNav({ org, variant }: { org: OrganizationPublic; variant: 'glass' | 'dark' | 'light' }) {
   return (
     <nav
-      className={`hl-nav ${glass ? 'hl-nav-glass' : 'hl-nav-light'}`}
+      className={`hl-nav hl-nav-${variant}`}
       aria-label="Seitennavigation"
     >
       <div className="hl-nav-left">
@@ -188,7 +181,7 @@ function V1({ org, camps }: { org: OrganizationPublic; camps: CampPublic[] }) {
 
   return (
     <header className="hl-v1" ref={ref} lang="de">
-      <HlNav org={org} glass={true} />
+      <HlNav org={org} variant="dark" />
       <div className="hl-v1-bg">
         {hero && (
           <Image
@@ -356,11 +349,11 @@ function V2({ org, camps }: { org: OrganizationPublic; camps: CampPublic[] }) {
   return (
     <div className="hl-v2" ref={ref} lang="de">
       <header className="hl-v2-hero">
-        <HlNav org={org} glass={true} />
+        <HlNav org={org} variant="glass" />
         <div className="hl-v2-left">
           <div className="hl-v2-text">
             <span className="hl-sup-label">{org.name}</span>
-            <h1 className="hl-v2-h1" data-hl-split>{heading}</h1>
+            <h1 className="hl-v2-h1" data-hl-split data-scale={headlineScale(heading)}>{heading}</h1>
             {intro && <p className="hl-v2-intro">{intro}</p>}
             <div className="hl-btns">
               <button className="hl-btn-glass" type="button">Camps ansehen</button>
@@ -462,7 +455,7 @@ function V3({ org, camps: _camps }: { org: OrganizationPublic; camps: CampPublic
 
   return (
     <div className="hl-v3" ref={ref} lang="de">
-      <HlNav org={org} glass={true} />
+      <HlNav org={org} variant="glass" />
       <div className="hl-v3-in">
         <div className="hl-v3-headline">
           <span className="hl-sup-label">{org.name}</span>

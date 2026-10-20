@@ -58,10 +58,11 @@ it('does not promise a confirmation mail when no bank details are stored', () =>
   expect(html).toContain('kontakt@testverein.example')
 })
 
-it('announces no send-out the pilot cannot perform', () => {
+it('zeigt E-Mail-Bestätigungshinweis mit Eltern-Adresse', () => {
   const html = render()
-  expect(html).toContain('geht noch keine Bestätigungs-E-Mail raus')
-  expect(html).not.toContain('Infopaket')
+  expect(html).toContain('eva@example.de')
+  expect(html).toContain('Bestätigung')
+  expect(html).not.toContain('geht noch keine Bestätigungs-E-Mail raus')
 })
 
 it('separates the waitlist case from a reserved place', () => {

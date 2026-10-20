@@ -224,8 +224,12 @@ def send_registration_notification(
     parent_last_name: str,
     child_first_name: str,
     child_last_name: str,
+    notify_provider: bool = True,
 ) -> None:
-    """Best-effort notification after registration creation. Never raises."""
+    """Best-effort notification after registration creation. Never raises.
+
+    notify_provider=False is used by the parent-mail retry, so the provider
+    is informed exactly once per registration."""
     try:
         _do_send(
             registration_token=registration_token,
@@ -251,6 +255,8 @@ def send_registration_notification(
         except Exception:
             pass
 
+    if not notify_provider:
+        return
     _send_provider_notification(
         registration_token=registration_token,
         status=status,
@@ -286,4 +292,5 @@ def retry_registration_notification(
         parent_last_name=reg["parent_last_name"],
         child_first_name=reg["child_first_name"],
         child_last_name=reg["child_last_name"],
+        notify_provider=False,
     )

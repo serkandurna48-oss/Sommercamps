@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for app/notifications — mail provider, templates, and send/retry logic.
 
 All tests are unit tests: no real DB, no real network calls.
@@ -431,7 +431,7 @@ def test_retry_sends_if_not_yet_sent(monkeypatch, fake_provider):
     _patch(monkeypatch, reg=_reg(email_sent_at=None))
     sending.retry_registration_notification(_TOKEN, _ORG_ID)
 
-    assert len(fake_provider.sent) == 2  # parent + provider mail
+    assert len(fake_provider.sent) == 1  # retry: parent mail only, provider was informed at first send
 
 
 def test_retry_is_noop_when_already_sent(monkeypatch, fake_provider):
@@ -478,7 +478,7 @@ def test_retry_idempotent_double_call(monkeypatch, fake_provider):
     _patch(monkeypatch, reg=_reg(email_sent_at=datetime.now(timezone.utc)))
     sending.retry_registration_notification(_TOKEN, _ORG_ID)
 
-    assert len(real.sent) == 2  # first retry: parent + provider; second: noop
+    assert len(real.sent) == 1  # first retry: parent only; second: noop
     assert call_count[0] == 1  # _mark_sent called exactly once (parent mail)
 
 
@@ -578,7 +578,7 @@ def test_retry_reaches_registration_after_provider_switch(monkeypatch, fake_prov
     sending.retry_registration_notification(_TOKEN, _ORG_ID)
 
     assert marked == [_TOKEN], "retry must mark email_sent_at when a real provider is active"
-    assert len(real.sent) == 2  # parent + provider mail
+    assert len(real.sent) == 1  # retry: parent mail only
 
 
 # ---------------------------------------------------------------------------
@@ -980,3 +980,33 @@ def test_provider_notification_uses_organization_id(monkeypatch, fake_provider):
     assert len(query_args) == 1
     assert query_args[0][0] == _ORG_ID
     assert query_args[0][1] == _CAMP_ID
+
+
+# --- Judge F2: Retry der Elternmail informiert den Anbieter nicht erneut ------
+
+def test_retry_does_not_notify_provider_again(monkeypatch):
+    from uuid import uuid4 as _u
+    calls = {"provider": 0, "do_send": 0}
+    monkeypatch.setattr(sending, "_fetch_registration", lambda tok, org: {
+        "email_sent_at": None, "status": "registered", "camp_id": _u(),
+        "start_date": date(2027, 7, 1), "end_date": date(2027, 7, 3),
+        "parent_email": "p@campspilot.example", "parent_first_name": "A", "parent_last_name": "B",
+        "child_first_name": "C", "child_last_name": "D",
+    })
+    monkeypatch.setattr(sending, "_do_send", lambda **kw: calls.__setitem__("do_send", calls["do_send"] + 1))
+    monkeypatch.setattr(sending, "_send_provider_notification", lambda **kw: calls.__setitem__("provider", calls["provider"] + 1))
+    sending.retry_registration_notification(_u(), _u())
+    assert calls == {"provider": 0, "do_send": 1}
+
+
+def test_first_send_notifies_provider_once(monkeypatch):
+    from uuid import uuid4 as _u
+    calls = {"provider": 0}
+    monkeypatch.setattr(sending, "_do_send", lambda **kw: None)
+    monkeypatch.setattr(sending, "_send_provider_notification", lambda **kw: calls.__setitem__("provider", calls["provider"] + 1))
+    sending.send_registration_notification(
+        registration_token=_u(), status="registered", organization_id=_u(), camp_id=_u(),
+        start_date=date(2027, 7, 1), end_date=date(2027, 7, 3), parent_email="p@campspilot.example",
+        parent_first_name="A", parent_last_name="B", child_first_name="C", child_last_name="D",
+    )
+    assert calls["provider"] == 1

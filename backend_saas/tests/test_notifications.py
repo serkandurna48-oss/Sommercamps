@@ -226,6 +226,88 @@ def test_waitlist_mail_body_has_no_deadline_promise():
     assert "48" not in msg.html_content
 
 
+def test_registered_mail_with_iban_shows_amount_and_recipient():
+    msg = build_registration_mail(
+        status="registered",
+        org_name="JK Academy",
+        org_email="info@jk.example",
+        org_phone=None,
+        camp_title="Sommercamp 2027",
+        camp_start=date(2027, 7, 5),
+        camp_end=date(2027, 7, 9),
+        parent_name="Max Mustermann",
+        parent_email="max@example.com",
+        child_name="Lena Mustermann",
+        payment_reference="CP-ABCD1234",
+        iban="DE89370400440532013000",
+        price_cents=14900,
+        currency="EUR",
+    )
+    assert "149" in msg.html_content
+    assert "EUR" in msg.html_content
+    assert "JK Academy" in msg.html_content
+    assert "DE89370400440532013000" in msg.html_content
+    assert "CP-ABCD1234" in msg.html_content
+
+
+def test_registered_mail_without_iban_shows_provider_hint():
+    msg = build_registration_mail(
+        status="registered",
+        org_name="JK Academy",
+        org_email="info@jk.example",
+        org_phone=None,
+        camp_title="Sommercamp 2027",
+        camp_start=date(2027, 7, 5),
+        camp_end=date(2027, 7, 9),
+        parent_name="Max Mustermann",
+        parent_email="max@example.com",
+        child_name="Lena Mustermann",
+        payment_reference="CP-ABCD1234",
+        iban=None,
+    )
+    assert "Zahlungsdetails" in msg.html_content
+    assert "JK Academy" in msg.html_content
+    assert "CP-ABCD1234" not in msg.html_content
+
+
+def test_waitlist_mail_body_has_no_iban_block():
+    msg = build_registration_mail(
+        status="waitlist",
+        org_name="JK Academy",
+        org_email="info@jk.example",
+        org_phone=None,
+        camp_title="Sommercamp 2027",
+        camp_start=date(2027, 7, 5),
+        camp_end=date(2027, 7, 9),
+        parent_name="Max Mustermann",
+        parent_email="max@example.com",
+        child_name="Lena Mustermann",
+        payment_reference="CP-ABCD1234",
+        iban="DE89370400440532013000",
+    )
+    assert "IBAN" not in msg.html_content
+    assert "DE89370400440532013000" not in msg.html_content
+
+
+def test_html_escaping_of_malicious_child_name():
+    msg = build_registration_mail(
+        status="registered",
+        org_name="JK Academy",
+        org_email="info@jk.example",
+        org_phone=None,
+        camp_title="Sommercamp 2027",
+        camp_start=date(2027, 7, 5),
+        camp_end=date(2027, 7, 9),
+        parent_name="Max Mustermann",
+        parent_email="max@example.com",
+        child_name='<script>alert("xss")</script>',
+        payment_reference="CP-ABCD1234",
+        iban="DE89370400440532013000",
+    )
+    assert "<script>" not in msg.html_content
+    assert "&lt;script&gt;" in msg.html_content
+
+
 # ---------------------------------------------------------------------------
 # send_registration_notification
 # ---------------------------------------------------------------------------

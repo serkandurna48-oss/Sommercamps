@@ -33,6 +33,8 @@ def build_registration_mail(
     child_name: str,
     payment_reference: str,
     iban: Optional[str],
+    price_cents: Optional[int] = None,
+    currency: Optional[str] = None,
 ) -> MailMessage:
     # Escape all user-supplied strings before interpolating into HTML.
     e_org_name = escape(org_name)
@@ -49,12 +51,23 @@ def build_registration_mail(
 
     if status == "registered":
         subject = f"Anmeldebestätigung – {camp_title}"
-        payment_block = (
-            f"<p>Verwendungszweck: <strong>{e_payment_ref}</strong>"
-            f"<br>IBAN: <strong>{e_iban}</strong></p>"
-            if e_iban
-            else ""
-        )
+        if e_iban:
+            amount_line = ""
+            if price_cents is not None and currency:
+                e_cur = escape(currency)
+                formatted = f"{price_cents // 100},{price_cents % 100:02d}"
+                amount_line = f"<p>Betrag: <strong>{formatted}&nbsp;{e_cur}</strong></p>\n"
+            payment_block = (
+                f"{amount_line}"
+                f"<p>Empfänger: <strong>{e_org_name}</strong>"
+                f"<br>IBAN: <strong>{e_iban}</strong>"
+                f"<br>Verwendungszweck: <strong>{e_payment_ref}</strong></p>"
+            )
+        else:
+            payment_block = (
+                f"<p>Die Zahlungsdetails erhältst du direkt von {e_org_name}.<br>"
+                f"E-Mail: {e_org_email}{phone_line}</p>"
+            )
         html = f"""\
 <p>Hallo {e_parent_name},</p>
 <p>die Anmeldung von <strong>{e_child_name}</strong> für <strong>{e_camp_title}</strong>
@@ -69,7 +82,7 @@ E-Mail: {e_org_email}{phone_line}</p>
 <p>Hallo {e_parent_name},</p>
 <p>die Anmeldung von <strong>{e_child_name}</strong> für <strong>{e_camp_title}</strong>
 ({dates}) ist bei uns eingegangen. Das Camp ist aktuell ausgebucht –
-{e_child_name} steht auf der Warteliste.</p>
+{e_child_name} steht auf der Warteliste. Es sind noch keine Kosten fällig.</p>
 <p>Sollte ein Platz frei werden, meldet sich {e_org_name} direkt bei dir.</p>
 <p>Bei Fragen wende dich direkt an {e_org_name}:<br>
 E-Mail: {e_org_email}{phone_line}</p>

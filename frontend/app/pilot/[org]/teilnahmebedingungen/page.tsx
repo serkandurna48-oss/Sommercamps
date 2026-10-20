@@ -31,9 +31,9 @@ export default async function OrgTeilnahmebedingungenPage({ params }: { params: 
           <p className="legal-toc-label">Inhalt</p>
           <ol>
             <li><a href="#tb-1">Geltungsbereich</a></li>
-            <li><a href="#tb-2">Anmeldung und Vertrag</a></li>
+            <li><a href="#tb-2">Anmeldung</a></li>
             <li><a href="#tb-3">Zahlung</a></li>
-            <li><a href="#tb-4">Rücktritt und Stornierung</a></li>
+            <li><a href="#tb-4">Stornierung</a></li>
             <li><a href="#tb-5">Haftung und Verhalten</a></li>
           </ol>
         </nav>
@@ -42,17 +42,16 @@ export default async function OrgTeilnahmebedingungenPage({ params }: { params: 
           <section id="tb-1">
             <h2>1. Geltungsbereich</h2>
             <p>
-              Diese Teilnahmebedingungen gelten für alle Fußball-Feriencamps, die von {entityName}
-              über das CampsPilot-Anmeldesystem angeboten werden. Mit der Anmeldung erkennt der
-              gesetzliche Vertreter des Teilnehmers diese Bedingungen an.
+              Diese Seite beschreibt den Ablauf für Anmeldungen zu Fußball-Feriencamps von{' '}
+              {entityName} über das CampsPilot-Anmeldesystem.
             </p>
           </section>
 
           <section id="tb-2">
-            <h2>2. Anmeldung und Vertrag</h2>
+            <h2>2. Anmeldung</h2>
             <p>
-              Die Anmeldung erfolgt ausschließlich über das Online-Formular. Ein verbindlicher
-              Vertrag kommt mit Eingang der Anmeldebestätigung per E-Mail zustande. Die Teilnahme
+              Die Anmeldung erfolgt ausschließlich über das Online-Formular. Nach Eingang der
+              vollständigen Anmeldung wird eine Bestätigung per E-Mail verschickt. Die Teilnahme
               ist auf die angegebene Altersgruppe beschränkt.
             </p>
             <p>
@@ -65,23 +64,21 @@ export default async function OrgTeilnahmebedingungenPage({ params }: { params: 
           <section id="tb-3">
             <h2>3. Zahlung</h2>
             <p>
-              Der Teilnahmebetrag ist nach Erhalt der Anmeldebestätigung fällig. Zahlungsdetails
-              werden in der Bestätigungsmail mitgeteilt. Bei Nichtzahlung innerhalb der angegebenen
-              Frist kann der Platz anderweitig vergeben werden.
+              Der Teilnahmebetrag und die Zahlungsdetails werden in der Bestätigungs-E-Mail
+              mitgeteilt. Maßgeblich ist die dort genannte Angabe.
             </p>
           </section>
 
           <section id="tb-4">
-            <h2>4. Rücktritt und Stornierung</h2>
+            <h2>4. Stornierung</h2>
             <p>
-              Ein Rücktritt ist schriftlich per E-Mail an {entityName} zu erklären. Bei Rücktritt
-              bis 4 Wochen vor Camp-Beginn wird der Teilnahmebetrag abzüglich einer
-              Bearbeitungsgebühr von 20 € erstattet. Bei späterem Rücktritt oder Nichterscheinen
-              wird der volle Betrag einbehalten, sofern kein Ersatzteilnehmer gestellt werden kann.
+              Ein Rücktritt ist schriftlich per E-Mail an {entityName} zu erklären.
             </p>
             <p>
-              Bei Absage eines Camps durch {entityName} wird der vollständige Teilnahmebetrag
-              erstattet. Weitergehende Ansprüche bestehen nicht.
+              Es gelten die Teilnahme- und Stornobedingungen von {entityName}. Bei Fragen wenden
+              Sie sich direkt an {entityName}:{' '}
+              <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>
+              {org.contact_phone ? ` oder ${org.contact_phone}` : ''}.
             </p>
           </section>
 

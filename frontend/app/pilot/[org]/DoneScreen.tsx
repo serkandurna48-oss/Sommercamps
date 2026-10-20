@@ -158,7 +158,7 @@ export default function DoneScreen({
             </div>
             <div className="txt">
               <b>{waitlisted ? 'Auf der Warteliste eingetragen' : 'Anmeldung gespeichert'}</b>
-              <span>Notieren Sie sich diese Seite — im Pilotbetrieb geht noch keine Bestätigungs-E-Mail raus.</span>
+              <span>Wir haben dir eine Bestätigung an {parentEmail} geschickt. Schau auch im Spam-Ordner nach.</span>
             </div>
           </li>
           {waitlisted ? (

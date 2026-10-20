@@ -91,9 +91,8 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
           <section id="ds-4">
             <h2>4. Speicherung</h2>
             <p>
-              Die Daten liegen in einer Supabase-Postgres-Datenbank (EU-Hosting). Lesender/schreibender
-              Zugriff ist auf den Anmeldeserver beschränkt — es gibt keinen direkten Browserzugriff auf
-              die Anmeldedaten.
+              Die Daten liegen in einer Supabase-Postgres-Datenbank (EU-Hosting). Zugriff haben der
+              Anmeldeserver und angemeldete, berechtigte Verantwortliche des jeweiligen Anbieters.
             </p>
           </section>
 
@@ -110,7 +109,19 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
             <h2>6. Weitergabe an Dritte</h2>
             <p>
               Die Daten werden nicht verkauft oder für Werbezwecke genutzt. Eine Weitergabe erfolgt
-              nur, wenn dazu eine gesetzliche Verpflichtung besteht.
+              an folgende Dienstleister zur Durchführung der Anmeldung:
+            </p>
+            <ul>
+              <li>
+                <strong>Brevo</strong> (Sendinblue SAS, 55 rue d&apos;Amsterdam, 75008 Paris,
+                Frankreich) – für den Versand der Bestätigungsmail. Übermittelt werden Name und
+                E-Mail-Adresse der Eltern sowie Vorname und Nachname des Kindes, Camp und Termin.
+                Keine Geburtsdaten, Allergien oder medizinischen Hinweise.
+              </li>
+            </ul>
+            <p>
+              Darüber hinaus erfolgt eine Weitergabe nur, wenn dazu eine gesetzliche Verpflichtung
+              besteht.
             </p>
           </section>
 

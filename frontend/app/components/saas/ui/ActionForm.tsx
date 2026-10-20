@@ -41,12 +41,17 @@ export default function ActionForm({
   /** Wenn gesetzt: Text der Bestätigungsfrage. Zeigt erst nach Klick. */
   requireConfirm?: string
 }) {
-  const [state, formAction, pending] = useActionState(action, initialActionFormState)
+  // Jede abgeschlossene Aktion liefert ein neues State-Objekt (Kopie), damit
+  // der Reset unten auch bei identischem Erfolgs-/Fehlertext greift.
+  const [state, formAction, pending] = useActionState(
+    async (prev: ActionFormState, formData: FormData) => ({ ...(await action(prev, formData)) }),
+    initialActionFormState,
+  )
   const [confirming, setConfirming] = useState(false)
 
   useEffect(() => {
     if (state.success || state.error) setConfirming(false)
-  }, [state.success, state.error])
+  }, [state])
 
   const effectiveConfirming = !!requireConfirm && confirming
 

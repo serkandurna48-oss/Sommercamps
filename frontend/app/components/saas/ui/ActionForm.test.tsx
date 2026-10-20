@@ -74,6 +74,9 @@ it('zwei aufeinanderfolgende Beförderungen verlangen je eine eigene Bestätigun
   expect(container.querySelector('form')).not.toBeNull()
   await submitForm()
   expect(action).toHaveBeenCalledTimes(2)
+
+  // Gleicher Erfolgstext wie zuvor: Bestätigungszustand trotzdem zurückgesetzt
+  expect(container.querySelector('form')).toBeNull()
 })
 
 it('nach Fehler ist kein unbestätigter Submit erreichbar', async () => {

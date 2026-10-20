@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useEffect, useState } from 'react'
 import Button from './Button'
 
 export interface ActionFormState {
@@ -20,6 +20,8 @@ export const initialActionFormState: ActionFormState = { error: null, success: n
  * eine Inline-Bestätigungsfrage — zweiter Klick löst die Aktion aus.
  * Verhindert unbeabsichtigte Klicks bei nicht rückgängig zu machenden
  * Aktionen (Warteliste aufrücken, Zahlung erlassen).
+ * Der Bestätigungszustand wird nach jeder abgeschlossenen Aktion
+ * (Erfolg, Fehler, Abbrechen) zurückgesetzt.
  */
 export default function ActionForm({
   action,
@@ -39,20 +41,37 @@ export default function ActionForm({
   /** Wenn gesetzt: Text der Bestätigungsfrage. Zeigt erst nach Klick. */
   requireConfirm?: string
 }) {
-  const [state, formAction, pending] = useActionState(action, initialActionFormState)
+  // Jede abgeschlossene Aktion liefert ein neues State-Objekt (Kopie), damit
+  // der Reset unten auch bei identischem Erfolgs-/Fehlertext greift.
+  const [state, formAction, pending] = useActionState(
+    async (prev: ActionFormState, formData: FormData) => ({ ...(await action(prev, formData)) }),
+    initialActionFormState,
+  )
   const [confirming, setConfirming] = useState(false)
 
-  // Nach erfolgter Aktion fällt effectiveConfirming auf false zurück, ohne
-  // setState im Effect aufzurufen — state.success übersteuert confirming rein
-  // visuell; beim nächsten Render-Zyklus (Server-Revalidierung) wird das
-  // Component sowieso neu gemountet.
-  const effectiveConfirming = !!requireConfirm && confirming && !state.success
+  useEffect(() => {
+    if (state.success || state.error) setConfirming(false)
+  }, [state])
 
-  if (requireConfirm && !effectiveConfirming && !state.success && !state.error && !pending) {
+  const effectiveConfirming = !!requireConfirm && confirming
+
+  if (requireConfirm && !confirming) {
     return (
-      <Button type="button" variant={variant} brandStrong={brandStrong} brandOn={brandOn} onClick={() => setConfirming(true)}>
-        {label}
-      </Button>
+      <div className="flex flex-col items-start gap-2">
+        <Button type="button" variant={variant} brandStrong={brandStrong} brandOn={brandOn} onClick={() => setConfirming(true)}>
+          {label}
+        </Button>
+        {state.error && (
+          <p className="cp-confirm-pop cp-chip motion-reduce:animate-none" style={{ color: 'var(--cp-error)' }} role="alert">
+            {state.error}
+          </p>
+        )}
+        {state.success && (
+          <p className="cp-confirm-pop cp-chip motion-reduce:animate-none" style={{ color: 'var(--cp-ok)' }} role="status">
+            {state.success}
+          </p>
+        )}
+      </div>
     )
   }
 

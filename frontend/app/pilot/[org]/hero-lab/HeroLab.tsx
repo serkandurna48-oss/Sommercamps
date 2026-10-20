@@ -34,6 +34,7 @@ function HlNav({ org, variant }: { org: OrganizationPublic; variant: 'glass' | '
               alt={org.name}
               width={32}
               height={32}
+              unoptimized
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           ) : (

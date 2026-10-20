@@ -140,7 +140,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
               <div className="nav-left">
                 <span className="nav-logo-trad">
                   {org.logo_url
-                    ? <Image src={org.logo_url} alt={org.name} width={32} height={32} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <Image src={org.logo_url} alt={org.name} width={32} height={32} unoptimized style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : shortCode}
                 </span>
                 <span className="nav-name-trad">{org.name}</span>
@@ -196,7 +196,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
               <div className="nav-left">
                 <span className="nav-logo">
                   {org.logo_url
-                    ? <Image src={org.logo_url} alt={org.name} width={36} height={36} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    ? <Image src={org.logo_url} alt={org.name} width={36} height={36} unoptimized style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     : shortCode}
                 </span>
                 <span className="nav-name">{org.name}</span>
@@ -249,7 +249,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
               <div className="nav-left">
                 <span className="nav-logo-trad">
                   {org.logo_url
-                    ? <Image src={org.logo_url} alt={org.name} width={32} height={32} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <Image src={org.logo_url} alt={org.name} width={32} height={32} unoptimized style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : shortCode}
                 </span>
                 <span className="nav-name-trad">{org.name}</span>

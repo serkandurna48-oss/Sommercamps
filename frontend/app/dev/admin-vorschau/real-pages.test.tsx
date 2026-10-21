@@ -46,7 +46,7 @@ beforeEach(() => {
 
 for (const [name, Page] of Object.entries({ DashboardPage, CampPage, CampCreatePage, CampConfigPage, PaymentsPage, WaitlistPage, TasksPage, ConfigPage })) {
   it(`${name} renders the shared screen with its authenticated data`, async () => {
-    const html = renderToStaticMarkup(await Page({ params }))
+    const html = renderToStaticMarkup(await (Page as (props: { params: typeof params; searchParams: Promise<{ created?: string }> }) => Promise<React.ReactElement>)({ params, searchParams: Promise.resolve({}) }))
     expect(html).toContain('JK Performance Academy')
     expect(html).toContain('aria-label="Bereiche"')
     expect(html).toContain('href="/pilot/jk-performance-academy/')

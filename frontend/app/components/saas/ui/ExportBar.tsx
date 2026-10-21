@@ -84,7 +84,6 @@ export default function ExportBar<T>({
 
   return (
     <div className="cp-noprint relative mb-4" ref={rootRef}>
-      {summary && <div className="mb-2 text-sm" aria-live="polite">{summary}</div>}
       <Button
         ref={triggerRef}
         type="button"
@@ -97,6 +96,8 @@ export default function ExportBar<T>({
         Exportieren
         <IconChevronDown className={`transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`} />
       </Button>
+
+      {summary && <div className="mt-2 text-sm" aria-live="polite">{summary}</div>}
 
       {open && (
         <div

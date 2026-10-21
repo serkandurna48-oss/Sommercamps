@@ -502,3 +502,46 @@
 .cp-confirm-pop {
   animation: cp-confirm-pop 260ms cubic-bezier(0.2, 0, 0, 1);
 }
+
+/* Shared admin geometry: cards, metrics, rows and fields. */
+.cp-scope { --cp-card-padding: 20px; --cp-card-gap: 16px; }
+.cp-scope .cp-card, .cp-scope .cp-roster {
+  min-width: 0; border: 1px solid var(--cp-line); border-radius: var(--cp-r-card);
+  padding: var(--cp-card-padding); background: var(--cp-surface);
+}
+.cp-scope .cp-card-list, .cp-scope .cp-roster { padding: 0; overflow: clip; }
+.cp-stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--cp-card-gap); }
+.cp-stat-tile { container-type: inline-size; }
+.cp-stat-tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.cp-stat-value { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: clamp(18px, 15cqi, 34px); line-height: 1.2; }
+.cp-stat-money .cp-stat-value { font-size: clamp(14px, 11cqi, 28px); letter-spacing: -0.3px; font-stretch: 100%; }
+.cp-stat-amount { white-space: nowrap; }
+.cp-list-row { display: grid; width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: 'main main' 'secondary secondary' 'status action'; gap: 12px; align-items: start; text-align: left; }
+.cp-row-main { grid-area: main; }
+.cp-row-secondary { grid-area: secondary; }
+.cp-row-status { grid-area: status; }
+.cp-row-action { grid-area: action; justify-self: end; }
+.cp-list-row > * { min-width: 0; overflow-wrap: anywhere; }
+.cp-row-action { max-width: 100%; }
+.cp-row-action button, .cp-row-action a { max-width: 100%; white-space: normal; }
+.cp-row-status:empty, .cp-row-secondary:empty, .cp-row-action:empty { display: none; }
+.cp-list-row-padded { padding: var(--cp-card-padding); }
+.cp-participant-status { display: flex; flex-wrap: wrap; gap: 8px; }
+.cp-participant-summary { grid-template-columns: minmax(0, 1fr) 20px; grid-template-areas: 'main action' 'secondary action' 'status action'; }
+.cp-participant-summary .cp-row-action { align-self: center; }
+.cp-scope .cp-participant-trigger { display: block; padding: 0; border-color: transparent; background: transparent; }
+.cp-input, .cp-scope main input:not([type='checkbox']):not([type='radio']):not([type='hidden']), .cp-scope main select {
+  min-height: 48px; min-width: 0; max-width: 100%; font-size: 16px; line-height: 22px;
+  border-radius: var(--cp-r-field);
+}
+.cp-field-control { position: relative; min-width: 0; }
+.cp-field-control input { padding-right: 76px; }
+.cp-field-suffix { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--cp-muted); pointer-events: none; }
+@media (min-width: 1024px) {
+  .cp-stat-grid { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); grid-template-columns: none; }
+  .cp-stat-tile:last-child:nth-child(odd) { grid-column: auto; }
+  .cp-list-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 136px 192px; grid-template-areas: 'main secondary status action'; gap: 16px; align-items: center; }
+  .cp-row-action { justify-self: start; }
+  .cp-participant-summary { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 248px 24px; }
+  .cp-participant-status { display: grid; grid-template-columns: repeat(2, 116px); }
+}

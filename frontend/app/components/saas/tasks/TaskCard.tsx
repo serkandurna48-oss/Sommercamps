@@ -1,5 +1,7 @@
 'use client'
 
+import ListRow from '../ui/ListRow'
+import StatusChip from '../data/StatusChip'
 import { useState } from 'react'
 import { de } from '../../../lib/i18n/de'
 import { taskHref, type Task } from '../dashboardLogic'
@@ -30,23 +32,21 @@ export default function TaskCard({ task, orgSlug, brandStrong, brandOn }: { task
 
   return (
     <div
-      className="rounded-[var(--cp-r-card)] border p-6"
+      className="cp-card"
       style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}
     >
-      <p className={`cp-heading ${done ? 'line-through' : ''}`} style={{ color: done ? 'var(--cp-muted)' : 'var(--cp-ink)' }}>
+      <ListRow main={<p className={`cp-heading ${done ? 'line-through' : ''}`} style={{ color: done ? 'var(--cp-muted)' : 'var(--cp-ink)' }}>
         {copy.title}
-      </p>
-      <p className="cp-body mt-1.5" style={{ color: 'var(--cp-muted)' }}>
+      </p>} secondary={<p className="cp-body" style={{ color: 'var(--cp-muted)' }}>
         {copy.hint}
-      </p>
-      <div className="mt-5 flex flex-wrap gap-3">
+      </p>} status={<StatusChip label={done ? 'Erledigt' : 'Offen'} tone={done ? 'ok' : 'pending'} />} action={<div className="flex flex-wrap gap-3">
         <ButtonLink href={taskHref(orgSlug, task)} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
           {de.tasks.review}
         </ButtonLink>
         <Button variant="secondary" onClick={() => setDone(v => !v)} aria-pressed={done}>
           {de.tasks.markDone}
         </Button>
-      </div>
+      </div>} />
     </div>
   )
 }

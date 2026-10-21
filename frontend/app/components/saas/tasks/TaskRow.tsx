@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import ListRow from '../ui/ListRow'
+import StatusChip from '../data/StatusChip'
 import { ButtonLink } from '../ui/Button'
 import { de } from '../../../lib/i18n/de'
 import { taskHref, type Task } from '../dashboardLogic'
@@ -23,13 +25,12 @@ export default function TaskRow({ task, orgSlug, brandStrong, brandOn }: { task:
 
   return (
     <div
-      className={`flex items-center justify-between gap-4 py-4 ${brandStrong ? 'rounded-[var(--cp-r-card)] border px-5' : 'border-t px-1'}`}
+      className={brandStrong ? 'cp-card' : 'border-t cp-list-row-padded'}
       style={{ borderColor: 'var(--cp-line-2)', background: 'var(--cp-surface)' }}
     >
-      <p className={`cp-body ${done ? 'line-through' : ''}`} style={{ color: done ? 'var(--cp-muted)' : 'var(--cp-ink-2)' }}>
+      <ListRow main={<p className={`cp-body ${done ? 'line-through' : ''}`} style={{ color: done ? 'var(--cp-muted)' : 'var(--cp-ink-2)' }}>
         {taskTitle(task)}
-      </p>
-      <ButtonLink
+      </p>} secondary={<p className="cp-chip">{task.campTitle}</p>} status={<StatusChip label={done ? 'Angesehen' : 'Offen'} tone={done ? 'ok' : 'pending'} />} action={<ButtonLink
         href={taskHref(orgSlug, task)}
         onClick={() => setDone(true)}
         className="shrink-0"
@@ -38,7 +39,7 @@ export default function TaskRow({ task, orgSlug, brandStrong, brandOn }: { task:
         brandOn={brandOn}
       >
         {de.tasks.review}
-      </ButtonLink>
+      </ButtonLink>} />
     </div>
   )
 }

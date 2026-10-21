@@ -8,6 +8,7 @@ import { setPaymentStatusAction } from '../actions/paymentActions'
 import ActionForm from '../ui/ActionForm'
 import type { ActionFormState } from '../ui/ActionForm'
 import Button from '../ui/Button'
+import ListRow from '../ui/ListRow'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from './StatusChip'
 
 export default function PaymentRow({
@@ -44,12 +45,8 @@ export default function PaymentRow({
   const markRefunded = setPaymentStatusAction.bind(null, orgSlug, camp.slug, registration.registration_token, 'refunded', de.paymentsPage.markRefundedSuccess)
 
   return (
-    <div
-      className="cp-ledger-row flex flex-col gap-3 border-t px-5 py-3.5 md:flex-row md:items-center md:justify-between md:gap-4"
-      data-status={registration.payment_status}
-      style={{ borderTopColor: 'var(--cp-line-2)' }}
-    >
-      <div className="min-w-0">
+    <div className="cp-ledger-row border-t" data-status={registration.payment_status} style={{ borderTopColor: 'var(--cp-line-2)' }}>
+      <ListRow className="cp-list-row-padded" main={<div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono font-semibold" style={{ color: 'var(--cp-ink)' }}>{registration.payment_reference}</span>
           <Button type="button" variant="secondary" aria-label={`Verwendungszweck ${registration.payment_reference} kopieren`} onClick={copyReference}>
@@ -60,13 +57,10 @@ export default function PaymentRow({
         <p className="cp-subheading" style={{ color: 'var(--cp-ink)' }}>
           {registration.child_first_name} {registration.child_last_name} · {camp.title}
         </p>
-        <p className="cp-chip mt-0.5 truncate" style={{ color: 'var(--cp-muted)' }}>
-          {registration.parent_first_name} {registration.parent_last_name} · {registration.parent_email}
-        </p>
-      </div>
 
-      <div className="flex flex-wrap items-center gap-3 md:flex-col md:items-end md:gap-1.5">
-        <div className="flex items-center gap-3">
+      </div>} secondary={        <p className="cp-chip mt-0.5 truncate" style={{ color: 'var(--cp-muted)' }}>
+          {registration.parent_first_name} {registration.parent_last_name} · {registration.parent_email}
+        </p>} status={<div className="flex flex-col items-start gap-2">
           <span className="cp-num cp-subheading shrink-0" style={{ color: 'var(--cp-ink)' }}>
             {formatEuro(camp.price_cents, camp.currency)}
           </span>
@@ -81,9 +75,7 @@ export default function PaymentRow({
               dot
             />
           )}
-        </div>
-
-        {isOpenPayment(registration) && (
+        </div>} action={<>        {isOpenPayment(registration) && (
           <div className="flex flex-wrap items-center gap-2">
             <ActionForm
               action={markPaid}
@@ -111,8 +103,7 @@ export default function PaymentRow({
             variant="danger"
             requireConfirm="Bereits erfolgte Rückzahlung als erstattet markieren? CampsPilot überweist kein Geld."
           />
-        )}
-      </div>
+        )}</>} />
     </div>
   )
 }

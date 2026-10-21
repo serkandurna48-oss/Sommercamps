@@ -4,7 +4,7 @@ import { type TodayEntry } from '../registrationDates'
 
 export default function TodayRegistrations({ entries, orgSlug, fullList = false }: { entries: TodayEntry[]; orgSlug: string; fullList?: boolean }) {
   return (
-    <section className="mb-8 rounded-[var(--cp-r-card)] border p-4 md:p-6" style={{ background: 'var(--cp-surface)', borderColor: 'var(--cp-line)' }} aria-labelledby="today-registrations">
+    <section className="mb-8 cp-card" style={{ background: 'var(--cp-surface)', borderColor: 'var(--cp-line)' }} aria-labelledby="today-registrations">
       <h2 id="today-registrations" className="cp-heading">Heute neu: {entries.length} Anmeldungen</h2>
       {entries.length === 0 ? (
         <p className="cp-body mt-3">Heute noch keine neuen Anmeldungen</p>

@@ -39,7 +39,7 @@ export default function PublishToggle({
   return (
     <div
       id="publication"
-      className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--cp-r-card)] border p-5"
+      className="flex flex-wrap items-center justify-between gap-4 cp-card"
       style={{
         borderColor: published ? 'var(--cp-field-line)' : 'var(--cp-error-line)',
         background: published ? 'var(--cp-surface)' : 'var(--cp-error-bg)',

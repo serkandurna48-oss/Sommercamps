@@ -81,7 +81,7 @@ export default function TaskFilterList({
       {filtered.length === 0 ? (
         <EmptyState title={de.tasksPage.emptyFiltered} />
       ) : (
-        <div className="rounded-[var(--cp-r-card)] border px-1" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
+        <div className="cp-card cp-card-list" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
           {filtered.map(t => (
             <TaskRow key={t.id} task={t} orgSlug={orgSlug} />
           ))}

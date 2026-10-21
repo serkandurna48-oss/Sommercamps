@@ -1,4 +1,4 @@
-﻿import type { CampAdmin, OrganizationAdmin, RegistrationAdmin } from '../../lib/saasAdminApi'
+import type { CampAdmin, OrganizationAdmin, RegistrationAdmin } from '../../lib/saasAdminApi'
 
 // All people and contact details are invented; no production data is used.
 export const organization: OrganizationAdmin = {
@@ -41,7 +41,7 @@ export const registrations: RegistrationAdmin[] = firstNames.map((name, i) => {
   const cancelled = i === 26 || i === 27
   const waiting = i >= 16 && i < 20
   return {
-    id: `preview-registration-${i + 1}`, registration_token: `preview-token-${i + 1}`,
+    id: `preview-registration-${i + 1}`, registration_token: `preview-token-${i + 1}`, payment_reference: `CP-PV${String(i + 1).padStart(6, '0')}`,
     status: cancelled ? 'cancelled' : waiting ? 'waitlist' : i % 3 === 0 ? 'registered' : 'confirmed',
     payment_status: cancelled ? (i === 26 ? 'refunded' : 'cancelled') : waiting ? 'open' : i % 5 === 0 ? 'waived' : i % 3 === 0 ? 'open' : 'paid',
     child_first_name: name, child_last_name: lastNames[i % lastNames.length],

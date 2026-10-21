@@ -128,7 +128,7 @@ def test_foreign_tokens_cannot_be_used_through_an_authorized_org_path(real_db, m
         assert promoted.status_code == 200
         assert promoted.json()["promoted"] is None
         exports = (
-            (f"{camp_path}/export.xlsx", ("participants", "payments", "waitlist")),
+            (f"{camp_path}/export.xlsx", ("participants", "payments", "waitlist", "daylist")),
             (f"{base}/export.xlsx", ("payments", "waitlist")),
         )
         for endpoint, views in exports:

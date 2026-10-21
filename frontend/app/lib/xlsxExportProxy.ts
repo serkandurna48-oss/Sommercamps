@@ -31,7 +31,7 @@ export async function proxyXlsxExport(
   const view = request.nextUrl.searchParams.get('view') ?? defaultView
   const tokens = request.nextUrl.searchParams.get('tokens')
   const upstreamParams = new URLSearchParams({ view })
-  if (tokens) upstreamParams.set('tokens', tokens)
+  if (tokens !== null) upstreamParams.set('tokens', tokens)
 
   const upstream = await fetch(`${baseUrl()}${upstreamPath}?${upstreamParams}`, {
     headers: { Authorization: `Bearer ${token}` },

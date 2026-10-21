@@ -2,7 +2,7 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
+import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { de, publicUI } from '../../../lib/i18n/de'
 import { cancelRegistrationAction, promoteWaitlistAction } from '../actions/waitlistActions'
 import RegistrationActionFeedback from '../ui/RegistrationActionFeedback'
@@ -17,7 +17,7 @@ vi.mock('../actions/waitlistActions', () => ({
 vi.mock('../actions/paymentActions', () => ({ setPaymentStatusAction: vi.fn() }))
 
 const child: RegistrationAdmin = {
-  id: 'child', registration_token: 'child-token', status: 'registered', payment_status: 'paid',
+  id: 'child', registration_token: 'child-token', payment_reference: 'CP-CHILDTOK', status: 'registered', payment_status: 'paid',
   parent_first_name: 'Test', parent_last_name: 'Parent', parent_email: 'parent@example.com', parent_phone: '123',
   child_first_name: 'Mia', child_last_name: 'Test', child_birth_date: '2018-05-10',
   emergency_contact_name: null, emergency_contact_phone: null, medical_notes: null, allergies: null,
@@ -55,7 +55,7 @@ async function submit() {
 }
 async function renderParticipants(registrations = [child]) {
   await act(() => root.render(<ParticipantList registrations={registrations} orgSlug="club" campSlug="camp"
-    campTitle="Sommercamp" brandColor="#112233" />))
+    camp={{ slug: 'camp', title: 'Sommercamp', price_cents: 14900 } as unknown as CampAdmin} brandColor="#112233" />))
 }
 async function renderWaitlist(waitlisted = [waiting], registeredCount = 1) {
   await act(() => root.render(

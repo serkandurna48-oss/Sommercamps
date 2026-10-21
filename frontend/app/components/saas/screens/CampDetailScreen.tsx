@@ -48,7 +48,7 @@ export default function CampDetailScreen({ orgSlug, campSlug, org, camp, registr
           <StatCard label="Aufgaben" value={String(openTaskCount)} numericValue={openTaskCount} />
         </div>
 
-        <ParticipantList registrations={registrations} brandColor={brand.brand} orgSlug={orgSlug} campSlug={campSlug} campTitle={camp.title} />
+        <ParticipantList registrations={registrations} brandColor={brand.brand} orgSlug={orgSlug} campSlug={campSlug} camp={camp} />
       </main>
     </>
   )

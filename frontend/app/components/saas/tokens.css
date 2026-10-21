@@ -341,7 +341,7 @@
  * dunkle Band würde sonst als schwarze Fläche auf Papier landen.
  * ---------------------------------------------------------------------- */
 @media print {
-  .cp-scope header,
+  .cp-scope header:not(.cp-daylist-heading),
   .cp-noprint {
     display: none !important;
   }
@@ -356,6 +356,58 @@
   .cp-grain {
     display: none !important;
   }
+}
+
+/* The native dialog traps focus; its body portal isolates printed content. */
+.cp-daylist-preview {
+  width: min(1100px, calc(100% - 24px));
+  max-height: calc(100dvh - 24px);
+  margin: auto;
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid var(--cp-line);
+  background: white;
+  color: #111;
+}
+.cp-daylist-preview::backdrop { background: rgb(0 0 0 / 50%); }
+.cp-daylist-heading { margin-bottom: 16px; }
+.cp-daylist-heading h1 { font-size: 24px; font-weight: 700; }
+.cp-daylist-heading p { margin-top: 4px; }
+.cp-daylist-table-scroll { overflow-x: auto; }
+.cp-daylist-preview table { width: 100%; min-width: 720px; border-collapse: collapse; table-layout: fixed; }
+.cp-daylist-preview th, .cp-daylist-preview td {
+  border: 1px solid #777;
+  padding: 8px;
+  vertical-align: top;
+  text-align: left;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.cp-daylist-preview th { font-weight: 700; }
+.cp-daylist-preview td { height: 44px; }
+.cp-daylist-preview :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+@media print {
+  body:has(.cp-daylist-preview) { overflow: visible !important; }
+  body:has(.cp-daylist-preview) > :not(.cp-daylist-preview) { display: none !important; }
+  .cp-daylist-preview {
+    position: static !important;
+    display: block !important;
+    width: 100%;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    font: 10pt Arial, sans-serif;
+  }
+  .cp-daylist-preview::backdrop { display: none; }
+  .cp-daylist-heading { display: block !important; break-inside: avoid; }
+  .cp-daylist-table-scroll { overflow: visible; }
+  .cp-daylist-preview table { min-width: 0; }
+  .cp-daylist-preview thead { display: table-header-group; }
+  .cp-daylist-preview tr { break-inside: avoid; }
 }
 
 /* ----------------------------------------------------------------------

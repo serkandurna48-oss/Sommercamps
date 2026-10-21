@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '../preview/AdminLink'
 import { campStatusLabel, formatDateRange } from '../../../lib/i18n/de'
 import type { CampAdmin } from '../../../lib/saasAdminApi'
 import CapacityBar from './CapacityBar'

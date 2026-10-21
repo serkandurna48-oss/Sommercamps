@@ -1,5 +1,7 @@
 'use client'
 
+import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
+
 import { useActionState } from 'react'
 import Button from '../ui/Button'
 import { setOrganizationPublishedAction, type PublishActionState } from '../actions/configActions'
@@ -26,7 +28,8 @@ export default function PublishToggle({
   brandStrong?: string
   brandOn?: string
 }) {
-  const boundAction = setOrganizationPublishedAction.bind(null, orgSlug, !published)
+  const preview = useAdminPreview()
+  const boundAction = preview ? previewNoopAction : setOrganizationPublishedAction.bind(null, orgSlug, !published)
   const [state, formAction, pending] = useActionState<PublishActionState, FormData>(boundAction, { error: null })
 
   return (

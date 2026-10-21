@@ -1,5 +1,7 @@
 'use client'
 
+import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
+
 import { useActionState, useState } from 'react'
 import { CAMP_STATUSES, campStatusLabel, de } from '../../../lib/i18n/de'
 import type { CampAdmin } from '../../../lib/saasAdminApi'
@@ -30,7 +32,8 @@ export default function CampConfigForm({
     setSubmitted(null)
   }
   const inputValue = (field: string, fallback: string | number) => submitted?.[field] ?? fallback
-  const boundAction = updateCampConfigAction.bind(null, orgSlug, camp.slug)
+  const preview = useAdminPreview()
+  const boundAction = preview ? previewNoopAction : updateCampConfigAction.bind(null, orgSlug, camp.slug)
   const [state, formAction, pending] = useActionState<ConfigActionState, FormData>(async (previous, data) => {
     // React resets uncontrolled fields after a resolved action, including
     // validation failures. Keep submitted defaults until fresh props arrive.

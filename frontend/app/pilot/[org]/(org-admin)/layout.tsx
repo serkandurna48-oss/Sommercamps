@@ -1,12 +1,9 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { archivo } from '../../../components/saas/fonts'
-import GrainOverlay from '../../../components/saas/GrainOverlay'
-import '../../../components/saas/tokens.css'
+import AdminShell from '../../../components/saas/shell/AdminShell'
 import { getAdminToken } from '../../../lib/adminSession'
 import { fetchMe } from '../../../lib/saasAdminApi'
 import { getOrganizationAdmin } from '../../../components/saas/orgAdminData'
-import { ViewerProvider } from '../../../components/saas/shell/ViewerContext'
 
 /**
  * Gemeinsamer Titel-Fix für alle Org-Admin-Seiten (Dashboard, Teilnehmer,
@@ -82,9 +79,6 @@ export default async function OrgAdminLayout({
   // pb-16: unter 768px liegt die Bereichsleiste als fixierte Fussleiste über dem
   // Inhalt (BandTabs.tsx) — ohne diesen Abstand verdeckt sie das Seitenende.
   return (
-    <div className={`${archivo.variable} cp-scope min-h-screen pb-16 md:pb-0`}>
-      <GrainOverlay />
-      <ViewerProvider isPlatformOwner={me.is_platform_owner}>{children}</ViewerProvider>
-    </div>
+    <AdminShell isPlatformOwner={me.is_platform_owner}>{children}</AdminShell>
   )
 }

@@ -1,5 +1,7 @@
 'use client'
 
+import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
+
 import { useActionState } from 'react'
 import Button from '../ui/Button'
 import Field from '../ui/Field'
@@ -22,7 +24,8 @@ export default function CampCreateForm({
   brandStrong: string
   brandOn: string
 }) {
-  const boundAction = createCampAction.bind(null, orgSlug)
+  const preview = useAdminPreview()
+  const boundAction = preview ? previewNoopAction : createCampAction.bind(null, orgSlug)
   const [state, formAction, pending] = useActionState<CampCreateActionState, FormData>(boundAction, initialState)
 
   return (

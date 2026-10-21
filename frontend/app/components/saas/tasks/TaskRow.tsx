@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
+import Link from '../preview/AdminLink'
 import { de } from '../../../lib/i18n/de'
 import type { Task } from '../dashboardLogic'
 

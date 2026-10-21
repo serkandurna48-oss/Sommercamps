@@ -1,8 +1,12 @@
+'use client'
+
+import { useAdminPreview, previewLogoutAction } from '../preview/AdminPreviewContext'
 import { logoutAction } from './logoutAction'
 
 export default function LogoutButton({ orgSlug }: { orgSlug: string }) {
+  const preview = useAdminPreview()
   return (
-    <form action={logoutAction.bind(null, orgSlug)}>
+    <form action={preview ? previewLogoutAction : logoutAction.bind(null, orgSlug)}>
       <button
         type="submit"
         className="cp-label rounded-[var(--cp-r-chip)] border px-3 py-1.5 focus-visible:outline focus-visible:outline-2"

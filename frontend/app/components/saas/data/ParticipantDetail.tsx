@@ -1,5 +1,7 @@
 'use client'
 
+import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
+
 import { useActionState, useEffect, useState } from 'react'
 import { de } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
@@ -46,7 +48,8 @@ export default function ParticipantDetail({
   const markRefunded = setPaymentStatusAction.bind(null, orgSlug, campSlug, registration.registration_token, 'refunded', de.paymentsPage.markRefundedSuccess)
 
   const [editing, setEditing] = useState(false)
-  const updateDetails = updateRegistrationDetailsAction.bind(null, orgSlug, campSlug, registration.registration_token)
+  const preview = useAdminPreview()
+  const updateDetails = preview ? previewNoopAction : updateRegistrationDetailsAction.bind(null, orgSlug, campSlug, registration.registration_token)
   const [state, formAction, pending] = useActionState(updateDetails, { error: null, saved: false, registration: null })
 
   const [previousState, setPreviousState] = useState(state)

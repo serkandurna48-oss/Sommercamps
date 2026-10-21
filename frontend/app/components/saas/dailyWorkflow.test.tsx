@@ -118,6 +118,42 @@ describe('daily overview', () => {
     expect(dom.textContent).toContain('In 3 Schritten zur Anmeldeseite')
     expect(dom.textContent).not.toContain('Deine Anmeldeseite ist live.')
   })
+
+  it('degrades "Camp anlegen" to secondary while the onboarding card is visible', async () => {
+    vi.mocked(loadOrgAdminData).mockResolvedValue({ token: 'test', org, camps: [], registrationsByCamp: [] })
+    const dom = markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) }))
+    // Use text match: "+" distinguishes the section button from the OnboardingCard step-2 action
+    const campLink = [...dom.querySelectorAll<HTMLAnchorElement>('a[href="/pilot/demo/camps/new"]')]
+      .find(a => a.textContent?.trim() === '+ Camp anlegen')
+    expect(campLink).not.toBeNull()
+    expect(campLink!.className).toContain('cp-btn-secondary')
+    expect(campLink!.className).not.toContain('cp-btn-primary')
+  })
+
+  it('promotes "Camp anlegen" to primary once onboarding is complete', async () => {
+    // org has site_published+required fields, camp is published → step3Done → showCard=false
+    const dom = markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) }))
+    const campLink = [...dom.querySelectorAll<HTMLAnchorElement>('a[href="/pilot/demo/camps/new"]')]
+      .find(a => a.textContent?.trim() === '+ Camp anlegen')
+    expect(campLink).not.toBeNull()
+    expect(campLink!.className).toContain('cp-btn-primary')
+  })
+
+  it('shows launch success card with copy-link button when first camp just published and no registrations', async () => {
+    vi.mocked(loadOrgAdminData).mockResolvedValue({ token: 'test', org, camps: [camp], registrationsByCamp: [[]] })
+    const dom = markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) }))
+    expect(dom.textContent).toContain('Deine Anmeldeseite ist live.')
+    expect(dom.textContent).toContain('Anmeldelink kopieren')
+    expect(dom.textContent).toContain('Elternseite ansehen')
+  })
+
+  it('shows regular success card without copy button once registrations exist', async () => {
+    // entries are all paid with emergency contacts → no tasks → regular success state shown
+    vi.mocked(loadOrgAdminData).mockResolvedValue({ token: 'test', org, camps: [camp], registrationsByCamp: [entries] })
+    const dom = markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) }))
+    expect(dom.textContent).toContain('Deine Anmeldeseite ist live.')
+    expect(dom.textContent).not.toContain('Anmeldelink kopieren')
+  })
 })
 
 describe('camp navigation and task destinations', () => {

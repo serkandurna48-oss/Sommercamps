@@ -172,6 +172,7 @@ export const de = {
     missingFieldsAction: 'Ergänzen',
     liveLabel: 'Deine Anmeldeseite ist live.',
     liveOpen: 'Elternseite ansehen',
+    liveCopyLink: 'Anmeldelink kopieren',
   },
   configPage: {
     orgHeading: 'Verein',

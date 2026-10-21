@@ -11,6 +11,7 @@ import TaskRow from '../tasks/TaskRow'
 import CampRow from '../data/CampRow'
 import EmptyState from '../state/EmptyState'
 import OnboardingCard from '../state/OnboardingCard'
+import LaunchSuccessCard from '../state/LaunchSuccessCard'
 import SuccessNote from '../state/SuccessNote'
 import { orgTabs } from '../navTabs'
 import { de, formatDateRange } from '../../../lib/i18n/de'
@@ -29,6 +30,9 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
   const { step3Done } = computeOnboardingSteps(org, camps)
   const showCard = !step3Done
   const missingFields = step3Done ? missingRequiredOrgFields(org) : []
+  const publishedCamps = camps.filter(c => c.status === 'published')
+  const totalRegistrations = registrationsByCamp.reduce((sum, r) => sum + r.length, 0)
+  const showLaunchSuccess = publishedCamps.length === 1 && totalRegistrations === 0
 
   return (
     <>
@@ -93,6 +97,8 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
                   </div>
                 )}
               </div>
+            ) : showLaunchSuccess ? (
+              <LaunchSuccessCard orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
             ) : (
               <div className="cp-card" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
                 <SuccessNote>{de.onboarding.liveLabel}</SuccessNote>
@@ -112,7 +118,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
             <h2 className="cp-title">{de.dashboard.allCamps}</h2>
             <ButtonLink
               href={`/pilot/${orgSlug}/camps/new`}
-              variant="primary" brandStrong={brand.brandStrong} brandOn={brand.brandOn}
+              variant={showCard ? 'secondary' : 'primary'} brandStrong={brand.brandStrong} brandOn={brand.brandOn}
             >
               + Camp anlegen
             </ButtonLink>

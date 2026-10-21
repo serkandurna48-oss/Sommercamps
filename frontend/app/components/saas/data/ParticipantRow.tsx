@@ -62,6 +62,7 @@ export default function ParticipantRow({
           aria-expanded={open}
           aria-controls={detailId}
           className="cp-participant-trigger min-w-0 flex-1 text-left"
+          style={{ border: '1px solid transparent' }}
         >
           <ListRow className="cp-participant-summary" main={<p className="cp-subheading min-w-0 truncate" style={{ color: 'var(--cp-ink)' }}>
               {effective.child_first_name} {effective.child_last_name}

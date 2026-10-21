@@ -61,7 +61,7 @@ function Step({ number, done, active, title, body, children }: {
 }) {
   const muted = !done && !active
   return (
-    <li className={`flex gap-4${muted ? ' opacity-40' : ''}`}>
+    <li className={`flex gap-4${muted ? ' opacity-40' : ''}`} aria-current={active ? 'step' : undefined}>
       <span
         aria-hidden="true"
         className="cp-subheading mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm leading-none"
@@ -74,7 +74,10 @@ function Step({ number, done, active, title, body, children }: {
         {done ? '✓' : number}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="cp-subheading">{title}</p>
+        <p className="cp-subheading">
+          {title}
+          <span className="sr-only">{' '}{done ? 'erledigt' : active ? 'aktiv' : 'offen'}</span>
+        </p>
         {active && <p className="cp-body mt-1" style={{ color: 'var(--cp-ink-2)' }}>{body}</p>}
         {children && <div className="mt-3">{children}</div>}
       </div>

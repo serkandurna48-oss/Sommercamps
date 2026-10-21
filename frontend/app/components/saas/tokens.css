@@ -16,6 +16,10 @@
  */
 
 .cp-scope {
+  --cp-mobile-nav-target-height: 56px;
+  --cp-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --cp-mobile-nav-height: calc(var(--cp-mobile-nav-target-height) + var(--cp-safe-area-bottom) + 1px);
+  --cp-selection-height: 0px;
   /* Flächen */
   --cp-band: #131a17;
   --cp-band-2: #26302c;
@@ -168,11 +172,28 @@
  * gewinnt dessen 17px. Der wandernde Unterstrich ist dort ausgeblendet,
  * deshalb markiert eine Oberkante in der Vereinsfarbe den aktiven Bereich. */
 @media (max-width: 767px) {
+  .cp-admin-layout {
+    padding-bottom: calc(var(--cp-mobile-nav-height) + var(--cp-selection-height) + 16px);
+  }
+  .cp-band-tabs {
+    padding-bottom: var(--cp-safe-area-bottom);
+  }
+  .cp-selection-bar {
+    bottom: var(--cp-mobile-nav-height);
+  }
   .cp-band-tab {
-    font-size: 11px;
+    min-height: var(--cp-mobile-nav-target-height);
+    min-width: 0;
+    font-size: 13px;
     line-height: 1.15;
     font-stretch: 100%;
     font-weight: 600;
+    position: relative;
+  }
+  .cp-band-tab .cp-tab-hint {
+    position: absolute;
+    right: 2px;
+    top: 4px;
   }
   .cp-band-tab[data-active='true'] {
     box-shadow: inset 0 2px 0 0 var(--cp-tab-mark, currentColor);

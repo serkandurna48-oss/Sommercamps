@@ -9,6 +9,10 @@ import OrgPaymentsScreen from '../../../components/saas/screens/OrgPaymentsScree
 import OrgWaitlistScreen from '../../../components/saas/screens/OrgWaitlistScreen'
 import OrgTasksScreen from '../../../components/saas/screens/OrgTasksScreen'
 import OrgConfigScreen from '../../../components/saas/screens/OrgConfigScreen'
+import CampPaymentsScreen from '../../../components/saas/screens/CampPaymentsScreen'
+import CampWaitlistScreen from '../../../components/saas/screens/CampWaitlistScreen'
+import CampTasksScreen from '../../../components/saas/screens/CampTasksScreen'
+import NewRegistrationsScreen from '../../../components/saas/screens/NewRegistrationsScreen'
 import { getPreviewFixtures } from '../fixtures'
 import PreviewProvider from '../PreviewProvider'
 
@@ -16,21 +20,30 @@ export const metadata = { title: 'Admin-Vorschau – CampsPilot', robots: { inde
 
 type Props = {
   params: Promise<{ screen: string }>
-  searchParams?: Promise<{ leer?: string | string[] }>
+  searchParams?: Promise<{ leer?: string | string[]; filter?: string | string[]; sort?: string | string[]; camp?: string | string[] }>
 }
 
 export default async function AdminPreviewPage({ params, searchParams }: Props) {
   if (process.env.NODE_ENV !== 'development') notFound()
 
   const { screen } = await params
-  const empty = (await searchParams)?.leer === '1'
+  const query = await searchParams
+  const empty = query?.leer === '1'
   const fixtures = getPreviewFixtures(empty)
-  const camp = fixtures.camps[0]
-  const campProps = { orgSlug: fixtures.orgSlug, org: fixtures.org, camp, campSlug: camp?.slug ?? '', registrations: fixtures.registrationsByCamp[0] ?? [] }
+  const campIndex = Math.max(0, fixtures.camps.findIndex(camp => camp.slug === query?.camp))
+  const camp = fixtures.camps[campIndex]
+  const campProps = { orgSlug: fixtures.orgSlug, org: fixtures.org, camp, campSlug: camp?.slug ?? '', registrations: fixtures.registrationsByCamp[campIndex] ?? [] }
+  const initialFilter = query?.filter === 'missing-info' || query?.filter === 'payment-open' ? query.filter : 'all'
+  const initialSort = query?.sort === 'name' ? 'name' : 'newest'
+  const paymentFilter = query?.filter === 'paid' || query?.filter === 'all' ? query.filter : 'open'
   let content: React.ReactNode
   switch (screen) {
     case 'dashboard': content = <OrgDashboardScreen {...fixtures} />; break
-    case 'camp': content = <CampDetailScreen {...campProps} />; break
+    case 'anmeldungen': content = <NewRegistrationsScreen {...fixtures} />; break
+    case 'camp': content = <CampDetailScreen {...campProps} initialFilter={initialFilter} initialSort={initialSort} />; break
+    case 'camp-zahlungen': content = <CampPaymentsScreen {...campProps} initialFilter={paymentFilter} />; break
+    case 'camp-warteliste': content = <CampWaitlistScreen {...campProps} />; break
+    case 'camp-aufgaben': content = <CampTasksScreen {...campProps} />; break
     case 'camp-neu': content = <CampCreateScreen {...fixtures} />; break
     case 'camp-konfiguration': content = <CampConfigScreen {...campProps} />; break
     case 'zahlungen': content = <OrgPaymentsScreen {...fixtures} />; break

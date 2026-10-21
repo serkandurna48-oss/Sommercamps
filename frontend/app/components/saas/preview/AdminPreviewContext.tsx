@@ -18,10 +18,20 @@ export async function previewLogoutAction() {}
 
 export function previewHref(href: string, empty: boolean): string {
   if (!href.startsWith('/pilot/')) return href
-  const path = href.split('?')[0].split('/').slice(3)
+  const [pathname, query] = href.split('?')
+  const path = pathname.split('/').slice(3)
+  const params = new URLSearchParams()
+  const sourceParams = new URLSearchParams(query)
+  for (const key of ['filter', 'sort']) {
+    const value = sourceParams.get(key)
+    if (value) params.set(key, value)
+  }
   let screen = path[0] || 'dashboard'
   if (path[0] === 'camps') {
-    screen = path[1] === 'new' ? 'camp-neu' : path[2] === 'konfiguration' ? 'camp-konfiguration' : path[2] || 'camp'
+    screen = path[1] === 'new' ? 'camp-neu' : path[2] ? `camp-${path[2]}` : 'camp'
+    if (!empty && path[1] !== 'new') params.set('camp', path[1])
   }
-  return `/dev/admin-vorschau/${screen}${empty ? '?leer=1' : ''}`
+  if (empty) params.set('leer', '1')
+  const search = params.toString()
+  return `/dev/admin-vorschau/${screen}${search ? `?${search}` : ''}`
 }

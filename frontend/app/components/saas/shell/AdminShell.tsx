@@ -8,7 +8,7 @@ export default function AdminShell({ children, isPlatformOwner = false }: {
   isPlatformOwner?: boolean
 }) {
   return (
-    <div className={`${archivo.variable} cp-scope min-h-screen pb-16 md:pb-0`}>
+    <div className={`${archivo.variable} cp-scope min-h-screen cp-admin-layout`}>
       <GrainOverlay />
       <ViewerProvider isPlatformOwner={isPlatformOwner}>{children}</ViewerProvider>
     </div>

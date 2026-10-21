@@ -76,8 +76,7 @@ export default async function OrgAdminLayout({
     redirect(ownOrg ? `/pilot/${ownOrg}/dashboard` : `/pilot/${org}/login`)
   }
 
-  // pb-16: unter 768px liegt die Bereichsleiste als fixierte Fussleiste über dem
-  // Inhalt (BandTabs.tsx) — ohne diesen Abstand verdeckt sie das Seitenende.
+  // AdminShell reserves the measured navigation and selection heights, including the safe area.
   return (
     <AdminShell isPlatformOwner={me.is_platform_owner}>{children}</AdminShell>
   )

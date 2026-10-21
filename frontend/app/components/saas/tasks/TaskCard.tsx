@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from '../preview/AdminLink'
 import { de } from '../../../lib/i18n/de'
-import type { Task } from '../dashboardLogic'
+import { taskHref, type Task } from '../dashboardLogic'
 import Button from '../ui/Button'
 
 function taskCopy(task: Task): { title: string; hint: string } {
@@ -41,10 +41,8 @@ export default function TaskCard({ task, orgSlug, brandStrong, brandOn }: { task
         {copy.hint}
       </p>
       <div className="mt-5 flex flex-wrap gap-3">
-        <Link href={`/pilot/${orgSlug}/camps/${task.campSlug}`}>
-          <Button variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
-            {de.tasks.review}
-          </Button>
+        <Link href={taskHref(orgSlug, task)} className="cp-label inline-flex min-h-[44px] items-center rounded-full px-5" style={{ background: brandStrong, color: brandOn }}>
+          {de.tasks.review}
         </Link>
         <Button variant="secondary" onClick={() => setDone(v => !v)} aria-pressed={done}>
           {de.tasks.markDone}

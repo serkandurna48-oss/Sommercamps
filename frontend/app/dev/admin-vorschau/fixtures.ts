@@ -57,11 +57,14 @@ export const registrations: RegistrationAdmin[] = firstNames.map((name, i) => {
 })
 
 export function getPreviewFixtures(empty = false) {
+  // Fresh invented arrivals keep the daily workflow visible on every preview visit.
+  const today = new Date().toISOString()
+  const previewRegistrations = registrations.map((registration, i) => i < 4 ? { ...registration, created_at: today } : registration)
   return {
     orgSlug: organization.slug,
     org: empty ? { ...organization, camp_count: 0 } : organization,
     camps: empty ? [] : camps,
     // 16 active + 4 waiting + 2 cancelled; second camp has 6/12 active places.
-    registrationsByCamp: empty ? [] : [[...registrations.slice(0, 20), ...registrations.slice(26)], registrations.slice(20, 26), []],
+    registrationsByCamp: empty ? [] : [[...previewRegistrations.slice(0, 20), ...previewRegistrations.slice(26)], previewRegistrations.slice(20, 26), []],
   }
 }

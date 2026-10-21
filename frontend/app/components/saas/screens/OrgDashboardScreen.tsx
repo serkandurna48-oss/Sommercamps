@@ -1,3 +1,5 @@
+import TodayRegistrations from '../data/TodayRegistrations'
+import { todayRegistrations } from '../registrationDates'
 import Link from '../preview/AdminLink'
 import { computeBrandTokens } from '../brandPipeline'
 import { buildTasks, computeCampStats, pickNextCamp } from '../dashboardLogic'
@@ -23,7 +25,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
   return (
     <>
       <MatchdayBand
-        variant="full"
+        variant="compact"
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}
@@ -58,9 +60,16 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
       />
 
       <main className="mx-auto max-w-[920px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+        <TodayRegistrations entries={todayRegistrations(camps, registrationsByCamp)} orgSlug={orgSlug} />
         <section className="mb-12">
           <h2 className="cp-title mb-4">{de.dashboard.upNext}</h2>
-          {firstTask ? (
+          {camps.length === 0 ? (
+            <div className="rounded-[var(--cp-r-card)] border p-6" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
+              <h3 className="cp-heading">Dein erstes Camp vorbereiten</h3>
+              <p className="cp-body mt-2">Lege dein erstes Camp an und bereite die Anmeldung für die Eltern vor.</p>
+              <Link href={`/pilot/${orgSlug}/camps/new`} className="cp-label mt-4 inline-flex min-h-[48px] items-center rounded-full px-5" style={{ background: brand.brandStrong, color: brand.brandOn }}>Camp anlegen</Link>
+            </div>
+          ) : firstTask ? (
             <div className="flex flex-col gap-3">
               <TaskCard task={firstTask} orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
               {restTasks.length > 0 && (

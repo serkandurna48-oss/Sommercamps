@@ -19,6 +19,7 @@ export default function CampConfigScreen({ orgSlug, campSlug, org, camp, created
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}
+        backToCamps
         title={camp.title}
         subtitle={formatDateRange(camp.start_date, camp.end_date)}
         tabs={campTabs(orgSlug, campSlug)}

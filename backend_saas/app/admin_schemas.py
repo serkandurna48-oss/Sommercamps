@@ -312,9 +312,8 @@ class RegistrationDetailsUpdate(BaseModel):
         return value or None
 
 
-class OrganizationAdminOut(BaseModel):
-    """Admin view of an organization — unlike OrganizationPublic, includes
-    the internal id and plan_status an admin needs to operate the platform."""
+class OrganizationOrgAdminOut(BaseModel):
+    """Organization admin view, excluding platform-owner contract notes."""
 
     id: UUID
     slug: str
@@ -340,8 +339,13 @@ class OrganizationAdminOut(BaseModel):
     trainer_image_url: Optional[str] = None
     trainer_text: Optional[str] = None
     terms_text: Optional[str] = None
-    billing_notes: Optional[str] = None
     site_published: bool = False
+
+
+class OrganizationAdminOut(OrganizationOrgAdminOut):
+    """Platform-owner view including internal contract notes."""
+
+    billing_notes: Optional[str] = None
 
 
 class OrganizationAdminListItem(OrganizationAdminOut):

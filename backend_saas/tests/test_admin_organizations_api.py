@@ -356,3 +356,79 @@ def test_patch_organization_terms_text_too_long_returns_422():
         )
 
     assert response.status_code == 422
+
+
+@pytest.fixture
+def organization_with_private_notes(monkeypatch):
+    row = _org_row(billing_notes="Internal contract: 150 EUR/month")
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: row)
+    writes = []
+
+    def update(slug, data):
+        changes = data.model_dump(exclude_unset=True)
+        writes.append(changes)
+        row.update(changes)
+        return row
+
+    monkeypatch.setattr(organizations, "update_organization", update)
+    return row, writes
+
+
+def test_org_admin_get_excludes_billing_notes(organization_with_private_notes):
+    row, _ = organization_with_private_notes
+    with TestClient(app) as client:
+        response = client.get("/admin/organizations/demo-fc", headers=org_admin_headers(row["id"]))
+    assert response.status_code == 200
+    assert response.json()["name"] == row["name"]
+    assert "billing_notes" not in response.json()
+    assert "Internal contract" not in response.text
+
+
+@pytest.mark.parametrize("notes", ["Changed by club", "", None])
+def test_org_admin_cannot_change_or_clear_billing_notes(organization_with_private_notes, notes):
+    row, writes = organization_with_private_notes
+    original = dict(row)
+    with TestClient(app) as client:
+        response = client.patch(
+            "/admin/organizations/demo-fc",
+            json={"billing_notes": notes, "name": "Should not change either"},
+            headers=org_admin_headers(row["id"]),
+        )
+    assert response.status_code == 403
+    assert writes == []
+    assert row == original
+    assert "billing_notes" not in response.json()
+
+
+def test_org_admin_normal_patch_preserves_and_excludes_billing_notes(organization_with_private_notes):
+    row, writes = organization_with_private_notes
+    original_notes = row["billing_notes"]
+    with TestClient(app) as client:
+        response = client.patch(
+            "/admin/organizations/demo-fc", json={"name": "Updated club"},
+            headers=org_admin_headers(row["id"]),
+        )
+    assert response.status_code == 200
+    assert response.json()["name"] == "Updated club"
+    assert "billing_notes" not in response.json()
+    assert writes == [{"name": "Updated club"}]
+    assert row["billing_notes"] == original_notes
+
+
+@pytest.mark.parametrize("notes", ["New internal contract", None])
+def test_owner_can_read_set_and_clear_billing_notes(organization_with_private_notes, notes):
+    row, writes = organization_with_private_notes
+    headers = _auth_headers()
+    with TestClient(app) as client:
+        before = client.get("/admin/organizations/demo-fc", headers=headers)
+        assert before.status_code == 200
+        assert before.json()["billing_notes"] == row["billing_notes"]
+        response = client.patch(
+            "/admin/organizations/demo-fc", json={"billing_notes": notes}, headers=headers,
+        )
+        after = client.get("/admin/organizations/demo-fc", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["billing_notes"] == notes
+    assert row["billing_notes"] == notes
+    assert writes == [{"billing_notes": notes}]
+    assert after.json()["billing_notes"] == notes

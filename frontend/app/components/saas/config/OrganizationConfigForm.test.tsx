@@ -127,3 +127,13 @@ it('keeps the submit button reachable and labelled while a save runs', async () 
   expect(button.disabled).toBe(false)
   expect(button.textContent).toBe('Speichern')
 })
+
+
+it('never renders billing notes or the billing section, even with owner data', async () => {
+  const ownerOrg = { ...org, billing_notes: 'Private contract terms' }
+  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={ownerOrg} brandStrong="#112233" brandOn="#ffffff" />))
+  expect(container.querySelector('[name="billing_notes"]')).toBeNull()
+  expect(container.textContent).not.toContain('Abrechnung')
+  expect(container.textContent).not.toContain('Konditionen')
+  expect(container.textContent).not.toContain('Private contract terms')
+})

@@ -111,3 +111,14 @@ it('sends null for terms_text when input is empty', async () => {
   const [, , payload] = vi.mocked(updateOrganizationAdmin).mock.calls[0]
   expect(payload.terms_text).toBeNull()
 })
+
+
+it.each([undefined, '', 'Injected notes'])('never sends billing_notes from the club form (%s)', async notes => {
+  const fd = makeFormData(BASE_FIELDS)
+  fd.delete('billing_notes')
+  if (notes !== undefined) fd.set('billing_notes', notes)
+  const state = await updateOrganizationConfigAction('demo', { error: null, saved: false }, fd)
+  expect(state.saved).toBe(true)
+  expect(updateOrganizationAdmin).toHaveBeenCalledOnce()
+  expect(vi.mocked(updateOrganizationAdmin).mock.calls[0][2]).not.toHaveProperty('billing_notes')
+})

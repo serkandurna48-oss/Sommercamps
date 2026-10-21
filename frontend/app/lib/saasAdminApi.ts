@@ -64,7 +64,8 @@ export interface OrganizationAdmin {
   trainer_image_url: string | null
   trainer_text: string | null
   terms_text: string | null
-  billing_notes: string | null
+  /** Present only for platform owners. */
+  billing_notes?: string | null
   site_published: boolean
   camp_count?: number
 }
@@ -181,10 +182,14 @@ export interface OrganizationConfigUpdate {
   trainer_image_url?: string | null
   trainer_text?: string | null
   terms_text?: string | null
-  billing_notes?: string | null
   /** Der "Veröffentlichen"/"Zurückziehen"-Schalter — siehe
    * backend_saas admin_schemas.OrganizationUpdate.site_published. */
   site_published?: boolean
+}
+
+/** Internal contract notes may only be changed by platform owners. */
+export interface PlatformOrganizationUpdate extends OrganizationConfigUpdate {
+  billing_notes?: string | null
 }
 
 /** Alle Felder optional — nur mitgeschickte Felder werden geändert
@@ -283,7 +288,7 @@ export async function createCampAdmin(orgSlug: string, token: string, data: Camp
 export async function updateOrganizationAdmin(
   orgSlug: string,
   token: string,
-  data: OrganizationConfigUpdate,
+  data: PlatformOrganizationUpdate,
 ): Promise<void> {
   await mutateOrThrow(`/admin/organizations/${orgSlug}`, token, 'PATCH', data)
 }

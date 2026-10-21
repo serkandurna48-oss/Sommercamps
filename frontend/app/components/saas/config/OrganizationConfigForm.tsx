@@ -222,18 +222,6 @@ export default function OrganizationConfigForm({
           </Field>
         </section>
 
-        <section className="flex flex-col gap-4">
-          <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
-            Abrechnung
-          </h3>
-          <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
-            Nur für dich als Betreiber sichtbar, nie öffentlich. Vertragsstatus selbst steht auf der Plattform-Konsole.
-          </p>
-          <Field label="Konditionen" htmlFor="billing_notes" hint="Freitext, z. B. vereinbarter Preis, Rechnungsintervall, Startdatum.">
-            <textarea id="billing_notes" name="billing_notes" rows={2} defaultValue={inputValue('billing_notes', org.billing_notes ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
-          </Field>
-        </section>
-
         {pending && <PendingNote>{de.configPage.saving}</PendingNote>}
         {!pending && state.error && (
           <p

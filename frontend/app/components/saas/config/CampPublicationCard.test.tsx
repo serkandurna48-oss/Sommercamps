@@ -39,7 +39,7 @@ it.each([false, true].flatMap(sitePublished => (['draft', 'published', 'closed',
     expect(container.textContent!.includes('Eltern sehen das Camp erst, wenn auch die Vereinsseite veröffentlicht ist')).toBe(!sitePublished)
     expect(container.querySelector('[value="published"]') !== null).toBe(status !== 'published')
     const checks = Array.from(container.querySelectorAll('li'))
-    expect(checks.map(check => check.textContent)).toEqual(['Kontakt-E-Mail– Noch ergänzen', 'Bankverbindung– Noch ergänzen', 'Ort– Noch ergänzen', 'Teilnahmebedingungen– Noch ergänzen'])
+    expect(checks.map(check => check.textContent)).toEqual(['!Kontakt-E-Mail– Fehltergänzen', '!Bankverbindung– Fehltergänzen', '!Ort– Fehltergänzen', '!Teilnahmebedingungen– Fehltergänzen'])
     expect(checks.map(check => check.querySelector('a')!.getAttribute('href'))).toEqual(['/pilot/review/konfiguration#contact_email', '/pilot/review/konfiguration#iban', '#location', '/pilot/review/konfiguration#terms_text'])
     if (!sitePublished) expect(container.querySelector('a[href="/pilot/review/konfiguration#publication"]')).not.toBeNull()
   },

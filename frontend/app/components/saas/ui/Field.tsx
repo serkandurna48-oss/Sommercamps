@@ -7,13 +7,14 @@ interface FieldProps {
   htmlFor: string
   hint?: string
   error?: string
+  suffix?: string
   children: ReactNode
 }
 
 /** Label + Control + Hinweis + Fehler. Control (Input/Select/Textarea) wird
  * als Kind übergeben und muss selbst >=16px Schriftgröße setzen (sonst
  * zoomt iOS beim Fokussieren, Abschnitt 3.2) und >=46px Höhe (Abschnitt 5). */
-export default function Field({ label, htmlFor, hint, error, children }: FieldProps) {
+export default function Field({ label, htmlFor, hint, error, suffix, children }: FieldProps) {
   const hintId = `${htmlFor}-hint`
   const errorId = `${htmlFor}-error`
   // Match only the labelled control, including controls inside layout wrappers.
@@ -22,7 +23,7 @@ export default function Field({ label, htmlFor, hint, error, children }: FieldPr
     return Children.map(nodes, node => {
       if (!isValidElement<ControlProps>(node)) return node
       if (node.props.id === htmlFor) {
-        const describedBy = [node.props['aria-describedby'], hint && hintId, error && errorId].filter(Boolean).join(' ')
+        const describedBy = [node.props['aria-describedby'], suffix && `${htmlFor}-unit`, hint && hintId, error && errorId].filter(Boolean).join(' ')
         return cloneElement(node, {
           'aria-describedby': describedBy || undefined,
           'aria-invalid': error ? true : node.props['aria-invalid'],
@@ -33,11 +34,11 @@ export default function Field({ label, htmlFor, hint, error, children }: FieldPr
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="cp-field flex min-w-0 flex-col gap-1.5">
       <label htmlFor={htmlFor} className="cp-label" style={{ color: 'var(--cp-ink-2)' }}>
         {label}
       </label>
-      {connect(children)}
+      {suffix ? <div className="cp-field-control">{connect(children)}<span className="cp-field-suffix" aria-hidden="true">{suffix}</span><span id={`${htmlFor}-unit`} className="sr-only">{suffix}</span></div> : connect(children)}
       {hint && (
         <p id={hintId} className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
           {hint}

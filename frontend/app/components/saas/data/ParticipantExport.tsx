@@ -5,7 +5,7 @@ import { xlsxHrefWithFilter, type ExportColumn } from '../../../lib/exportCsv'
 import { paymentStatusLabel } from '../../../lib/i18n/de'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { filterRegistrations, type ParticipantFilter } from '../commandCenterLogic'
-import { DAY_LIST_COLUMNS, dayListCountText, dayListRows, exportFilterText } from '../dayListExport'
+import { DAY_LIST_COLUMNS, dayListRows, exportFilterText } from '../dayListExport'
 import ExportBar from '../ui/ExportBar'
 import DayListPrint from './DayListPrint'
 
@@ -39,8 +39,8 @@ export default function ParticipantExport({ registrations, camp, orgSlug, filter
       csvFilename={`${camp.slug}-${purpose}.csv`}
       xlsxHref={xlsxHrefWithFilter(`/pilot/${orgSlug}/camps/${camp.slug}/export?view=${purpose}`, rows.map(r => r.registration_token), registrations.length)}
       summary={<>
-        <p>{purpose === 'daylist' ? dayListCountText(rows.length) : `${rows.length} Anmeldungen · einschließlich Warteliste und Stornierungen`}</p>
-        <p>{filterText}</p>
+        <p>{purpose === 'daylist' ? `Tagesliste enthält ${rows.length} Teilnehmende (ohne Warteliste und Stornierungen)` : `${rows.length} Anmeldungen · einschließlich Warteliste und Stornierungen`}</p>
+        {(filter !== 'all' || search.trim()) && <p>{filterText}</p>}
       </>}
       configuration={<>
         <label htmlFor={purposeId} className="mb-1 block">Was möchtest du exportieren?</label>

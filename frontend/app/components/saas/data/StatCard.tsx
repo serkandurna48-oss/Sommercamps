@@ -29,11 +29,7 @@ const TONE_LINE: Record<Exclude<StatusTone, 'neutral'>, string> = {
  * zusammengesetzte Strings wie Geldbeträge oder "3/3"-Belegung, die
  * weiterhin nur `value` nutzen.
  *
- * `wide` (optional): belegt unter 768px beide Spalten. Ein Geldbetrag ist in
- * der Scoreboard-Schrift ~169px breit und wegen des geschützten Leerzeichens
- * vor dem € nicht umbrechbar — in einer halben Spalte (129px bei 390px) schob
- * er die ganze Seite seitlich heraus. Nur für Werte setzen, die lang werden
- * können, nicht für Zähler.
+ * `wide` marks money values for responsive sizing within the shared grid.
  *
  * `tone` (optional): hebt die Karte farblich hervor — z. B. `pending` für
  * offene Zahlungen, damit Jan sofort sieht, welche Kennzahl Handlungsbedarf
@@ -58,14 +54,14 @@ export default function StatCard({
 
   return (
     <div
-      className={`rounded-[var(--cp-r-card)] border p-5${wide ? ' col-span-2 md:col-span-1 xl:col-span-2' : ''}`}
+      className={`cp-card cp-stat-tile${wide ? ' cp-stat-money' : ''}`}
       style={{ borderColor, background: bg }}
     >
       {numericValue !== undefined ? (
-        <CountUpNumber value={numericValue} className="cp-num cp-scoreboard" style={{ color: valueColor, whiteSpace: 'nowrap' }} />
+        <CountUpNumber value={numericValue} className="cp-num cp-scoreboard cp-stat-value" style={{ color: valueColor }} />
       ) : (
-        <p className="cp-num cp-scoreboard" style={{ color: valueColor, whiteSpace: 'nowrap' }}>
-          {value}
+        <p className="cp-num cp-scoreboard cp-stat-value" style={{ color: valueColor }}>
+          {value.split(' / ').map((part, index) => <span className="cp-stat-amount" key={index}>{index > 0 && '/ '}{part}</span>)}
         </p>
       )}
       <p className="cp-label mt-1" style={{ color: tone ? valueColor : 'var(--cp-muted)', opacity: tone ? 0.8 : 1 }}>

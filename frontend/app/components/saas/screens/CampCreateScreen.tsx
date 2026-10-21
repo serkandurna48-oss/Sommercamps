@@ -24,7 +24,7 @@ export default function CampCreateScreen({ orgSlug, org }: OrganizationIdentityP
           Camp anlegen
         </h2>
         <p className="cp-body mb-8" style={{ color: 'var(--cp-muted)' }}>
-          Lege dein Camp als Entwurf an. Ergänze danach Ort und Ablauf in den Camp-Einstellungen.
+          Trage die Eckdaten für dein neues Camp ein.
         </p>
 
         <CampCreateForm orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />

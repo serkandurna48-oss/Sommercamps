@@ -1,6 +1,7 @@
 'use client'
 
 import Button from '../ui/Button'
+import ListRow from '../ui/ListRow'
 import { useId, useState } from 'react'
 import { paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
@@ -60,16 +61,9 @@ export default function ParticipantRow({
           onClick={() => setOpen(v => !v)}
           aria-expanded={open}
           aria-controls={detailId}
-          className="min-w-0 flex-1 text-left"
+          className="cp-participant-trigger min-w-0 flex-1 text-left"
         >
-          {/*
-           * Mobile: relative container, arrow absolute-right; pr-8 keeps text clear.
-           * Desktop (md): 5-column grid — name, parent, reg-chip, pay-chip, arrow.
-           * md:contents on the chips wrapper makes the two chips direct grid children.
-           */}
-          <div className="relative cp-admin-row [--cp-row-cols:1fr] md:[--cp-row-cols:minmax(0,2fr)_minmax(0,1fr)_auto_auto_auto] gap-y-1.5 md:gap-y-0 pr-8 md:pr-0">
-            {/* Col 1: Kind-Name + Jg. + Hinweis-Badge */}
-            <p className="cp-subheading min-w-0 truncate" style={{ color: 'var(--cp-ink)' }}>
+          <ListRow className="cp-participant-summary" main={<p className="cp-subheading min-w-0 truncate" style={{ color: 'var(--cp-ink)' }}>
               {effective.child_first_name} {effective.child_last_name}
               <span className="cp-num ml-1.5" style={{ color: 'var(--cp-muted)' }}>
                 ({birthYear(effective.child_birth_date)})
@@ -79,16 +73,10 @@ export default function ParticipantRow({
                   Hinweis
                 </span>
               )}
-            </p>
-
-            {/* Col 2: Elternteil-Name */}
-            <p className="cp-chip min-w-0 truncate" style={{ color: 'var(--cp-muted)' }}>
+            </p>} secondary={<p className="cp-chip min-w-0 truncate" style={{ color: 'var(--cp-muted)' }}>
               {registration.parent_first_name} {registration.parent_last_name}
               <span className="cp-label mt-1 block whitespace-normal">Eingang: <time dateTime={registration.created_at}>{registrationDate(registration.created_at)}</time></span>
-            </p>
-
-            {/* Cols 3+4: Status-Chips; md:contents makes them direct grid children */}
-            <div className="flex flex-wrap gap-2 md:contents">
+            </p>} status={<div className="cp-participant-status">
               <StatusChip
                 tone={REGISTRATION_STATUS_TONE[effective.status] ?? 'neutral'}
                 label={registrationStatusLabel[effective.status] ?? effective.status}
@@ -98,13 +86,9 @@ export default function ParticipantRow({
                 tone={PAYMENT_STATUS_TONE[effective.payment_status] ?? 'neutral'}
                 label={paymentStatusLabel[effective.payment_status] ?? effective.payment_status}
               />
-            </div>
-
-            {/* Col 5 on desktop; absolute top-right on mobile */}
-            <IconChevronDown
-              className={`absolute right-0 top-1/2 -translate-y-1/2 shrink-0 text-[var(--cp-ink-2)] transition-transform motion-reduce:transition-none md:static md:translate-y-0 ${open ? 'rotate-180' : ''}`}
-            />
-          </div>
+            </div>} action={<IconChevronDown
+              className={`shrink-0 transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
+            />} />
         </Button>
       </div>
 

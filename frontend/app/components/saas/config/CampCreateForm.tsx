@@ -4,6 +4,7 @@ import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewConte
 import { useId, useActionState, useState } from 'react'
 import Button from '../ui/Button'
 import Field from '../ui/Field'
+import PriceInput from '../ui/PriceInput'
 import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 import { createCampAction, type CampCreateActionState } from '../actions/configActions'
 
@@ -43,8 +44,8 @@ export default function CampCreateForm({
   }, initialState)
 
   return (
-    <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-8">
-      <section className="flex flex-col gap-4">
+    <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-4">
+      <section className="cp-card flex flex-col gap-4">
         <Field label="Titel" htmlFor="title">
           <input id="title" name="title" required value={title} onChange={event => setTitle(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
@@ -58,17 +59,17 @@ export default function CampCreateForm({
           <Field label="Ende" htmlFor="end_date">
             <input id="end_date" name="end_date" type="date" required defaultValue={submitted.end_date ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
-          <Field label="Mindestalter" htmlFor="age_min">
-            <input id="age_min" name="age_min" type="number" min={0} required defaultValue={submitted.age_min ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
+          <Field label="Mindestalter" htmlFor="age_min" suffix="Jahre" hint="Zum Beispiel 7 Jahre.">
+            <input id="age_min" name="age_min" type="number" inputMode="numeric" min={0} required defaultValue={submitted.age_min ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
-          <Field label="Höchstalter" htmlFor="age_max">
-            <input id="age_max" name="age_max" type="number" min={0} required defaultValue={submitted.age_max ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
+          <Field label="Höchstalter" htmlFor="age_max" suffix="Jahre" hint="Zum Beispiel 13 Jahre.">
+            <input id="age_max" name="age_max" type="number" inputMode="numeric" min={0} required defaultValue={submitted.age_max ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
-          <Field label="Plätze" htmlFor="capacity">
-            <input id="capacity" name="capacity" type="number" min={1} required defaultValue={submitted.capacity ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
+          <Field label="Plätze" htmlFor="capacity" suffix="Plätze" hint="Zum Beispiel 24 Plätze.">
+            <input id="capacity" name="capacity" type="number" inputMode="numeric" min={1} required defaultValue={submitted.capacity ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
-          <Field label="Preis (in Euro)" htmlFor="price_euros">
-            <input id="price_euros" name="price_euros" type="number" min={0} step="0.01" required defaultValue={submitted.price_euros ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
+          <Field label="Preis (in Euro)" htmlFor="price_euros" suffix="€" hint="Zum Beispiel 189,00 €.">
+            <PriceInput id="price_euros" name="price_euros"    required defaultValue={submitted.price_euros ?? ''}   />
           </Field>
         </div>
         <p className="cp-body" style={{ color: 'var(--cp-ink-2)' }}>Dein Camp wird als Entwurf angelegt. Ergänze danach Ort und Ablauf, bevor du es veröffentlichst.</p>

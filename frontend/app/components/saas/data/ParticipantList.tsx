@@ -1,11 +1,11 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ButtonLink } from '../ui/Button'
+import Button, { ButtonLink } from '../ui/Button'
 import { de, formatDate, formatDateTime, registrationStatusLabel, paymentStatusLabel } from '../../../lib/i18n/de'
 import { type ExportColumn } from '../../../lib/exportCsv'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
-import { countByFilter, filterRegistrations, type ParticipantFilter } from '../commandCenterLogic'
+import { countByFilter, filterRegistrations, isActiveRegistration, type ParticipantFilter } from '../commandCenterLogic'
 import EmptyState from '../state/EmptyState'
 import ParticipantExport from './ParticipantExport'
 import FilterButton from '../ui/FilterButton'
@@ -127,10 +127,17 @@ export default function ParticipantList({
         </div>
       </div>
 
+      <div className="mb-4 cp-body" aria-live="polite">
+        <p>{filtered.length} Anmeldungen · {filtered.filter(isActiveRegistration).length} Teilnehmende, {filtered.filter(r => r.status === 'waitlist').length} Warteliste, {filtered.filter(r => r.status === 'cancelled').length} storniert</p>
+        {(filter !== 'all' || search.trim()) && <div className="flex flex-wrap items-center gap-2">
+          <p>Gefiltert: {[search.trim() && 'Suche „' + search.trim() + '“', filter !== 'all' && (filter === 'payment-open' ? 'Zahlung offen' : 'Fehlende Notfallkontakte')].filter(Boolean).join(' · ')}</p>
+          <Button type="button" onClick={() => { setFilter('all'); setSearch('') }}>Filter zurücksetzen</Button>
+        </div>}
+      </div>
       {filtered.length === 0 ? (
         <EmptyState title={de.command.noParticipantsFiltered} />
       ) : (
-        <div className="cp-roster" style={{ borderLeft: `3px solid ${brandColor}` }}>
+        <div className="cp-roster">
           {filtered.map(r => (
             <ParticipantRow
               key={r.id}

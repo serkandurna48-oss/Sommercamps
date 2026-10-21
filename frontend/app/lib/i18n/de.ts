@@ -125,7 +125,7 @@ export const de = {
     heading: 'Warteliste',
     subtitleOrg: 'Über alle Camps',
     position: (n: number) => `Platz ${n}`,
-    waitingSince: (days: number) => (days <= 0 ? 'wartet seit heute' : days === 1 ? 'wartet seit 1 Tag' : `wartet seit ${days} Tagen`),
+    waitingSince: (days: number) => (days < 0 ? 'Anmeldedatum liegt in der Zukunft' : days === 0 ? 'wartet seit heute' : days === 1 ? 'wartet seit 1 Tag' : `wartet seit ${days} Tagen`),
     familiesWaiting: (n: number) => (n === 1 ? '1 Familie wartet' : `${n} Familien warten`),
     promote: (name: string) => `Platz an ${name} vergeben`,
     promoting: 'Wird vergeben …',
@@ -232,13 +232,20 @@ export function daysUntil(isoDate: string): number {
  * echter Zeitstempel MIT Zeitzone (z. B. "...+02:00" vom Server) — `target`
  * ohne dieselbe Europe/Berlin-Konvertierung wie `today` zu lesen, gibt auf
  * einem UTC-Server rund um Mitternacht deutscher Zeit einen Tag daneben. */
-export function daysSince(isoDateTime: string): number {
-  const now = new Date()
+export function daysSince(isoDateTime: string, now = new Date()): number {
   const berlinNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Berlin' }))
   const today = new Date(berlinNow.getFullYear(), berlinNow.getMonth(), berlinNow.getDate())
   const target = new Date(new Date(isoDateTime).toLocaleString('en-US', { timeZone: 'Europe/Berlin' }))
   const targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate())
   return Math.round((today.getTime() - targetDay.getTime()) / 86_400_000)
+}
+
+/** Check the instant before clamping calendar days, including later today. */
+export function waitingSince(isoDateTime: string, now = new Date()): string {
+  const timestamp = new Date(isoDateTime).getTime()
+  if (!Number.isFinite(timestamp)) return 'Anmeldedatum unbekannt'
+  if (timestamp > now.getTime()) return 'Anmeldedatum liegt in der Zukunft'
+  return de.waitlistPage.waitingSince(Math.max(0, daysSince(isoDateTime, now)))
 }
 
 export function formatDateRange(startIso: string, endIso: string): string {

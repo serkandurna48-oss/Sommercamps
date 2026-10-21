@@ -23,7 +23,6 @@ export default function WaitlistCard({
   registeredCount,
   priceCents,
   currency,
-  brandColor,
   brandStrong,
   brandOn,
   showCampTitle = false,
@@ -47,10 +46,10 @@ export default function WaitlistCard({
   const childName = next ? `${next.child_first_name} ${next.child_last_name}` : ''
 
   return (
-    <div>
+    <div className="cp-card cp-card-list">
       <div
         className="flex flex-wrap items-center justify-between gap-4 px-5 py-4"
-        style={{ background: 'var(--cp-surface-2)', borderLeft: `3px solid ${brandColor}` }}
+        style={{ background: 'var(--cp-surface-2)' }}
       >
         <div>
           {showCampTitle && (
@@ -84,7 +83,7 @@ export default function WaitlistCard({
           </p>}
         </div>
       </div>
-      <div className="cp-roster" style={{ borderLeft: `3px solid ${brandColor}` }}>
+      <div>
         {waitlisted.map((r, i) => (
           <WaitlistRow key={r.id} registration={r} position={i + 1} />
         ))}

@@ -59,16 +59,16 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
         <section className="mb-12">
           <h2 className="cp-title mb-4">{de.dashboard.upNext}</h2>
           {camps.length === 0 ? (
-            <div className="rounded-[var(--cp-r-card)] border p-6" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
+            <div className="cp-card" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
               <h3 className="cp-heading">Dein erstes Camp vorbereiten</h3>
               <p className="cp-body mt-2">Lege dein erstes Camp an und bereite die Anmeldung für die Eltern vor.</p>
               <ButtonLink href={`/pilot/${orgSlug}/camps/new`} variant="primary" brandStrong={brand.brandStrong} brandOn={brand.brandOn} className="mt-4">Camp anlegen</ButtonLink>
             </div>
           ) : firstTask ? (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
               <TaskCard task={firstTask} orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
               {restTasks.length > 0 && (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-4">
                   {restTasks.map(t => (
                     <TaskRow key={t.id} task={t} orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
                   ))}
@@ -93,7 +93,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
           {campsWithStats.length === 0 ? (
             <EmptyState title={de.dashboard.noCamps} />
           ) : (
-            <div className="cp-roster" style={{ borderLeft: `3px solid ${brand.brand}` }}>
+            <div className="cp-roster">
               {campsWithStats.map(c => (
                 <CampRow
                   key={c.camp.slug}

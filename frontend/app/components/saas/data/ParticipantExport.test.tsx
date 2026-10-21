@@ -51,7 +51,7 @@ async function click(label: string) { await act(() => button(label).click()) }
 describe('participant export workflow', () => {
   it('defaults to daily list, displays count, and exports the same CSV rows', async () => {
     await render([registration, { ...registration, status: 'waitlist', registration_token: 'waiting' }])
-    expect(container.textContent).toContain('1 Teilnehmende · ohne Warteliste und Stornierungen')
+    expect(container.textContent).toContain('Tagesliste enthält 1 Teilnehmende (ohne Warteliste und Stornierungen)')
     await click('Exportieren')
     expect(container.querySelector('select')?.value).toBe('daylist')
     expect([...container.querySelectorAll('option')].map(o => o.textContent)).toEqual(['Camp-Tagesliste', 'Zahlungsübersicht', 'Alle Anmeldungen'])
@@ -61,7 +61,7 @@ describe('participant export workflow', () => {
   })
   it('disables all exports at zero results and offers filter reset', async () => {
     await render([registration], 'unbekannt')
-    expect(container.textContent).toContain('0 Teilnehmende · ohne Warteliste und Stornierungen')
+    expect(container.textContent).toContain('Tagesliste enthält 0 Teilnehmende (ohne Warteliste und Stornierungen)')
     expect(container.textContent).toContain('Suche: „unbekannt“')
     await click('Exportieren')
     for (const label of ['Als CSV', 'Als Excel', 'Druckansicht']) expect(button(label).disabled).toBe(true)

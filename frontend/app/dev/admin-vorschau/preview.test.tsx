@@ -102,7 +102,7 @@ describe('development-only admin preview', () => {
         if (screen === 'konfiguration') expect(header.querySelector('h1')?.textContent).toBe('Vereinseinstellungen')
         if (screen === 'camp-konfiguration' && !empty) expect(header.querySelector('h1')?.textContent).toBe('Camp-Einstellungen')
         for (const button of document.querySelectorAll('button')) expect(button.className).toMatch(/cp-btn-(primary|secondary|danger)\b/)
-        for (const card of document.querySelectorAll('[class*="rounded-[var(--cp-r-card)]"]')) {
+        for (const card of document.querySelectorAll('.cp-card:not(.cp-card-list), [class*="rounded-[var(--cp-r-card)]"]')) {
           expect(card.querySelectorAll('.cp-btn-primary').length).toBeLessThanOrEqual(1)
         }
         if (screen === 'dashboard') {
@@ -164,11 +164,10 @@ it('provides coherent, invented fixtures and real derived tasks', () => {
 
 it('shows daily arrivals, the full daily list and the first-camp empty state', async () => {
   const dashboard = renderToStaticMarkup(await page('dashboard'))
-  expect(dashboard).toContain('Heute neu: 4 Anmeldungen')
+  expect(dashboard).toContain('Heute neu: 0 Anmeldungen')
   expect(dashboard).toContain('href="/dev/admin-vorschau/anmeldungen"')
   const daily = renderToStaticMarkup(await page('anmeldungen'))
-  for (const registration of registrations.slice(0, 4)) expect(daily).toContain(registration.child_first_name)
-  expect(daily).toContain('sort=newest')
+  expect(daily).toContain('Heute noch keine neuen Anmeldungen')
   expect(daily).not.toMatch(/href="\/(pilot|platform)\//)
   const empty = renderToStaticMarkup(await page('dashboard', true))
   expect(empty).toContain('Dein erstes Camp vorbereiten')

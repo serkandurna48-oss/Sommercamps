@@ -8,6 +8,7 @@ import type { CampAdmin } from '../../../lib/saasAdminApi'
 import { updateCampConfigAction, type ConfigActionState } from '../actions/configActions'
 import Button from '../ui/Button'
 import Field from '../ui/Field'
+import PriceInput from '../ui/PriceInput'
 import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 import SuccessNote from '../state/SuccessNote'
 import PendingNote from '../state/PendingNote'
@@ -66,12 +67,12 @@ export default function CampConfigForm({
   }
 
   return (
-    <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-8">
+    <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-4">
       <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
         Web-Adresse: <strong className="break-all">{camp.slug}</strong> – {de.configPage.hint.slugLocked}
       </p>
 
-      <section className="flex flex-col gap-4">
+      <section className="cp-card flex flex-col gap-4">
         <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
           {de.configPage.section.facts}
         </h3>
@@ -83,7 +84,7 @@ export default function CampConfigForm({
         </Field>
       </section>
 
-      <section className="flex flex-col gap-4">
+      <section className="cp-card flex flex-col gap-4">
         <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
           {de.configPage.section.schedule}
         </h3>
@@ -117,32 +118,32 @@ export default function CampConfigForm({
               style={INPUT_STYLE}
             />
           </Field>
-          <Field label={de.configPage.field.ageMin} htmlFor="age_min">
-            <input id="age_min" name="age_min" type="number" min={0} required defaultValue={inputValue('age_min', camp.age_min)} className={INPUT_CLASS} style={INPUT_STYLE} />
+          <Field label={de.configPage.field.ageMin} htmlFor="age_min" suffix="Jahre" hint="Zum Beispiel 7 Jahre.">
+            <input id="age_min" name="age_min" type="number" inputMode="numeric" min={0} required defaultValue={inputValue('age_min', camp.age_min)} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
-          <Field label={de.configPage.field.ageMax} htmlFor="age_max">
-            <input id="age_max" name="age_max" type="number" min={0} required defaultValue={inputValue('age_max', camp.age_max)} className={INPUT_CLASS} style={INPUT_STYLE} />
+          <Field label={de.configPage.field.ageMax} htmlFor="age_max" suffix="Jahre" hint="Zum Beispiel 13 Jahre.">
+            <input id="age_max" name="age_max" type="number" inputMode="numeric" min={0} required defaultValue={inputValue('age_max', camp.age_max)} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
-          <Field label={de.configPage.field.capacity} htmlFor="capacity">
-            <input id="capacity" name="capacity" type="number" min={1} required defaultValue={inputValue('capacity', camp.capacity)} className={INPUT_CLASS} style={INPUT_STYLE} />
+          <Field label={de.configPage.field.capacity} htmlFor="capacity" suffix="Plätze" hint="Zum Beispiel 24 Plätze.">
+            <input id="capacity" name="capacity" type="number" inputMode="numeric" min={1} required defaultValue={inputValue('capacity', camp.capacity)} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
-          <Field label={de.configPage.field.price} htmlFor="price_euros">
-            <input
+          <Field label={de.configPage.field.price} htmlFor="price_euros" suffix="€" hint="Zum Beispiel 189,00 €.">
+            <PriceInput
               id="price_euros"
               name="price_euros"
-              type="number"
-              min={0}
-              step="0.01"
+              
+              
+              
               required
-              defaultValue={inputValue('price_euros', (camp.price_cents / 100).toFixed(2))}
-              className={INPUT_CLASS}
-              style={INPUT_STYLE}
+              defaultValue={inputValue('price_euros', (camp.price_cents / 100).toFixed(2).replace('.', ','))}
+              
+              
             />
           </Field>
         </div>
       </section>
 
-      <section className="flex flex-col gap-4">
+      <section className="cp-card flex flex-col gap-4">
         <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
           {de.configPage.section.parentInfo}
         </h3>

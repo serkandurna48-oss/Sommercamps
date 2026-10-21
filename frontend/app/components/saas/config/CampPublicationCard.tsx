@@ -37,7 +37,7 @@ export default function CampPublicationCard({ orgSlug, org, camp, pending, brand
     { label: 'Bankverbindung', ready: !!org.iban?.trim(), href: `${orgSettings}#iban` },
     { label: 'Ort', ready: !!camp.location?.trim(), href: '#location' },
     { label: 'Teilnahmebedingungen', ready: !!org.terms_text?.trim(), href: `${orgSettings}#terms_text` },
-  ]
+  ].sort((a, b) => Number(a.ready) - Number(b.ready))
 
   async function copyLink() {
     try {
@@ -49,7 +49,7 @@ export default function CampPublicationCard({ orgSlug, org, camp, pending, brand
   }
 
   return (
-    <section aria-labelledby="publication-heading" className="flex min-w-0 flex-col gap-4 rounded-[var(--cp-r-card)] border p-4 sm:p-6" style={{ background: 'var(--cp-surface)', borderColor: 'var(--cp-field-line)' }}>
+    <section aria-labelledby="publication-heading" className="cp-card flex min-w-0 flex-col gap-4" style={{ background: 'var(--cp-surface)', borderColor: 'var(--cp-line)' }}>
       <h3 id="publication-heading" className="cp-heading">Veröffentlichung</h3>
       <dl className="cp-body grid grid-cols-1 gap-2">
         <div><dt className="inline">Vereinsseite: </dt><dd className="inline font-semibold">{org.site_published ? 'Öffentlich' : 'Entwurf'}</dd></div>
@@ -63,10 +63,10 @@ export default function CampPublicationCard({ orgSlug, org, camp, pending, brand
       <p className="cp-body">Prüfe deine gespeicherten Angaben vor der Veröffentlichung. Mit „Camp veröffentlichen“ speicherst du auch deine Änderungen.</p>
       <ul className="cp-body">
         {checks.map(check => (
-          <li key={check.label}>
-            <Link href={check.href} className="flex min-h-[44px] flex-wrap items-center gap-x-2 py-2 underline">
-              <span>{check.label}</span><span>– {check.ready ? 'Vorhanden' : 'Noch ergänzen'}</span>
-            </Link>
+          <li key={check.label} className="flex min-h-[44px] flex-wrap items-center gap-x-2 py-2">
+            <span aria-hidden="true" style={{ color: check.ready ? 'var(--cp-ok)' : 'var(--cp-pending)' }}>{check.ready ? '✓' : '!'}</span>
+            <span>{check.label}</span><span>– {check.ready ? 'Vorhanden' : 'Fehlt'}</span>
+            {!check.ready && <Link href={check.href} aria-label={check.label + ' ergänzen'} className="cp-focus inline-flex min-h-[44px] items-center underline">ergänzen</Link>}
           </li>
         ))}
       </ul>

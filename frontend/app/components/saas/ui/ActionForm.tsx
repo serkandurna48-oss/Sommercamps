@@ -1,12 +1,18 @@
 ﻿'use client'
 
+<<<<<<< HEAD
 import { useActionState, useState } from 'react'
 import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
+=======
+import { useActionState, useState, type ReactNode } from 'react'
+import type { RegistrationStatusResult } from '../../../lib/saasAdminApi'
+>>>>>>> ux/w2c-storno-warteliste
 import Button from './Button'
 
 export interface ActionFormState {
   error: string | null
   success: string | null
+  promoted?: RegistrationStatusResult | null
 }
 
 export const initialActionFormState: ActionFormState = { error: null, success: null }
@@ -32,6 +38,8 @@ export default function ActionForm({
   brandStrong,
   brandOn,
   requireConfirm,
+  cancelLabel = 'Abbrechen',
+  onResult,
 }: {
   action: (state: ActionFormState, formData: FormData) => Promise<ActionFormState>
   label: string
@@ -40,7 +48,9 @@ export default function ActionForm({
   brandStrong?: string
   brandOn?: string
   /** Wenn gesetzt: Text der BestÃ¤tigungsfrage. Zeigt erst nach Klick. */
-  requireConfirm?: string
+  requireConfirm?: ReactNode
+  cancelLabel?: string
+  onResult?: (result: ActionFormState) => void
 }) {
   const preview = useAdminPreview()
   const effectiveAction = preview ? previewNoopAction : action
@@ -50,7 +60,13 @@ export default function ActionForm({
   const [state, formAction, pending] = useActionState(
     async (prev: ActionFormState, formData: FormData) => {
       try {
+<<<<<<< HEAD
         return { ...(await effectiveAction(prev, formData)) }
+=======
+        const result = await action(prev, formData)
+        onResult?.(result)
+        return { ...result }
+>>>>>>> ux/w2c-storno-warteliste
       } finally {
         setConfirming(false)
       }
@@ -71,7 +87,7 @@ export default function ActionForm({
             {state.error}
           </p>
         )}
-        {state.success && (
+        {state.success && !onResult && (
           <p className="cp-confirm-pop cp-chip motion-reduce:animate-none" style={{ color: 'var(--cp-ok)' }} role="status">
             {state.success}
           </p>
@@ -83,9 +99,9 @@ export default function ActionForm({
   return (
     <form action={formAction} className="flex flex-col items-start gap-2">
       {effectiveConfirming && (
-        <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
+        <div className="cp-body space-y-2" style={{ color: 'var(--cp-muted)' }}>
           {requireConfirm}
-        </p>
+        </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
         <Button type="submit" disabled={pending} variant={variant} brandStrong={brandStrong} brandOn={brandOn}>
@@ -93,7 +109,7 @@ export default function ActionForm({
         </Button>
         {effectiveConfirming && (
           <Button type="button" variant="quiet" disabled={pending} aria-disabled={pending} onClick={() => setConfirming(false)}>
-            Abbrechen
+            {cancelLabel}
           </Button>
         )}
       </div>
@@ -102,7 +118,7 @@ export default function ActionForm({
           {state.error}
         </p>
       )}
-      {state.success && (
+      {state.success && !onResult && (
         <p className="cp-confirm-pop cp-chip motion-reduce:animate-none" style={{ color: 'var(--cp-ok)' }} role="status">
           {state.success}
         </p>

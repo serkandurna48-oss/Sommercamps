@@ -1,7 +1,10 @@
-import { de } from '../../../lib/i18n/de'
+'use client'
+
+import { de, formatEuro } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { promoteWaitlistAction } from '../actions/waitlistActions'
 import ActionForm from '../ui/ActionForm'
+import { useRegistrationActionFeedback } from '../ui/RegistrationActionFeedback'
 import WaitlistRow from './WaitlistRow'
 
 /**
@@ -16,6 +19,10 @@ export default function WaitlistCard({
   campSlug,
   campTitle,
   waitlisted,
+  capacity,
+  registeredCount,
+  priceCents,
+  currency,
   brandColor,
   brandStrong,
   brandOn,
@@ -25,12 +32,19 @@ export default function WaitlistCard({
   campSlug: string
   campTitle: string
   waitlisted: RegistrationAdmin[]
+  capacity: number
+  registeredCount: number
+  priceCents: number
+  currency: string
   brandColor: string
   brandStrong: string
   brandOn: string
   showCampTitle?: boolean
 }) {
   const promote = promoteWaitlistAction.bind(null, orgSlug, campSlug)
+  const reportResult = useRegistrationActionFeedback()
+  const next = waitlisted[0]
+  const childName = next ? `${next.child_first_name} ${next.child_last_name}` : ''
 
   return (
     <div>
@@ -49,18 +63,25 @@ export default function WaitlistCard({
           </p>
         </div>
         <div className="flex flex-col items-start gap-1">
-          <ActionForm
+          {next && (registeredCount >= capacity ? (
+            <p className="cp-body" style={{ color: 'var(--cp-muted)' }}>{de.waitlistPage.promoteNoCapacity}</p>
+          ) : <ActionForm
             action={promote}
-            label={de.waitlistPage.promote}
+            onResult={reportResult}
+            label={de.waitlistPage.promote(childName)}
             pendingLabel={de.waitlistPage.promoting}
             variant="primary"
             brandStrong={brandStrong}
             brandOn={brandOn}
-            requireConfirm="Platz wirklich vergeben?"
-          />
-          <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
+            requireConfirm={<>
+              <p className="cp-subheading">Platz an {childName} für {campTitle} vergeben?</p>
+              <p>Preis: {formatEuro(priceCents, currency)}</p>
+              <p>Eltern werden nicht automatisch benachrichtigt. Bitte informieren Sie die Eltern nach der Platzvergabe.</p>
+            </>}
+          />)}
+          {next && registeredCount < capacity && <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
             {de.waitlistPage.promoteHint}
-          </p>
+          </p>}
         </div>
       </div>
       <div className="cp-roster" style={{ borderLeft: `3px solid ${brandColor}` }}>

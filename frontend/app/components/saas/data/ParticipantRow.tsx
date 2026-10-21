@@ -15,6 +15,7 @@ export default function ParticipantRow({
   brandColor,
   orgSlug,
   campSlug,
+  campTitle,
 }: {
   registration: RegistrationAdmin
   selected: boolean
@@ -22,6 +23,7 @@ export default function ParticipantRow({
   brandColor: string
   orgSlug: string
   campSlug: string
+  campTitle: string
 }) {
   const [open, setOpen] = useState(false)
   const [override, setOverride] = useState<RegistrationAdmin | null>(null)
@@ -109,6 +111,7 @@ export default function ParticipantRow({
               registration={effective}
               orgSlug={orgSlug}
               campSlug={campSlug}
+              campTitle={campTitle}
               brandStrong={brandColor}
               brandOn="#FFFFFF"
               onDetailsSaved={setOverride}

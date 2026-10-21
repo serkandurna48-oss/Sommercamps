@@ -1,6 +1,7 @@
 import { computeBrandTokens } from '../../../../../../components/saas/brandPipeline'
 import { loadCampAdminData } from '../../../../../../components/saas/orgAdminData'
 import MatchdayBand from '../../../../../../components/saas/shell/MatchdayBand'
+import RegistrationActionFeedback from '../../../../../../components/saas/ui/RegistrationActionFeedback'
 import WaitlistCard from '../../../../../../components/saas/data/WaitlistCard'
 import WaitlistExportBar from '../../../../../../components/saas/data/WaitlistExportBar'
 import EmptyState from '../../../../../../components/saas/state/EmptyState'
@@ -39,27 +40,33 @@ export default async function CampWaitlistPage({
           {de.waitlistPage.heading}
         </h2>
 
-        {waitlisted.length === 0 ? (
-          <EmptyState title={de.waitlistPage.emptyCamp} />
-        ) : (
-          <>
-            <WaitlistExportBar
-              rows={exportRows}
-              showCampTitle={false}
-              csvFilename={`${campSlug}-warteliste.csv`}
-              xlsxHref={`/pilot/${orgSlug}/camps/${campSlug}/export?view=waitlist`}
-            />
-            <WaitlistCard
-              orgSlug={orgSlug}
-              campSlug={campSlug}
-              campTitle={camp.title}
-              waitlisted={waitlisted}
-              brandColor={brand.brand}
-              brandStrong={brand.brandStrong}
-              brandOn={brand.brandOn}
-            />
-          </>
-        )}
+        <RegistrationActionFeedback registrations={waitlisted} waitlistHref={`/pilot/${orgSlug}/camps/${campSlug}/warteliste`}>
+          {waitlisted.length === 0 ? (
+            <EmptyState title={de.waitlistPage.emptyCamp} />
+          ) : (
+            <>
+              <WaitlistExportBar
+                rows={exportRows}
+                showCampTitle={false}
+                csvFilename={`${campSlug}-warteliste.csv`}
+                xlsxHref={`/pilot/${orgSlug}/camps/${campSlug}/export?view=waitlist`}
+              />
+              <WaitlistCard
+                orgSlug={orgSlug}
+                campSlug={campSlug}
+                campTitle={camp.title}
+                capacity={camp.capacity}
+                registeredCount={registrations.filter(r => r.status === 'registered' || r.status === 'confirmed').length}
+                priceCents={camp.price_cents}
+                currency={camp.currency}
+                waitlisted={waitlisted}
+                brandColor={brand.brand}
+                brandStrong={brand.brandStrong}
+                brandOn={brand.brandOn}
+              />
+            </>
+          )}
+        </RegistrationActionFeedback>
       </main>
     </>
   )

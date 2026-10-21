@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
-import { CAMP_STATUSES, campStatusLabel, de } from '../../../lib/i18n/de'
+import { de } from '../../../lib/i18n/de'
 import type { CampAdmin } from '../../../lib/saasAdminApi'
 import { updateCampConfigAction, type ConfigActionState } from '../actions/configActions'
 import Button from '../ui/Button'
@@ -10,24 +10,29 @@ import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 import SuccessNote from '../state/SuccessNote'
 import PendingNote from '../state/PendingNote'
 import { localInputToIso, toLocalInputValue } from '../../../lib/dateTimeInput'
+import CampPublicationCard, { type PublicationOrganization } from './CampPublicationCard'
 
 /** Local wall times are converted to explicit instants before invoking the Server Action. */
 export default function CampConfigForm({
   orgSlug,
   camp,
+  org,
   brandStrong,
   brandOn,
 }: {
   orgSlug: string
   camp: CampAdmin
+  org: PublicationOrganization
   brandStrong: string
   brandOn: string
 }) {
   const [submitted, setSubmitted] = useState<Record<string, string> | null>(null)
   const [previousCamp, setPreviousCamp] = useState(camp)
+  const [confirmedCamp, setConfirmedCamp] = useState(camp)
   if (camp !== previousCamp) {
     setPreviousCamp(camp)
     setSubmitted(null)
+    setConfirmedCamp(camp)
   }
   const inputValue = (field: string, fallback: string | number) => submitted?.[field] ?? fallback
   const boundAction = updateCampConfigAction.bind(null, orgSlug, camp.slug)
@@ -35,6 +40,7 @@ export default function CampConfigForm({
     // React resets uncontrolled fields after a resolved action, including
     // validation failures. Keep submitted defaults until fresh props arrive.
     setSubmitted(Object.fromEntries([...data].filter((entry): entry is [string, string] => typeof entry[1] === 'string')))
+    data.set('status', String(data.get('publication_status') ?? confirmedCamp.status))
     // A datetime-local field has no offset. Convert on the device that
     // displayed it, not in the Server Action's unrelated timezone.
     try {
@@ -47,25 +53,18 @@ export default function CampConfigForm({
     return boundAction(previous, data)
   }, { error: null, saved: false })
 
-  // Remount the uncontrolled select after each action, using the confirmed
-  // status on success and the submitted selection on failure.
-  const [status, setStatus] = useState<CampAdmin['status']>(camp.status)
-  const [selectGeneration, setSelectGeneration] = useState(0)
-
   const [prevState, setPrevState] = useState(state)
   if (state !== prevState) {
     setPrevState(state)
-    const confirmed = state.error ? submitted?.status as CampAdmin['status'] | undefined : state.saved && state.status ? state.status : null
-    if (confirmed) {
-      setStatus(confirmed)
-      setSelectGeneration(g => g + 1)
+    if (state.saved && !state.error && state.camp) {
+      setConfirmedCamp(state.camp)
     }
   }
 
   return (
     <form action={formAction} className="flex flex-col gap-8">
       <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
-        /pilot/{orgSlug}/camps/<strong>{camp.slug}</strong> — {de.configPage.hint.slugLocked}
+        Web-Adresse: <strong className="break-all">{camp.slug}</strong> — {de.configPage.hint.slugLocked}
       </p>
 
       <section className="flex flex-col gap-4">
@@ -161,29 +160,6 @@ export default function CampConfigForm({
         </Field>
       </section>
 
-      <section className="flex flex-col gap-4">
-        <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
-          {de.configPage.section.visibility}
-        </h3>
-        <Field label={de.configPage.field.status} htmlFor="status">
-          <select
-            key={selectGeneration}
-            id="status"
-            name="status"
-            required
-            defaultValue={status}
-            className={INPUT_CLASS}
-            style={INPUT_STYLE}
-          >
-            {CAMP_STATUSES.map(s => (
-              <option key={s} value={s}>
-                {campStatusLabel[s]}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </section>
-
       {pending && <PendingNote>{de.configPage.saving}</PendingNote>}
       {!pending && state.error && (
         <p
@@ -197,10 +173,11 @@ export default function CampConfigForm({
       {!pending && state.saved && !state.error && <SuccessNote>{de.configPage.saved}</SuccessNote>}
 
       <div>
-        <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn}>
+        <Button type="submit" variant="secondary" disabled={pending}>
           {pending ? de.configPage.saving : de.configPage.save}
         </Button>
       </div>
+      <CampPublicationCard orgSlug={orgSlug} org={org} camp={confirmedCamp} pending={pending} brandStrong={brandStrong} brandOn={brandOn} />
     </form>
   )
 }

@@ -4,7 +4,9 @@ import { useActionState } from 'react'
 import Button from '../ui/Button'
 import { setOrganizationPublishedAction, type PublishActionState } from '../actions/configActions'
 
-/** Ein Klick, sofortige Wirkung, kein "Speichern" nötig — bewusst kein Teil
+/** Publication is separate from saving organization details. Withdrawal
+ * requires confirmation because it hides all camps from parents.
+ * Bewusst kein Teil
  * des großen Stammdaten-Formulars (OrganizationConfigForm), damit man
  * "Veröffentlichen" nie versehentlich mit-absendet. Wiederverwendet auf der
  * Vereins-Konfigurationsseite UND der Plattform-Konsole-Vereinsdetailseite
@@ -31,6 +33,7 @@ export default function PublishToggle({
 
   return (
     <div
+      id="publication"
       className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--cp-r-card)] border p-5"
       style={{
         borderColor: published ? 'var(--cp-field-line)' : 'var(--cp-error-line)',
@@ -52,7 +55,9 @@ export default function PublishToggle({
           </p>
         )}
       </div>
-      <form action={formAction}>
+      <form action={formAction} onSubmit={event => {
+        if (published && !window.confirm('Vereinsseite zurückziehen?\nEltern können dann keine Camps mehr sehen oder buchen.')) event.preventDefault()
+      }}>
         <Button
           type="submit"
           variant={published ? 'secondary' : 'primary'}
@@ -60,7 +65,7 @@ export default function PublishToggle({
           brandStrong={brandStrong}
           brandOn={brandOn}
         >
-          {pending ? 'Wird gespeichert …' : published ? 'Zurückziehen' : 'Veröffentlichen'}
+          {pending ? 'Wird gespeichert …' : published ? 'Vereinsseite zurückziehen' : 'Vereinsseite veröffentlichen'}
         </Button>
       </form>
     </div>

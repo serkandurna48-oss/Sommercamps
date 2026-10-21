@@ -6,6 +6,9 @@ import type { OrganizationAdmin } from '../../../lib/saasAdminApi'
 import OrganizationConfigForm from './OrganizationConfigForm'
 import { updateOrganizationConfigAction, type ConfigActionState } from '../actions/configActions'
 
+// Initial jsdom/React form work can exceed five seconds on the shared Windows runner.
+vi.setConfig({ testTimeout: 15_000 })
+
 vi.mock('../actions/configActions', () => ({
   updateOrganizationConfigAction: vi.fn(),
   setOrganizationPublishedAction: vi.fn(),

@@ -1,13 +1,17 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-import { updateOrganizationConfigAction } from './configActions'
+import { createCampAction, updateCampConfigAction, updateOrganizationConfigAction } from './configActions'
+import { redirect } from 'next/navigation'
 
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('../../../lib/adminSession', () => ({ getAdminToken: vi.fn() }))
-vi.mock('../../../lib/saasAdminApi', () => ({ updateOrganizationAdmin: vi.fn() }))
+vi.mock('../../../lib/saasAdminApi', async importOriginal => ({
+  ...await importOriginal<typeof import('../../../lib/saasAdminApi')>(),
+  updateOrganizationAdmin: vi.fn(), createCampAdmin: vi.fn(), updateCampAdmin: vi.fn(),
+}))
 
 import { getAdminToken } from '../../../lib/adminSession'
-import { updateOrganizationAdmin } from '../../../lib/saasAdminApi'
+import { createCampAdmin, SlugConflictError, updateCampAdmin, updateOrganizationAdmin, type CampAdmin } from '../../../lib/saasAdminApi'
 
 function makeFormData(fields: Record<string, string>): FormData {
   const fd = new FormData()
@@ -35,8 +39,39 @@ const BASE_FIELDS = {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks()
   vi.mocked(getAdminToken).mockResolvedValue('tok-123')
   vi.mocked(updateOrganizationAdmin).mockResolvedValue(undefined)
+})
+
+const CAMP_FIELDS = { slug: 'sommer', title: 'Sommer', start_date: '2027-07-05', end_date: '2027-07-09', age_min: '6', age_max: '12', capacity: '20', price_euros: '149.50' }
+
+it('always creates a draft even when an obsolete immediate-publication field is submitted', async () => {
+  await createCampAction('demo', { error: null }, makeFormData({ ...CAMP_FIELDS, publish_now: 'on' }))
+  expect(createCampAdmin).toHaveBeenCalledWith('demo', 'tok-123', expect.objectContaining({ slug: 'sommer', status: 'draft', price_cents: 14950 }))
+  expect(redirect).toHaveBeenCalledWith('/pilot/demo/camps/sommer/konfiguration?created=1')
+})
+
+it('describes address conflicts without technical slug wording and does not redirect', async () => {
+  vi.mocked(createCampAdmin).mockRejectedValueOnce(new SlugConflictError('sommer'))
+  const state = await createCampAction('demo', { error: null }, makeFormData(CAMP_FIELDS))
+  expect(state.error).toBe('Die Web-Adresse „sommer“ ist bereits vergeben — wähle eine andere.')
+  expect(redirect).not.toHaveBeenCalled()
+})
+
+it('does not create a camp when the session has expired', async () => {
+  vi.mocked(getAdminToken).mockResolvedValueOnce(null)
+  const state = await createCampAction('demo', { error: null }, makeFormData(CAMP_FIELDS))
+  expect(state.error).toContain('Sitzung abgelaufen')
+  expect(createCampAdmin).not.toHaveBeenCalled()
+  expect(redirect).not.toHaveBeenCalled()
+})
+
+it('returns the persisted camp for the publication card', async () => {
+  const persisted = { slug: 'sommer', status: 'published', location: 'Sportplatz' } as CampAdmin
+  vi.mocked(updateCampAdmin).mockResolvedValueOnce(persisted)
+  const state = await updateCampConfigAction('demo', 'sommer', { error: null, saved: false }, makeFormData({ ...CAMP_FIELDS, status: 'published', location: 'Sportplatz' }))
+  expect(state).toEqual({ error: null, saved: true, status: 'published', camp: persisted })
 })
 
 it('passes trainer_image_url and trainer_text to updateOrganizationAdmin', async () => {

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { getAdminToken } from '../../../lib/adminSession'
 import { CAMP_STATUSES } from '../../../lib/i18n/de'
 import { parseZonedDateTime } from '../../../lib/dateTimeInput'
-import { createCampAdmin, SlugConflictError, updateCampAdmin, updateOrganizationAdmin } from '../../../lib/saasAdminApi'
+import { createCampAdmin, SlugConflictError, updateCampAdmin, updateOrganizationAdmin, type CampAdmin } from '../../../lib/saasAdminApi'
 
 export interface ConfigActionState {
   error: string | null
@@ -18,6 +18,7 @@ export interface ConfigActionState {
    * ALTE Wert von vor dem Save. Nur der Server-Roundtrip selbst kennt in
    * diesem Moment zuverlässig den neuen Stand. */
   status?: 'draft' | 'published' | 'closed' | 'archived'
+  camp?: CampAdmin
 }
 
 function str(formData: FormData, key: string): string | undefined {
@@ -148,8 +149,9 @@ export async function updateCampConfigAction(
         .filter(Boolean)
     : null
 
+  let updatedCamp: CampAdmin
   try {
-    await updateCampAdmin(orgSlug, campSlug, token, {
+    updatedCamp = await updateCampAdmin(orgSlug, campSlug, token, {
       title,
       start_date: startDate,
       end_date: endDate,
@@ -170,7 +172,7 @@ export async function updateCampConfigAction(
   }
 
   revalidatePath(`/pilot/${orgSlug}`, 'layout')
-  return { error: null, saved: true, status: status as 'draft' | 'published' | 'closed' | 'archived' }
+  return { error: null, saved: true, status: updatedCamp.status, camp: updatedCamp }
 }
 
 export interface CampCreateActionState {
@@ -211,8 +213,6 @@ export async function createCampAction(
     return { error: 'Zahlenfelder bitte ohne Sonderzeichen eingeben.' }
   }
 
-  const publishNow = formData.get('publish_now') === 'on'
-
   try {
     await createCampAdmin(orgSlug, token, {
       slug,
@@ -223,15 +223,15 @@ export async function createCampAction(
       age_max: ageMax,
       capacity,
       price_cents: Math.round(priceEuros * 100),
-      status: publishNow ? 'published' : 'draft',
+      status: 'draft',
     })
   } catch (err) {
     if (err instanceof SlugConflictError) {
-      return { error: `Der Slug „${slug}" ist bereits vergeben — einen anderen wählen.` }
+      return { error: `Die Web-Adresse „${slug}“ ist bereits vergeben — wähle eine andere.` }
     }
     return { error: 'Camp konnte nicht angelegt werden — Angaben prüfen und erneut versuchen.' }
   }
 
   revalidatePath(`/pilot/${orgSlug}`, 'layout')
-  redirect(`/pilot/${orgSlug}/camps/${slug}/konfiguration`)
+  redirect(`/pilot/${orgSlug}/camps/${slug}/konfiguration?created=1`)
 }

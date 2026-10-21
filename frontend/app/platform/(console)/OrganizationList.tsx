@@ -116,7 +116,7 @@ export default function OrganizationList({ organizations }: { organizations: Org
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Name, Slug, Ansprechpartner oder E-Mail suchen …"
-          className="cp-subheading min-h-[46px] flex-1 rounded-[var(--cp-r-field)] border px-4 py-2 outline-none"
+          className="cp-subheading min-h-[46px] flex-1 rounded-[var(--cp-r-field)] border px-4 py-2 cp-focus"
           style={{ borderColor: 'var(--cp-field-line)', fontSize: '16px', minWidth: '240px' }}
         />
         <div className="flex flex-wrap gap-2">

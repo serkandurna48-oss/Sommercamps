@@ -52,6 +52,8 @@ async function click(label: string) {
 }
 
 async function saveFirstEdit() {
+  const trigger = container.querySelector<HTMLButtonElement>('button[aria-expanded]')!
+  await act(() => trigger.click())
   await click('Bearbeiten')
   const input = container.querySelector<HTMLInputElement>('[name="child_first_name"]')!
   input.value = 'Corrected'

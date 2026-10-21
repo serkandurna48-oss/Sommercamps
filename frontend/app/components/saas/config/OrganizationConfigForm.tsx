@@ -2,7 +2,7 @@
 
 import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
 
-import { useActionState, useState } from 'react'
+import { useId, useActionState, useState } from 'react'
 import { de } from '../../../lib/i18n/de'
 import type { OrganizationAdmin } from '../../../lib/saasAdminApi'
 import { updateOrganizationConfigAction, type ConfigActionState } from '../actions/configActions'
@@ -36,6 +36,7 @@ export default function OrganizationConfigForm({
     setSubmitted(null)
   }
   const inputValue = (field: string, fallback: string) => submitted?.[field] ?? fallback
+  const feedbackId = useId()
   const preview = useAdminPreview()
   const boundAction = preview ? previewNoopAction : updateOrganizationConfigAction.bind(null, orgSlug)
   const [state, formAction, pending] = useActionState<ConfigActionState, FormData>(async (previous, data) => {
@@ -49,7 +50,7 @@ export default function OrganizationConfigForm({
     <div className="flex flex-col gap-10">
       <PublishToggle orgSlug={orgSlug} published={org.site_published} brandStrong={brandStrong} brandOn={brandOn} />
 
-      <form action={formAction} className="flex flex-col gap-8">
+      <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-8">
         <section className="flex flex-col gap-4">
           <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
             {de.configPage.section.branding}
@@ -227,7 +228,7 @@ export default function OrganizationConfigForm({
           <p
             className="cp-confirm-pop cp-body rounded-[var(--cp-r-chip)] border px-3 py-2 motion-reduce:animate-none"
             style={{ color: 'var(--cp-error)', background: 'var(--cp-error-bg)', borderColor: 'var(--cp-error-line)' }}
-            role="alert"
+            id={feedbackId} role="alert"
           >
             {state.error}
           </p>

@@ -1,0 +1,13 @@
+/* Shared keyboard focus, including controls that do not use our primitives.
+ * Use the surrounding surface text color, including the dark header and login themes. */
+.cp-focus:focus-visible,
+.cp-scope :is(input, textarea, select, button, a[href], summary, [tabindex]):focus-visible,
+.cp-admin-login :is(input, button, a[href]):focus-visible {
+  outline: 2px solid var(--cp-focus-color, currentColor);
+  outline-offset: 2px;
+}
+
+.cp-scope { --cp-focus-color: var(--cp-ink); }
+.cp-scope header { --cp-focus-color: #ffffff; }
+
+.cp-admin-login { --cp-focus-color: var(--ink); }

@@ -1,3 +1,5 @@
+@import './ui/focus.css';
+
 /*
  * Richtung C "Hybrid Matchday" — platform tokens (Auftrag Abschnitt 3.1) and
  * the Archivo type scale (Abschnitt 3.2).
@@ -176,7 +178,7 @@
     padding-bottom: calc(var(--cp-mobile-nav-height) + var(--cp-selection-height) + 16px);
   }
   .cp-band-tabs {
-    padding-bottom: var(--cp-safe-area-bottom);
+    padding-bottom: calc(var(--cp-safe-area-bottom) + 4px);
   }
   .cp-selection-bar {
     bottom: var(--cp-mobile-nav-height);

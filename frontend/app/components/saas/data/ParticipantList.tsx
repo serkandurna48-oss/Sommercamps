@@ -101,7 +101,7 @@ export default function ParticipantList({
           className="cp-subheading min-h-[44px] w-full rounded-[var(--cp-r-field)] border px-4 xl:flex-1"
           style={{ borderColor: 'var(--cp-field-line)', fontSize: '16px', minWidth: '220px' }}
         />
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex gap-2 overflow-x-auto p-1">
           <FilterButton
             label={de.command.filterPaymentOpen}
             count={counts['payment-open']}
@@ -146,7 +146,7 @@ export default function ParticipantList({
       )}
 
       <SelectionBar count={selected.size}>
-        <a href={`mailto:?bcc=${selectedEmails.join(',')}`} className="cp-subheading inline-flex min-h-[50px] items-center justify-center rounded-[var(--cp-r-field)] px-5 py-2 text-center" style={{ background: brand.brandStrong, color: brand.brandOn }}>
+        <a href={`mailto:?bcc=${selectedEmails.join(',')}`} className="cp-focus cp-btn-primary cp-subheading inline-flex min-w-[44px] min-h-[50px] items-center justify-center rounded-[var(--cp-r-field)] px-5 py-2 text-center" style={{ background: brand.brandStrong, color: brand.brandOn }}>
           E-Mail an Ausgewählte
         </a>
       </SelectionBar>

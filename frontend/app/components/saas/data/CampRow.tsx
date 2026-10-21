@@ -26,8 +26,8 @@ export default function CampRow({
   return (
     <Link
       href={`/pilot/${orgSlug}/camps/${camp.slug}`}
-      className="cp-roster-row flex flex-wrap items-center justify-between gap-4 border-t px-5 py-4 transition-colors motion-reduce:transition-none hover:bg-[var(--cp-surface-2)] focus-visible:outline focus-visible:outline-2"
-      style={{ borderColor: 'var(--cp-line-2)', outlineColor: brandColor }}
+      className="cp-roster-row flex flex-wrap items-center justify-between gap-4 border-t px-5 py-4 transition-colors motion-reduce:transition-none hover:bg-[var(--cp-surface-2)]"
+      style={{ borderColor: 'var(--cp-line-2)' }}
     >
       <div className="min-w-0">
         <p className="cp-subheading" style={{ color: 'var(--cp-ink)' }}>

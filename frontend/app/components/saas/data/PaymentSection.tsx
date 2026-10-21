@@ -124,7 +124,7 @@ export default function PaymentSection({
         )}
       />
 
-      <div className="mb-4 flex flex-wrap gap-2 pb-1">
+      <div className="mb-4 flex flex-wrap gap-2 p-1">
         <FilterButton
           label={de.paymentsPage.filterOpen}
           count={counts.open}

@@ -67,7 +67,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
             <div className="rounded-[var(--cp-r-card)] border p-6" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
               <h3 className="cp-heading">Dein erstes Camp vorbereiten</h3>
               <p className="cp-body mt-2">Lege dein erstes Camp an und bereite die Anmeldung für die Eltern vor.</p>
-              <Link href={`/pilot/${orgSlug}/camps/new`} className="cp-label mt-4 inline-flex min-h-[48px] items-center rounded-full px-5" style={{ background: brand.brandStrong, color: brand.brandOn }}>Camp anlegen</Link>
+              <Link href={`/pilot/${orgSlug}/camps/new`} className="cp-focus cp-label mt-4 inline-flex min-h-[48px] min-w-[44px] items-center rounded-full px-5" style={{ background: brand.brandStrong, color: brand.brandOn }}>Camp anlegen</Link>
             </div>
           ) : firstTask ? (
             <div className="flex flex-col gap-3">
@@ -90,7 +90,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
             <h2 className="cp-title">{de.dashboard.allCamps}</h2>
             <Link
               href={`/pilot/${orgSlug}/camps/new`}
-              className="cp-chip rounded-[var(--cp-r-chip)] border px-3 py-2"
+              className="cp-focus inline-flex min-h-[44px] min-w-[44px] items-center cp-chip rounded-[var(--cp-r-chip)] border px-3 py-2"
               style={{ borderColor: 'var(--cp-field-line)', color: 'var(--cp-ink)' }}
             >
               + Camp anlegen

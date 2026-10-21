@@ -2,7 +2,7 @@
 
 import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
 
-import { useActionState } from 'react'
+import { useActionState, useId } from 'react'
 import Button from '../ui/Button'
 import { setOrganizationPublishedAction, type PublishActionState } from '../actions/configActions'
 
@@ -30,6 +30,8 @@ export default function PublishToggle({
   brandStrong?: string
   brandOn?: string
 }) {
+  const feedbackId = useId()
+  const hintId = `${feedbackId}-hint`
   const preview = useAdminPreview()
   const boundAction = preview ? previewNoopAction : setOrganizationPublishedAction.bind(null, orgSlug, !published)
   const [state, formAction, pending] = useActionState<PublishActionState, FormData>(boundAction, { error: null })
@@ -47,13 +49,13 @@ export default function PublishToggle({
         <p className="cp-subheading" style={{ color: 'var(--cp-ink)' }}>
           {published ? 'Veröffentlicht' : 'Entwurf — noch nicht öffentlich sichtbar'}
         </p>
-        <p className="cp-chip mt-0.5" style={{ color: 'var(--cp-muted)' }}>
+        <p id={hintId} className="cp-chip mt-0.5" style={{ color: 'var(--cp-muted)' }}>
           {published
             ? 'Die Vereinsseite ist für Eltern erreichbar.'
             : 'Nur du siehst diesen Verein — die öffentliche Seite antwortet mit „nicht gefunden“, bis du veröffentlichst.'}
         </p>
         {state.error && (
-          <p className="cp-chip mt-1" style={{ color: 'var(--cp-error)' }} role="alert">
+          <p className="cp-chip mt-1" style={{ color: 'var(--cp-error)' }} id={feedbackId} role="alert">
             {state.error}
           </p>
         )}
@@ -62,6 +64,7 @@ export default function PublishToggle({
         if (published && !window.confirm('Vereinsseite zurückziehen?\nEltern können dann keine Camps mehr sehen oder buchen.')) event.preventDefault()
       }}>
         <Button
+          aria-describedby={[hintId, state.error && feedbackId].filter(Boolean).join(' ')}
           type="submit"
           variant={published ? 'secondary' : 'primary'}
           disabled={pending}

@@ -5,6 +5,7 @@ import Image from 'next/image'
 import GrainOverlay from '../GrainOverlay'
 import { publicFontClassName, type PublicTheme } from '../publicFonts'
 import '../publicTheme.css'
+import '../../../components/saas/ui/focus.css'
 import { loginAction, type LoginState } from './actions'
 import { orgShortCode } from '../../../lib/parentFlowFormat'
 
@@ -33,7 +34,7 @@ export default function LoginForm({
 
   return (
     <div
-      className={`cp-public ${publicFontClassName(orgTheme)}`}
+      className={`cp-public cp-admin-login ${publicFontClassName(orgTheme)}`}
       data-theme={orgTheme}
       style={
         {
@@ -76,6 +77,8 @@ export default function LoginForm({
             type="email"
             required
             autoFocus
+            aria-describedby={state.error ? "login-error" : undefined}
+            aria-invalid={state.error ? true : undefined}
             autoComplete="username"
             className="login-field"
           />
@@ -88,12 +91,14 @@ export default function LoginForm({
             name="password"
             type="password"
             required
+            aria-describedby={state.error ? "login-error" : undefined}
+            aria-invalid={state.error ? true : undefined}
             autoComplete="current-password"
             className="login-field"
           />
 
           {state.error && (
-            <p className="login-error" role="alert">
+            <p id="login-error" className="login-error" role="alert">
               {state.error}
             </p>
           )}

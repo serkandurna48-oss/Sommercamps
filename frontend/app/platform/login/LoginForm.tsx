@@ -31,8 +31,10 @@ export default function PlatformLoginForm() {
           type="email"
           required
           autoFocus
+          aria-describedby={state.error ? "login-error" : undefined}
+          aria-invalid={state.error ? true : undefined}
           autoComplete="username"
-          className="cp-subheading mb-4 w-full rounded-[var(--cp-r-field)] border px-4 py-3 outline-none"
+          className="cp-subheading mb-4 w-full rounded-[var(--cp-r-field)] border px-4 py-3 cp-focus"
           style={{ borderColor: 'var(--cp-field-line)', fontSize: '16px' }}
         />
 
@@ -44,14 +46,16 @@ export default function PlatformLoginForm() {
           name="password"
           type="password"
           required
+          aria-describedby={state.error ? "login-error" : undefined}
+          aria-invalid={state.error ? true : undefined}
           autoComplete="current-password"
-          className="cp-subheading w-full rounded-[var(--cp-r-field)] border px-4 py-3 outline-none"
+          className="cp-subheading w-full rounded-[var(--cp-r-field)] border px-4 py-3 cp-focus"
           style={{ borderColor: 'var(--cp-field-line)', fontSize: '16px' }}
         />
 
         {state.error && (
           <p
-            className="cp-body mt-3 rounded-[var(--cp-r-chip)] border px-3 py-2 text-sm"
+            id="login-error" className="cp-body mt-3 rounded-[var(--cp-r-chip)] border px-3 py-2 text-sm"
             style={{ color: 'var(--cp-error)', background: 'var(--cp-error-bg)', borderColor: 'var(--cp-error-line)' }}
             role="alert"
           >

@@ -1,7 +1,7 @@
 'use client'
 
 import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
-import { useActionState, useState } from 'react'
+import { useId, useActionState, useState } from 'react'
 import Button from '../ui/Button'
 import Field from '../ui/Field'
 import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
@@ -30,6 +30,7 @@ export default function CampCreateForm({
   brandStrong: string
   brandOn: string
 }) {
+  const feedbackId = useId()
   const preview = useAdminPreview()
   const boundAction = preview ? previewNoopAction : createCampAction.bind(null, orgSlug)
   const [title, setTitle] = useState('')
@@ -42,7 +43,7 @@ export default function CampCreateForm({
   }, initialState)
 
   return (
-    <form action={formAction} className="flex flex-col gap-8">
+    <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-8">
       <section className="flex flex-col gap-4">
         <Field label="Titel" htmlFor="title">
           <input id="title" name="title" required value={title} onChange={event => setTitle(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
@@ -77,7 +78,7 @@ export default function CampCreateForm({
         <p
           className="cp-body rounded-[var(--cp-r-chip)] border px-3 py-2"
           style={{ color: 'var(--cp-error)', background: 'var(--cp-error-bg)', borderColor: 'var(--cp-error-line)' }}
-          role="alert"
+          id={feedbackId} role="alert"
         >
           {state.error}
         </p>

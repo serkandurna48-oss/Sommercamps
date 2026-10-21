@@ -2,7 +2,7 @@
 
 import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
 
-import { useActionState, useEffect, useState } from 'react'
+import { useActionState, useEffect, useId, useState } from 'react'
 import { de, paymentStatusLabel } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { cancelRegistrationAction, updateRegistrationDetailsAction } from '../actions/waitlistActions'
@@ -43,6 +43,8 @@ export default function ParticipantDetail({
   brandOn: string
   onDetailsSaved?: (registration: RegistrationAdmin) => void
 }) {
+  const editorId = useId()
+  const fieldId = (name: string) => `${editorId}-${name}`
   const missingContact = hasMissingEmergencyContact(registration)
   const notes = hasNotes(registration)
   const reportResult = useRegistrationActionFeedback()
@@ -86,18 +88,18 @@ export default function ParticipantDetail({
             {de.command.participants}
           </p>
           {!editing && (
-            <button type="button" className="cp-chip underline" onClick={() => setEditing(true)}>
+            <button type="button" className="cp-focus cp-chip min-h-[44px] min-w-[44px] px-3 underline" onClick={() => setEditing(true)}>
               {de.command.editParticipant}
             </button>
           )}
         </div>
 
         {editing ? (
-          <form action={formAction} className="flex flex-col gap-4">
+          <form action={formAction} aria-describedby={state.error ? `${editorId}-error` : undefined} className="flex flex-col gap-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label={de.command.fieldChildFirstName} htmlFor="child_first_name">
+              <Field label={de.command.fieldChildFirstName} htmlFor={fieldId('child_first_name')}>
                 <input
-                  id="child_first_name"
+                  id={fieldId('child_first_name')}
                   name="child_first_name"
                   required
                   defaultValue={registration.child_first_name}
@@ -105,9 +107,9 @@ export default function ParticipantDetail({
                   style={INPUT_STYLE}
                 />
               </Field>
-              <Field label={de.command.fieldChildLastName} htmlFor="child_last_name">
+              <Field label={de.command.fieldChildLastName} htmlFor={fieldId('child_last_name')}>
                 <input
-                  id="child_last_name"
+                  id={fieldId('child_last_name')}
                   name="child_last_name"
                   required
                   defaultValue={registration.child_last_name}
@@ -115,18 +117,18 @@ export default function ParticipantDetail({
                   style={INPUT_STYLE}
                 />
               </Field>
-              <Field label={de.command.fieldJerseySize} htmlFor="jersey_size">
+              <Field label={de.command.fieldJerseySize} htmlFor={fieldId('jersey_size')}>
                 <input
-                  id="jersey_size"
+                  id={fieldId('jersey_size')}
                   name="jersey_size"
                   defaultValue={registration.jersey_size ?? ''}
                   className={INPUT_CLASS}
                   style={INPUT_STYLE}
                 />
               </Field>
-              <Field label={de.command.fieldPickupAuthorized} htmlFor="pickup_authorized">
+              <Field label={de.command.fieldPickupAuthorized} htmlFor={fieldId('pickup_authorized')}>
                 <input
-                  id="pickup_authorized"
+                  id={fieldId('pickup_authorized')}
                   name="pickup_authorized"
                   defaultValue={registration.pickup_authorized ?? ''}
                   className={INPUT_CLASS}
@@ -134,9 +136,9 @@ export default function ParticipantDetail({
                 />
               </Field>
             </div>
-            <Field label={de.command.fieldAllergies} htmlFor="allergies">
+            <Field label={de.command.fieldAllergies} htmlFor={fieldId('allergies')}>
               <textarea
-                id="allergies"
+                id={fieldId('allergies')}
                 name="allergies"
                 rows={2}
                 defaultValue={registration.allergies ?? ''}
@@ -146,7 +148,7 @@ export default function ParticipantDetail({
             </Field>
 
             {state.error && (
-              <p className="cp-chip" style={{ color: 'var(--cp-error)' }} role="alert">
+              <p id={`${editorId}-error`} className="cp-chip" style={{ color: 'var(--cp-error)' }} role="alert">
                 {state.error}
               </p>
             )}
@@ -214,11 +216,11 @@ export default function ParticipantDetail({
           {de.command.nextStep}
         </p>
         <div className="flex flex-wrap gap-2">
-          <a href={`mailto:${registration.parent_email}`}>
-            <Button variant="secondary">E-Mail schreiben</Button>
+          <a href={`mailto:${registration.parent_email}`} className="cp-focus cp-subheading inline-flex min-h-[44px] min-w-[44px] items-center rounded-[var(--cp-r-field)] border border-[var(--cp-field-line)] bg-[var(--cp-surface)] px-5">
+            E-Mail schreiben
           </a>
-          <a href={`tel:${registration.parent_phone}`}>
-            <Button variant="secondary">Anrufen</Button>
+          <a href={`tel:${registration.parent_phone}`} className="cp-focus cp-subheading inline-flex min-h-[44px] min-w-[44px] items-center rounded-[var(--cp-r-field)] border border-[var(--cp-field-line)] bg-[var(--cp-surface)] px-5">
+            Anrufen
           </a>
         </div>
 

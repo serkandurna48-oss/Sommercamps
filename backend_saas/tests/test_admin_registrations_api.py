@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.admin_schemas import RegistrationAdminOut
+from app.schemas import RegistrationCreated
+from app.repositories import platform_roles
 from app.registration_lifecycle import InvalidStatusTransitionError
 from app.repositories import camps as camps_repo
 from app.repositories import organizations
@@ -128,6 +131,46 @@ def test_list_registrations_success(monkeypatch):
     assert {r["status"] for r in body} == {"registered", "waitlist"}
     # PII fields are present for the admin view (unlike the public API)
     assert body[0]["parent_email"] == "max@example.com"
+    for registration in body:
+        assert registration["payment_reference"] == RegistrationCreated.model_validate(registration).payment_reference
+
+
+def test_admin_payment_reference_matches_parent_schema_without_db_field():
+    row = _registration_row(registration_token=UUID("1a2b3c4d-1234-5678-abcd-123456789abc"))
+    assert "payment_reference" not in row
+    admin = RegistrationAdminOut.model_validate(row)
+    parent = RegistrationCreated.model_validate(row)
+    assert admin.model_dump(mode="json")["payment_reference"] == parent.payment_reference == "CP-1A2B3C4D"
+
+
+def test_reopen_paid_payment_is_audited(monkeypatch):
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    row = _registration_row(payment_status="paid")
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+    audit = []
+    monkeypatch.setattr(platform_roles, "write_audit_log", lambda **kwargs: audit.append(kwargs))
+
+    def update(org_id, camp_id, token, status):
+        assert (org_id, camp_id, token) == (org["id"], camp["id"], row["registration_token"])
+        assert row["payment_status"] == "paid"
+        row["payment_status"] = status
+        return row
+
+    monkeypatch.setattr(registrations_repo, "update_payment_status", update)
+    with TestClient(app) as client:
+        response = client.patch(
+            f"/admin/organizations/demo-fc/camps/summer-1/registrations/{row['registration_token']}/payment-status",
+            json={"payment_status": "open"}, headers=_auth_headers(),
+        )
+    assert response.status_code == 200
+    assert response.json()["payment_status"] == "open"
+    assert len(audit) == 1
+    assert audit[0]["action"] == "registration.payment_status_changed"
+    assert audit[0]["target_id"] == str(row["registration_token"])
+    assert audit[0]["organization_id"] == str(org["id"])
+    assert audit[0]["metadata"] == {"payment_status": "open"}
 
 
 def test_list_registrations_unknown_camp_returns_404(monkeypatch):

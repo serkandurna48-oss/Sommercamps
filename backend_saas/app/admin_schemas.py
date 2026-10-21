@@ -17,6 +17,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
+from app.schemas import RegistrationCreated
+
 # Mirrors chk_organizations_slug_format / chk_camps_slug_format in
 # supabase/migrations/20260917133748_create_saas_schema_v1.sql — validated
 # here too so a bad slug fails fast with a readable 422 instead of a raw
@@ -375,7 +377,7 @@ class CampAdminOut(BaseModel):
     status: str
 
 
-class RegistrationAdminOut(BaseModel):
+class RegistrationAdminOut(RegistrationCreated):
     """
     Admin view of a registration — contains real personal/medical data about
     a child and their parents (Auftrag Abschnitt 9.1, DSGVO Art. 9 für

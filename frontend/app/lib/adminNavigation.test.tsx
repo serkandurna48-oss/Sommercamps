@@ -18,6 +18,9 @@ vi.mock('next/link', () => ({ default: ({ children, ...props }: { children: Reac
 beforeEach(() => {
   vi.resetAllMocks()
   vi.mocked(getAdminToken).mockResolvedValue('local-test-token')
+  vi.mocked(fetchOrganizationAdmin).mockResolvedValue({
+    slug: 'club-a', name: 'Unpublished club', logo_url: null,
+  } as OrganizationAdmin)
   vi.mocked(fetchMe).mockResolvedValue({
     user_id: 'review-user', email: null, is_platform_owner: false, admin_organization_slugs: ['club-a'],
   })

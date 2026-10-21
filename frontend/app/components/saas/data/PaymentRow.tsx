@@ -15,11 +15,15 @@ export default function PaymentRow({
   camp,
   orgSlug,
   onPaid,
+  brandStrong,
+  brandOn,
 }: {
   registration: RegistrationAdmin
   camp: CampAdmin
   orgSlug: string
   onPaid: () => void
+  brandStrong: string
+  brandOn: string
 }) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle')
   async function markPaid(previous: ActionFormState) {
@@ -48,7 +52,7 @@ export default function PaymentRow({
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono font-semibold" style={{ color: 'var(--cp-ink)' }}>{registration.payment_reference}</span>
-          <Button type="button" variant="quiet" aria-label={`Verwendungszweck ${registration.payment_reference} kopieren`} onClick={copyReference}>
+          <Button type="button" variant="secondary" aria-label={`Verwendungszweck ${registration.payment_reference} kopieren`} onClick={copyReference}>
             {copyState === 'copied' ? 'Kopiert' : 'Kopieren'}
           </Button>
         </div>
@@ -85,13 +89,15 @@ export default function PaymentRow({
               action={markPaid}
               label={de.paymentsPage.markPaid}
               pendingLabel={de.paymentsPage.updating}
-              variant="secondary"
+              variant="primary"
+              brandStrong={brandStrong}
+              brandOn={brandOn}
             />
             <ActionForm
               action={markWaived}
               label={de.paymentsPage.markWaived}
               pendingLabel={de.paymentsPage.updating}
-              variant="quiet-danger"
+              variant="danger"
               requireConfirm="Wirklich erlassen?"
             />
           </div>
@@ -102,7 +108,7 @@ export default function PaymentRow({
             action={markRefunded}
             label={de.paymentsPage.markRefunded}
             pendingLabel={de.paymentsPage.updating}
-            variant="quiet-danger"
+            variant="danger"
             requireConfirm="Bereits erfolgte Rückzahlung als erstattet markieren? CampsPilot überweist kein Geld."
           />
         )}

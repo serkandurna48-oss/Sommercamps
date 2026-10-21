@@ -47,12 +47,12 @@ export default function PublishToggle({
     >
       <div>
         <p className="cp-subheading" style={{ color: 'var(--cp-ink)' }}>
-          {published ? 'Veröffentlicht' : 'Entwurf — noch nicht öffentlich sichtbar'}
+          {published ? 'Veröffentlicht' : 'Entwurf – noch nicht öffentlich sichtbar'}
         </p>
         <p id={hintId} className="cp-chip mt-0.5" style={{ color: 'var(--cp-muted)' }}>
           {published
             ? 'Die Vereinsseite ist für Eltern erreichbar.'
-            : 'Nur du siehst diesen Verein — die öffentliche Seite antwortet mit „nicht gefunden“, bis du veröffentlichst.'}
+            : 'Nur du siehst diesen Verein – die öffentliche Seite antwortet mit „nicht gefunden“, bis du veröffentlichst.'}
         </p>
         {state.error && (
           <p className="cp-chip mt-1" style={{ color: 'var(--cp-error)' }} id={feedbackId} role="alert">
@@ -66,7 +66,7 @@ export default function PublishToggle({
         <Button
           aria-describedby={[hintId, state.error && feedbackId].filter(Boolean).join(' ')}
           type="submit"
-          variant={published ? 'secondary' : 'primary'}
+          variant={published ? 'danger' : 'primary'}
           disabled={pending}
           brandStrong={brandStrong}
           brandOn={brandOn}

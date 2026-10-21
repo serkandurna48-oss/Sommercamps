@@ -75,7 +75,7 @@ it('cancels only after confirmation and explains payment, promotion and refund c
   expect(container.textContent).toContain('Anmeldung von Mia Test für Sommercamp stornieren?')
   expect(container.textContent).toContain('Zahlungsstatus: Bezahlt')
   expect(container.textContent).toContain('Ein frei werdender Platz geht automatisch an die nächste Anmeldung auf der Warteliste. Eine Rückzahlung wird dadurch nicht ausgeführt.')
-  expect(container.querySelector('section[aria-label="Anmeldung stornieren"] button[type="submit"]')?.className).toContain('cp-btn-quiet-danger')
+  expect(container.querySelector('section[aria-label="Anmeldung stornieren"] button[type="submit"]')?.className).toContain('cp-btn-danger')
   await submit()
   expect(cancelRegistrationAction).toHaveBeenCalledOnce()
   expect(cancelRegistrationAction).toHaveBeenCalledWith('club', 'camp', child.registration_token, expect.any(Object))

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import type { CampAdmin, OrganizationAdmin } from '../../../lib/saasAdminApi'
+import { formatDateTime } from '../../../lib/i18n/de'
 import Button from '../ui/Button'
 import SuccessNote from '../state/SuccessNote'
 import { useAdminPreview } from '../preview/AdminPreviewContext'
@@ -14,7 +15,7 @@ const statusLabels: Record<CampAdmin['status'], string> = {
 }
 
 function registrationTime(value: string | null, fallback: string) {
-  return value ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Berlin' }).format(new Date(value)) : fallback
+  return value ? formatDateTime(value) : fallback
 }
 
 /** Uses persisted values only. Publication submits the surrounding camp form. */
@@ -79,10 +80,10 @@ export default function CampPublicationCard({ orgSlug, org, camp, pending, brand
         {camp.status !== 'published' ? (
           <Button type="submit" name="publication_status" value="published" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn}>Camp veröffentlichen</Button>
         ) : (
-          <Button type="submit" name="publication_status" value="draft" disabled={pending}>Camp zurückziehen</Button>
+          <Button type="submit" name="publication_status" value="draft" variant="danger" onClick={event => { if (!window.confirm('Camp zurückziehen? Eltern können dieses Camp dann nicht mehr buchen.')) event.preventDefault() }} disabled={pending}>Camp zurückziehen</Button>
         )}
-        {camp.status === 'published' && <Button type="submit" name="publication_status" value="closed" variant="quiet" disabled={pending}>Camp schließen</Button>}
-        {camp.status === 'closed' && <Button type="submit" name="publication_status" value="archived" variant="quiet" disabled={pending}>Camp archivieren</Button>}
+        {camp.status === 'published' && <Button type="submit" name="publication_status" value="closed" variant="danger" onClick={event => { if (!window.confirm('Camp schließen? Neue Anmeldungen sind danach nicht mehr möglich.')) event.preventDefault() }} disabled={pending}>Camp schließen</Button>}
+        {camp.status === 'closed' && <Button type="submit" name="publication_status" value="archived" variant="secondary" disabled={pending}>Camp archivieren</Button>}
       </div>
       {reachable && !pending && (
         <div className="flex flex-col items-start gap-3">

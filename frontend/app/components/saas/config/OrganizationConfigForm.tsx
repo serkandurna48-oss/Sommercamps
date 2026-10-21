@@ -64,7 +64,7 @@ export default function OrganizationConfigForm({
           <Field
             label="Anschrift (für Impressum/Datenschutz)"
             htmlFor="legal_address"
-            hint="Straße, PLZ, Ort — erscheint auf der öffentlichen Impressum-/Datenschutzseite dieses Vereins. Ohne diese Angabe zeigt die Seite ehrlich „noch nicht angegeben“, nie die Daten eines anderen Vereins."
+            hint="Straße, PLZ, Ort – erscheint auf der öffentlichen Impressum-/Datenschutzseite dieses Vereins. Ohne diese Angabe zeigt die Seite ehrlich „noch nicht angegeben“, nie die Daten eines anderen Vereins."
           >
             <textarea
               id="legal_address"
@@ -155,7 +155,7 @@ export default function OrganizationConfigForm({
           <Field label="Einführungstext" htmlFor="intro_text">
             <textarea id="intro_text" name="intro_text" rows={3} defaultValue={inputValue('intro_text', org.intro_text ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
-          <Field label="Titelbild-URL" htmlFor="hero_image_url" hint="Kein Upload in dieser Version — Bild extern hochladen und die URL hier eintragen.">
+          <Field label="Titelbild-URL" htmlFor="hero_image_url" hint="Kein Upload in dieser Version – Bild extern hochladen und die URL hier eintragen.">
             <input
               id="hero_image_url"
               name="hero_image_url"
@@ -165,7 +165,7 @@ export default function OrganizationConfigForm({
               style={INPUT_STYLE}
             />
           </Field>
-          <Field label="Trainer-Bild-URL" htmlFor="trainer_image_url" hint="Kein Upload in dieser Version — Bild extern hochladen und die URL hier eintragen.">
+          <Field label="Trainer-Bild-URL" htmlFor="trainer_image_url" hint="Kein Upload in dieser Version – Bild extern hochladen und die URL hier eintragen.">
             <input
               id="trainer_image_url"
               name="trainer_image_url"

@@ -88,7 +88,7 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
   return (
     <nav
       ref={containerRef}
-      className="cp-band-tabs fixed right-0 bottom-0 left-0 z-20 grid p-1 grid-flow-col auto-cols-fr md:relative md:flex md:gap-6 md:overflow-x-auto"
+      className="cp-band-tabs fixed right-0 bottom-0 left-0 z-20 grid p-1 grid-cols-[1fr_1fr_1fr_1fr_1.3fr] md:relative md:flex md:gap-6 md:overflow-x-auto"
       style={navStyle}
       aria-label="Bereiche"
     >
@@ -107,7 +107,7 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
             }}
           >
             {Icon && <Icon className="hidden md:inline-block" size={16} />}
-            <span className="min-w-0 [overflow-wrap:anywhere]">{tab.label}</span>
+            <span className="min-w-0 whitespace-nowrap">{tab.label}</span>
             <TabHint />
           </Link>
         )

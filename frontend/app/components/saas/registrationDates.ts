@@ -1,21 +1,7 @@
 import type { CampAdmin, RegistrationAdmin } from '../../lib/saasAdminApi'
 
-const dayFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' })
-const timeFormatter = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' })
-const dateFormatter = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-
-export function berlinDay(date: Date): string {
-  return dayFormatter.format(date)
-}
-
-export function registrationTime(createdAt: string): string {
-  return timeFormatter.format(new Date(createdAt))
-}
-
-export function registrationDate(createdAt: string): string {
-  const date = new Date(createdAt)
-  return Number.isNaN(date.getTime()) ? 'Unbekannt' : dateFormatter.format(date)
-}
+import { berlinDay } from '../../lib/i18n/de'
+export { berlinDay, formatTime as registrationTime, formatDateTime as registrationDate } from '../../lib/i18n/de'
 
 export type ParticipantSort = 'newest' | 'name'
 

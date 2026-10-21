@@ -55,7 +55,7 @@ it('always creates a draft even when an obsolete immediate-publication field is 
 it('describes address conflicts without technical slug wording and does not redirect', async () => {
   vi.mocked(createCampAdmin).mockRejectedValueOnce(new SlugConflictError('sommer'))
   const state = await createCampAction('demo', { error: null }, makeFormData(CAMP_FIELDS))
-  expect(state.error).toBe('Die Web-Adresse „sommer“ ist bereits vergeben — wähle eine andere.')
+  expect(state.error).toBe('Die Web-Adresse „sommer“ ist bereits vergeben – wähle eine andere.')
   expect(redirect).not.toHaveBeenCalled()
 })
 

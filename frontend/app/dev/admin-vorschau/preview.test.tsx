@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -80,6 +81,36 @@ describe('development-only admin preview', () => {
         expect(html).toContain('aria-label="Bereiche"')
         expect(html).toContain('/jk/logo.jpg')
         expect(html).toContain('cp-scope')
+        const document = window.document.implementation.createHTMLDocument()
+        document.body.innerHTML = html
+        const header = document.querySelector('header')!
+        const campLevel = screen.startsWith('camp') && screen !== 'camp-neu' && !empty
+        expect([...header.querySelectorAll('nav a')].map(a => a.textContent)).toEqual([
+          campLevel ? 'Teilnehmer' : 'Übersicht', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Einstellungen',
+        ])
+        const back = [...header.querySelectorAll('a')].find(a => a.textContent?.trim() === '← Zurück')
+        if (screen === 'dashboard') expect(back).toBeUndefined()
+        else {
+          const target = campLevel && screen !== 'camp' ? '/dev/admin-vorschau/camp' : '/dev/admin-vorschau/dashboard'
+          const query = empty ? '?leer=1' : campLevel && screen !== 'camp' ? `?camp=${getPreviewFixtures().camps[0].slug}` : ''
+          expect(back?.getAttribute('href')).toBe(`${target}${query}`)
+        }
+        expect(header.querySelectorAll('h1')).toHaveLength(1)
+        expect(header.querySelectorAll('.cp-num').length).toBeLessThanOrEqual(3)
+        expect(header.className).toContain('md:sticky')
+        expect(header.className.split(' ')).not.toContain('sticky')
+        if (screen === 'konfiguration') expect(header.querySelector('h1')?.textContent).toBe('Vereinseinstellungen')
+        if (screen === 'camp-konfiguration' && !empty) expect(header.querySelector('h1')?.textContent).toBe('Camp-Einstellungen')
+        for (const button of document.querySelectorAll('button')) expect(button.className).toMatch(/cp-btn-(primary|secondary|danger)\b/)
+        for (const card of document.querySelectorAll('[class*="rounded-[var(--cp-r-card)]"]')) {
+          expect(card.querySelectorAll('.cp-btn-primary').length).toBeLessThanOrEqual(1)
+        }
+        if (screen === 'dashboard') {
+          for (const link of document.querySelectorAll('main a')) {
+            if (link.textContent?.trim() === 'Ansehen') expect(link.className).toContain('cp-btn-primary')
+          }
+        }
+        expect(document.body.textContent).not.toMatch(/—|\.\.\.|\bSie\b|\bIhnen\b/)
         expect(html).not.toMatch(/href="\/(pilot|platform)\//)
         if (['dashboard', 'camp', 'zahlungen', 'warteliste', 'aufgaben', 'konfiguration', 'camp-konfiguration', 'camp-zahlungen', 'camp-warteliste', 'camp-aufgaben'].includes(screen) && !(empty && screen.startsWith('camp'))) {
           expect(html).toContain('aria-current="page"')

@@ -1,3 +1,4 @@
+import Button from './Button'
 import { computeBrandTokens } from '../brandPipeline'
 
 export default function FilterButton({
@@ -15,7 +16,7 @@ export default function FilterButton({
 }) {
   const { brandStrong } = computeBrandTokens(brandColor)
   return (
-    <button
+    <Button
       type="button"
       onClick={onClick}
       aria-pressed={active}
@@ -28,6 +29,6 @@ export default function FilterButton({
     >
       {label}
       <span className="cp-num">{count}</span>
-    </button>
+    </Button>
   )
 }

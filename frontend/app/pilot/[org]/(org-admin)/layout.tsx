@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import AdminShell from '../../../components/saas/shell/AdminShell'
 import { getAdminToken } from '../../../lib/adminSession'
-import { fetchMe } from '../../../lib/saasAdminApi'
+import { AdminAuthError, fetchMe } from '../../../lib/saasAdminApi'
 import { getOrganizationAdmin } from '../../../components/saas/orgAdminData'
 
 /**
@@ -77,7 +77,12 @@ export default async function OrgAdminLayout({
   }
 
   // AdminShell reserves the measured navigation and selection heights, including the safe area.
+  const identity = await getOrganizationAdmin(org, token).catch(error => {
+    if (error instanceof AdminAuthError) redirect(`/pilot/${org}/login`)
+    // Page loaders report API failures inside the route error boundary.
+    return null
+  })
   return (
-    <AdminShell isPlatformOwner={me.is_platform_owner}>{children}</AdminShell>
+    <AdminShell org={identity ?? undefined} isPlatformOwner={me.is_platform_owner}>{children}</AdminShell>
   )
 }

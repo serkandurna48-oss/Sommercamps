@@ -1,7 +1,8 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { de, registrationStatusLabel, paymentStatusLabel } from '../../../lib/i18n/de'
+import { ButtonLink } from '../ui/Button'
+import { de, formatDate, formatDateTime, registrationStatusLabel, paymentStatusLabel } from '../../../lib/i18n/de'
 import { type ExportColumn } from '../../../lib/exportCsv'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { countByFilter, filterRegistrations, type ParticipantFilter } from '../commandCenterLogic'
@@ -19,7 +20,7 @@ const PARTICIPANT_COLUMNS: ExportColumn<RegistrationAdmin>[] = [
   { header: 'Zahlung', value: r => paymentStatusLabel[r.payment_status] ?? r.payment_status },
   { header: 'Kind Vorname', value: r => r.child_first_name },
   { header: 'Kind Nachname', value: r => r.child_last_name },
-  { header: 'Geburtsdatum', value: r => r.child_birth_date },
+  { header: 'Geburtsdatum', value: r => formatDate(r.child_birth_date) },
   { header: 'Elternteil Vorname', value: r => r.parent_first_name },
   { header: 'Elternteil Nachname', value: r => r.parent_last_name },
   { header: 'E-Mail', value: r => r.parent_email },
@@ -31,7 +32,7 @@ const PARTICIPANT_COLUMNS: ExportColumn<RegistrationAdmin>[] = [
   { header: 'Trikotgröße', value: r => r.jersey_size },
   { header: 'Abholberechtigt', value: r => r.pickup_authorized },
   { header: 'Fotoerlaubnis', value: r => (r.photo_permission ? 'Ja' : 'Nein') },
-  { header: 'Angemeldet am', value: r => r.created_at },
+  { header: 'Angemeldet am', value: r => formatDateTime(r.created_at) },
 ]
 
 export default function ParticipantList({
@@ -146,9 +147,9 @@ export default function ParticipantList({
       )}
 
       <SelectionBar count={selected.size}>
-        <a href={`mailto:?bcc=${selectedEmails.join(',')}`} className="cp-focus cp-btn-primary cp-subheading inline-flex min-w-[44px] min-h-[50px] items-center justify-center rounded-[var(--cp-r-field)] px-5 py-2 text-center" style={{ background: brand.brandStrong, color: brand.brandOn }}>
+        <ButtonLink href={`mailto:?bcc=${selectedEmails.join(',')}`} variant="primary" brandStrong={brand.brandStrong} brandOn={brand.brandOn}>
           E-Mail an Ausgewählte
-        </a>
+        </ButtonLink>
       </SelectionBar>
       </div>}
     </RegistrationActionFeedback>

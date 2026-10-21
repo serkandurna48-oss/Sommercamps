@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import Field from './Field'
-import Button from './Button'
+import Button, { ButtonLink } from './Button'
 import FilterButton from './FilterButton'
 import ExportBar from './ExportBar'
 import { INPUT_CLASS } from './formFieldStyles'
@@ -107,15 +107,12 @@ describe('admin accessibility primitives', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
   })
 
-  it('gives the dashboard Camp anlegen link an explicit 44px minimum target', () => {
-    const source = readFileSync(resolve('app/components/saas/screens/OrgDashboardScreen.tsx'), 'utf8')
-    const links = [...source.matchAll(/<Link\b[\s\S]*?<\/Link>/g)].map(match => match[0]).filter(link => link.includes('Camp anlegen'))
-    expect(links).toHaveLength(2)
-    for (const link of links) {
-      expect(link).toMatch(/min-h-\[(44|48)px\]/)
-      expect(link).toContain('min-w-[44px]')
-      expect(link).toContain('cp-focus')
-    }
+  it('gives navigation actions an explicit 44px minimum target', async () => {
+    await act(() => root.render(<ButtonLink href="/pilot/demo/camps/new" variant="primary" brandStrong="#116644" brandOn="#fff">Camp anlegen</ButtonLink>))
+    const link = container.querySelector('a')!
+    minimumTarget(link)
+    expect(link.classList.contains('cp-focus')).toBe(true)
+    expect(link.querySelector('button')).toBeNull()
   })
 
   it.each(['#B8912B', '#CC0000'])('uses safe brand contrast for filters, selection actions and editing: %s', async color => {

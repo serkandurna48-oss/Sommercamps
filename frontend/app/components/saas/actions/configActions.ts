@@ -40,7 +40,7 @@ export async function updateOrganizationConfigAction(
   formData: FormData,
 ): Promise<ConfigActionState> {
   const token = await getAdminToken()
-  if (!token) return { error: 'Sitzung abgelaufen — bitte neu anmelden.', saved: false }
+  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', saved: false }
 
   const name = str(formData, 'name')
   const contactEmail = str(formData, 'contact_email')
@@ -67,7 +67,7 @@ export async function updateOrganizationConfigAction(
       terms_text: optionalStr(formData, 'terms_text'),
     })
   } catch {
-    return { error: 'Konnte nicht gespeichert werden — Angaben prüfen und erneut versuchen.', saved: false }
+    return { error: 'Konnte nicht gespeichert werden – Angaben prüfen und erneut versuchen.', saved: false }
   }
 
   revalidatePath(`/pilot/${orgSlug}`, 'layout')
@@ -91,12 +91,12 @@ export async function setOrganizationPublishedAction(
   _formData: FormData,
 ): Promise<PublishActionState> {
   const token = await getAdminToken()
-  if (!token) return { error: 'Sitzung abgelaufen — bitte neu anmelden.' }
+  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.' }
 
   try {
     await updateOrganizationAdmin(orgSlug, token, { site_published: published })
   } catch {
-    return { error: 'Konnte nicht gespeichert werden — erneut versuchen.' }
+    return { error: 'Konnte nicht gespeichert werden – erneut versuchen.' }
   }
 
   revalidatePath(`/pilot/${orgSlug}`, 'layout')
@@ -114,7 +114,7 @@ export async function updateCampConfigAction(
   formData: FormData,
 ): Promise<ConfigActionState> {
   const token = await getAdminToken()
-  if (!token) return { error: 'Sitzung abgelaufen — bitte neu anmelden.', saved: false }
+  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', saved: false }
 
   const title = str(formData, 'title')
   const startDate = str(formData, 'start_date')
@@ -167,7 +167,7 @@ export async function updateCampConfigAction(
       status: status as 'draft' | 'published' | 'closed' | 'archived',
     })
   } catch {
-    return { error: 'Konnte nicht gespeichert werden — Angaben prüfen und erneut versuchen.', saved: false }
+    return { error: 'Konnte nicht gespeichert werden – Angaben prüfen und erneut versuchen.', saved: false }
   }
 
   revalidatePath(`/pilot/${orgSlug}`, 'layout')
@@ -189,7 +189,7 @@ export async function createCampAction(
   formData: FormData,
 ): Promise<CampCreateActionState> {
   const token = await getAdminToken()
-  if (!token) return { error: 'Sitzung abgelaufen — bitte neu anmelden.' }
+  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.' }
 
   const slug = str(formData, 'slug')
   const title = str(formData, 'title')
@@ -226,9 +226,9 @@ export async function createCampAction(
     })
   } catch (err) {
     if (err instanceof SlugConflictError) {
-      return { error: `Die Web-Adresse „${slug}“ ist bereits vergeben — wähle eine andere.` }
+      return { error: `Die Web-Adresse „${slug}“ ist bereits vergeben – wähle eine andere.` }
     }
-    return { error: 'Camp konnte nicht angelegt werden — Angaben prüfen und erneut versuchen.' }
+    return { error: 'Camp konnte nicht angelegt werden – Angaben prüfen und erneut versuchen.' }
   }
 
   revalidatePath(`/pilot/${orgSlug}`, 'layout')

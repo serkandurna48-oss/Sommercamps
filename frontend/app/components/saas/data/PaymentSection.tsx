@@ -1,5 +1,7 @@
 'use client'
 
+import { computeBrandTokens } from '../brandPipeline'
+
 import { useId, useMemo, useState } from 'react'
 import { de, formatEuro, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import { xlsxHrefWithFilter, type ExportColumn } from '../../../lib/exportCsv'
@@ -57,6 +59,7 @@ export default function PaymentSection({
   const [lastPaid, setLastPaid] = useState<PaymentEntry | null>(null)
   const [undoMessage, setUndoMessage] = useState<string | null>(null)
   const searchId = useId()
+  const brand = computeBrandTokens(brandColor)
 
   const counts = useMemo(
     () => ({
@@ -159,6 +162,8 @@ export default function PaymentSection({
               registration={e.registration}
               camp={e.camp}
               orgSlug={orgSlug}
+              brandStrong={brand.brandStrong}
+              brandOn={brand.brandOn}
               onPaid={() => { setLastPaid(e); setUndoMessage(null) }}
             />
           ))}

@@ -10,7 +10,7 @@ import { setPaymentStatusAction } from '../actions/paymentActions'
 import { hasMissingEmergencyContact, hasNotes, isOpenPayment } from '../commandCenterLogic'
 import ActionForm from '../ui/ActionForm'
 import { useRegistrationActionFeedback } from '../ui/RegistrationActionFeedback'
-import Button from '../ui/Button'
+import Button, { ButtonLink } from '../ui/Button'
 import Field from '../ui/Field'
 import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 
@@ -88,9 +88,9 @@ export default function ParticipantDetail({
             {de.command.participants}
           </p>
           {!editing && (
-            <button type="button" className="cp-focus cp-chip min-h-[44px] min-w-[44px] px-3 underline" onClick={() => setEditing(true)}>
+            <Button type="button" onClick={() => setEditing(true)}>
               {de.command.editParticipant}
-            </button>
+            </Button>
           )}
         </div>
 
@@ -157,7 +157,7 @@ export default function ParticipantDetail({
               <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn}>
                 {pending ? de.command.editParticipantSaving : de.command.editParticipantSave}
               </Button>
-              <Button type="button" variant="quiet" disabled={pending} onClick={() => setEditing(false)}>
+              <Button type="button" variant="secondary" disabled={pending} onClick={() => setEditing(false)}>
                 {de.command.editParticipantCancel}
               </Button>
             </div>
@@ -168,13 +168,13 @@ export default function ParticipantDetail({
               <dt className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
                 {de.command.fieldJerseySize}
               </dt>
-              <dd className="cp-body">{registration.jersey_size ?? '—'}</dd>
+              <dd className="cp-body">{registration.jersey_size ?? '–'}</dd>
             </div>
             <div>
               <dt className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
                 {de.command.fieldPickupAuthorized}
               </dt>
-              <dd className="cp-body">{registration.pickup_authorized ?? '—'}</dd>
+              <dd className="cp-body">{registration.pickup_authorized ?? '–'}</dd>
             </div>
           </dl>
         )}
@@ -216,23 +216,23 @@ export default function ParticipantDetail({
           {de.command.nextStep}
         </p>
         <div className="flex flex-wrap gap-2">
-          <a href={`mailto:${registration.parent_email}`} className="cp-focus cp-subheading inline-flex min-h-[44px] min-w-[44px] items-center rounded-[var(--cp-r-field)] border border-[var(--cp-field-line)] bg-[var(--cp-surface)] px-5">
+          <ButtonLink href={`mailto:${registration.parent_email}`}>
             E-Mail schreiben
-          </a>
-          <a href={`tel:${registration.parent_phone}`} className="cp-focus cp-subheading inline-flex min-h-[44px] min-w-[44px] items-center rounded-[var(--cp-r-field)] border border-[var(--cp-field-line)] bg-[var(--cp-surface)] px-5">
+          </ButtonLink>
+          <ButtonLink href={`tel:${registration.parent_phone}`}>
             Anrufen
-          </a>
+          </ButtonLink>
         </div>
 
         {isOpenPayment(registration) && (
           <div className="mt-3 flex flex-wrap gap-2">
-            <ActionForm action={markPaid} label={de.paymentsPage.markPaid} pendingLabel={de.paymentsPage.updating} variant="secondary" />
-            <ActionForm action={markWaived} label={de.paymentsPage.markWaived} pendingLabel={de.paymentsPage.updating} variant="quiet-danger" requireConfirm="Wirklich erlassen?" />
+            <ActionForm action={markPaid} label={de.paymentsPage.markPaid} pendingLabel={de.paymentsPage.updating} variant={editing ? 'secondary' : 'primary'} brandStrong={brandStrong} brandOn={brandOn} />
+            <ActionForm action={markWaived} label={de.paymentsPage.markWaived} pendingLabel={de.paymentsPage.updating} variant="danger" requireConfirm="Wirklich erlassen?" />
           </div>
         )}
         {registration.payment_status === 'paid' && (
           <div className="mt-3">
-            <ActionForm action={markRefunded} label={de.paymentsPage.markRefunded} pendingLabel={de.paymentsPage.updating} variant="quiet-danger" requireConfirm="Wirklich erstatten?" />
+            <ActionForm action={markRefunded} label={de.paymentsPage.markRefunded} pendingLabel={de.paymentsPage.updating} variant="danger" requireConfirm="Wirklich erstatten?" />
           </div>
         )}
 
@@ -244,7 +244,7 @@ export default function ParticipantDetail({
             onResult={reportResult}
             label="Anmeldung stornieren"
             pendingLabel="Wird storniert …"
-            variant="quiet-danger"
+            variant="danger"
             cancelLabel="Behalten"
             requireConfirm={<>
               <p className="cp-subheading">Anmeldung von {childName} für {campTitle} stornieren?</p>

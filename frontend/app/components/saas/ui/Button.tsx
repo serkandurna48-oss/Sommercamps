@@ -1,47 +1,32 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, ComponentProps, CSSProperties, Ref } from 'react'
+import Link from '../preview/AdminLink'
 
-type Variant = 'primary' | 'secondary' | 'quiet' | 'quiet-danger'
-
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: Variant
-  /** Für variant="primary": --cp-brand-strong/--cp-brand-on (Abschnitt 3.3). */
+export type ButtonVariant = 'primary' | 'secondary' | 'danger'
+interface ButtonAppearance {
+  variant?: ButtonVariant
   brandStrong?: string
   brandOn?: string
+  className?: string
+  style?: CSSProperties
 }
 
-const VARIANT_CLASS: Record<Variant, string> = {
-  primary: 'cp-btn-primary',
-  secondary: 'cp-btn-secondary',
-  quiet: 'cp-btn-quiet',
-  'quiet-danger': 'cp-btn-quiet-danger',
+function appearance({ variant = 'secondary', brandStrong, brandOn, className = '', style }: ButtonAppearance) {
+  return {
+    className: `cp-focus cp-subheading cp-btn-${variant} inline-flex min-w-[44px] min-h-[44px] items-center justify-center rounded-[var(--cp-r-field)] px-5 py-2 transition-[opacity,background-color] disabled:opacity-50 motion-reduce:transition-none ${className}`,
+    style: {
+      background: variant === 'primary' ? brandStrong ?? 'var(--cp-ink)' : 'var(--cp-surface)',
+      color: variant === 'primary' ? brandOn ?? '#FFFFFF' : variant === 'danger' ? 'var(--cp-error)' : 'var(--cp-ink)',
+      border: variant === 'primary' ? '1px solid transparent' : `1px solid ${variant === 'danger' ? 'var(--cp-error-line)' : 'var(--cp-field-line)'}`,
+      ...style,
+    },
+  }
 }
 
-/** Mindestens 50-54px Höhe (primary), 44x44 Tapfläche (Abschnitt 5). */
-export default function Button({
-  variant = 'secondary',
-  brandStrong,
-  brandOn,
-  className = '',
-  style,
-  ...props
-}: ButtonProps) {
-  const base =
-    'cp-focus cp-subheading inline-flex min-w-[44px] min-h-[44px] items-center justify-center rounded-[var(--cp-r-field)] px-5 transition-[opacity,background-color] disabled:opacity-50 motion-reduce:transition-none'
+export default function Button({ variant, brandStrong, brandOn, className, style, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & ButtonAppearance & { ref?: Ref<HTMLButtonElement> }) {
+  return <button {...appearance({ variant, brandStrong, brandOn, className, style })} {...props} />
+}
 
-  const variantStyle: React.CSSProperties =
-    variant === 'primary'
-      ? { background: brandStrong ?? 'var(--cp-ink)', color: brandOn ?? '#FFFFFF', minHeight: '50px' }
-      : variant === 'secondary'
-        ? { background: 'var(--cp-surface)', color: 'var(--cp-ink)', border: '1px solid var(--cp-field-line)' }
-        : variant === 'quiet-danger'
-          ? { background: 'transparent', color: 'var(--cp-error)' }
-          : { background: 'transparent', color: 'var(--cp-ink-2)' }
-
-  return (
-    <button
-      className={`${base} ${VARIANT_CLASS[variant]} ${className}`}
-      style={{ ...variantStyle, ...style }}
-      {...props}
-    />
-  )
+/** Navigation actions share the same three appearances and remain semantic links. */
+export function ButtonLink({ variant, brandStrong, brandOn, className, style, ...props }: ComponentProps<typeof Link> & ButtonAppearance) {
+  return <Link {...appearance({ variant, brandStrong, brandOn, className, style })} {...props} />
 }

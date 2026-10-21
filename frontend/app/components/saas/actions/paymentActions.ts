@@ -22,12 +22,12 @@ export async function setPaymentStatusAction(
   _prev: ActionFormState,
 ): Promise<ActionFormState> {
   const token = await getAdminToken()
-  if (!token) return { error: 'Sitzung abgelaufen — bitte neu anmelden.', success: null }
+  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', success: null }
 
   try {
     await setPaymentStatusAdmin(orgSlug, campSlug, registrationToken, token, paymentStatus)
   } catch {
-    return { error: 'Konnte nicht gespeichert werden — erneut versuchen.', success: null }
+    return { error: 'Konnte nicht gespeichert werden – erneut versuchen.', success: null }
   }
 
   revalidatePath(`/pilot/${orgSlug}`, 'layout')

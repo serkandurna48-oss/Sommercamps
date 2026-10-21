@@ -24,8 +24,7 @@ export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsBy
 
   return (
     <>
-      <MatchdayBand
-        variant="compact"
+      <MatchdayBand backHref={`/pilot/${orgSlug}/dashboard`}
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}

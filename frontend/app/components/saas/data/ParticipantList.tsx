@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from 'react'
 import { de, registrationStatusLabel, paymentStatusLabel } from '../../../lib/i18n/de'
-import { xlsxHrefWithFilter, type ExportColumn } from '../../../lib/exportCsv'
-import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
+import { type ExportColumn } from '../../../lib/exportCsv'
+import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { countByFilter, filterRegistrations, type ParticipantFilter } from '../commandCenterLogic'
 import EmptyState from '../state/EmptyState'
-import ExportBar from '../ui/ExportBar'
+import ParticipantExport from './ParticipantExport'
 import FilterButton from '../ui/FilterButton'
 import SelectionBar from '../ui/SelectionBar'
 import Button from '../ui/Button'
@@ -37,11 +37,13 @@ export default function ParticipantList({
   brandColor,
   orgSlug,
   campSlug,
+  camp,
 }: {
   registrations: RegistrationAdmin[]
   brandColor: string
   orgSlug: string
   campSlug: string
+  camp: CampAdmin
 }) {
   const [filter, setFilter] = useState<ParticipantFilter>('all')
   const [search, setSearch] = useState('')
@@ -61,26 +63,22 @@ export default function ParticipantList({
 
   const selectedEmails = registrations.filter(r => selected.has(r.id)).map(r => r.parent_email)
 
-  if (registrations.length === 0) {
-    return <EmptyState title={de.command.noParticipants} />
-  }
-
   return (
     <div>
-      <ExportBar
-        rows={filtered}
-        columns={PARTICIPANT_COLUMNS}
-        csvFilename={`${campSlug}-teilnehmer.csv`}
-        xlsxHref={xlsxHrefWithFilter(
-          `/pilot/${orgSlug}/camps/${campSlug}/export?view=participants`,
-          filtered.map(r => r.registration_token),
-          registrations.length,
-        )}
+      <ParticipantExport
+        registrations={registrations}
+        camp={camp}
+        orgSlug={orgSlug}
+        filter={filter}
+        search={search}
+        allColumns={PARTICIPANT_COLUMNS}
+        onReset={() => { setFilter('all'); setSearch('') }}
       />
 
       <div className="mb-4 flex flex-col gap-2 xl:flex-row xl:items-center">
         <input
           type="search"
+          aria-label="Teilnehmende suchen"
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder={de.command.searchPlaceholder}

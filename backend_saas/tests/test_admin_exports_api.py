@@ -124,6 +124,43 @@ def test_export_camp_payments_xlsx_excludes_camp_column(monkeypatch):
     assert sheet["E2"].value == "Bezahlt"
 
 
+def test_export_daylist_active_sorted_columns_and_token_filter(monkeypatch):
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    rows = [
+        _registration_row(child_last_name="Zimmer", child_first_name="Zoe"),
+        _registration_row(status="confirmed", child_last_name="Äbel", child_first_name="Ben",
+                          emergency_contact_name="Anna", emergency_contact_phone="0123",
+                          pickup_authorized="Oma", medical_notes="Hinweis", allergies="Nüsse"),
+        _registration_row(status="waitlist", child_last_name="A", child_first_name="Wartend"),
+        _registration_row(status="cancelled", child_last_name="A", child_first_name="Storniert"),
+        _registration_row(child_last_name="Äbel", child_first_name="Anna"),
+    ]
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+    monkeypatch.setattr(registrations_repo, "list_registrations_for_camp", lambda org_id, camp_id: rows)
+    url = "/admin/organizations/demo-fc/camps/summer-1/export.xlsx?view=daylist"
+    with TestClient(app) as client:
+        response = client.get(url, headers=_auth_headers())
+        assert response.status_code == 200
+        sheet = _load(response.content).active
+        assert [c.value for c in sheet[1]] == ["Kind", "Jahrgang/Alter", "Notfallkontakt Telefon", "Abholberechtigt", "Hinweise/Allergien", "Anwesenheit"]
+        assert [sheet.cell(row=i, column=1).value for i in range(2, 5)] == ["Anna Äbel", "Ben Äbel", "Zoe Zimmer"]
+        assert sheet.max_row == 4
+        assert [c.value for c in sheet[3]] == ["Ben Äbel", "2018", "Anna · 0123", "Oma", "Hinweis · Nüsse", None]
+        selected = client.get(url + f"&tokens={rows[1]['registration_token']},{rows[2]['registration_token']}", headers=_auth_headers())
+        selected_sheet = _load(selected.content).active
+        assert selected_sheet.max_row == 2
+        assert selected_sheet["A2"].value == "Ben Äbel"
+        empty = client.get(url + "&tokens=", headers=_auth_headers())
+        assert _load(empty.content).active.max_row == 1
+
+
+def test_export_daylist_requires_authentication():
+    with TestClient(app) as client:
+        assert client.get("/admin/organizations/demo-fc/camps/summer-1/export.xlsx?view=daylist").status_code == 401
+
+
 def test_export_camp_waitlist_xlsx_only_includes_waitlisted(monkeypatch):
     org = _org_row()
     camp = _camp_row(org["id"])

@@ -21,6 +21,7 @@ between camp_config.py and campConfig.ts).
 from __future__ import annotations
 
 from collections import defaultdict
+import unicodedata
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, Query, Response
@@ -132,6 +133,30 @@ def _payments_sheet(camp_registrations: list[tuple[dict, list[dict]]], include_c
     return headers, rows
 
 
+def _daylist_sheet(registrations: list[dict]) -> tuple[list[str], list[list[object]]]:
+    """Active children only; same columns and dictionary order as dayListExport.ts."""
+    def sort_key(value: object) -> str:
+        return "".join(c for c in unicodedata.normalize("NFD", str(value)) if not unicodedata.combining(c)).lower().replace("ß", "ss")
+
+    active = sorted(
+        (r for r in registrations if r["status"] in ("registered", "confirmed")),
+        key=lambda r: tuple(sort_key(r[field]) for field in ("child_last_name", "child_first_name", "registration_token")),
+    )
+    headers = ["Kind", "Jahrgang/Alter", "Notfallkontakt Telefon", "Abholberechtigt", "Hinweise/Allergien", "Anwesenheit"]
+    rows = [
+        [
+            f"{r['child_first_name']} {r['child_last_name']}",
+            str(r["child_birth_date"])[:4],
+            " · ".join(filter(None, [r["emergency_contact_name"], r["emergency_contact_phone"]])),
+            r["pickup_authorized"],
+            " · ".join(filter(None, [r["medical_notes"], r["allergies"]])),
+            "",
+        ]
+        for r in active
+    ]
+    return headers, rows
+
+
 def _waitlist_sheet(camp_registrations: list[tuple[dict, list[dict]]], include_camp_column: bool) -> tuple[list[str], list[list[object]]]:
     """Mirrors WaitlistCard/WaitlistRow: only status='waitlist', in the
     same FIFO order the admin's promote action would use (registrations
@@ -163,7 +188,7 @@ def _waitlist_sheet(camp_registrations: list[tuple[dict, list[dict]]], include_c
 def export_camp_xlsx(
     organization_slug: str,
     camp_slug: str,
-    view: Literal["participants", "payments", "waitlist"] = "participants",
+    view: Literal["participants", "payments", "waitlist", "daylist"] = "participants",
     tokens: Optional[str] = Query(default=None, description="Comma-separated registration_token values to restrict to"),
     auth: AuthContext = Depends(require_org_access),
 ) -> Response:
@@ -172,7 +197,9 @@ def export_camp_xlsx(
 
     registrations = _filter_by_tokens(registrations_repo.list_registrations_for_camp(organization["id"], camp["id"]), tokens)
 
-    if view == "participants":
+    if view == "daylist":
+        headers, rows = _daylist_sheet(registrations)
+    elif view == "participants":
         headers, rows = _participants_sheet(camp, registrations)
     elif view == "payments":
         headers, rows = _payments_sheet([(camp, registrations)], include_camp_column=False)

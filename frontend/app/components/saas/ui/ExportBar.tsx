@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { downloadCsv, toCsv, type ExportColumn } from '../../../lib/exportCsv'
 import { IconChevronDown, IconDocument, IconDownload, IconPrinter, IconTable } from '../icons'
 
@@ -19,14 +19,46 @@ export default function ExportBar<T>({
   columns,
   csvFilename,
   xlsxHref,
+  configuration,
+  summary,
+  onReset,
+  onPrint,
+  printEnabled = true,
 }: {
   rows: T[]
   columns: ExportColumn<T>[]
   csvFilename: string
   xlsxHref: string
+  configuration?: ReactNode
+  summary?: ReactNode
+  onReset?: () => void
+  onPrint?: () => void
+  printEnabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
+  const [downloadState, setDownloadState] = useState<'idle' | 'pending' | 'success' | 'error'>('idle')
   const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const panelId = useId()
+  const disabled = rows.length === 0 || downloadState === 'pending'
+
+  async function downloadExcel() {
+    if (disabled) return
+    setDownloadState('pending')
+    try {
+      const response = await fetch(xlsxHref)
+      if (!response.ok) throw new Error('Export failed')
+      const url = URL.createObjectURL(await response.blob())
+      const link = document.createElement('a')
+      link.href = url
+      link.download = csvFilename.replace(/\.csv$/i, '.xlsx')
+      link.click()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      setDownloadState('success')
+    } catch {
+      setDownloadState('error')
+    }
+  }
 
   useEffect(() => {
     if (!open) return
@@ -34,7 +66,10 @@ export default function ExportBar<T>({
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
     }
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') {
+        setOpen(false)
+        triggerRef.current?.focus()
+      }
     }
     document.addEventListener('pointerdown', onPointerDown)
     document.addEventListener('keydown', onKeyDown)
@@ -45,13 +80,15 @@ export default function ExportBar<T>({
   }, [open])
 
   return (
-    <div className="cp-noprint relative mb-4 inline-block" ref={rootRef}>
+    <div className="cp-noprint relative mb-4" ref={rootRef}>
+      {summary && <div className="mb-2 text-sm" aria-live="polite">{summary}</div>}
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen(v => !v)}
         aria-expanded={open}
-        aria-haspopup="menu"
-        className="cp-label inline-flex min-h-[40px] items-center gap-2 rounded-[var(--cp-r-field)] border px-3.5 transition-colors motion-reduce:transition-none focus-visible:outline focus-visible:outline-2"
+        aria-controls={panelId}
+        className="cp-label inline-flex min-h-[44px] items-center gap-2 rounded-[var(--cp-r-field)] border px-3.5 transition-colors motion-reduce:transition-none focus-visible:outline focus-visible:outline-2"
         style={{ borderColor: 'var(--cp-field-line)', color: 'var(--cp-ink-2)', background: 'var(--cp-surface)' }}
       >
         <IconDownload />
@@ -61,45 +98,55 @@ export default function ExportBar<T>({
 
       {open && (
         <div
-          role="menu"
-          className="absolute top-[calc(100%+6px)] left-0 z-20 min-w-[190px] overflow-hidden rounded-[var(--cp-r-field)] border"
+          id={panelId}
+          className="absolute top-[calc(100%+6px)] left-0 z-20 w-[320px] max-w-full overflow-hidden rounded-[var(--cp-r-field)] border"
           style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}
         >
+          {configuration && <div className="border-b p-3">{configuration}</div>}
+          {rows.length === 0 && <p className="px-3.5 py-2 text-sm">Keine Treffer für diesen Export.</p>}
+          {rows.length === 0 && onReset && <button type="button" onClick={onReset} className="min-h-[44px] px-3.5 underline">Filter zurücksetzen</button>}
           <button
             type="button"
-            role="menuitem"
+            disabled={disabled}
             onClick={() => {
               downloadCsv(csvFilename, toCsv(rows, columns))
-              setOpen(false)
+              setDownloadState('success')
             }}
-            className="cp-body flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none hover:bg-[var(--cp-surface-2)]"
+            className="cp-body flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-left disabled:opacity-50 hover:bg-[var(--cp-surface-2)]"
             style={{ color: 'var(--cp-ink)' }}
           >
             <IconDocument /> Als CSV
           </button>
-          <a
-            role="menuitem"
-            href={xlsxHref}
-            onClick={() => setOpen(false)}
-            className="cp-body flex items-center gap-2.5 border-t px-3.5 py-2.5 transition-colors motion-reduce:transition-none hover:bg-[var(--cp-surface-2)]"
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={downloadExcel}
+            className="cp-body flex min-h-[44px] w-full items-center gap-2.5 border-t px-3.5 py-2.5 disabled:opacity-50 hover:bg-[var(--cp-surface-2)]"
             style={{ color: 'var(--cp-ink)', borderColor: 'var(--cp-line-2)' }}
           >
             <IconTable /> Als Excel
-          </a>
-          <button
+          </button>
+          {printEnabled && <button
             type="button"
-            role="menuitem"
+            disabled={disabled}
             onClick={() => {
-              window.print()
-              setOpen(false)
+              if (onPrint) {
+                setOpen(false)
+                triggerRef.current?.focus()
+                onPrint()
+              }
+              else window.print()
             }}
-            className="cp-body flex w-full items-center gap-2.5 border-t px-3.5 py-2.5 text-left transition-colors motion-reduce:transition-none hover:bg-[var(--cp-surface-2)]"
+            className="cp-body flex min-h-[44px] w-full items-center gap-2.5 border-t px-3.5 py-2.5 text-left disabled:opacity-50 hover:bg-[var(--cp-surface-2)]"
             style={{ color: 'var(--cp-ink)', borderColor: 'var(--cp-line-2)' }}
           >
-            <IconPrinter /> Drucken
-          </button>
+            <IconPrinter /> {onPrint ? 'Druckansicht' : 'Drucken'}
+          </button>}
         </div>
       )}
+      {downloadState === 'pending' && <p role="status">Liste wird erstellt …</p>}
+      {downloadState === 'success' && <p role="status">Download gestartet.</p>}
+      {downloadState === 'error' && <div role="alert">Export fehlgeschlagen. <button type="button" disabled={disabled} onClick={downloadExcel} className="min-h-[44px] underline">Erneut versuchen</button></div>}
     </div>
   )
 }

@@ -52,7 +52,7 @@ export default async function CampCommandCenterPage({
           <StatCard label="Aufgaben" value={String(openTaskCount)} numericValue={openTaskCount} />
         </div>
 
-        <ParticipantList registrations={registrations} brandColor={brand.brand} orgSlug={orgSlug} campSlug={campSlug} />
+        <ParticipantList registrations={registrations} brandColor={brand.brand} orgSlug={orgSlug} campSlug={campSlug} camp={camp} />
       </main>
     </>
   )

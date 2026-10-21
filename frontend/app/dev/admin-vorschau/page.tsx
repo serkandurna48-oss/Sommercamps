@@ -16,6 +16,10 @@ export default function AdminPreviewIndex() {
           <li key={screen} className="flex flex-wrap justify-between gap-3 border-b pb-3">
             <Link className="underline" href={`/dev/admin-vorschau/${screen}`}>{label}</Link>
             <Link className="underline" href={`/dev/admin-vorschau/${screen}?leer=1`}>{label}: Leerzustand</Link>
+            {screen === 'dashboard' && <>
+              <Link className="underline" href="/dev/admin-vorschau/dashboard?schritt=2">{label}: Schritt 2</Link>
+              <Link className="underline" href="/dev/admin-vorschau/dashboard?schritt=3">{label}: Schritt 3</Link>
+            </>}
           </li>
         ))}
       </ul>

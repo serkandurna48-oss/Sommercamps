@@ -1,13 +1,17 @@
+import Link from '../preview/AdminLink'
 import TodayRegistrations from '../data/TodayRegistrations'
 import { todayRegistrations } from '../registrationDates'
 import { ButtonLink } from '../ui/Button'
 import { computeBrandTokens } from '../brandPipeline'
 import { buildTasks, computeCampStats, pickNextCamp } from '../dashboardLogic'
+import { computeOnboardingSteps, missingRequiredOrgFields } from '../onboardingSteps'
 import MatchdayBand from '../shell/MatchdayBand'
 import TaskCard from '../tasks/TaskCard'
 import TaskRow from '../tasks/TaskRow'
 import CampRow from '../data/CampRow'
 import EmptyState from '../state/EmptyState'
+import OnboardingCard from '../state/OnboardingCard'
+import SuccessNote from '../state/SuccessNote'
 import { orgTabs } from '../navTabs'
 import { de, formatDateRange } from '../../../lib/i18n/de'
 import type { OrganizationScreenProps } from './types'
@@ -21,6 +25,10 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
 
   const brand = computeBrandTokens(org.primary_color)
   const tabs = orgTabs(orgSlug)
+
+  const { step3Done } = computeOnboardingSteps(org, camps)
+  const showCard = !step3Done
+  const missingFields = step3Done ? missingRequiredOrgFields(org) : []
 
   return (
     <>
@@ -55,30 +63,49 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
       />
 
       <main className="mx-auto max-w-[920px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
-        <TodayRegistrations entries={todayRegistrations(camps, registrationsByCamp)} orgSlug={orgSlug} />
-        <section className="mb-12">
-          <h2 className="cp-title mb-4">{de.dashboard.upNext}</h2>
-          {camps.length === 0 ? (
-            <div className="cp-card" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
-              <h3 className="cp-heading">Dein erstes Camp vorbereiten</h3>
-              <p className="cp-body mt-2">Lege dein erstes Camp an und bereite die Anmeldung für die Eltern vor.</p>
-              <ButtonLink href={`/pilot/${orgSlug}/camps/new`} variant="primary" brandStrong={brand.brandStrong} brandOn={brand.brandOn} className="mt-4">Camp anlegen</ButtonLink>
-            </div>
-          ) : firstTask ? (
-            <div className="flex flex-col gap-4">
-              <TaskCard task={firstTask} orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
-              {restTasks.length > 0 && (
-                <div className="flex flex-col gap-4">
-                  {restTasks.map(t => (
-                    <TaskRow key={t.id} task={t} orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
-                  ))}
+        {!showCard && <TodayRegistrations entries={todayRegistrations(camps, registrationsByCamp)} orgSlug={orgSlug} />}
+
+        {showCard ? (
+          <section className="mb-12">
+            <OnboardingCard orgSlug={orgSlug} org={org} camps={camps} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+          </section>
+        ) : (
+          <section className="mb-12">
+            <h2 className="cp-title mb-4">{de.dashboard.upNext}</h2>
+            {missingFields.length > 0 && (
+              <div
+                className="cp-body mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[var(--cp-r-card)] border px-4 py-3"
+                style={{ borderColor: 'var(--cp-pending-line)', background: 'var(--cp-surface)' }}
+              >
+                <span aria-hidden style={{ color: 'var(--cp-pending)' }}>!</span>
+                <span>{de.onboarding.missingFieldsHint(missingFields)}</span>
+                <Link href={`/pilot/${orgSlug}/konfiguration`} className="cp-focus min-h-[44px] inline-flex items-center underline">{de.onboarding.missingFieldsAction}</Link>
+              </div>
+            )}
+            {firstTask ? (
+              <div className="flex flex-col gap-4">
+                <TaskCard task={firstTask} orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+                {restTasks.length > 0 && (
+                  <div className="flex flex-col gap-4">
+                    {restTasks.map(t => (
+                      <TaskRow key={t.id} task={t} orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="cp-card" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
+                <SuccessNote>{de.onboarding.liveLabel}</SuccessNote>
+                <p className="cp-body mt-2 break-all" style={{ color: 'var(--cp-ink-2)' }}>/pilot/{orgSlug}</p>
+                <div className="mt-4">
+                  <ButtonLink href={`/pilot/${orgSlug}`} variant="primary" brandStrong={brand.brandStrong} brandOn={brand.brandOn}>
+                    {de.onboarding.liveOpen}
+                  </ButtonLink>
                 </div>
-              )}
-            </div>
-          ) : (
-            <EmptyState title={de.tasks.allDone} />
-          )}
-        </section>
+              </div>
+            )}
+          </section>
+        )}
 
         <section>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

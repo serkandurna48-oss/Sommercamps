@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { CampAdmin, OrganizationAdmin } from '../../../lib/saasAdminApi'
 import Button from '../ui/Button'
 import SuccessNote from '../state/SuccessNote'
+import { useAdminPreview } from '../preview/AdminPreviewContext'
 
 export type PublicationOrganization = Pick<OrganizationAdmin, 'site_published' | 'contact_email' | 'iban' | 'terms_text'>
 
@@ -26,8 +27,9 @@ export default function CampPublicationCard({ orgSlug, org, camp, pending, brand
   brandOn: string
 }) {
   const [copyResult, setCopyResult] = useState<'copied' | 'error' | null>(null)
-  const orgSettings = `/pilot/${orgSlug}/konfiguration`
-  const registrationLink = `/pilot/${orgSlug}`
+  const preview = useAdminPreview()
+  const orgSettings = preview ? '/dev/admin-vorschau/konfiguration' : `/pilot/${orgSlug}/konfiguration`
+  const registrationLink = preview ? '/dev/admin-vorschau' : `/pilot/${orgSlug}`
   const reachable = org.site_published && camp.status === 'published'
   const checks = [
     { label: 'Kontakt-E-Mail', ready: !!org.contact_email?.trim(), href: `${orgSettings}#contact_email` },

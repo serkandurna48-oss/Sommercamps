@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState, type ReactNode } from 'react'
+import { useActionState, useId, useState, type ReactNode } from 'react'
 import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
 import type { RegistrationStatusResult } from '../../../lib/saasAdminApi'
 import Button from './Button'
@@ -48,6 +48,8 @@ export default function ActionForm({
   cancelLabel?: string
   onResult?: (result: ActionFormState) => void
 }) {
+  const feedbackId = useId()
+  const confirmId = `${feedbackId}-confirm`
   const preview = useAdminPreview()
   const effectiveAction = preview ? previewNoopAction : action
   const [confirming, setConfirming] = useState(false)
@@ -71,11 +73,11 @@ export default function ActionForm({
   if (requireConfirm && !confirming) {
     return (
       <div className="flex flex-col items-start gap-2">
-        <Button type="button" variant={variant} brandStrong={brandStrong} brandOn={brandOn} onClick={() => setConfirming(true)}>
+        <Button aria-describedby={state.error ? feedbackId : undefined} type="button" variant={variant} brandStrong={brandStrong} brandOn={brandOn} onClick={() => setConfirming(true)}>
           {label}
         </Button>
         {state.error && (
-          <p className="cp-confirm-pop cp-chip motion-reduce:animate-none" style={{ color: 'var(--cp-error)' }} role="alert">
+          <p className="cp-confirm-pop cp-chip motion-reduce:animate-none" style={{ color: 'var(--cp-error)' }} id={feedbackId} role="alert">
             {state.error}
           </p>
         )}
@@ -91,12 +93,12 @@ export default function ActionForm({
   return (
     <form action={formAction} className="flex flex-col items-start gap-2">
       {effectiveConfirming && (
-        <div className="cp-body space-y-2" style={{ color: 'var(--cp-muted)' }}>
+        <div id={confirmId} className="cp-body space-y-2" style={{ color: 'var(--cp-muted)' }}>
           {requireConfirm}
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" disabled={pending} variant={variant} brandStrong={brandStrong} brandOn={brandOn}>
+        <Button aria-describedby={[effectiveConfirming && confirmId, state.error && feedbackId].filter(Boolean).join(' ') || undefined} type="submit" disabled={pending} variant={variant} brandStrong={brandStrong} brandOn={brandOn}>
           {pending ? pendingLabel : label}
         </Button>
         {effectiveConfirming && (
@@ -106,7 +108,7 @@ export default function ActionForm({
         )}
       </div>
       {state.error && (
-        <p className="cp-confirm-pop cp-chip motion-reduce:animate-none" style={{ color: 'var(--cp-error)' }} role="alert">
+        <p className="cp-confirm-pop cp-chip motion-reduce:animate-none" style={{ color: 'var(--cp-error)' }} id={feedbackId} role="alert">
           {state.error}
         </p>
       )}

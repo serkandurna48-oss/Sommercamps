@@ -7,6 +7,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import ActionForm, { type ActionFormState } from './ActionForm'
+import { AdminPreviewContext } from '../preview/AdminPreviewContext'
 
 let container: HTMLDivElement
 let root: Root
@@ -138,4 +139,53 @@ it('nach Abbrechen ist kein unbestätigter Submit erreichbar', async () => {
   // Nach Abbrechen: Submit-Button nicht direkt erreichbar, Aktion nicht ausgelöst
   expect(container.querySelector('form')).toBeNull()
   expect(action).not.toHaveBeenCalled()
+})
+
+it('verknüpft Bestätigung und Aktionsfehler mit dem jeweiligen Button', async () => {
+  const action = vi.fn<ActionFn>().mockResolvedValue({ error: 'Server-Fehler', success: null })
+  await renderForm(action)
+  await clickButton('Aufrücken')
+  const submit = container.querySelector<HTMLButtonElement>('button[type="submit"]')!
+  const confirmId = submit.getAttribute('aria-describedby')!
+  expect(document.getElementById(confirmId)?.textContent).toBeTruthy()
+  await submitForm()
+  const entry = container.querySelector('button')!
+  const errorId = entry.getAttribute('aria-describedby')!
+  expect(document.getElementById(errorId)?.textContent).toBe('Server-Fehler')
+  await clickButton('Aufrücken')
+  const descriptions = container.querySelector('button[type="submit"]')!.getAttribute('aria-describedby')!.split(' ')
+  expect(descriptions).toHaveLength(2)
+  for (const id of descriptions) expect(document.getElementById(id)?.textContent).toBeTruthy()
+})
+
+it.each([false, true])('preserves result callbacks and linked confirmation in preview: %s', async preview => {
+  const result = { error: null, success: 'Anmeldung storniert.', promoted: null }
+  const action = vi.fn<ActionFn>().mockResolvedValue(result)
+  const onResult = vi.fn()
+  await act(() => root.render(
+    <AdminPreviewContext.Provider value={preview ? { empty: false } : null}>
+      <ActionForm action={action} onResult={onResult} label="Stornieren" pendingLabel="Wird storniert"
+        cancelLabel="Behalten" requireConfirm={<><p>Anmeldung stornieren?</p><p>Ein Platz wird frei.</p></>} />
+    </AdminPreviewContext.Provider>,
+  ))
+  await clickButton('Stornieren')
+  const submit = container.querySelector<HTMLButtonElement>('button[type="submit"]')!
+  const description = document.getElementById(submit.getAttribute('aria-describedby')!)!
+  expect(description.textContent).toContain('Anmeldung stornieren?')
+  expect(description.textContent).toContain('Ein Platz wird frei.')
+  expect([...container.querySelectorAll('button')].some(button => button.textContent === 'Behalten')).toBe(true)
+  await submitForm()
+  expect(onResult).toHaveBeenCalledOnce()
+  if (preview) {
+    expect(action).not.toHaveBeenCalled()
+    const entry = container.querySelector('button')!
+    expect(document.getElementById(entry.getAttribute('aria-describedby')!)?.textContent).toContain('Vorschau')
+    expect(onResult.mock.calls[0][0].error).toContain('Vorschau')
+  } else {
+    expect(action).toHaveBeenCalledOnce()
+    expect(onResult).toHaveBeenCalledWith(result)
+    // The persistent RegistrationActionFeedback owns successful results.
+    expect(container.querySelector('[role="status"]')).toBeNull()
+  }
+  expect(container.querySelector('form')).toBeNull()
 })

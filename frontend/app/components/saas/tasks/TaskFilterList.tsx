@@ -47,7 +47,7 @@ export default function TaskFilterList({
 
   return (
     <div>
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+      <div className="mb-4 flex gap-2 overflow-x-auto p-1">
         <FilterButton
           label={de.tasksPage.filterAll}
           count={counts.all}

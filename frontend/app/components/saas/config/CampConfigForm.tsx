@@ -2,7 +2,7 @@
 
 import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
 
-import { useActionState, useState } from 'react'
+import { useId, useActionState, useState } from 'react'
 import { de } from '../../../lib/i18n/de'
 import type { CampAdmin } from '../../../lib/saasAdminApi'
 import { updateCampConfigAction, type ConfigActionState } from '../actions/configActions'
@@ -37,6 +37,7 @@ export default function CampConfigForm({
     setConfirmedCamp(camp)
   }
   const inputValue = (field: string, fallback: string | number) => submitted?.[field] ?? fallback
+  const feedbackId = useId()
   const preview = useAdminPreview()
   const boundAction = preview ? previewNoopAction : updateCampConfigAction.bind(null, orgSlug, camp.slug)
   const [state, formAction, pending] = useActionState<ConfigActionState, FormData>(async (previous, data) => {
@@ -65,7 +66,7 @@ export default function CampConfigForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-8">
+    <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-8">
       <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
         Web-Adresse: <strong className="break-all">{camp.slug}</strong> — {de.configPage.hint.slugLocked}
       </p>
@@ -168,7 +169,7 @@ export default function CampConfigForm({
         <p
           className="cp-confirm-pop cp-body rounded-[var(--cp-r-chip)] border px-3 py-2 motion-reduce:animate-none"
           style={{ color: 'var(--cp-error)', background: 'var(--cp-error-bg)', borderColor: 'var(--cp-error-line)' }}
-          role="alert"
+          id={feedbackId} role="alert"
         >
           {state.error}
         </p>

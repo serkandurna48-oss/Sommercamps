@@ -9,7 +9,7 @@ export default function LogoutButton({ orgSlug }: { orgSlug: string }) {
     <form action={preview ? previewLogoutAction : logoutAction.bind(null, orgSlug)}>
       <button
         type="submit"
-        className="cp-label rounded-[var(--cp-r-chip)] border px-3 py-1.5 focus-visible:outline focus-visible:outline-2"
+        className="cp-focus min-h-[44px] min-w-[44px] cp-label rounded-[var(--cp-r-chip)] border px-3 py-1.5"
         style={{ color: 'var(--cp-on-band-2)', borderColor: 'var(--cp-band-line)' }}
       >
         Abmelden

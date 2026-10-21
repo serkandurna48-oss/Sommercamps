@@ -7,6 +7,7 @@ import { birthYear, hasNotes } from '../commandCenterLogic'
 import ParticipantDetail from './ParticipantDetail'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from './StatusChip'
 import { IconChevronDown } from '../icons'
+import { computeBrandTokens } from '../brandPipeline'
 import { registrationDate } from '../registrationDates'
 
 export default function ParticipantRow({
@@ -35,19 +36,22 @@ export default function ParticipantRow({
   }
   const detailId = useId()
   const effective = override ?? registration
+  const brand = computeBrandTokens(brandColor)
 
   return (
     <div className="cp-roster-row border-t" style={{ borderColor: 'var(--cp-line-2)' }}>
       <div className="flex items-center gap-3 px-5 py-3.5">
         {/* Checkbox outside the expand trigger — click does not bubble to row */}
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={onToggleSelect}
-          aria-label={`${effective.child_first_name} ${effective.child_last_name} auswählen`}
-          className="h-5 w-5 shrink-0"
-          style={{ accentColor: brandColor }}
-        />
+        <label className="inline-flex min-h-[44px] min-w-[44px] shrink-0 cursor-pointer items-center justify-center">
+          <span className="sr-only">{effective.child_first_name} {effective.child_last_name} auswählen</span>
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            className="cp-focus h-5 w-5 shrink-0"
+            style={{ accentColor: brand.brandStrong }}
+          />
+        </label>
 
         {/* Entire summary is one expand button: name, parent, chips, arrow */}
         <button
@@ -103,7 +107,7 @@ export default function ParticipantRow({
         </button>
       </div>
 
-      <div id={detailId} className={`cp-collapse cp-collapse-m3 motion-reduce:transition-none ${open ? 'cp-collapse-expanded' : ''}`}>
+      <div id={detailId} inert={!open} aria-hidden={!open} className={`cp-collapse cp-collapse-m3 motion-reduce:transition-none ${open ? 'cp-collapse-expanded' : ''}`}>
         <div>
           <div
             className="transition-opacity delay-[60ms] duration-150 motion-reduce:transition-none motion-reduce:delay-0"
@@ -114,8 +118,8 @@ export default function ParticipantRow({
               orgSlug={orgSlug}
               campSlug={campSlug}
               campTitle={campTitle}
-              brandStrong={brandColor}
-              brandOn="#FFFFFF"
+              brandStrong={brand.brandStrong}
+              brandOn={brand.brandOn}
               onDetailsSaved={setOverride}
             />
           </div>

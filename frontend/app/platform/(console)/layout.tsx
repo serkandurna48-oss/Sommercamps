@@ -41,7 +41,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
     <div className={`${archivo.variable} cp-scope min-h-screen`}>
       <StagingBanner />
       <GrainOverlay />
-      <div className="border-b" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-ink)' }}>
+      <header className="border-b" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-ink)' }}>
         <div className="mx-auto flex max-w-[1080px] items-center justify-between px-4 py-4 md:px-8">
           <div className="flex items-center gap-6">
             <Link href="/platform" className="cp-subheading" style={{ color: '#FFFFFF' }}>
@@ -62,14 +62,14 @@ export default async function PlatformLayout({ children }: { children: React.Rea
           <form action={platformLogoutAction}>
             <button
               type="submit"
-              className="cp-chip rounded-[var(--cp-r-chip)] border px-3 py-2"
+              className="cp-focus min-h-[44px] min-w-[44px] cp-chip rounded-[var(--cp-r-chip)] border px-3 py-2"
               style={{ borderColor: 'rgba(255,255,255,0.3)', color: '#FFFFFF' }}
             >
               Abmelden
             </button>
           </form>
         </div>
-      </div>
+      </header>
       {children}
     </div>
   )

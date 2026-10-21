@@ -26,11 +26,11 @@ export default function Button({
   ...props
 }: ButtonProps) {
   const base =
-    'cp-subheading inline-flex min-h-[44px] items-center justify-center rounded-[var(--cp-r-field)] px-5 transition-[opacity,background-color] disabled:opacity-50 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2'
+    'cp-focus cp-subheading inline-flex min-w-[44px] min-h-[44px] items-center justify-center rounded-[var(--cp-r-field)] px-5 transition-[opacity,background-color] disabled:opacity-50 motion-reduce:transition-none'
 
   const variantStyle: React.CSSProperties =
     variant === 'primary'
-      ? { background: brandStrong ?? 'var(--cp-ink)', color: brandOn ?? '#FFFFFF', minHeight: '50px', outlineColor: brandStrong }
+      ? { background: brandStrong ?? 'var(--cp-ink)', color: brandOn ?? '#FFFFFF', minHeight: '50px' }
       : variant === 'secondary'
         ? { background: 'var(--cp-surface)', color: 'var(--cp-ink)', border: '1px solid var(--cp-field-line)' }
         : variant === 'quiet-danger'

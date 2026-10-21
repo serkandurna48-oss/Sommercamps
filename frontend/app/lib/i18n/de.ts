@@ -246,7 +246,7 @@ export function formatDateRange(startIso: string, endIso: string): string {
   const end = new Date(`${endIso}T00:00:00`)
   const day = (d: Date) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
   const full = end.toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })
-  return `${day(start)}.–${full}`
+  return `${day(start)}–${full}`
 }
 
 /** Vereinsneutrale Texte für die öffentliche Org-Seite (Parent Flow) */

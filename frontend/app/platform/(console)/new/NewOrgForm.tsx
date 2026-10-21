@@ -43,7 +43,7 @@ export default function NewOrgForm() {
           Verein
         </h2>
         <Field
-          label={'Slug (Teil der Web-Adresse, z. B. „musterverein")'}
+          label={'Slug (Teil der Web-Adresse, z. B. „musterverein“)'}
           htmlFor="org_slug"
           hint="Nur Kleinbuchstaben, Zahlen, Bindestriche — später nicht mehr änderbar."
         >

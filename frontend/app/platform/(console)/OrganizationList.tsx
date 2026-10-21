@@ -142,7 +142,7 @@ export default function OrganizationList({ organizations }: { organizations: Org
         {filtered.length === 0 ? (
           <p className="cp-body px-4 py-8 text-center" style={{ color: 'var(--cp-muted)' }}>
             {organizations.length === 0
-              ? 'Noch keine Vereine — leg den ersten über „Neuen Verein anlegen" an.'
+              ? 'Noch keine Vereine — leg den ersten über „Neuen Verein anlegen“ an.'
               : 'Kein Verein passt zu dieser Suche/Filterung.'}
           </p>
         ) : (

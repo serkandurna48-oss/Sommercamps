@@ -103,7 +103,7 @@ export interface SiteContent {
   registrationHeading: string
   registrationIntro: string
   registrationMode: 'camp' | 'inquiry' | 'inquiry-form'
-  /** Auswahl für „Worum geht es?" im Anfrageformular (nur 'inquiry-form'). */
+  /** Auswahl für „Worum geht es?“ im Anfrageformular (nur 'inquiry-form'). */
   registrationTopics: string[]
   registrationContactHeading: string
   registrationContactLines: ContactLine[]

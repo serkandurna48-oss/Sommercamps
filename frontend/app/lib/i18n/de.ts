@@ -54,22 +54,22 @@ export const de = {
     payment: {
       title: (count: number, campTitle: string) =>
         count === 1
-          ? `Eine offene Zahlung für „${campTitle}"`
-          : `${count} offene Zahlungen für „${campTitle}"`,
+          ? `Eine offene Zahlung für „${campTitle}“`
+          : `${count} offene Zahlungen für „${campTitle}“`,
       hint: 'Zahlung ist noch offen — kurze Erinnerung schicken.',
     },
     missingContact: {
       title: (count: number, campTitle: string) =>
         count === 1
-          ? `Ein Notfallkontakt fehlt bei „${campTitle}"`
-          : `${count} Notfallkontakte fehlen bei „${campTitle}"`,
+          ? `Ein Notfallkontakt fehlt bei „${campTitle}“`
+          : `${count} Notfallkontakte fehlen bei „${campTitle}“`,
       hint: 'Vor Camp-Start nachfragen.',
     },
     waitlist: {
       title: (count: number, campTitle: string) =>
         count === 1
-          ? `Eine Anmeldung wartet bei „${campTitle}" auf einen Platz`
-          : `${count} Anmeldungen warten bei „${campTitle}" auf einen Platz`,
+          ? `Eine Anmeldung wartet bei „${campTitle}“ auf einen Platz`
+          : `${count} Anmeldungen warten bei „${campTitle}“ auf einen Platz`,
       hint: 'Beim Nachrücken werden die Eltern nicht automatisch benachrichtigt. Der Verein meldet sich bei ihnen.',
     },
     review: 'Ansehen',
@@ -257,7 +257,7 @@ export const publicUI = {
   howItWorks: {
     heading: 'So einfach geht\'s',
     steps: [
-      { num: '1', title: 'Platz wählen', body: 'Suchen Sie den Termin, der passt, und klicken Sie auf „Ansehen".' },
+      { num: '1', title: 'Platz wählen', body: 'Suchen Sie den Termin, der passt, und klicken Sie auf „Ansehen“.' },
       { num: '2', title: 'Anmelden', body: 'Füllen Sie das Formular in ca. 4 Minuten aus — kein Konto nötig.' },
       { num: '3', title: 'Bestätigung', body: 'Sie erhalten Ihre Anmeldebestätigung mit allen Infos zum Camp.' },
     ],

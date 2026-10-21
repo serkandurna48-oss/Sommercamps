@@ -1,5 +1,5 @@
 /** Zwischenzustand beim Speichern. Ersetzt sichtbar die vorige Erfolgs-/Fehlermeldung,
- * damit ein zweiter Speicherklick nicht neben einem alten „Gespeichert." hängt. */
+ * damit ein zweiter Speicherklick nicht neben einem alten „Gespeichert.“ hängt. */
 export default function PendingNote({ children }: { children: React.ReactNode }) {
   return (
     <p

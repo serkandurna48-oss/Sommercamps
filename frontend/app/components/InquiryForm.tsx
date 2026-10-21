@@ -21,7 +21,7 @@ const field = (extra = '') =>
    focus:bg-white transition-all ${extra}`
 
 interface InquiryFormProps {
-  /** Auswahlmöglichkeiten für „Worum geht es?" — kommt aus der Mandantenkonfiguration. */
+  /** Auswahlmöglichkeiten für „Worum geht es?“ — kommt aus der Mandantenkonfiguration. */
   topics: string[]
 }
 

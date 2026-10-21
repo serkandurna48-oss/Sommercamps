@@ -63,7 +63,7 @@ export default function OrganizationConfigForm({
           <Field
             label="Anschrift (für Impressum/Datenschutz)"
             htmlFor="legal_address"
-            hint="Straße, PLZ, Ort — erscheint auf der öffentlichen Impressum-/Datenschutzseite dieses Vereins. Ohne diese Angabe zeigt die Seite ehrlich „noch nicht angegeben”, nie die Daten eines anderen Vereins."
+            hint="Straße, PLZ, Ort — erscheint auf der öffentlichen Impressum-/Datenschutzseite dieses Vereins. Ohne diese Angabe zeigt die Seite ehrlich „noch nicht angegeben“, nie die Daten eines anderen Vereins."
           >
             <textarea
               id="legal_address"

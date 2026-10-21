@@ -15,7 +15,7 @@ import { setOrganizationPublishedAction, type PublishActionState } from '../acti
  * (platform/(console)/[org]) — derselbe Schalter, zwei Orte.
  *
  * Die Brand-Props sind optional, weil genau das die beiden Orte unterscheidet:
- * im Vereinsbereich ist „Veröffentlichen" eine Hauptaktion in Vereinsfarbe wie
+ * im Vereinsbereich ist „Veröffentlichen“ eine Hauptaktion in Vereinsfarbe wie
  * jedes Speichern daneben, in der Plattform-Konsole gibt es bewusst keine
  * Vereinsfarbe (wie NewOrgForm). Ohne die Props bleibt es beim bisherigen
  * --cp-ink aus Button.tsx. */
@@ -50,7 +50,7 @@ export default function PublishToggle({
         <p className="cp-chip mt-0.5" style={{ color: 'var(--cp-muted)' }}>
           {published
             ? 'Die Vereinsseite ist für Eltern erreichbar.'
-            : 'Nur du siehst diesen Verein — die öffentliche Seite antwortet mit „nicht gefunden", bis du veröffentlichst.'}
+            : 'Nur du siehst diesen Verein — die öffentliche Seite antwortet mit „nicht gefunden“, bis du veröffentlichst.'}
         </p>
         {state.error && (
           <p className="cp-chip mt-1" style={{ color: 'var(--cp-error)' }} role="alert">

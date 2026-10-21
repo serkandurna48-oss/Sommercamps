@@ -6,7 +6,7 @@
  *
  * Muster: Wortgrenzen-Regex über die Du-Pronomen-Liste aus K5-Auftrag Punkt 1
  * sowie exemplarische Du-Imperative (Schau, Melde, Sichere, Wähle, Gib).
- * „Sie" und „Ihr" sind erwünscht und werden nicht geprüft.
+ * „Sie“ und „Ihr“ sind erwünscht und werden nicht geprüft.
  */
 
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -36,7 +36,7 @@ const DU_RE =
 
 function assertNoDu(html: string) {
   const m = DU_RE.exec(html)
-  expect(m, m ? `Du-Form gefunden: „${m[0]}"` : undefined).toBeNull()
+  expect(m, m ? `Du-Form gefunden: „${m[0]}“` : undefined).toBeNull()
 }
 
 // ── Testdaten ───────────────────────────────────────────────────────────────

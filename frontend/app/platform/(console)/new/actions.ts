@@ -58,7 +58,7 @@ export async function createOrganizationWithCampAction(
     await createOrganizationAdmin(token, orgData)
   } catch (err) {
     if (err instanceof SlugConflictError) {
-      return { error: `Der Slug „${orgSlug}" ist bereits vergeben — einen anderen wählen.`, orgCreatedSlug: null }
+      return { error: `Der Slug „${orgSlug}“ ist bereits vergeben — einen anderen wählen.`, orgCreatedSlug: null }
     }
     return { error: 'Verein konnte nicht gespeichert werden — Angaben prüfen und erneut versuchen.', orgCreatedSlug: null }
   }
@@ -78,7 +78,7 @@ export async function createOrganizationWithCampAction(
 
   if (!campSlug || !campTitle || !startDate || !endDate || !ageMinRaw || !ageMaxRaw || !capacityRaw || !priceRaw) {
     return {
-      error: `Verein „${orgName}" wurde angelegt, aber die Camp-Angaben sind unvollständig. Camp-Pflichtfelder ausfüllen und erneut absenden, oder direkt zur Verwaltung wechseln.`,
+      error: `Verein „${orgName}“ wurde angelegt, aber die Camp-Angaben sind unvollständig. Camp-Pflichtfelder ausfüllen und erneut absenden, oder direkt zur Verwaltung wechseln.`,
       orgCreatedSlug: orgSlug,
     }
   }
@@ -89,7 +89,7 @@ export async function createOrganizationWithCampAction(
   const priceEuros = Number(priceRaw.replace(',', '.'))
   if (![ageMin, ageMax, capacity, priceEuros].every(Number.isFinite)) {
     return {
-      error: `Verein „${orgName}" wurde angelegt, aber ein Zahlenfeld beim Camp ist ungültig. Bitte prüfen und erneut absenden, oder direkt zur Verwaltung wechseln.`,
+      error: `Verein „${orgName}“ wurde angelegt, aber ein Zahlenfeld beim Camp ist ungültig. Bitte prüfen und erneut absenden, oder direkt zur Verwaltung wechseln.`,
       orgCreatedSlug: orgSlug,
     }
   }
@@ -110,7 +110,7 @@ export async function createOrganizationWithCampAction(
     await createCampAdmin(orgSlug, token, campData)
   } catch {
     return {
-      error: `Verein „${orgName}" wurde angelegt, aber das erste Camp konnte nicht gespeichert werden. In der Verwaltung erneut versuchen.`,
+      error: `Verein „${orgName}“ wurde angelegt, aber das erste Camp konnte nicht gespeichert werden. In der Verwaltung erneut versuchen.`,
       orgCreatedSlug: orgSlug,
     }
   }

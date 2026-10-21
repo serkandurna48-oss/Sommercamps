@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from '../preview/AdminLink'
 import BandMetric, { type BandMetricProps } from './BandMetric'
 import BandTabs, { type TabItem } from './BandTabs'
@@ -51,26 +50,18 @@ export default function MatchdayBand({
   brandColor,
   backToCamps = false,
 }: MatchdayBandProps) {
-  const [scrolled, setScrolled] = useState(variant === 'compact')
-
-  useEffect(() => {
-    if (variant !== 'full') return
-    function onScroll() {
-      setScrolled(window.scrollY > 80)
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [variant])
-
-  const showHero = variant === 'full' && !scrolled
+  // Kein scrollgesteuertes Ein-/Ausklappen mehr: Die Höhenänderung beim
+  // Scrollen ließ die Seite springen (Kopf klappt zu → Seite wird kürzer →
+  // Schwelle wieder unterschritten). Der Kopf ist immer kompakt.
+  const showHero = false
 
   return (
     <header
-      className="sticky top-0 z-10 px-4 pt-5 pb-5 md:px-6"
+      className="z-10 px-4 pt-3 pb-1 md:sticky md:top-0 md:px-6 md:pt-4 md:pb-2"
       style={{ background: 'var(--cp-band)', borderTop: `3px solid ${brandColor}`, color: 'var(--cp-on-band)' }}
     >
       <div className="mx-auto flex max-w-[1080px] flex-col">
-        <div className="flex items-center justify-between gap-4 pb-4">
+        <div className="flex items-center justify-between gap-4 pb-2 md:pb-3">
           <OrgSwitcher name={orgName} logoUrl={orgLogoUrl} orgSlug={orgSlug} />
           <LogoutButton orgSlug={orgSlug} />
         </div>
@@ -120,7 +111,7 @@ export default function MatchdayBand({
         {/* Kompakte Titelzeile — sichtbar wenn Hero kollabiert ist (M1) oder
             variant="compact" (Command Center hat nie einen Hero). */}
         <div
-          className="flex flex-wrap items-center justify-between gap-4 pb-4 transition-opacity duration-[240ms] motion-reduce:transition-none"
+          className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pb-3 transition-opacity duration-[240ms] motion-reduce:transition-none"
           style={{
             display: showHero ? 'none' : 'flex',
             opacity: showHero ? 0 : 1,

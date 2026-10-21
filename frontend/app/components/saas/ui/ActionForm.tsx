@@ -1,12 +1,8 @@
 ﻿'use client'
 
-<<<<<<< HEAD
-import { useActionState, useState } from 'react'
-import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
-=======
 import { useActionState, useState, type ReactNode } from 'react'
+import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
 import type { RegistrationStatusResult } from '../../../lib/saasAdminApi'
->>>>>>> ux/w2c-storno-warteliste
 import Button from './Button'
 
 export interface ActionFormState {
@@ -60,13 +56,9 @@ export default function ActionForm({
   const [state, formAction, pending] = useActionState(
     async (prev: ActionFormState, formData: FormData) => {
       try {
-<<<<<<< HEAD
-        return { ...(await effectiveAction(prev, formData)) }
-=======
-        const result = await action(prev, formData)
+        const result = await effectiveAction(prev, formData)
         onResult?.(result)
         return { ...result }
->>>>>>> ux/w2c-storno-warteliste
       } finally {
         setConfirming(false)
       }

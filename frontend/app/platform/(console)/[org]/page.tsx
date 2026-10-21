@@ -5,6 +5,7 @@ import { getAdminToken } from '../../../lib/adminSession'
 import { fetchCampsAdmin, fetchOrganizationAdmin, fetchOrganizationMembersAdmin } from '../../../lib/saasAdminApi'
 import PublishToggle from '../../../components/saas/config/PublishToggle'
 import MembersSection from './MembersSection'
+import BillingNotesForm from './BillingNotesForm'
 import { computeSetupSteps, setupProgressCount } from '../../setupProgress'
 
 /** Ohne das erbt diese Seite den Layout-Titel "CampsPilot Plattform" —
@@ -200,9 +201,7 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
           <p className="cp-body" style={{ color: 'var(--cp-ink)' }}>
             Vertragsstatus: {PLAN_STATUS_LABEL[org.plan_status] ?? org.plan_status}
           </p>
-          <p className="cp-chip mt-2" style={{ color: org.billing_notes ? 'var(--cp-ink-2)' : 'var(--cp-muted)' }}>
-            {org.billing_notes ?? 'Keine Konditionen hinterlegt.'}
-          </p>
+          <BillingNotesForm orgSlug={org.slug} billingNotes={org.billing_notes ?? null} />
         </div>
       </section>
     </main>

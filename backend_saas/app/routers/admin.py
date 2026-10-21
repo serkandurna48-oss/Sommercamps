@@ -54,6 +54,7 @@ from ..admin_schemas import (
     OrganizationAdminOut,
     OrganizationCreate,
     OrganizationMemberOut,
+    OrganizationOrgAdminOut,
     OrganizationUpdate,
     PaymentStatusUpdate,
     PlatformStatsOut,
@@ -113,9 +114,11 @@ def list_organizations() -> list[OrganizationAdminListItem]:
 
 @router.get(
     "/organizations/{organization_slug}",
-    response_model=OrganizationAdminOut,
+    response_model=OrganizationAdminOut | OrganizationOrgAdminOut,
 )
-def get_organization(organization_slug: str, auth: AuthContext = Depends(require_org_access)) -> OrganizationAdminOut:
+def get_organization(
+    organization_slug: str, auth: AuthContext = Depends(require_org_access)
+) -> OrganizationAdminOut | OrganizationOrgAdminOut:
     """Single-organization admin detail — powers the platform console's
     Vereinsdetailseite (setup-progress checklist) and the operator preview
     of an unpublished (draft) organization's public page, which the public
@@ -123,7 +126,8 @@ def get_organization(organization_slug: str, auth: AuthContext = Depends(require
     tenancy.py's site_published check). platform_owner or that
     organization's own org_admin."""
     organization = require_organization(organization_slug)
-    return OrganizationAdminOut.model_validate(organization)
+    schema = OrganizationAdminOut if auth.is_owner else OrganizationOrgAdminOut
+    return schema.model_validate(organization)
 
 
 @router.post(
@@ -148,11 +152,15 @@ def create_organization(data: OrganizationCreate, auth: AuthContext = Depends(re
 
 @router.patch(
     "/organizations/{organization_slug}",
-    response_model=OrganizationAdminOut,
+    response_model=OrganizationAdminOut | OrganizationOrgAdminOut,
 )
 def update_organization(
     organization_slug: str, data: OrganizationUpdate, auth: AuthContext = Depends(require_org_access)
-) -> OrganizationAdminOut:
+) -> OrganizationAdminOut | OrganizationOrgAdminOut:
+    # Presence matters: clearing the notes is an owner-only write too.
+    if "billing_notes" in data.model_fields_set:
+        require_platform_owner(auth)
+
     try:
         row = organizations_repo.update_organization(organization_slug, data)
     except Exception:
@@ -182,7 +190,8 @@ def update_organization(
             metadata={"site_published": row["site_published"]},
         )
     logger.info("Organization updated (slug=%s)", organization_slug)
-    return OrganizationAdminOut.model_validate(row)
+    schema = OrganizationAdminOut if auth.is_owner else OrganizationOrgAdminOut
+    return schema.model_validate(row)
 
 
 @router.post(

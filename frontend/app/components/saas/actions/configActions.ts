@@ -65,7 +65,6 @@ export async function updateOrganizationConfigAction(
       trainer_image_url: optionalStr(formData, 'trainer_image_url'),
       trainer_text: optionalStr(formData, 'trainer_text'),
       terms_text: optionalStr(formData, 'terms_text'),
-      billing_notes: optionalStr(formData, 'billing_notes'),
     })
   } catch {
     return { error: 'Konnte nicht gespeichert werden — Angaben prüfen und erneut versuchen.', saved: false }

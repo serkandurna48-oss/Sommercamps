@@ -1,12 +1,18 @@
-import type { ReactNode } from 'react'
+'use client'
+
+import { useRef, type ReactNode } from 'react'
+import { useBarHeight } from '../shell/useBarHeight'
 
 /** Erscheint sobald count >= 1 (Abschnitt 4.3). Fixiert am unteren Rand auf
  * Mobile (Abschnitt 6), sonst unter der Liste. */
 export default function SelectionBar({ count, children }: { count: number; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useBarHeight(ref, '--cp-selection-height', count > 0)
   if (count === 0) return null
   return (
     <div
-      className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4 max-md:fixed max-md:right-0 max-md:bottom-0 max-md:left-0"
+      ref={ref}
+      className="cp-selection-bar cp-noprint sticky bottom-0 z-30 flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4 max-md:fixed max-md:right-0 max-md:left-0"
       style={{ background: 'var(--cp-surface)', borderColor: 'var(--cp-line)' }}
       role="status"
     >

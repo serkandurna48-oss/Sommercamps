@@ -7,6 +7,7 @@ import { birthYear, hasNotes } from '../commandCenterLogic'
 import ParticipantDetail from './ParticipantDetail'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from './StatusChip'
 import { IconChevronDown } from '../icons'
+import { registrationDate } from '../registrationDates'
 
 export default function ParticipantRow({
   registration,
@@ -78,6 +79,7 @@ export default function ParticipantRow({
             {/* Col 2: Elternteil-Name */}
             <p className="cp-chip min-w-0 truncate" style={{ color: 'var(--cp-muted)' }}>
               {registration.parent_first_name} {registration.parent_last_name}
+              <span className="cp-label mt-1 block whitespace-normal">Eingang: <time dateTime={registration.created_at}>{registrationDate(registration.created_at)}</time></span>
             </p>
 
             {/* Cols 3+4: Status-Chips; md:contents makes them direct grid children */}

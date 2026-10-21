@@ -5,6 +5,7 @@ import Link from '../preview/AdminLink'
 import { useAdminPreview, previewHref } from '../preview/AdminPreviewContext'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { useBarHeight } from './useBarHeight'
 import { IconBoard, IconCoin, IconFlag, IconGear, IconHourglass, IconJersey } from '../icons'
 
 /**
@@ -64,6 +65,7 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
   const pathname = usePathname()
   const preview = useAdminPreview()
   const containerRef = useRef<HTMLDivElement>(null)
+  useBarHeight(containerRef, '--cp-mobile-nav-height')
   const [underline, setUnderline] = useState<{ left: number; width: number } | null>(null)
   // --cp-tab-mark: die Vereinsfarbe für die Aktiv-Markierung der schmalen
   // Leiste. Als Custom Property, weil die Markierung in tokens.css hinter
@@ -86,7 +88,7 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
   return (
     <nav
       ref={containerRef}
-      className="fixed right-0 bottom-0 left-0 z-20 grid grid-flow-col auto-cols-fr md:relative md:flex md:gap-6 md:overflow-x-auto"
+      className="cp-band-tabs fixed right-0 bottom-0 left-0 z-20 grid grid-flow-col auto-cols-fr md:relative md:flex md:gap-6 md:overflow-x-auto"
       style={navStyle}
       aria-label="Bereiche"
     >
@@ -106,7 +108,7 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
             }}
           >
             {Icon && <Icon className="hidden md:inline-block" size={16} />}
-            {tab.label}
+            <span className="min-w-0 [overflow-wrap:anywhere]">{tab.label}</span>
             <TabHint />
           </Link>
         )

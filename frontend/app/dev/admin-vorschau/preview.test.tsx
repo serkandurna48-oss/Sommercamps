@@ -81,7 +81,7 @@ describe('development-only admin preview', () => {
         expect(html).toContain('/jk/logo.jpg')
         expect(html).toContain('cp-scope')
         expect(html).not.toMatch(/href="\/(pilot|platform)\//)
-        if (['dashboard', 'camp', 'zahlungen', 'warteliste', 'aufgaben', 'konfiguration', 'camp-konfiguration'].includes(screen) && !(empty && screen.startsWith('camp'))) {
+        if (['dashboard', 'camp', 'zahlungen', 'warteliste', 'aufgaben', 'konfiguration', 'camp-konfiguration', 'camp-zahlungen', 'camp-warteliste', 'camp-aufgaben'].includes(screen) && !(empty && screen.startsWith('camp'))) {
           expect(html).toContain('aria-current="page"')
         }
         if (empty) expect(html).not.toContain('familie1@campspilot.example')
@@ -129,4 +129,41 @@ it('provides coherent, invented fixtures and real derived tasks', () => {
   expect(data.camps[2].status).toBe('draft')
   expect(buildTasks(stats).length).toBeGreaterThan(0)
   expect(getPreviewFixtures(true)).toMatchObject({ camps: [], registrationsByCamp: [], org: { camp_count: 0 } })
+})
+
+it('shows daily arrivals, the full daily list and the first-camp empty state', async () => {
+  const dashboard = renderToStaticMarkup(await page('dashboard'))
+  expect(dashboard).toContain('Heute neu: 4 Anmeldungen')
+  expect(dashboard).toContain('href="/dev/admin-vorschau/anmeldungen"')
+  const daily = renderToStaticMarkup(await page('anmeldungen'))
+  for (const registration of registrations.slice(0, 4)) expect(daily).toContain(registration.child_first_name)
+  expect(daily).toContain('sort=newest')
+  expect(daily).not.toMatch(/href="\/(pilot|platform)\//)
+  const empty = renderToStaticMarkup(await page('dashboard', true))
+  expect(empty).toContain('Dein erstes Camp vorbereiten')
+  expect(empty).not.toContain('Alles erledigt')
+  expect(empty).toContain('href="/dev/admin-vorschau/camp-neu?leer=1"')
+})
+
+it('preserves task filters and camp selection inside the preview', async () => {
+  const href = previewHref('/pilot/demo/camps/technikcamp?filter=missing-info&sort=name', false)
+  expect(href).toBe('/dev/admin-vorschau/camp?filter=missing-info&sort=name&camp=technikcamp')
+  const filtered = renderToStaticMarkup(await PreviewPage({
+    params: Promise.resolve({ screen: 'camp' }),
+    searchParams: Promise.resolve({ filter: 'missing-info', sort: 'name', camp: 'technikcamp' }),
+  }))
+  const data = getPreviewFixtures()
+  const expected = computeCampStats(data.camps[0], data.registrationsByCamp[0]).missingEmergencyContactCount
+  expect(filtered.match(/class="cp-roster-row/g)).toHaveLength(expected)
+  expect(filtered).toContain('value="name" selected=""')
+  expect(filtered).not.toMatch(/href="\/(pilot|platform)\//)
+  expect(previewHref('/pilot/demo/camps/technikcamp/zahlungen?filter=open', false))
+    .toBe('/dev/admin-vorschau/camp-zahlungen?filter=open&camp=technikcamp')
+  const winter = renderToStaticMarkup(await PreviewPage({
+    params: Promise.resolve({ screen: 'camp' }),
+    searchParams: Promise.resolve({ camp: 'wintercamp', sort: 'newest' }),
+  }))
+  expect(winter).toContain('<h1 class="cp-band-title break-words">Wintercamp Ballgefühl</h1>')
+  expect(winter).toContain('Eingang:')
+  expect(winter).not.toMatch(/href="\/(pilot|platform)\//)
 })

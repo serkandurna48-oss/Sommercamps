@@ -41,6 +41,7 @@ export default function PaymentSection({
   showCampTitle = false,
   csvFilename,
   xlsxHref,
+  initialFilter = 'open',
 }: {
   entries: PaymentEntry[]
   orgSlug: string
@@ -49,8 +50,9 @@ export default function PaymentSection({
   showCampTitle?: boolean
   csvFilename: string
   xlsxHref: string
+  initialFilter?: Filter
 }) {
-  const [filter, setFilter] = useState<Filter>('open')
+  const [filter, setFilter] = useState<Filter>(initialFilter)
   const [search, setSearch] = useState('')
   const [lastPaid, setLastPaid] = useState<PaymentEntry | null>(null)
   const [undoMessage, setUndoMessage] = useState<string | null>(null)

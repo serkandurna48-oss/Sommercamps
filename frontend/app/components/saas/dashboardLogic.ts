@@ -64,6 +64,15 @@ export interface Task {
   priority: number
 }
 
+export function taskHref(orgSlug: string, task: Task): string {
+  const base = `/pilot/${orgSlug}/camps/${task.campSlug}`
+  switch (task.kind) {
+    case 'payment': return `${base}/zahlungen?filter=open`
+    case 'missing-contact': return `${base}?filter=missing-info`
+    case 'waitlist': return `${base}/warteliste`
+  }
+}
+
 /** Priorisierung aus Abschnitt 4.2: Zahlung -> fehlende Angaben ->
  * Kapazität/Warteliste (die zwei nicht berechenbaren Typen entfallen,
  * siehe Moduldoc oben). */

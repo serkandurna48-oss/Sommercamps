@@ -16,7 +16,7 @@ export default function OrgConfigScreen({ orgSlug, org }: OrganizationIdentityPr
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}
-        title={de.command.configuration}
+        title="Vereinseinstellungen"
         tabs={orgTabs(orgSlug)}
         brandColor={brand.brand}
       />

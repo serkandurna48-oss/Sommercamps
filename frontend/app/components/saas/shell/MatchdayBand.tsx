@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from '../preview/AdminLink'
 import BandMetric, { type BandMetricProps } from './BandMetric'
 import BandTabs, { type TabItem } from './BandTabs'
 import LogoutButton from './LogoutButton'
@@ -27,6 +28,7 @@ export interface MatchdayBandProps {
   /** --cp-brand — eine der fünf erlaubten Vereinsfarben-Stellen: Kante am
    * oberen Bandrand + aktiver Tab-Unterstrich (siehe Abschnitt 3.3). */
   brandColor: string
+  backToCamps?: boolean
 }
 
 /**
@@ -47,6 +49,7 @@ export default function MatchdayBand({
   metrics = [],
   tabs,
   brandColor,
+  backToCamps = false,
 }: MatchdayBandProps) {
   const [scrolled, setScrolled] = useState(variant === 'compact')
 
@@ -72,8 +75,14 @@ export default function MatchdayBand({
           <LogoutButton orgSlug={orgSlug} />
         </div>
 
+        {backToCamps && (
+          <Link href={`/pilot/${orgSlug}/dashboard`} className="cp-label mb-2 inline-flex min-h-[44px] items-center self-start underline">
+            ← Alle Camps
+          </Link>
+        )}
+
         {/* Hero-Block — kollabiert per grid-rows (M1), nicht font-size. */}
-        <div className={`cp-collapse motion-reduce:transition-none ${showHero ? 'cp-collapse-expanded' : ''}`}>
+        {variant === 'full' && <div className={`cp-collapse motion-reduce:transition-none ${showHero ? 'cp-collapse-expanded' : ''}`}>
           <div>
             <div className="pb-5">
               {eyebrow && (
@@ -106,7 +115,7 @@ export default function MatchdayBand({
               </div>
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Kompakte Titelzeile — sichtbar wenn Hero kollabiert ist (M1) oder
             variant="compact" (Command Center hat nie einen Hero). */}
@@ -118,7 +127,7 @@ export default function MatchdayBand({
           }}
         >
           <div>
-            <h2 className="cp-band-title">{title}</h2>
+            {variant === 'compact' ? <h1 className="cp-band-title break-words">{title}</h1> : <h2 className="cp-band-title">{title}</h2>}
             {subtitle && (
               <p className="cp-chip mt-0.5" style={{ color: 'var(--cp-on-band-2)' }}>
                 {subtitle}

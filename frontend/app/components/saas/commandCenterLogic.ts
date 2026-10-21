@@ -59,7 +59,7 @@ export function filterRegistrations(
   const q = search.trim().toLowerCase()
   return registrations.filter(r => {
     if (filter === 'payment-open' && !isOpenPayment(r)) return false
-    if (filter === 'missing-info' && !hasMissingEmergencyContact(r)) return false
+    if (filter === 'missing-info' && (!isActiveRegistration(r) || !hasMissingEmergencyContact(r))) return false
 
     if (!q) return true
     const haystack = `${r.child_first_name} ${r.child_last_name} ${r.parent_first_name} ${r.parent_last_name} ${r.parent_email}`.toLowerCase()
@@ -70,7 +70,7 @@ export function filterRegistrations(
 export function countByFilter(registrations: RegistrationAdmin[]): Record<ParticipantFilter, number> {
   return {
     'payment-open': openPaymentStats(registrations).count,
-    'missing-info': registrations.filter(hasMissingEmergencyContact).length,
+    'missing-info': registrations.filter(r => isActiveRegistration(r) && hasMissingEmergencyContact(r)).length,
     all: registrations.length,
   }
 }

@@ -9,7 +9,8 @@ import EmptyState from '../state/EmptyState'
 import ParticipantExport from './ParticipantExport'
 import FilterButton from '../ui/FilterButton'
 import SelectionBar from '../ui/SelectionBar'
-import Button from '../ui/Button'
+import { sortRegistrations, type ParticipantSort } from '../registrationDates'
+import { computeBrandTokens } from '../brandPipeline'
 import ParticipantRow from './ParticipantRow'
 import RegistrationActionFeedback from '../ui/RegistrationActionFeedback'
 
@@ -39,19 +40,25 @@ export default function ParticipantList({
   orgSlug,
   campSlug,
   camp,
+  initialFilter = 'all',
+  initialSort = 'newest',
 }: {
   registrations: RegistrationAdmin[]
   brandColor: string
   orgSlug: string
   campSlug: string
   camp: CampAdmin
+  initialFilter?: ParticipantFilter
+  initialSort?: ParticipantSort
 }) {
-  const [filter, setFilter] = useState<ParticipantFilter>('all')
+  const [filter, setFilter] = useState<ParticipantFilter>(initialFilter)
+  const [sort, setSort] = useState<ParticipantSort>(initialSort)
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const brand = computeBrandTokens(brandColor)
 
   const counts = useMemo(() => countByFilter(registrations), [registrations])
-  const filtered = useMemo(() => filterRegistrations(registrations, filter, search), [registrations, filter, search])
+  const filtered = useMemo(() => sortRegistrations(filterRegistrations(registrations, filter, search), sort), [registrations, filter, search, sort])
 
   function toggleSelect(id: string) {
     setSelected(prev => {
@@ -78,6 +85,13 @@ export default function ParticipantList({
       />
 
       <div className="mb-4 flex flex-col gap-2 xl:flex-row xl:items-center">
+        <label className="cp-label flex flex-col gap-1">
+          Sortierung
+          <select aria-label="Sortierung" value={sort} onChange={e => setSort(e.target.value as ParticipantSort)} className="min-h-[44px] rounded-[var(--cp-r-field)] border px-3 text-base" style={{ borderColor: 'var(--cp-field-line)' }}>
+            <option value="newest">Neueste zuerst</option>
+            <option value="name">Name A–Z</option>
+          </select>
+        </label>
         <input
           type="search"
           aria-label="Teilnehmende suchen"
@@ -132,10 +146,8 @@ export default function ParticipantList({
       )}
 
       <SelectionBar count={selected.size}>
-        <a href={`mailto:?bcc=${selectedEmails.join(',')}`}>
-          <Button variant="primary" brandStrong={brandColor} brandOn="#FFFFFF">
-            E-Mail an Ausgewählte
-          </Button>
+        <a href={`mailto:?bcc=${selectedEmails.join(',')}`} className="cp-subheading inline-flex min-h-[50px] items-center justify-center rounded-[var(--cp-r-field)] px-5 py-2 text-center" style={{ background: brand.brandStrong, color: brand.brandOn }}>
+          E-Mail an Ausgewählte
         </a>
       </SelectionBar>
       </div>}

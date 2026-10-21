@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from '../preview/AdminLink'
 import { de } from '../../../lib/i18n/de'
-import type { Task } from '../dashboardLogic'
+import { taskHref, type Task } from '../dashboardLogic'
 
 function taskTitle(task: Task): string {
   switch (task.kind) {
@@ -30,9 +30,9 @@ export default function TaskRow({ task, orgSlug }: { task: Task; orgSlug: string
         {taskTitle(task)}
       </p>
       <Link
-        href={`/pilot/${orgSlug}/camps/${task.campSlug}`}
+        href={taskHref(orgSlug, task)}
         onClick={() => setDone(true)}
-        className="cp-label shrink-0"
+        className="cp-label inline-flex min-h-[44px] shrink-0 items-center"
         style={{ color: 'var(--cp-ink)' }}
       >
         {de.tasks.review}

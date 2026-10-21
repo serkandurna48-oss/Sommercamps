@@ -1,3 +1,5 @@
+import type { ParticipantFilter } from '../commandCenterLogic'
+import type { ParticipantSort } from '../registrationDates'
 import EmptyCampScreen from './EmptyCampScreen'
 import { computeBrandTokens } from '../brandPipeline'
 import { computeCampStats } from '../dashboardLogic'
@@ -9,7 +11,7 @@ import { campTabs } from '../navTabs'
 import { de, formatDateRange, formatEuro } from '../../../lib/i18n/de'
 import type { CampScreenProps } from './types'
 
-export default function CampDetailScreen({ orgSlug, campSlug, org, camp, registrations }: CampScreenProps) {
+export default function CampDetailScreen({ orgSlug, campSlug, org, camp, registrations, initialFilter = 'all', initialSort = 'newest' }: CampScreenProps & { initialFilter?: ParticipantFilter; initialSort?: ParticipantSort }) {
   if (!camp) return <EmptyCampScreen orgSlug={orgSlug} org={org} />
 
   const stats = computeCampStats(camp, registrations)
@@ -30,6 +32,7 @@ export default function CampDetailScreen({ orgSlug, campSlug, org, camp, registr
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}
+        backToCamps
         title={camp.title}
         subtitle={formatDateRange(camp.start_date, camp.end_date)}
         metrics={[{ label: de.dashboard.spotsLabel, value: `${stats.registeredCount}/${camp.capacity}` }]}
@@ -48,7 +51,7 @@ export default function CampDetailScreen({ orgSlug, campSlug, org, camp, registr
           <StatCard label="Aufgaben" value={String(openTaskCount)} numericValue={openTaskCount} />
         </div>
 
-        <ParticipantList registrations={registrations} brandColor={brand.brand} orgSlug={orgSlug} campSlug={campSlug} camp={camp} />
+        <ParticipantList key={`${campSlug}-${initialFilter}-${initialSort}`} initialFilter={initialFilter} initialSort={initialSort} registrations={registrations} brandColor={brand.brand} orgSlug={orgSlug} campSlug={campSlug} camp={camp} />
       </main>
     </>
   )

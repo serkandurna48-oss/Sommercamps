@@ -15,6 +15,13 @@ const org: OrganizationPublic = {
   trainer_image_url: null, trainer_text: null, terms_text: null,
 }
 
+it('explains payment without promising an IBAN or a reserved place for every submission', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={org} camps={[]} />)
+  expect(html).toContain('Falls keine Bankdaten hinterlegt sind, meldet sich der Verein zur Zahlung.')
+  expect(html).toContain('Auf der Warteliste entstehen noch keine Kosten.')
+  expect(html).not.toContain('sobald das Formular abgeschickt wurde')
+})
+
 it.each(['tradition', 'akademie', 'kompakt'] as const)('%s uses the organization heading and intro', theme => {
   const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme }} camps={[]} />)
   expect(html).toContain('Unser Fußballsommer')

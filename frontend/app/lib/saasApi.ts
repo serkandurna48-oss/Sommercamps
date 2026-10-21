@@ -108,7 +108,7 @@ export async function fetchCamps(orgSlug: string): Promise<CampPublic[]> {
 
 export type SubmitRegistrationResult =
   | { ok: true; data: RegistrationCreated }
-  | { ok: false; status: number; detail: string }
+  | { ok: false; status: number; detail: string; fieldErrors?: Partial<Record<keyof RegistrationCreateInput, string>> }
 
 export async function submitRegistration(
   orgSlug: string,
@@ -125,12 +125,28 @@ export async function submitRegistration(
   )
   const body = await res.json().catch(() => null)
   if (!res.ok) {
-    const detail = Array.isArray(body?.detail)
-      ? body.detail.map((d: { msg: string }) => d.msg).join(' · ')
-      : body?.detail
-        ? String(body.detail)
-        : `Fehler (${res.status})`
-    return { ok: false, status: res.status, detail }
+    const fieldErrors: Partial<Record<keyof RegistrationCreateInput, string>> = {}
+    if (res.status === 422 && Array.isArray(body?.detail)) {
+      for (const error of body.detail) {
+        const field = error.loc?.[0] === 'body' ? error.loc[1] : undefined
+        if (typeof field === 'string' && Object.hasOwn(payload, field)) {
+          fieldErrors[field as keyof RegistrationCreateInput] = field === 'parent_email'
+            ? 'Bitte geben Sie eine gültige E-Mail-Adresse an.'
+            : 'Bitte prüfen Sie diese Angabe.'
+        }
+      }
+    }
+    if (body?.detail === "Child's age does not meet this camp's age requirements") {
+      fieldErrors.child_birth_date = 'Das Alter Ihres Kindes passt zum Campbeginn nicht zur angegebenen Altersgruppe.'
+    }
+    const detail = Object.keys(fieldErrors).length > 0
+      ? 'Bitte prüfen Sie die markierten Angaben.'
+      : res.status === 409
+        ? 'Für dieses Kind liegt für dieses Camp bereits eine Anmeldung vor.'
+        : res.status === 404 || res.status === 422
+          ? 'Die Anmeldung für dieses Camp ist derzeit nicht möglich. Bitte wenden Sie sich an den Verein.'
+          : 'Die Anmeldung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.'
+    return { ok: false, status: res.status, detail, fieldErrors }
   }
   return { ok: true, data: body as RegistrationCreated }
 }

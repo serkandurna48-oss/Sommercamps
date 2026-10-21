@@ -14,18 +14,23 @@ function parseISODate(iso: string): Date {
   return new Date(Date.UTC(y, m - 1, d))
 }
 
-/** "6. bis 9. April 2027" (oder mit zwei Monatsnamen, falls der Zeitraum die Monatsgrenze kreuzt). */
+const SHORT_MONTHS_DE = ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sept.', 'Okt.', 'Nov.', 'Dez.']
+
+/** Compact German date range, including both years across a year boundary. */
 export function formatCampDateRange(startISO: string, endISO: string): string {
   const start = parseISODate(startISO)
   const end = parseISODate(endISO)
   const sameMonth = start.getUTCMonth() === end.getUTCMonth() && start.getUTCFullYear() === end.getUTCFullYear()
-  const endMonth = MONTHS_DE[end.getUTCMonth()]
+  const endMonth = SHORT_MONTHS_DE[end.getUTCMonth()]
   const year = end.getUTCFullYear()
   if (sameMonth) {
-    return `${start.getUTCDate()}. bis ${end.getUTCDate()}. ${endMonth} ${year}`
+    return startISO === endISO
+      ? `${end.getUTCDate()}. ${endMonth} ${year}`
+      : `${start.getUTCDate()}.–${end.getUTCDate()}. ${endMonth} ${year}`
   }
-  const startMonth = MONTHS_DE[start.getUTCMonth()]
-  return `${start.getUTCDate()}. ${startMonth} bis ${end.getUTCDate()}. ${endMonth} ${year}`
+  const startMonth = SHORT_MONTHS_DE[start.getUTCMonth()]
+  const startYear = start.getUTCFullYear() === year ? '' : ` ${start.getUTCFullYear()}`
+  return `${start.getUTCDate()}. ${startMonth}${startYear}–${end.getUTCDate()}. ${endMonth} ${year}`
 }
 
 /** "Montag bis Donnerstag" */

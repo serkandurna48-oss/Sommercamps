@@ -31,8 +31,7 @@ export default function DoneScreen({
   const [copied, setCopied] = useState(false)
   const waitlisted = result.status === 'waitlist'
   const payTo = org.legal_name ?? org.name
-  // null = keine Bankverbindung hinterlegt (§6.4). Dann darf hier keine IBAN und
-  // auch kein Mailversand versprochen werden — die Eltern fragen beim Verein nach.
+  // Only show transfer instructions when the organization has supplied an IBAN.
   const iban = org.iban
   const containerRef = useRef<HTMLElement>(null)
   useParentFlowMotion(org.theme, containerRef)
@@ -101,7 +100,7 @@ export default function DoneScreen({
             </div>
           </dl>
 
-          {!waitlisted && (
+          {!waitlisted && iban && (
             <div className="done-transfer">
               <span className="done-transfer-label">Überweisung</span>
               <dl className="done-transfer-rows">
@@ -141,6 +140,11 @@ export default function DoneScreen({
               </div>
             </div>
           )}
+          {!waitlisted && !iban && (
+            <div className="note quiet">
+              <p>Der Verein meldet sich zur Zahlung. Ihre Referenz: <strong>{result.payment_reference}</strong>.</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -177,7 +181,7 @@ export default function DoneScreen({
                   <span className="dot next">3</span>
                 </div>
                 <div className="txt">
-                  <b>Wird ein Platz frei, rücken Sie sofort nach</b>
+                  <b>Der Verein informiert Sie über das Nachrücken</b>
                   <span>Der Verein informiert Sie persönlich — keine automatische Nachricht, keine Frist.</span>
                 </div>
               </li>
@@ -190,8 +194,8 @@ export default function DoneScreen({
                   <span className="rail" />
                 </div>
                 <div className="txt">
-                  <b>Sie überweisen den Betrag</b>
-                  <span>{payTo} vermerkt den Zahlungseingang von Hand — das kann einige Tage dauern.</span>
+                  <b>{iban ? 'Sie überweisen den Betrag' : 'Der Verein meldet sich zur Zahlung'}</b>
+                  <span>{iban ? `${payTo} vermerkt den Zahlungseingang von Hand — das kann einige Tage dauern.` : `${payTo} sendet Ihnen die Zahlungsdetails direkt.`}</span>
                 </div>
               </li>
               <li data-rise>
@@ -216,6 +220,12 @@ export default function DoneScreen({
             </>
           )}
         </ol>
+        <div className="done-contact">
+          <h2 className="d3">Kontakt zum Verein</h2>
+          <p>{org.contact_person_name || org.name}</p>
+          <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>
+          {org.contact_phone && <a href={`tel:${org.contact_phone.replace(/[^+\d]/g, '')}`}>{org.contact_phone}</a>}
+        </div>
         <button className="btn btn-pill" type="button" onClick={onBackToOrg} style={{ marginTop: 6 }}>
           Zurück zur Übersicht
         </button>

@@ -83,7 +83,8 @@ it('does not promise a 48-hour acceptance window on the waitlist', () => {
 it('does not promise a prior acceptance step before costs on the waitlist', () => {
   const html = render({ result: { status: 'waitlist' } })
   expect(html).not.toContain('Zusage')
-  expect(html).toContain('sofort nach')
+  expect(html).toContain('informiert Sie über das Nachrücken')
+  expect(html).not.toContain('sofort nach')
 })
 
 // ── M3: Zusammenfassung und Überweisungsblock ──
@@ -114,6 +115,17 @@ it('F4: ohne IBAN kündigt Verein Zahlungsdetails an statt nachfragen zu fordern
   expect(html).toContain('sendet')
   expect(html).not.toContain('Bitte erfragen')
   expect(html).not.toContain('Bankverbindung ist hier noch nicht hinterlegt')
+  expect(html).toContain('Der Verein meldet sich zur Zahlung')
+  expect(html).not.toContain('class="done-transfer"')
+  expect(html).toContain('CP-1234')
+})
+
+it.each(['registered', 'waitlist'])('shows club contact and confirmation mail for %s', status => {
+  const html = render({ result: { status } })
+  expect(html).toContain('mailto:kontakt@testverein.example')
+  expect(html).toContain('tel:05611234')
+  expect(html).toContain('Wir schicken Ihnen eine Bestätigung an eva@example.de')
+  expect(html).toContain('5.–9. Juli 2027')
 })
 
 it('zeigt keinen Überweisungsblock bei Warteliste', () => {

@@ -11,6 +11,7 @@ import DoneScreen from './DoneScreen'
 import { useParentFlowMotion } from './motion'
 import { publicUI } from '../../lib/i18n/de'
 import PublicFooter from './PublicFooter'
+import CampSummary from './CampSummary'
 
 type ScreenName = 'org' | 'camp' | 'form' | 'done' | 'wait'
 
@@ -607,7 +608,7 @@ function WaitScreen({
           Alle {camp.capacity} Plätze sind vergeben
         </h1>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--ink-2)', maxWidth: '42ch' }}>
-          Sie können Ihr Kind auf die Warteliste setzen. {org.name} meldet sich, sobald ein Platz frei wird, und Sie entscheiden dann in Ruhe.
+          Sie können Ihr Kind auf die Warteliste setzen. Wird ein Platz frei und rückt Ihr Kind nach, informiert Sie {org.name} persönlich.
         </p>
         <div className="cap">
           <div className="bar full">
@@ -618,13 +619,14 @@ function WaitScreen({
           </span>
         </div>
       </div>
+      <CampSummary camp={camp} />
       <div className="pad" style={{ paddingBottom: 28 }}>
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
           <h2 className="d3">So läuft die Warteliste</h2>
           <p style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--ink-2)' }}>
-            Sie geben nur Name, Jahrgang und Kontaktdaten an. Wird ein Platz frei, meldet sich {org.name} direkt bei Ihnen.
+            Sie füllen das Anmeldeformular aus. Auf der Warteliste entstehen noch keine Kosten. Wird ein Platz frei, meldet sich {org.name} direkt bei Ihnen.
           </p>
-          <button className="btn primary" type="button" onClick={onJoinWaitlist}>
+          <button className="btn primary" type="button" onClick={onJoinWaitlist} disabled={!camp.registration_open}>
             Auf die Warteliste setzen
           </button>
         </div>

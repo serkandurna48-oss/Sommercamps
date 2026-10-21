@@ -297,7 +297,7 @@ export const publicUI = {
     ],
   },
   faq: [
-    { q: 'Wie läuft die Bezahlung ab?', a: 'Nach der Anmeldung erhalten Sie die Bankdaten und überweisen den Betrag selbst. Ihr Platz ist bereits reserviert, sobald das Formular abgeschickt wurde.' },
+    { q: 'Wie läuft die Bezahlung ab?', a: 'Die Bestätigung zeigt Ihnen, ob ein Platz reserviert ist oder Ihr Kind auf der Warteliste steht. Bei einem reservierten Platz überweisen Sie mit dem angegebenen Verwendungszweck. Falls keine Bankdaten hinterlegt sind, meldet sich der Verein zur Zahlung. Auf der Warteliste entstehen noch keine Kosten.' },
     { q: 'Was passiert, wenn ein Camp ausgebucht ist?', a: 'Sie können sich auf die Warteliste setzen. Sobald ein Platz frei wird, rückt das nächste Kind automatisch nach. Es wird keine automatische E-Mail versendet; der Verein meldet sich bei Ihnen, wenn Ihr Kind einen Platz erhält.' },
     { q: 'Wie kann ich stornieren?', a: 'Schreiben Sie dem Camp-Team einfach eine E-Mail. Die genauen Stornobedingungen stehen in den Teilnahmebedingungen.' },
     { q: 'Wer darf mein Kind abholen?', a: 'Die abholberechtigten Personen geben Sie direkt im Anmeldeformular an. Bitte halten Sie bei der Abholung einen Lichtbildausweis bereit.' },

@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useActionState, useState, type ReactNode } from 'react'
 import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
@@ -14,17 +14,17 @@ export interface ActionFormState {
 export const initialActionFormState: ActionFormState = { error: null, success: null }
 
 /**
- * Ein Server-Action-Button ohne eigene Formularfelder (AufrÃ¼cken,
- * Zahlungsstatus setzen, Stornieren) â€” mit Pending- und Fehler-/Erfolgs-
- * Feedback Ã¼ber useActionState, gleiches Muster wie LoginForm. Kein
- * eigenes Fetch/State-Handling pro Aufrufstelle nÃ¶tig.
+ * Ein Server-Action-Button ohne eigene Formularfelder (Aufrücken,
+ * Zahlungsstatus setzen, Stornieren) — mit Pending- und Fehler-/Erfolgs-
+ * Feedback über useActionState, gleiches Muster wie LoginForm. Kein
+ * eigenes Fetch/State-Handling pro Aufrufstelle nötig.
  *
  * `requireConfirm` (optional): wenn gesetzt, zeigt ein erster Klick
- * eine Inline-BestÃ¤tigungsfrage â€” zweiter Klick lÃ¶st die Aktion aus.
- * Verhindert unbeabsichtigte Klicks bei nicht rÃ¼ckgÃ¤ngig zu machenden
- * Aktionen (Warteliste aufrÃ¼cken, Zahlung erlassen).
- * Der BestÃ¤tigungszustand wird nach jeder abgeschlossenen Aktion
- * (Erfolg, Fehler, Abbrechen) zurÃ¼ckgesetzt.
+ * eine Inline-Bestätigungsfrage — zweiter Klick löst die Aktion aus.
+ * Verhindert unbeabsichtigte Klicks bei nicht rückgängig zu machenden
+ * Aktionen (Warteliste aufrücken, Zahlung erlassen).
+ * Der Bestätigungszustand wird nach jeder abgeschlossenen Aktion
+ * (Erfolg, Fehler, Abbrechen) zurückgesetzt.
  */
 export default function ActionForm({
   action,
@@ -43,7 +43,7 @@ export default function ActionForm({
   variant?: 'primary' | 'secondary' | 'quiet' | 'quiet-danger'
   brandStrong?: string
   brandOn?: string
-  /** Wenn gesetzt: Text der BestÃ¤tigungsfrage. Zeigt erst nach Klick. */
+  /** Wenn gesetzt: Text der Bestätigungsfrage. Zeigt erst nach Klick. */
   requireConfirm?: ReactNode
   cancelLabel?: string
   onResult?: (result: ActionFormState) => void
@@ -51,8 +51,8 @@ export default function ActionForm({
   const preview = useAdminPreview()
   const effectiveAction = preview ? previewNoopAction : action
   const [confirming, setConfirming] = useState(false)
-  // BestÃ¤tigungszustand wird nach jeder abgeschlossenen Aktion zurÃ¼ckgesetzt â€“
-  // unabhÃ¤ngig davon, ob der Ergebnistext derselbe ist wie zuvor.
+  // Bestätigungszustand wird nach jeder abgeschlossenen Aktion zurückgesetzt –
+  // unabhängig davon, ob der Ergebnistext derselbe ist wie zuvor.
   const [state, formAction, pending] = useActionState(
     async (prev: ActionFormState, formData: FormData) => {
       try {

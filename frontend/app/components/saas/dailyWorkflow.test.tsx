@@ -52,7 +52,13 @@ const entries = [
   registration('Anna', '2026-10-21T09:00:00Z'),
   registration('Zoe', '2026-10-21T10:00:00Z'),
 ]
-const org = { id: 'org', slug: 'demo', name: 'Testverein', logo_url: null, primary_color: '#116644' } as Awaited<ReturnType<typeof loadOrgAdminData>>['org']
+const org: Awaited<ReturnType<typeof loadOrgAdminData>>['org'] = {
+  id: 'org', slug: 'demo', name: 'Testverein', legal_name: null, legal_address: 'Musterstr. 1',
+  contact_email: 'test@demo.example', contact_phone: null, contact_person_name: null,
+  logo_url: null, primary_color: '#116644', plan_status: 'active', theme: 'default',
+  iban: null, intro_heading: null, intro_text: null, hero_image_url: null,
+  trainer_image_url: null, trainer_text: null, terms_text: 'Bedingungen', site_published: true,
+}
 function markup(element: React.ReactNode) {
   const container = document.createElement('div')
   container.innerHTML = renderToStaticMarkup(element)
@@ -94,17 +100,23 @@ describe('daily overview', () => {
     expect(dom.textContent).toContain('Mitternacht')
     expect(dom.textContent).not.toContain('Alt Kind')
   })
-  it('distinguishes no arrivals today from no camps', async () => {
+  it('shows onboarding card (Schritt 2) instead of arrivals when no camps', async () => {
     expect(markup(<TodayRegistrations entries={[]} orgSlug="demo" />).textContent).toContain('Heute noch keine neuen Anmeldungen')
     vi.mocked(loadOrgAdminData).mockResolvedValue({ token: 'test', org, camps: [], registrationsByCamp: [] })
     const dom = markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) }))
-    expect(dom.textContent).toContain('Dein erstes Camp vorbereiten')
+    expect(dom.textContent).toContain('In 3 Schritten zur Anmeldeseite')
     expect(dom.textContent).not.toContain('Alles erledigt')
     expect(dom.querySelector('a[href="/pilot/demo/camps/new"]')?.textContent).toBe('Camp anlegen')
   })
-  it('keeps the done state for an existing camp without tasks', async () => {
+  it('shows success card after publishing when no tasks remain', async () => {
     vi.mocked(loadOrgAdminData).mockResolvedValue({ token: 'test', org, camps: [camp], registrationsByCamp: [[]] })
-    expect(markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) })).textContent).toContain('Alles erledigt')
+    expect(markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) })).textContent).toContain('Deine Anmeldeseite ist live.')
+  })
+  it('shows onboarding card (Schritt 3) when camp exists but site not yet published', async () => {
+    vi.mocked(loadOrgAdminData).mockResolvedValue({ token: 'test', org: { ...org, site_published: false }, camps: [camp], registrationsByCamp: [[]] })
+    const dom = markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) }))
+    expect(dom.textContent).toContain('In 3 Schritten zur Anmeldeseite')
+    expect(dom.textContent).not.toContain('Deine Anmeldeseite ist live.')
   })
 })
 

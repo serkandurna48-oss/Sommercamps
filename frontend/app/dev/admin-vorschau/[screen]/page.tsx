@@ -13,14 +13,14 @@ import CampPaymentsScreen from '../../../components/saas/screens/CampPaymentsScr
 import CampWaitlistScreen from '../../../components/saas/screens/CampWaitlistScreen'
 import CampTasksScreen from '../../../components/saas/screens/CampTasksScreen'
 import NewRegistrationsScreen from '../../../components/saas/screens/NewRegistrationsScreen'
-import { getPreviewFixtures } from '../fixtures'
+import { getPreviewFixtures, getPreviewFixturesDashboardStep1, getPreviewFixturesDashboardStep3 } from '../fixtures'
 import PreviewProvider from '../PreviewProvider'
 
 export const metadata = { title: 'Admin-Vorschau – CampsPilot', robots: { index: false, follow: false } }
 
 type Props = {
   params: Promise<{ screen: string }>
-  searchParams?: Promise<{ leer?: string | string[]; filter?: string | string[]; sort?: string | string[]; camp?: string | string[] }>
+  searchParams?: Promise<{ leer?: string | string[]; filter?: string | string[]; sort?: string | string[]; camp?: string | string[]; schritt?: string | string[] }>
 }
 
 export default async function AdminPreviewPage({ params, searchParams }: Props) {
@@ -29,6 +29,7 @@ export default async function AdminPreviewPage({ params, searchParams }: Props) 
   const { screen } = await params
   const query = await searchParams
   const empty = query?.leer === '1'
+  const schritt = typeof query?.schritt === 'string' ? parseInt(query.schritt, 10) : undefined
   const fixtures = getPreviewFixtures(empty)
   const campIndex = Math.max(0, fixtures.camps.findIndex(camp => camp.slug === query?.camp))
   const camp = fixtures.camps[campIndex]
@@ -38,7 +39,14 @@ export default async function AdminPreviewPage({ params, searchParams }: Props) 
   const paymentFilter = query?.filter === 'paid' || query?.filter === 'all' ? query.filter : 'open'
   let content: React.ReactNode
   switch (screen) {
-    case 'dashboard': content = <OrgDashboardScreen {...fixtures} />; break
+    case 'dashboard': {
+      const dashboardFixtures =
+        schritt === 1 || empty ? getPreviewFixturesDashboardStep1() :
+        schritt === 3 ? getPreviewFixturesDashboardStep3() :
+        schritt === 2 ? getPreviewFixtures(true) :
+        fixtures
+      content = <OrgDashboardScreen {...dashboardFixtures} />; break
+    }
     case 'anmeldungen': content = <NewRegistrationsScreen {...fixtures} />; break
     case 'camp': content = <CampDetailScreen {...campProps} initialFilter={initialFilter} initialSort={initialSort} />; break
     case 'camp-zahlungen': content = <CampPaymentsScreen {...campProps} initialFilter={paymentFilter} />; break

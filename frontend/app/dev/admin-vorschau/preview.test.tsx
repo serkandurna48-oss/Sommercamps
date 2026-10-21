@@ -162,17 +162,39 @@ it('provides coherent, invented fixtures and real derived tasks', () => {
   expect(getPreviewFixtures(true)).toMatchObject({ camps: [], registrationsByCamp: [], org: { camp_count: 0 } })
 })
 
-it('shows daily arrivals, the full daily list and the first-camp empty state', async () => {
+it('shows daily arrivals, the full daily list and the onboarding card in empty state', async () => {
   const dashboard = renderToStaticMarkup(await page('dashboard'))
   expect(dashboard).toContain('Heute neu: 0 Anmeldungen')
   expect(dashboard).toContain('href="/dev/admin-vorschau/anmeldungen"')
   const daily = renderToStaticMarkup(await page('anmeldungen'))
   expect(daily).toContain('Heute noch keine neuen Anmeldungen')
   expect(daily).not.toMatch(/href="\/(pilot|platform)\//)
+  // leer=1 zeigt Schritt 1 (leerer Verein, keine Pflichtangaben, kein Camp)
   const empty = renderToStaticMarkup(await page('dashboard', true))
-  expect(empty).toContain('Dein erstes Camp vorbereiten')
+  expect(empty).toContain('In 3 Schritten zur Anmeldeseite')
+  expect(empty).toContain('Vereinsangaben vervollständigen')
   expect(empty).not.toContain('Alles erledigt')
-  expect(empty).toContain('href="/dev/admin-vorschau/camp-neu?leer=1"')
+  expect(empty).toContain('href="/dev/admin-vorschau/konfiguration?leer=1"')
+})
+
+it('shows onboarding card steps 2 and 3 for the dashboard preview variants', async () => {
+  const step2 = renderToStaticMarkup(await PreviewPage({
+    params: Promise.resolve({ screen: 'dashboard' }),
+    searchParams: Promise.resolve({ schritt: '2' }),
+  }))
+  expect(step2).toContain('In 3 Schritten zur Anmeldeseite')
+  expect(step2).toContain('Erstes Camp anlegen')
+  expect(step2).toContain('href="/dev/admin-vorschau/camp-neu"')
+  expect(step2).not.toMatch(/href="\/(pilot|platform)\//)
+
+  const step3 = renderToStaticMarkup(await PreviewPage({
+    params: Promise.resolve({ screen: 'dashboard' }),
+    searchParams: Promise.resolve({ schritt: '3' }),
+  }))
+  expect(step3).toContain('In 3 Schritten zur Anmeldeseite')
+  expect(step3).toContain('Seite und Camp veröffentlichen')
+  expect(step3).toContain('href="/dev/admin-vorschau/camp-konfiguration?camp=technikcamp"')
+  expect(step3).not.toMatch(/href="\/(pilot|platform)\//)
 })
 
 it('preserves task filters and camp selection inside the preview', async () => {

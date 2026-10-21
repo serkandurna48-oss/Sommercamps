@@ -82,3 +82,24 @@ export function getPreviewFixtures(empty = false, now = new Date()) {
     registrationsByCamp: empty ? [] : [[...previewRegistrations.slice(0, 20), ...previewRegistrations.slice(26)], previewRegistrations.slice(20, 26), []],
   }
 }
+
+/** Schritt 1 – leerer Verein ohne Pflichtangaben (kein Camp). */
+export function getPreviewFixturesDashboardStep1() {
+  return {
+    orgSlug: organization.slug,
+    org: { ...organization, contact_email: '', legal_address: null, terms_text: null, camp_count: 0 },
+    camps: [] as typeof camps,
+    registrationsByCamp: [] as (typeof registrations)[],
+  }
+}
+
+/** Schritt 3 – Pflichtangaben gesetzt, ein Entwurfs-Camp, Vereinsseite noch nicht veröffentlicht. */
+export function getPreviewFixturesDashboardStep3(now = new Date()) {
+  const previewCamps = makeCamps(now)
+  return {
+    orgSlug: organization.slug,
+    org: { ...organization, site_published: false },
+    camps: [{ ...previewCamps[0], status: 'draft' as const }],
+    registrationsByCamp: [[]] as (typeof registrations)[],
+  }
+}

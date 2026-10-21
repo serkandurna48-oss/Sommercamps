@@ -65,6 +65,12 @@ async function saveFirstEdit() {
   expect(container.textContent).toContain('Corrected')
 }
 
+it('renders the expand trigger with a transparent border (no double-border in the roster card)', async () => {
+  await render()
+  const trigger = container.querySelector<HTMLButtonElement>('button[aria-expanded]')!
+  expect(trigger.style.border).toBe('1px solid transparent')
+})
+
 describe('participant correction workflow', () => {
   it('allows a second edit after a successful save without reloading', async () => {
     await render()

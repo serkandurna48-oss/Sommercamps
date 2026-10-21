@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, RegistrationCreated } from '../../lib/saasApi'
 import { submitRegistration } from '../../lib/saasApi'
 import { formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
+import CampSummary from './CampSummary'
 
-const EMAIL_RE = /\S+@\S+\.\S{2,}/
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 interface FormState {
   childFirstName: string
@@ -60,8 +61,7 @@ export default function RegistrationFormScreen({
 }: {
   orgSlug: string
   orgName: string
-  /** Mirrors DoneScreen: without a stored IBAN the parents have to ask the
-   * club, so the form must not promise bank details on the next screen. */
+  /** Only promise bank details when the organization has supplied an IBAN. */
   hasBankDetails: boolean
   camp: CampPublic
   onBack: () => void
@@ -71,12 +71,23 @@ export default function RegistrationFormScreen({
   const [submitAttempted, setSubmitAttempted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
+  const [serverFields, setServerFields] = useState<Partial<Record<FieldKey, string>>>({})
+  const inFlight = useRef(false)
+  const serverErrorRef = useRef<HTMLDivElement>(null)
   const fieldRefs = useRef<Partial<Record<FieldKey, HTMLElement | null>>>({})
   const headingRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => { headingRef.current?.focus() }, [])
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
+    const field = key === 'termsAccepted' ? 'agb' : key === 'privacyAccepted' ? 'privacy' : key
+    setServerFields((prev) => ({ ...prev, [field]: undefined }))
+  }
+
+  function focusField(key: FieldKey) {
+    const target = fieldRefs.current[key]
+    target?.querySelector<HTMLInputElement>('input')?.focus()
+    target?.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }
 
   const emailValid = EMAIL_RE.test(form.parentEmail.trim())
@@ -94,7 +105,7 @@ export default function RegistrationFormScreen({
 
   const badFields = useMemo<Partial<Record<FieldKey, string>>>(() => {
     if (!submitAttempted) return {}
-    const bad: Partial<Record<FieldKey, string>> = {}
+    const bad: Partial<Record<FieldKey, string>> = Object.fromEntries(Object.entries(serverFields).filter(([, value]) => value))
     if (form.childFirstName.trim() === '') bad.childFirstName = 'Bitte tragen Sie den Vornamen ein.'
     if (form.childLastName.trim() === '') bad.childLastName = 'Bitte tragen Sie den Nachnamen ein.'
     if (parseGermanDate(form.childBirthDate) === null) bad.childBirthDate = 'Bitte im Format TT.MM.JJJJ.'
@@ -104,15 +115,17 @@ export default function RegistrationFormScreen({
     if (form.emergencyPhone.trim() === '') {
       bad.emergencyPhone = 'Ohne Notfallnummer dürfen wir Ihr Kind am ersten Tag nicht übernehmen.'
     }
-    if (!form.termsAccepted) bad.agb = 'Pflichtfeld'
+    if (!form.termsAccepted) bad.agb = 'Bitte akzeptieren Sie die Teilnahmebedingungen.'
     if (!form.privacyAccepted) bad.privacy = 'Bitte stimmen Sie der Datenschutzerklärung zu.'
     return bad
-  }, [submitAttempted, form, emailValid])
+  }, [submitAttempted, form, emailValid, serverFields])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (inFlight.current) return
     setSubmitAttempted(true)
     setServerError(null)
+    setServerFields({})
 
     const bad: FieldKey[] = []
     if (form.childFirstName.trim() === '') bad.push('childFirstName')
@@ -126,10 +139,7 @@ export default function RegistrationFormScreen({
     if (!form.privacyAccepted) bad.push('privacy')
 
     if (bad.length > 0) {
-      const target = fieldRefs.current[bad[0]]
-      target?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-      const input = target?.querySelector<HTMLElement>('input')
-      setTimeout(() => input?.focus(), 300)
+      focusField(bad[0])
       return
     }
 
@@ -140,6 +150,7 @@ export default function RegistrationFormScreen({
     const parentFirstName = spaceIdx === -1 ? form.parentName.trim() : form.parentName.trim().slice(0, spaceIdx)
     const parentLastName = spaceIdx === -1 ? '' : form.parentName.trim().slice(spaceIdx + 1)
 
+    inFlight.current = true
     setSubmitting(true)
     try {
       const outcome = await submitRegistration(orgSlug, camp.slug, {
@@ -160,12 +171,28 @@ export default function RegistrationFormScreen({
       })
       if (!outcome.ok) {
         setServerError(outcome.detail)
+        const mapping = {
+          child_first_name: 'childFirstName', child_last_name: 'childLastName', child_birth_date: 'childBirthDate',
+          parent_first_name: 'parentName', parent_last_name: 'parentName', parent_email: 'parentEmail',
+          parent_phone: 'parentPhone', emergency_contact_phone: 'emergencyPhone', terms_accepted: 'agb', privacy_accepted: 'privacy',
+        } as const
+        const fields: Partial<Record<FieldKey, string>> = {}
+        for (const [apiField, field] of Object.entries(mapping)) {
+          const message = outcome.fieldErrors?.[apiField as keyof typeof mapping]
+          if (message) fields[field] = message
+        }
+        setServerFields(fields)
+        const first = Object.keys(fields)[0] as FieldKey | undefined
+        if (first) focusField(first)
+        else requestAnimationFrame(() => serverErrorRef.current?.focus())
         return
       }
       onSubmitted(outcome.data, form.childFirstName.trim() || 'Ihr Kind', form.parentEmail.trim())
     } catch {
       setServerError('Die Anmeldung konnte nicht gespeichert werden — Verbindung zum Server fehlgeschlagen. Versuchen Sie es gleich noch mal.')
+      requestAnimationFrame(() => serverErrorRef.current?.focus())
     } finally {
+      inFlight.current = false
       setSubmitting(false)
     }
   }
@@ -174,7 +201,7 @@ export default function RegistrationFormScreen({
     <section className="screen" id="s-form">
       <h1 ref={headingRef} tabIndex={-1} className="sr">Anmeldung: {camp.title}</h1>
       <div className="top">
-        <button className="back" type="button" onClick={onBack} aria-label="Zurück zum Camp">
+        <button className="back" type="button" onClick={onBack} disabled={submitting} aria-label="Zurück zum Camp">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M15 5l-7 7 7 7" />
           </svg>
@@ -191,8 +218,10 @@ export default function RegistrationFormScreen({
         <span className="prog-text">Schritt {Math.min(doneCount + 1, 4)} von 4</span>
       </div>
 
-      <form onSubmit={handleSubmit} noValidate>
+      <CampSummary camp={camp} />
+      <form onSubmit={handleSubmit} noValidate aria-busy={submitting}>
         <div className="pad form-body">
+          <p className="required-hint">Alle mit * markierten Felder sind Pflichtfelder.</p>
           <section className="fsec">
             <div className="fsec-head">
               <span className="sec-label">Kind</span>
@@ -200,9 +229,11 @@ export default function RegistrationFormScreen({
             </div>
             <div className="f">
               <label className={`field${badFields.childFirstName ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.childFirstName = el }}>
-                <span className="t-lab">Vorname</span>
+                <span className="t-lab">Vorname *</span>
                 <input
                   type="text"
+                  required
+                  autoComplete="section-child given-name"
                   value={form.childFirstName}
                   onChange={(e) => set('childFirstName', e.target.value)}
                   aria-invalid={!!badFields.childFirstName}
@@ -211,9 +242,11 @@ export default function RegistrationFormScreen({
                 <span className="err">{badFields.childFirstName && <span id="err-child-first-name">{badFields.childFirstName}</span>}</span>
               </label>
               <label className={`field${badFields.childLastName ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.childLastName = el }}>
-                <span className="t-lab">Nachname</span>
+                <span className="t-lab">Nachname *</span>
                 <input
                   type="text"
+                  required
+                  autoComplete="section-child family-name"
                   value={form.childLastName}
                   onChange={(e) => set('childLastName', e.target.value)}
                   aria-invalid={!!badFields.childLastName}
@@ -223,14 +256,19 @@ export default function RegistrationFormScreen({
               </label>
               <div className="row2">
                 <label className={`field${badFields.childBirthDate ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.childBirthDate = el }}>
-                  <span className="t-lab">Geburtsdatum</span>
+                  <span className="t-lab">Geburtsdatum *</span>
                   <input
                     type="text"
+                    required
+                    autoComplete="section-child bday"
                     placeholder="TT.MM.JJJJ"
                     inputMode="numeric"
                     className="num"
                     value={form.childBirthDate}
-                    onChange={(e) => set('childBirthDate', e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      set('childBirthDate', /^\d{8}$/.test(value) ? `${value.slice(0, 2)}.${value.slice(2, 4)}.${value.slice(4)}` : value)
+                    }}
                     aria-invalid={!!badFields.childBirthDate}
                     aria-describedby={badFields.childBirthDate ? 'err-child-birth-date' : undefined}
                   />
@@ -257,10 +295,11 @@ export default function RegistrationFormScreen({
             </div>
             <div className="f">
               <label className={`field${badFields.parentName ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.parentName = el }}>
-                <span className="t-lab">Vor- und Nachname</span>
+                <span className="t-lab">Vor- und Nachname *</span>
                 <input
                   type="text"
                   autoComplete="name"
+                  required
                   value={form.parentName}
                   onChange={(e) => set('parentName', e.target.value)}
                   aria-invalid={!!badFields.parentName}
@@ -269,9 +308,10 @@ export default function RegistrationFormScreen({
                 <span className="err">{badFields.parentName && <span id="err-parent-name">{badFields.parentName}</span>}</span>
               </label>
               <label className={`field${badFields.parentEmail ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.parentEmail = el }}>
-                <span className="t-lab">E-Mail</span>
+                <span className="t-lab">E-Mail *</span>
                 <input
                   type="email"
+                  required
                   autoComplete="email"
                   inputMode="email"
                   value={form.parentEmail}
@@ -283,10 +323,11 @@ export default function RegistrationFormScreen({
                 <span className="hint" id="hint-parent-email">Über diese Adresse erreicht Sie {orgName} bei Rückfragen.</span>
               </label>
               <label className={`field${badFields.parentPhone ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.parentPhone = el }}>
-                <span className="t-lab">Telefon</span>
+                <span className="t-lab">Telefon *</span>
                 <input
                   type="tel"
                   autoComplete="tel"
+                  required
                   inputMode="tel"
                   className="num"
                   value={form.parentPhone}
@@ -306,11 +347,13 @@ export default function RegistrationFormScreen({
             </div>
             <div className="f">
               <label className={`field${badFields.emergencyPhone ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.emergencyPhone = el }}>
-                <span className="t-lab">Notfallnummer während des Camps</span>
+                <span className="t-lab">Notfallnummer während des Camps *</span>
                 <input
                   type="tel"
                   inputMode="tel"
                   placeholder="Nummer, die wir tagsüber erreichen"
+                  autoComplete="section-emergency tel"
+                  required
                   className="num"
                   value={form.emergencyPhone}
                   onChange={(e) => set('emergencyPhone', e.target.value)}
@@ -352,24 +395,30 @@ export default function RegistrationFormScreen({
                 <input
                   type="checkbox"
                   checked={form.termsAccepted}
+                  required
                   onChange={(e) => set('termsAccepted', e.target.checked)}
                   aria-invalid={!!badFields.agb}
+                  aria-describedby={badFields.agb ? 'err-agb' : undefined}
                 />
                 <span className="txt">
                   <b>Teilnahmebedingungen</b>
-                  <span>Ich habe die Teilnahmebedingungen gelesen und melde mein Kind verbindlich an.</span>
+                  <span>Pflichtfeld *</span>
+                  <span>Ich habe die <a href={`/pilot/${orgSlug}/teilnahmebedingungen`} target="_blank" rel="noopener noreferrer">Teilnahmebedingungen</a> gelesen und melde mein Kind verbindlich an.</span>
+                  {badFields.agb && <span id="err-agb" role="alert" style={{ color: 'var(--error)' }}>{badFields.agb}</span>}
                 </span>
               </label>
               <label className={`consent${badFields.privacy ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.privacy = el }}>
                 <input
                   type="checkbox"
                   checked={form.privacyAccepted}
+                  required
                   onChange={(e) => set('privacyAccepted', e.target.checked)}
                   aria-invalid={!!badFields.privacy}
                   aria-describedby={badFields.privacy ? 'err-privacy' : undefined}
                 />
                 <span className="txt">
                   <b>Datenschutz</b>
+                  <span>Pflichtfeld *</span>
                   <span>
                     Ich habe die <a href={`/pilot/${orgSlug}/datenschutz`} target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a> gelesen und stimme der Verarbeitung der Daten für die Camp-Anmeldung zu.
                   </span>
@@ -415,7 +464,7 @@ export default function RegistrationFormScreen({
             </div>
           )}
           {serverError && (
-            <div className="note error" role="alert">
+            <div className="note error" role="alert" tabIndex={-1} ref={serverErrorRef}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--error)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="9" />
                 <path d="M12 7.5v5.5" />
@@ -442,7 +491,7 @@ export default function RegistrationFormScreen({
               ? 'Auf der Warteliste entstehen noch keine Kosten.'
               : hasBankDetails
                 ? `Den Betrag überweisen Sie anschließend selbst an ${orgName}. Die Bankdaten stehen auf der nächsten Seite.`
-                : `Den Betrag überweisen Sie anschließend selbst an ${orgName}. Die Bankverbindung ist hier noch nicht hinterlegt — wie Sie sie bekommen, steht auf der nächsten Seite.`}
+                : 'Der Verein meldet sich zur Zahlung.'}
           </span>
         </div>
       </form>

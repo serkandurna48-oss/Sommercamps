@@ -82,6 +82,8 @@ it('Datenschutz: Brevo als Dienstleister genannt, keine Kinderdaten übermittelt
   const html = renderToStaticMarkup(el)
   expect(html).toContain('Brevo')
   expect(html).not.toContain('Vorname und Nachname des Kindes')
+  expect(html).toContain('Notfallnummer während des Camps (Pflichtangabe)')
+  expect(html).not.toContain('Notfallkontakt (optional)')
 })
 
 it('Teilnahmebedingungen: mit terms_text zeigt Abschnitt mit zwei Absätzen', async () => {

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import type { CampPublic } from '../../lib/saasApi'
-import { formatCampRowDate, formatPrice } from '../../lib/parentFlowFormat'
+import { formatCampDateRange, formatCampRowDate, formatPrice } from '../../lib/parentFlowFormat'
 
 /**
  * Eine Campzeile — Ticket §6.1 / reference card(). Identisches Markup in
@@ -46,6 +46,7 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
       <span className="c-body">
         <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span className="c-name">{camp.title}</span>
+          <span>{formatCampDateRange(camp.start_date, camp.end_date)}</span>
         </span>
         <span className="tags">
           {camp.is_full && <span className="chip info">Ausgebucht</span>}

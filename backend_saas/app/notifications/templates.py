@@ -16,7 +16,14 @@ from .mail import MailMessage
 
 
 def _date_range(start: date, end: date) -> str:
-    return f"{start.strftime('%d.%m.%Y')} – {end.strftime('%d.%m.%Y')}"
+    months = ("Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sept.", "Okt.", "Nov.", "Dez.")
+    end_text = f"{end.day}. {months[end.month - 1]} {end.year}"
+    if start == end:
+        return end_text
+    if (start.year, start.month) == (end.year, end.month):
+        return f"{start.day}.–{end_text}"
+    start_year = f" {start.year}" if start.year != end.year else ""
+    return f"{start.day}. {months[start.month - 1]}{start_year}–{end_text}"
 
 
 def build_registration_mail(
@@ -66,7 +73,7 @@ def build_registration_mail(
             payment_block = (
                 f"{amount_line}"
                 f"<p>Verwendungszweck: <strong>{e_payment_ref}</strong></p>\n"
-                f"<p>{e_payee} sendet Ihnen die Zahlungsdetails direkt.<br>"
+                f"<p>Der Verein meldet sich zur Zahlung. {e_payee} sendet Ihnen die Zahlungsdetails direkt.<br>"
                 f"E-Mail: {e_org_email}{phone_line}</p>"
             )
         html = f"""\

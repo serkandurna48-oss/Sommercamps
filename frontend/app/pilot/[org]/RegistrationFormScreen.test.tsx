@@ -141,7 +141,7 @@ it('promises bank details on the next screen only when the club stored an IBAN',
   expect(withIban).toContain('Die Bankdaten stehen auf der nächsten Seite.')
   const withoutIban = text(render(vi.fn(), false, false))
   expect(withoutIban).not.toContain('Die Bankdaten stehen auf der nächsten Seite.')
-  expect(withoutIban).toContain('Die Bankverbindung ist hier noch nicht hinterlegt')
+  expect(withoutIban).toContain('Der Verein meldet sich zur Zahlung.')
 })
 
 it('rejects a parent name without a space and shows a validation error', async () => {

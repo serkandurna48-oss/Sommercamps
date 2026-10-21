@@ -2,7 +2,7 @@ ux/uc3-feinschliff
 
 STATUS: fertig zur Prüfung
 
-COMMIT: (folgt nach git commit)
+COMMIT: ccffa60 – ux: UC3 Feinschliff (Teilnehmerliste, Dashboard, Barrierefreiheit, Erfolgskarte)
 
 ## TESTS
 

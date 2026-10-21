@@ -31,6 +31,7 @@ function reg(overrides: Partial<RegistrationAdmin> = {}): RegistrationAdmin {
   return {
     id: crypto.randomUUID(),
     registration_token: crypto.randomUUID(),
+    payment_reference: 'CP-12345678',
     status: 'registered',
     payment_status: 'open',
     parent_first_name: 'Max',

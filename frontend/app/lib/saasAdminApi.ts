@@ -72,6 +72,7 @@ export interface OrganizationAdmin {
 export interface RegistrationAdmin {
   id: string
   registration_token: string
+  payment_reference: string
   status: 'registered' | 'confirmed' | 'cancelled' | 'waitlist'
   payment_status: 'open' | 'paid' | 'refunded' | 'waived' | 'cancelled'
   parent_first_name: string

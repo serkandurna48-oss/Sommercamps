@@ -46,6 +46,7 @@ export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsBy
           {de.paymentsPage.subtitleOrg}
         </p>
 
+        <p className="cp-body mb-4" style={{ color: 'var(--cp-muted)' }}>berechnet aus aktuellen Anmeldungen und Campreis</p>
         <div className="mb-8">
           <StatCard label={de.command.filterPaymentOpen} value={String(openCount)} numericValue={openCount} tone="pending" />
         </div>

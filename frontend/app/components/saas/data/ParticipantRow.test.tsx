@@ -12,6 +12,7 @@ vi.mock('../actions/waitlistActions', () => ({
 }))
 
 const registration: RegistrationAdmin = {
+  payment_reference: 'CP-12345678',
   id: 'review-registration', registration_token: 'review-token', status: 'registered', payment_status: 'open',
   parent_first_name: 'Test', parent_last_name: 'Parent', parent_email: 'test@example.com', parent_phone: '123',
   child_first_name: 'Test', child_last_name: 'Child', child_birth_date: '2018-05-10',

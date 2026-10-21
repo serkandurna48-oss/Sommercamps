@@ -54,8 +54,8 @@ export const de = {
     payment: {
       title: (count: number, campTitle: string) =>
         count === 1
-          ? `Eine Familie hat für „${campTitle}" noch nicht bezahlt`
-          : `${count} Familien haben für „${campTitle}" noch nicht bezahlt`,
+          ? `Eine offene Zahlung für „${campTitle}"`
+          : `${count} offene Zahlungen für „${campTitle}"`,
       hint: 'Zahlung ist noch offen — kurze Erinnerung schicken.',
     },
     missingContact: {
@@ -139,7 +139,7 @@ export const de = {
   paymentsPage: {
     heading: 'Zahlungen',
     subtitleOrg: 'Über alle Camps',
-    collected: 'Eingegangen',
+    collected: 'Als bezahlt markiert',
     open: 'Offen',
     breakdown: 'Nach Status',
     filterOpen: 'Offen',

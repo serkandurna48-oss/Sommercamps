@@ -24,7 +24,7 @@ export default function OrgSwitcher({ name, logoUrl, orgSlug }: { name: string; 
   const initial = name.trim().charAt(0).toUpperCase()
   const isPlatformOwner = useIsPlatformOwner()
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex min-w-0 items-center gap-2.5">
       <span
         className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md"
         style={{ background: 'var(--cp-band-2)' }}
@@ -37,8 +37,8 @@ export default function OrgSwitcher({ name, logoUrl, orgSlug }: { name: string; 
           </span>
         )}
       </span>
-      <div className="flex flex-col">
-        <span className="cp-subheading" style={{ color: 'var(--cp-on-band)' }}>
+      <div className="flex min-w-0 flex-col">
+        <span className="cp-subheading break-words" style={{ color: 'var(--cp-on-band)' }}>
           {name}
         </span>
         {isPlatformOwner && (

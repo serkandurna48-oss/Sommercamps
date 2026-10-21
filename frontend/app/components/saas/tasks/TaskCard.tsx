@@ -1,10 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import Link from '../preview/AdminLink'
 import { de } from '../../../lib/i18n/de'
 import { taskHref, type Task } from '../dashboardLogic'
-import Button from '../ui/Button'
+import Button, { ButtonLink } from '../ui/Button'
 
 function taskCopy(task: Task): { title: string; hint: string } {
   switch (task.kind) {
@@ -41,9 +40,9 @@ export default function TaskCard({ task, orgSlug, brandStrong, brandOn }: { task
         {copy.hint}
       </p>
       <div className="mt-5 flex flex-wrap gap-3">
-        <Link href={taskHref(orgSlug, task)} className="cp-label inline-flex min-h-[44px] items-center rounded-full px-5" style={{ background: brandStrong, color: brandOn }}>
+        <ButtonLink href={taskHref(orgSlug, task)} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
           {de.tasks.review}
-        </Link>
+        </ButtonLink>
         <Button variant="secondary" onClick={() => setDone(v => !v)} aria-pressed={done}>
           {de.tasks.markDone}
         </Button>

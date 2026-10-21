@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useId, useRef, useState } from 'react'
+import Button from '../ui/Button'
+import { berlinDay, formatDate, formatDateTime } from '../../../lib/i18n/de'
 import { createPortal } from 'react-dom'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { DAY_LIST_COLUMNS, dayListCountText } from '../dayListExport'
@@ -16,7 +18,7 @@ export default function DayListPrint({ camp, rows, filterText, onClose }: {
   const dateId = useId()
   const [createdAt] = useState(() => new Date())
   const [date, setDate] = useState(() => {
-    const today = new Date().toLocaleDateString('sv-SE')
+    const today = berlinDay(new Date())
     return today >= camp.start_date && today <= camp.end_date ? today : camp.start_date
   })
 
@@ -33,15 +35,15 @@ export default function DayListPrint({ camp, rows, filterText, onClose }: {
   return createPortal(
     <dialog ref={dialogRef} aria-labelledby={titleId} onCancel={onClose} className="cp-scope cp-daylist-preview">
       <div className="cp-noprint mb-4 flex flex-wrap items-center gap-3">
-        <button type="button" onClick={() => window.print()} className="min-h-[44px] rounded border px-4">Drucken</button>
-        <button type="button" onClick={onClose} className="min-h-[44px] rounded border px-4">Zurück zur Liste</button>
+        <Button type="button" onClick={() => window.print()}>Drucken</Button>
+        <Button type="button" onClick={onClose}>Zurück zur Liste</Button>
         <label htmlFor={dateId}>Datum der Tagesliste</label>
         <input id={dateId} type="date" value={date} min={camp.start_date} max={camp.end_date} onChange={e => { if (e.target.value) setDate(e.target.value) }} className="min-h-[44px] min-w-0 rounded border px-2 text-base" />
       </div>
       <header className="cp-daylist-heading">
         <h1 id={titleId}>Camp-Tagesliste · {camp.title}</h1>
-        <p>Datum: {new Date(`${date}T12:00:00`).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
-        <p>Erstellt: {createdAt.toLocaleString('de-DE')}</p>
+        <p>Datum: {formatDate(date)}</p>
+        <p>Erstellt: {formatDateTime(createdAt)}</p>
         <p>{dayListCountText(rows.length)}</p>
         <p>{filterText}</p>
         <p>Alphabetisch nach Nachname, Vorname · Jahrgang als Geburtsjahr</p>

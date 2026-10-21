@@ -1,5 +1,6 @@
 'use client'
 
+import Button from '../ui/Button'
 import { useId, useState } from 'react'
 import { paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
@@ -54,7 +55,7 @@ export default function ParticipantRow({
         </label>
 
         {/* Entire summary is one expand button: name, parent, chips, arrow */}
-        <button
+        <Button
           type="button"
           onClick={() => setOpen(v => !v)}
           aria-expanded={open}
@@ -104,7 +105,7 @@ export default function ParticipantRow({
               className={`absolute right-0 top-1/2 -translate-y-1/2 shrink-0 text-[var(--cp-ink-2)] transition-transform motion-reduce:transition-none md:static md:translate-y-0 ${open ? 'rotate-180' : ''}`}
             />
           </div>
-        </button>
+        </Button>
       </div>
 
       <div id={detailId} inert={!open} aria-hidden={!open} className={`cp-collapse cp-collapse-m3 motion-reduce:transition-none ${open ? 'cp-collapse-expanded' : ''}`}>

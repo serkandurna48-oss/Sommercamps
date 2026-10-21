@@ -11,8 +11,7 @@ export default function OrgConfigScreen({ orgSlug, org }: OrganizationIdentityPr
 
   return (
     <>
-      <MatchdayBand
-        variant="compact"
+      <MatchdayBand backHref={`/pilot/${orgSlug}/dashboard`}
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}

@@ -1,5 +1,6 @@
 'use client'
 
+import Button from './Button'
 import { useAdminPreview } from '../preview/AdminPreviewContext'
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { downloadCsv, toCsv, type ExportColumn } from '../../../lib/exportCsv'
@@ -84,19 +85,18 @@ export default function ExportBar<T>({
   return (
     <div className="cp-noprint relative mb-4" ref={rootRef}>
       {summary && <div className="mb-2 text-sm" aria-live="polite">{summary}</div>}
-      <button
+      <Button
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(v => !v)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="cp-label inline-flex cp-focus min-h-[44px] min-w-[44px] items-center gap-2 rounded-[var(--cp-r-field)] border px-3.5 transition-colors motion-reduce:transition-none"
-        style={{ borderColor: 'var(--cp-field-line)', color: 'var(--cp-ink-2)', background: 'var(--cp-surface)' }}
+        className="gap-2"
       >
         <IconDownload />
         Exportieren
         <IconChevronDown className={`transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`} />
-      </button>
+      </Button>
 
       {open && (
         <div
@@ -108,30 +108,28 @@ export default function ExportBar<T>({
         >
           {configuration && <div className="border-b p-3">{configuration}</div>}
           {rows.length === 0 && <p className="px-3.5 py-2 text-sm">Keine Treffer für diesen Export.</p>}
-          {rows.length === 0 && onReset && <button type="button" onClick={onReset} className="cp-focus min-h-[44px] min-w-[44px] px-3.5 underline">Filter zurücksetzen</button>}
-          <button
+          {rows.length === 0 && onReset && <Button type="button" onClick={onReset} className="cp-focus min-h-[44px] min-w-[44px] px-3.5">Filter zurücksetzen</Button>}
+          <Button
             type="button"
             disabled={disabled}
             onClick={() => {
               downloadCsv(csvFilename, toCsv(rows, columns))
               setDownloadState('success')
             }}
-            className="cp-body flex cp-focus min-h-[44px] min-w-[44px] w-full items-center gap-2.5 px-3.5 py-2.5 text-left disabled:opacity-50 hover:bg-[var(--cp-surface-2)]"
-            style={{ color: 'var(--cp-ink)' }}
+            className="mt-1 w-full gap-2.5"
           >
             <IconDocument /> Als CSV
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             disabled={disabled || !!preview}
             title={preview ? 'Excel-Export ist in der Vorschau nicht verfügbar' : undefined}
             onClick={downloadExcel}
-            className="cp-body flex cp-focus min-h-[44px] min-w-[44px] w-full items-center gap-2.5 border-t px-3.5 py-2.5 disabled:opacity-50 hover:bg-[var(--cp-surface-2)]"
-            style={{ color: 'var(--cp-ink)', borderColor: 'var(--cp-line-2)' }}
+            className="mt-1 w-full gap-2.5"
           >
             <IconTable /> Als Excel
-          </button>
-          {printEnabled && <button
+          </Button>
+          {printEnabled && <Button
             type="button"
             disabled={disabled}
             onClick={() => {
@@ -142,16 +140,15 @@ export default function ExportBar<T>({
               }
               else window.print()
             }}
-            className="cp-body flex cp-focus min-h-[44px] min-w-[44px] w-full items-center gap-2.5 border-t px-3.5 py-2.5 text-left disabled:opacity-50 hover:bg-[var(--cp-surface-2)]"
-            style={{ color: 'var(--cp-ink)', borderColor: 'var(--cp-line-2)' }}
+            className="mt-1 w-full gap-2.5"
           >
             <IconPrinter /> {onPrint ? 'Druckansicht' : 'Drucken'}
-          </button>}
+          </Button>}
         </div>
       )}
       {downloadState === 'pending' && <p role="status">Liste wird erstellt …</p>}
       {downloadState === 'success' && <p role="status">Download gestartet.</p>}
-      {downloadState === 'error' && <div role="alert">Export fehlgeschlagen. <button type="button" disabled={disabled} onClick={downloadExcel} className="cp-focus min-h-[44px] min-w-[44px] underline">Erneut versuchen</button></div>}
+      {downloadState === 'error' && <div role="alert">Export fehlgeschlagen. <Button type="button" disabled={disabled} onClick={downloadExcel} className="cp-focus min-h-[44px] min-w-[44px]">Erneut versuchen</Button></div>}
     </div>
   )
 }

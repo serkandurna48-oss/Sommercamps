@@ -22,6 +22,7 @@ const camp: CampAdmin = {
 let container: HTMLDivElement
 let root: Root
 beforeEach(() => {
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
   container = document.createElement('div')
   document.body.append(container)
@@ -34,7 +35,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(() => root.unmount())
   container.remove()
-  vi.clearAllMocks()
+  vi.restoreAllMocks()
 })
 
 it('sends registration deadlines as explicit instants, not server-local wall times', async () => {
@@ -59,6 +60,18 @@ it('publishes explicitly and retains the confirmed state over repeated saves', a
   await act(async () => container.querySelector<HTMLButtonElement>('[value="draft"]')!.click())
   expect(vi.mocked(updateCampConfigAction).mock.calls[2][3].get('status')).toBe('draft')
   expect(container.textContent).not.toContain('Camp ist für Eltern erreichbar')
+})
+
+it.each(['draft', 'closed'])('requires confirmation before changing a published camp to %s', async status => {
+  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={{ ...camp, status: 'published' }} brandStrong="#112233" brandOn="#ffffff" />))
+  const button = container.querySelector<HTMLButtonElement>(`[value="${status}"]`)!
+  expect(button.className).toContain('cp-btn-danger')
+  vi.mocked(window.confirm).mockReturnValue(false)
+  await act(async () => button.click())
+  expect(updateCampConfigAction).not.toHaveBeenCalled()
+  vi.mocked(window.confirm).mockReturnValue(true)
+  await act(async () => button.click())
+  expect(vi.mocked(updateCampConfigAction).mock.calls[0][3].get('status')).toBe(status)
 })
 it('keeps entered values when saving fails', async () => {
   vi.mocked(updateCampConfigAction).mockResolvedValue({ error: 'Try again', saved: false })

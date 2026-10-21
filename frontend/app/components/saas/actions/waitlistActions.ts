@@ -25,17 +25,17 @@ export async function promoteWaitlistAction(
   _prev: ActionFormState,
 ): Promise<ActionFormState> {
   const token = await getAdminToken()
-  if (!token) return { error: 'Sitzung abgelaufen — bitte neu anmelden.', success: null }
+  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', success: null }
 
   try {
     const result = await promoteWaitlistAdmin(orgSlug, campSlug, token)
     if (!result.promoted) {
-      return { error: 'Kein freier Platz gerade — später erneut versuchen.', success: null }
+      return { error: 'Kein freier Platz gerade – später erneut versuchen.', success: null }
     }
     revalidatePath(`/pilot/${orgSlug}`, 'layout')
     return { error: null, success: 'Platz vergeben.', promoted: result.promoted }
   } catch {
-    return { error: 'Konnte nicht aufrücken — erneut versuchen.', success: null }
+    return { error: 'Konnte nicht aufrücken – erneut versuchen.', success: null }
   }
 }
 
@@ -54,7 +54,7 @@ export async function cancelRegistrationAction(
   _prev: ActionFormState,
 ): Promise<ActionFormState> {
   const token = await getAdminToken()
-  if (!token) return { error: 'Sitzung abgelaufen — bitte neu anmelden.', success: null }
+  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', success: null }
 
   try {
     const result = await cancelRegistrationAdmin(orgSlug, campSlug, registrationToken, token)
@@ -65,7 +65,7 @@ export async function cancelRegistrationAction(
       promoted: result.promoted,
     }
   } catch {
-    return { error: 'Konnte nicht storniert werden — erneut versuchen.', success: null }
+    return { error: 'Konnte nicht storniert werden – erneut versuchen.', success: null }
   }
 }
 
@@ -98,7 +98,7 @@ export async function updateRegistrationDetailsAction(
   formData: FormData,
 ): Promise<RegistrationDetailsActionState> {
   const token = await getAdminToken()
-  if (!token) return { error: 'Sitzung abgelaufen — bitte neu anmelden.', saved: false, registration: null }
+  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', saved: false, registration: null }
 
   const childFirstName = String(formData.get('child_first_name') ?? '').trim()
   const childLastName = String(formData.get('child_last_name') ?? '').trim()
@@ -121,6 +121,6 @@ export async function updateRegistrationDetailsAction(
     revalidatePath(`/pilot/${orgSlug}`, 'layout')
     return { error: null, saved: true, registration }
   } catch {
-    return { error: 'Konnte nicht gespeichert werden — Angaben prüfen und erneut versuchen.', saved: false, registration: null }
+    return { error: 'Konnte nicht gespeichert werden – Angaben prüfen und erneut versuchen.', saved: false, registration: null }
   }
 }

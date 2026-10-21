@@ -84,7 +84,7 @@ describe('daily overview', () => {
     const block = dom.querySelector('main > section')!
     expect(block.textContent).toContain('Heute neu: 4 Anmeldungen')
     expect(block.querySelectorAll('li')).toHaveLength(3)
-    expect(block.textContent).toContain('Berta Kind · Herbstcamp · heute 10:42')
+    expect(block.textContent).toContain('Berta Kind · Herbstcamp · heute, 10:42')
     expect(block.textContent).not.toContain('Mitternacht')
     expect(block.querySelector('a[href="/pilot/demo/anmeldungen"]')).not.toBeNull()
   })
@@ -109,18 +109,18 @@ describe('daily overview', () => {
 })
 
 describe('camp navigation and task destinations', () => {
-  it.each([CampPage, PaymentsPage, WaitlistPage, TasksPage, ConfigPage])('offers the club backlink above the camp name on every camp page (%#)', async Page => {
+  it.each([CampPage, PaymentsPage, WaitlistPage, TasksPage, ConfigPage])('offers the parent backlink above the title on every camp page (%#)', async Page => {
     const dom = markup(await Page({ params: Promise.resolve({ org: 'demo', campSlug: 'herbst' }), searchParams: Promise.resolve({}) }))
-    const link = [...dom.querySelectorAll('header a')].find(a => a.textContent === '← Alle Camps')!
-    expect(link.getAttribute('href')).toBe('/pilot/demo/dashboard')
+    const link = [...dom.querySelectorAll('header a')].find(a => a.textContent === '← Zurück')!
+    expect(link.getAttribute('href')).toBe(Page === CampPage ? '/pilot/demo/dashboard' : '/pilot/demo/camps/herbst')
     expect(link.className).toContain('min-h-[44px]')
     const heading = dom.querySelector('h1')!
-    expect(heading.textContent).toBe('Herbstcamp')
+    expect(heading.textContent).toBe(Page === ConfigPage ? 'Camp-Einstellungen' : 'Herbstcamp')
     expect(link.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
   it('names the two settings destinations explicitly', () => {
-    expect(orgTabs('demo').at(-1)?.label).toBe('Vereinseinstellungen')
-    expect(campTabs('demo', 'herbst').at(-1)?.label).toBe('Camp-Einstellungen')
+    expect(orgTabs('demo').at(-1)?.label).toBe('Einstellungen')
+    expect(campTabs('demo', 'herbst').at(-1)?.label).toBe('Einstellungen')
   })
   it.each([
     ['payment', '/zahlungen?filter=open'], ['missing-contact', '?filter=missing-info'], ['waitlist', '/warteliste'],

@@ -68,7 +68,7 @@ export default function CampConfigForm({
   return (
     <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-8">
       <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
-        Web-Adresse: <strong className="break-all">{camp.slug}</strong> — {de.configPage.hint.slugLocked}
+        Web-Adresse: <strong className="break-all">{camp.slug}</strong> – {de.configPage.hint.slugLocked}
       </p>
 
       <section className="flex flex-col gap-4">
@@ -177,7 +177,7 @@ export default function CampConfigForm({
       {!pending && state.saved && !state.error && <SuccessNote>{de.configPage.saved}</SuccessNote>}
 
       <div>
-        <Button type="submit" variant="secondary" disabled={pending}>
+        <Button type="submit" variant="primary" brandStrong={brandStrong} brandOn={brandOn} disabled={pending}>
           {pending ? de.configPage.saving : de.configPage.save}
         </Button>
       </div>

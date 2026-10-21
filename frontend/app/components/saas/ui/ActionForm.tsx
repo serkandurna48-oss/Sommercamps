@@ -40,7 +40,7 @@ export default function ActionForm({
   action: (state: ActionFormState, formData: FormData) => Promise<ActionFormState>
   label: string
   pendingLabel: string
-  variant?: 'primary' | 'secondary' | 'quiet' | 'quiet-danger'
+  variant?: 'primary' | 'secondary' | 'danger'
   brandStrong?: string
   brandOn?: string
   /** Wenn gesetzt: Text der Bestätigungsfrage. Zeigt erst nach Klick. */
@@ -102,7 +102,7 @@ export default function ActionForm({
           {pending ? pendingLabel : label}
         </Button>
         {effectiveConfirming && (
-          <Button type="button" variant="quiet" disabled={pending} aria-disabled={pending} onClick={() => setConfirming(false)}>
+          <Button type="button" variant="secondary" disabled={pending} aria-disabled={pending} onClick={() => setConfirming(false)}>
             {cancelLabel}
           </Button>
         )}

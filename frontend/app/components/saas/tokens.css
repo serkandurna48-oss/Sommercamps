@@ -155,7 +155,7 @@
   font-weight: 400;
 }
 .cp-label {
-  font-size: 13px;
+    font-size: 13px;
   line-height: 1.4;
   font-stretch: 100%;
   font-weight: 600;
@@ -186,7 +186,7 @@
   .cp-band-tab {
     min-height: var(--cp-mobile-nav-target-height);
     min-width: 0;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.15;
     font-stretch: 100%;
     font-weight: 600;
@@ -302,8 +302,7 @@
  * ---------------------------------------------------------------------- */
 .cp-btn-primary:not(:disabled):hover { opacity: 0.88; }
 .cp-btn-secondary:not(:disabled):hover { background: var(--cp-surface-2); }
-.cp-btn-quiet:not(:disabled):hover { background: var(--cp-line-2); }
-.cp-btn-quiet-danger:not(:disabled):hover { background: var(--cp-error-bg); }
+.cp-btn-danger:not(:disabled):hover { background: var(--cp-error-bg); }
 
 /* ----------------------------------------------------------------------
  * Tabellenzeile mit festen Spalten (Admin-Listen: Teilnehmer, Zahlungen).

@@ -1,10 +1,6 @@
-import { daysSince, de } from '../../../lib/i18n/de'
+import { daysSince, de, formatDate } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { birthYear } from '../commandCenterLogic'
-
-function formatShortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
 
 export default function WaitlistRow({ registration, position }: { registration: RegistrationAdmin; position: number }) {
   const days = daysSince(registration.created_at)
@@ -38,7 +34,7 @@ export default function WaitlistRow({ registration, position }: { registration: 
           {de.waitlistPage.waitingSince(days)}
         </p>
         <p className="cp-chip shrink-0" style={{ color: 'var(--cp-muted)' }}>
-          Angemeldet am {formatShortDate(registration.created_at)}
+          Angemeldet am {formatDate(registration.created_at)}
         </p>
       </div>
     </div>

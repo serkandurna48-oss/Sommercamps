@@ -14,8 +14,7 @@ export default function OrgTasksScreen({ orgSlug, org, camps, registrationsByCam
 
   return (
     <>
-      <MatchdayBand
-        variant="compact"
+      <MatchdayBand backHref={`/pilot/${orgSlug}/dashboard`}
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}

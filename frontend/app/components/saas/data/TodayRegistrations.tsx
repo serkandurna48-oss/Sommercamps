@@ -1,5 +1,6 @@
 import Link from '../preview/AdminLink'
-import { registrationTime, type TodayEntry } from '../registrationDates'
+import { formatRelativeDateTime } from '../../../lib/i18n/de'
+import { type TodayEntry } from '../registrationDates'
 
 export default function TodayRegistrations({ entries, orgSlug, fullList = false }: { entries: TodayEntry[]; orgSlug: string; fullList?: boolean }) {
   return (
@@ -12,7 +13,7 @@ export default function TodayRegistrations({ entries, orgSlug, fullList = false 
           {(fullList ? entries : entries.slice(0, 3)).map(({ registration, camp }) => (
             <li key={registration.registration_token} className="cp-body break-words">
               <Link className="inline-block min-h-[44px] py-2 underline" href={`/pilot/${orgSlug}/camps/${camp.slug}?sort=newest`}>
-                {registration.child_first_name} {registration.child_last_name} · {camp.title} · <time dateTime={registration.created_at}>heute {registrationTime(registration.created_at)}</time>
+                {registration.child_first_name} {registration.child_last_name} · {camp.title} · <time dateTime={registration.created_at}>{formatRelativeDateTime(registration.created_at)}</time>
               </Link>
             </li>
           ))}

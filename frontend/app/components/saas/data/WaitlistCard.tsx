@@ -76,7 +76,7 @@ export default function WaitlistCard({
             requireConfirm={<>
               <p className="cp-subheading">Platz an {childName} für {campTitle} vergeben?</p>
               <p>Preis: {formatEuro(priceCents, currency)}</p>
-              <p>Eltern werden nicht automatisch benachrichtigt. Bitte informieren Sie die Eltern nach der Platzvergabe.</p>
+              <p>Eltern werden nicht automatisch benachrichtigt. Bitte informiere die Eltern nach der Platzvergabe.</p>
             </>}
           />)}
           {next && registeredCount < capacity && <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>

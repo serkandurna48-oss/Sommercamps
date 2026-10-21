@@ -8,7 +8,7 @@ export function orgTabs(orgSlug: string): TabItem[] {
     { label: de.command.payments, href: `/pilot/${orgSlug}/zahlungen`, icon: 'coin' },
     { label: de.command.waitlist, href: `/pilot/${orgSlug}/warteliste`, icon: 'hourglass' },
     { label: de.command.tasks, href: `/pilot/${orgSlug}/aufgaben`, icon: 'flag' },
-    { label: 'Vereinseinstellungen', href: `/pilot/${orgSlug}/konfiguration`, icon: 'gear' },
+    { label: 'Einstellungen', href: `/pilot/${orgSlug}/konfiguration`, icon: 'gear' },
   ]
 }
 
@@ -20,6 +20,6 @@ export function campTabs(orgSlug: string, campSlug: string): TabItem[] {
     { label: de.command.payments, href: `${base}/zahlungen`, icon: 'coin' },
     { label: de.command.waitlist, href: `${base}/warteliste`, icon: 'hourglass' },
     { label: de.command.tasks, href: `${base}/aufgaben`, icon: 'flag' },
-    { label: 'Camp-Einstellungen', href: `${base}/konfiguration`, icon: 'gear' },
+    { label: 'Einstellungen', href: `${base}/konfiguration`, icon: 'gear' },
   ]
 }

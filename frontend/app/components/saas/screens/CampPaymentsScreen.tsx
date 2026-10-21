@@ -19,12 +19,10 @@ export default function CampPaymentsScreen({ orgSlug, campSlug, org, camp, regis
 
   return (
     <>
-      <MatchdayBand
-        variant="compact"
+      <MatchdayBand backHref={`/pilot/${orgSlug}/camps/${campSlug}`}
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}
-        backToCamps
         title={camp.title}
         subtitle={formatDateRange(camp.start_date, camp.end_date)}
         metrics={[

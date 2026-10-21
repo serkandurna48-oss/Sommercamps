@@ -9,8 +9,8 @@ export default function NewRegistrationsScreen({ orgSlug, org, camps, registrati
   const brand = computeBrandTokens(org.primary_color)
   return (
     <>
-      <MatchdayBand variant="compact" orgSlug={orgSlug} orgName={org.name} orgLogoUrl={org.logo_url}
-        title="Neue Anmeldungen heute" tabs={orgTabs(orgSlug)} brandColor={brand.brand} backToCamps />
+      <MatchdayBand backHref={`/pilot/${orgSlug}/dashboard`} orgSlug={orgSlug} orgName={org.name} orgLogoUrl={org.logo_url}
+        title="Neue Anmeldungen heute" tabs={orgTabs(orgSlug)} brandColor={brand.brand} />
       <main className="mx-auto max-w-[920px] px-4 py-8 md:px-8">
         <TodayRegistrations entries={todayRegistrations(camps, registrationsByCamp)} orgSlug={orgSlug} fullList />
       </main>

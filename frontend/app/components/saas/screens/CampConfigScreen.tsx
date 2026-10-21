@@ -14,14 +14,12 @@ export default function CampConfigScreen({ orgSlug, campSlug, org, camp, created
 
   return (
     <>
-      <MatchdayBand
-        variant="compact"
+      <MatchdayBand backHref={`/pilot/${orgSlug}/camps/${campSlug}`}
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}
-        backToCamps
-        title={camp.title}
-        subtitle={formatDateRange(camp.start_date, camp.end_date)}
+        title="Camp-Einstellungen"
+        subtitle={`${camp.title} · ${formatDateRange(camp.start_date, camp.end_date)}`}
         tabs={campTabs(orgSlug, campSlug)}
         brandColor={brand.brand}
       />

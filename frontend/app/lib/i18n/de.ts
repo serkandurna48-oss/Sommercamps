@@ -56,7 +56,7 @@ export const de = {
         count === 1
           ? `Eine offene Zahlung für „${campTitle}“`
           : `${count} offene Zahlungen für „${campTitle}“`,
-      hint: 'Zahlung ist noch offen — kurze Erinnerung schicken.',
+      hint: 'Zahlung ist noch offen – kurze Erinnerung schicken.',
     },
     missingContact: {
       title: (count: number, campTitle: string) =>
@@ -74,14 +74,14 @@ export const de = {
     },
     review: 'Ansehen',
     markDone: 'Erledigt',
-    allDone: 'Alles erledigt — nichts steht gerade an.',
+    allDone: 'Alles erledigt – nichts steht gerade an.',
   },
   command: {
     participants: 'Teilnehmer',
     payments: 'Zahlungen',
     waitlist: 'Warteliste',
     tasks: 'Aufgaben',
-    configuration: 'Konfiguration',
+    configuration: 'Einstellungen',
     searchPlaceholder: 'Name oder E-Mail suchen …',
     filterPaymentOpen: 'Zahlung offen',
     filterMissingInfo: 'Angaben fehlen',
@@ -92,7 +92,7 @@ export const de = {
     nextStep: 'Nächster Schritt',
     nothingMissing: 'Alle Pflichtangaben liegen vor.',
     missingEmergencyContact: 'Kein Notfallkontakt hinterlegt',
-    hasAllergies: 'Allergien/Hinweise eingetragen — vor dem Camp prüfen',
+    hasAllergies: 'Allergien/Hinweise eingetragen – vor dem Camp prüfen',
     editParticipant: 'Bearbeiten',
     editParticipantCancel: 'Abbrechen',
     editParticipantSave: 'Speichern',
@@ -117,7 +117,7 @@ export const de = {
     filterPayment: 'Zahlung offen',
     filterMissingContact: 'Notfallkontakt fehlt',
     filterWaitlist: 'Warteliste',
-    emptyOrg: 'Alles erledigt — über alle Camps steht gerade nichts an.',
+    emptyOrg: 'Alles erledigt – über alle Camps steht gerade nichts an.',
     emptyCamp: 'Für dieses Camp steht gerade nichts an.',
     emptyFiltered: 'Kein Ergebnis für diese Auswahl.',
   },
@@ -132,7 +132,7 @@ export const de = {
     promoteHint: 'Beim Nachrücken werden die Eltern nicht automatisch benachrichtigt. Der Verein meldet sich bei ihnen.',
     promoteNoCapacity: 'Alle Plätze belegt – nach einer Stornierung rückt das nächste Kind automatisch nach.',
     promoteSuccess: (name: string) => `${name} ist jetzt angemeldet.`,
-    promoteError: 'Konnte nicht aufrücken — erneut versuchen.',
+    promoteError: 'Konnte nicht aufrücken – erneut versuchen.',
     emptyOrg: 'Aktuell wartet niemand auf einen Platz.',
     emptyCamp: 'Niemand wartet gerade auf einen Platz bei diesem Camp.',
   },
@@ -152,7 +152,7 @@ export const de = {
     markWaivedSuccess: 'Als erlassen gespeichert.',
     markRefundedSuccess: 'Als erstattet gespeichert.',
     updating: 'Wird gespeichert …',
-    updateError: 'Konnte nicht gespeichert werden — erneut versuchen.',
+    updateError: 'Konnte nicht gespeichert werden – erneut versuchen.',
     emptyOrg: 'Aktuell keine Zahlungen erfasst.',
     emptyCamp: 'Für dieses Camp liegen noch keine Anmeldungen vor.',
     emptyFiltered: 'Kein Ergebnis für diese Auswahl.',
@@ -196,14 +196,14 @@ export const de = {
       status: 'Status',
     },
     hint: {
-      primaryColor: 'Hex-Code, z. B. #1c6b45 — bestimmt Balken, Tabs und Buttons.',
+      primaryColor: 'Hex-Code, z. B. #1c6b45 – bestimmt Balken, Tabs und Buttons.',
       includes: 'Erscheint als Liste auf der öffentlichen Camp-Seite.',
-      slugLocked: 'Nicht änderbar — sonst brechen bestehende Links.',
+      slugLocked: 'Nicht änderbar – sonst brechen bestehende Links.',
     },
     save: 'Speichern',
     saving: 'Wird gespeichert …',
     saved: 'Gespeichert.',
-    saveError: 'Konnte nicht gespeichert werden — Angaben prüfen und erneut versuchen.',
+    saveError: 'Konnte nicht gespeichert werden – Angaben prüfen und erneut versuchen.',
   },
 } as const
 
@@ -242,11 +242,45 @@ export function daysSince(isoDateTime: string): number {
 }
 
 export function formatDateRange(startIso: string, endIso: string): string {
-  const start = new Date(`${startIso}T00:00:00`)
-  const end = new Date(`${endIso}T00:00:00`)
-  const day = (d: Date) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
-  const full = end.toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })
-  return `${day(start)}–${full}`
+  const [sy, sm, sd] = startIso.split('-').map(Number)
+  const [ey, em, ed] = endIso.split('-').map(Number)
+  const months = ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sept.', 'Okt.', 'Nov.', 'Dez.']
+  const end = `${ed}. ${months[em - 1]} ${ey}`
+  if (startIso === endIso) return end
+  const start = sy !== ey ? `${sd}. ${months[sm - 1]} ${sy}` : sm !== em ? `${sd}. ${months[sm - 1]}` : `${sd}.`
+  return `${start}–${end}`
+}
+
+const dateOptions = { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric' } as const
+const timeOptions = { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' } as const
+
+/** Date-only values stay calendar dates; timestamps are displayed in German time. */
+export function formatDate(value: string | Date): string {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? 'Unbekannt' : new Intl.DateTimeFormat('de-DE', dateOptions).format(date)
+}
+
+export function formatDateTime(value: string | Date): string {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? 'Unbekannt' : `${formatDate(date)}, ${formatTime(date)}`
+}
+
+export function formatTime(value: string | Date): string {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? 'Unbekannt' : new Intl.DateTimeFormat('de-DE', timeOptions).format(date)
+}
+
+/** ISO day key for comparisons and native date inputs, never a display format. */
+export function berlinDay(date: Date): string {
+  const parts = new Intl.DateTimeFormat('en-CA', dateOptions).formatToParts(date)
+  const part = (type: string) => parts.find(p => p.type === type)?.value
+  return `${part('year')}-${part('month')}-${part('day')}`
+}
+
+export function formatRelativeDateTime(value: string | Date, now = new Date()): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Unbekannt'
+  return berlinDay(date) === berlinDay(now) ? `heute, ${formatTime(date)}` : formatDateTime(date)
 }
 
 /** Vereinsneutrale Texte für die öffentliche Org-Seite (Parent Flow) */
@@ -258,7 +292,7 @@ export const publicUI = {
     heading: 'So einfach geht\'s',
     steps: [
       { num: '1', title: 'Platz wählen', body: 'Suchen Sie den Termin, der passt, und klicken Sie auf „Ansehen“.' },
-      { num: '2', title: 'Anmelden', body: 'Füllen Sie das Formular in ca. 4 Minuten aus — kein Konto nötig.' },
+      { num: '2', title: 'Anmelden', body: 'Füllen Sie das Formular in ca. 4 Minuten aus – kein Konto nötig.' },
       { num: '3', title: 'Bestätigung', body: 'Sie erhalten Ihre Anmeldebestätigung mit allen Infos zum Camp.' },
     ],
   },
@@ -268,6 +302,6 @@ export const publicUI = {
     { q: 'Wie kann ich stornieren?', a: 'Schreiben Sie dem Camp-Team einfach eine E-Mail. Die genauen Stornobedingungen stehen in den Teilnahmebedingungen.' },
     { q: 'Wer darf mein Kind abholen?', a: 'Die abholberechtigten Personen geben Sie direkt im Anmeldeformular an. Bitte halten Sie bei der Abholung einen Lichtbildausweis bereit.' },
     { q: 'Wie erreiche ich das Camp-Team?', a: 'Die E-Mail-Adresse des Vereins finden Sie am Ende dieser Seite. Wir antworten in der Regel am selben Tag.' },
-    { q: 'Kommen Kinder ohne Vereinsmitgliedschaft?', a: 'Ja, die Camps stehen allen Kindern offen — eine Mitgliedschaft ist nicht erforderlich.' },
+    { q: 'Kommen Kinder ohne Vereinsmitgliedschaft?', a: 'Ja, die Camps stehen allen Kindern offen – eine Mitgliedschaft ist nicht erforderlich.' },
   ],
 }

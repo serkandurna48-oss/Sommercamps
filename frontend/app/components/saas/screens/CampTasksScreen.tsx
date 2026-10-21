@@ -17,12 +17,10 @@ export default function CampTasksScreen({ orgSlug, campSlug, org, camp, registra
 
   return (
     <>
-      <MatchdayBand
-        variant="compact"
+      <MatchdayBand backHref={`/pilot/${orgSlug}/camps/${campSlug}`}
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}
-        backToCamps
         title={camp.title}
         subtitle={formatDateRange(camp.start_date, camp.end_date)}
         metrics={[{ label: de.tasksPage.heading, value: String(tasks.length) }]}

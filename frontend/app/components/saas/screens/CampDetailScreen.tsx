@@ -27,12 +27,10 @@ export default function CampDetailScreen({ orgSlug, campSlug, org, camp, registr
 
   return (
     <>
-      <MatchdayBand
-        variant="compact"
+      <MatchdayBand backHref={`/pilot/${orgSlug}/dashboard`}
         orgSlug={orgSlug}
         orgName={org.name}
         orgLogoUrl={org.logo_url}
-        backToCamps
         title={camp.title}
         subtitle={formatDateRange(camp.start_date, camp.end_date)}
         metrics={[{ label: de.dashboard.spotsLabel, value: `${stats.registeredCount}/${camp.capacity}` }]}

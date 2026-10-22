@@ -13,6 +13,7 @@ import CampPaymentsScreen from '../../../components/saas/screens/CampPaymentsScr
 import CampWaitlistScreen from '../../../components/saas/screens/CampWaitlistScreen'
 import CampTasksScreen from '../../../components/saas/screens/CampTasksScreen'
 import NewRegistrationsScreen from '../../../components/saas/screens/NewRegistrationsScreen'
+import HilfeScreen from '../../../components/saas/screens/HilfeScreen'
 import { getPreviewFixtures, getPreviewFixturesDashboardStep1, getPreviewFixturesDashboardStep3 } from '../fixtures'
 import PreviewProvider from '../PreviewProvider'
 
@@ -58,6 +59,7 @@ export default async function AdminPreviewPage({ params, searchParams }: Props) 
     case 'warteliste': content = <OrgWaitlistScreen {...fixtures} />; break
     case 'aufgaben': content = <OrgTasksScreen {...fixtures} />; break
     case 'konfiguration': content = <OrgConfigScreen {...fixtures} />; break
+    case 'hilfe': content = <HilfeScreen orgSlug={fixtures.orgSlug} org={fixtures.org} />; break
     default: notFound()
   }
 

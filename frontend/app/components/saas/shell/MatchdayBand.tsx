@@ -31,7 +31,10 @@ export default function MatchdayBand({ orgSlug, orgName, orgLogoUrl, title, subt
       <div className="mx-auto flex max-w-[1080px] flex-col">
         <div className="flex min-h-[44px] items-center justify-between gap-4 pb-2 md:pb-3">
           <OrgSwitcher name={orgName} logoUrl={orgLogoUrl} orgSlug={orgSlug} />
-          <LogoutButton orgSlug={orgSlug} />
+          <div className="flex items-center gap-3">
+            <Link href={`/pilot/${orgSlug}/hilfe`} className="cp-label underline" style={{ color: 'var(--cp-on-band-2)' }}>Hilfe</Link>
+            <LogoutButton orgSlug={orgSlug} />
+          </div>
         </div>
         {backHref && (
           <Link href={backHref} className="cp-focus cp-label mb-2 inline-flex min-h-[44px] items-center self-start underline">

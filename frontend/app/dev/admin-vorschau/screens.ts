@@ -11,4 +11,5 @@
   ['warteliste', 'Warteliste'],
   ['aufgaben', 'Aufgaben'],
   ['konfiguration', 'Vereinseinstellungen'],
+  ['hilfe', 'Hilfe'],
 ] as const

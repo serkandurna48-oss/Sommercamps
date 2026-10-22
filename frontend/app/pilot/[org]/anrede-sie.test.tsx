@@ -30,6 +30,7 @@ vi.mock('./publicFonts', () => ({
 import ParentFlow from './ParentFlow'
 import DoneScreen from './DoneScreen'
 import LegalShell from './LegalShell'
+import { de } from '../../lib/i18n/de'
 
 const DU_RE =
   /\b(du|dir|dich|dein|deine|deinen|deinem|deiner|deines|Du|Dir|Dein|euch|euer|eure|Schau|Melde|Sichere|Wähle|Gib)\b/
@@ -130,3 +131,26 @@ it.each(['tradition', 'akademie', 'kompakt'] as const)(
     assertNoDu(html)
   },
 )
+
+// ── Hilfe-Kopiertexte × Sie-Form ──────────────────────────────────────────
+// Die WhatsApp/Instagram-Vorlagen und FAQ-Antworten in der Admin-Hilfe-Seite
+// richten sich an Eltern und müssen deshalb die Sie-Form verwenden (K5).
+
+it('Hilfe-WhatsApp-Vorlage enthält keine Du-Formen', () => {
+  assertNoDu(de.hilfe.whatsappTemplate('demo'))
+})
+
+it('Hilfe-Instagram-Vorlage enthält keine Du-Formen', () => {
+  assertNoDu(de.hilfe.instagramTemplate('demo'))
+})
+
+it('Hilfe-Kopiertexte siezen die Eltern', () => {
+  const templates = de.hilfe.whatsappTemplate('demo') + '\n' + de.hilfe.instagramTemplate('demo')
+  expect(templates).toMatch(/\bSie\b/)
+})
+
+it('Hilfe-FAQ-Antworten enthalten keine Du-Formen', () => {
+  for (const { a } of de.hilfe.faq) {
+    assertNoDu(a)
+  }
+})

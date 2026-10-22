@@ -174,6 +174,42 @@ export const de = {
     liveOpen: 'Elternseite ansehen',
     liveCopyLink: 'Anmeldelink kopieren',
   },
+  hilfe: {
+    title: 'Hilfe',
+    s1: 'In 3 Schritten zur Anmeldeseite',
+    s2: 'Camp anlegen und veröffentlichen',
+    s3: 'Anmeldelink teilen',
+    s4: 'Zahlungen prüfen und als bezahlt markieren',
+    s5: 'Warteliste und Storno',
+    s6: 'Tagesliste exportieren',
+    s7: 'Häufige Eltern-Fragen',
+    whatsappTemplate: (orgSlug: string) =>
+      `Liebe Eltern,\n\nunsere Camp-Anmeldung ist jetzt offen. Bitte melden Sie Ihr Kind unter folgendem Link an:\n/pilot/${orgSlug}\n\nBei Fragen melden Sie sich gerne bei uns.\n\nHerzliche Grüße`,
+    instagramTemplate: (orgSlug: string) =>
+      `Unsere Camp-Anmeldung ist geöffnet! Jetzt anmelden: /pilot/${orgSlug} – Bei Fragen sind wir gerne für Sie da.`,
+    faq: [
+      {
+        q: 'Wie läuft die Bezahlung ab?',
+        a: 'Bei einem reservierten Platz erhalten Sie eine Anmeldebestätigung mit einem Verwendungszweck (z. B. CP-ABC12345). Bitte überweisen Sie den Camppreis auf das Vereinskonto. Auf der Warteliste entstehen noch keine Kosten.',
+      },
+      {
+        q: 'Mein Kind steht auf der Warteliste – wann gibt es eine Rückmeldung?',
+        a: 'Der Verein meldet sich bei Ihnen, sobald ein Platz frei wird. Es gibt keine automatische Benachrichtigung.',
+      },
+      {
+        q: 'Wie kann ich eine Anmeldung stornieren?',
+        a: 'Schreiben Sie dem Camp-Team eine E-Mail. Die Stornobedingungen stehen in den Teilnahmebedingungen.',
+      },
+      {
+        q: 'Kommen Kinder ohne Vereinsmitgliedschaft?',
+        a: 'Ja, die Camps stehen allen Kindern offen – eine Mitgliedschaft ist nicht erforderlich.',
+      },
+      {
+        q: 'Wie erreiche ich das Camp-Team?',
+        a: 'Die Kontaktadresse des Vereins finden Sie am Ende der Anmeldeseite.',
+      },
+    ],
+  },
   configPage: {
     orgHeading: 'Verein',
     orgHint: 'Diese Angaben erscheinen im Anmelde-Formular der Eltern und auf der Bestätigungsseite.',

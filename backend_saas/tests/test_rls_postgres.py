@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import psycopg2
 from psycopg2 import sql
+from psycopg2.extras import RealDictCursor
 import pytest
 
 from .test_review_postgres import local_database, real_db
@@ -189,3 +190,145 @@ def test_migration_aborts_on_foreign_policy(local_database):
         with psycopg2.connect(**local_database) as reapply:
             with reapply.cursor() as cur:
                 cur.execute(migration_sql)
+
+
+# ---------------------------------------------------------------------------
+# UC6 — Column-level grants (20261022000000_column_level_grants.sql)
+# ---------------------------------------------------------------------------
+
+def test_column_grants_block_sensitive_fields(local_database):
+    """UC6: billing_notes and stripe_account_id on organizations, and
+    notification_email/phone/whatsapp_consent_at on organization_members
+    must raise InsufficientPrivilege for authenticated.
+
+    The local_database fixture runs GRANT SELECT ON ALL TABLES after migrations,
+    which overrides the column-level migration. We explicitly revoke the
+    table-level grant here to reproduce the production state, then restore it
+    in the finally block so subsequent tests are unaffected.
+    """
+    user_id, org_id = uuid4(), uuid4()
+
+    setup = psycopg2.connect(**local_database)
+    setup.autocommit = True
+    try:
+        with setup.cursor() as cur:
+            cur.execute("INSERT INTO auth.users(id) VALUES (%s)", (user_id,))
+            cur.execute(
+                "INSERT INTO organizations(id,slug,name,contact_email) VALUES (%s,%s,'ColTest','col@example.test')",
+                (org_id, f"col-{org_id.hex}"),
+            )
+            cur.execute(
+                "INSERT INTO organization_members(organization_id,user_id) VALUES (%s,%s)",
+                (org_id, user_id),
+            )
+            # Remove ALL grants (table-level and any column-level) and then explicitly
+            # set only the column-level grants from the migration. The local_database
+            # fixture runs GRANT SELECT ON ALL TABLES after migrations; in that context,
+            # REVOKE SELECT alone may not preserve column-level grants from the migration.
+            # REVOKE ALL + GRANT (col-level) replicates the production state exactly.
+            cur.execute("REVOKE ALL ON public.organizations FROM authenticated")
+            cur.execute(
+                """GRANT SELECT (
+                    id, slug, name, legal_name, contact_email, contact_phone, logo_url,
+                    primary_color, plan_status, created_at, updated_at, theme, iban,
+                    site_published, contact_person_name, intro_heading, intro_text,
+                    hero_image_url, legal_address, trainer_image_url, trainer_text,
+                    terms_text, stripe_charges_enabled, online_payment_enabled
+                ) ON public.organizations TO authenticated"""
+            )
+            cur.execute("REVOKE ALL ON public.organization_members FROM authenticated")
+            cur.execute(
+                """GRANT SELECT (
+                    id, organization_id, user_id, role, created_at,
+                    notification_channel, notification_events
+                ) ON public.organization_members TO authenticated"""
+            )
+    finally:
+        setup.close()
+
+    try:
+        # organizations: sensitive columns must be blocked
+        for col in ("billing_notes", "stripe_account_id"):
+            with psycopg2.connect(**local_database) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT set_config('request.jwt.claims',%s,true)",
+                        (json.dumps({"sub": str(user_id)}),),
+                    )
+                    cur.execute("SET LOCAL ROLE authenticated")
+                    with pytest.raises(psycopg2.errors.InsufficientPrivilege):
+                        cur.execute(
+                            sql.SQL("SELECT {} FROM organizations").format(sql.Identifier(col))
+                        )
+
+        # organizations: safe columns must still be readable (privilege + RLS)
+        with psycopg2.connect(**local_database) as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT set_config('request.jwt.claims',%s,true)",
+                    (json.dumps({"sub": str(user_id)}),),
+                )
+                cur.execute("SET LOCAL ROLE authenticated")
+                cur.execute("SELECT name, slug FROM organizations WHERE id=%s", (org_id,))
+                row = cur.fetchone()
+                assert row is not None, "org_admin must be able to read safe org columns"
+                assert row["name"] == "ColTest"
+
+        # organization_members: sensitive notification columns must be blocked
+        for col in ("notification_email", "notification_phone", "whatsapp_consent_at"):
+            with psycopg2.connect(**local_database) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT set_config('request.jwt.claims',%s,true)",
+                        (json.dumps({"sub": str(user_id)}),),
+                    )
+                    cur.execute("SET LOCAL ROLE authenticated")
+                    with pytest.raises(psycopg2.errors.InsufficientPrivilege):
+                        cur.execute(
+                            sql.SQL("SELECT {} FROM organization_members").format(
+                                sql.Identifier(col)
+                            )
+                        )
+
+        # organization_members: safe columns must still be readable
+        with psycopg2.connect(**local_database) as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT set_config('request.jwt.claims',%s,true)",
+                    (json.dumps({"sub": str(user_id)}),),
+                )
+                cur.execute("SET LOCAL ROLE authenticated")
+                cur.execute(
+                    "SELECT id, role FROM organization_members WHERE user_id=%s", (user_id,)
+                )
+                row = cur.fetchone()
+                assert row is not None, "org_admin must be able to read safe member columns"
+                assert row["role"] == "org_admin"
+
+    finally:
+        restore = psycopg2.connect(**local_database)
+        restore.autocommit = True
+        try:
+            with restore.cursor() as cur:
+                cur.execute("GRANT SELECT ON public.organizations TO authenticated")
+                cur.execute("GRANT SELECT ON public.organization_members TO authenticated")
+                cur.execute(
+                    "DELETE FROM organization_members WHERE organization_id=%s", (org_id,)
+                )
+                cur.execute("DELETE FROM organizations WHERE id=%s", (org_id,))
+                cur.execute("DELETE FROM auth.users WHERE id=%s", (user_id,))
+        finally:
+            restore.close()
+
+
+def test_column_grants_migration_is_repeatable(local_database):
+    """Running 20261022000000_column_level_grants.sql twice must not error."""
+    migration = (
+        Path(__file__).resolve().parents[2]
+        / "supabase/migrations/20261022000000_column_level_grants.sql"
+    )
+    sql_text = migration.read_text(encoding="utf-8")
+    with psycopg2.connect(**local_database) as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql_text)
+            cur.execute(sql_text)

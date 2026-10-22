@@ -167,7 +167,7 @@ function useV1Motion(ref: React.RefObject<HTMLElement | null>) {
     })
 
     return () => { cancelled = true; gsapCleanup?.() }
-  }, [])
+  }, [ref])
 }
 
 function V1({ org, camps }: { org: OrganizationPublic; camps: CampPublic[] }) {
@@ -335,7 +335,7 @@ function useV2Motion(ref: React.RefObject<HTMLDivElement | null>) {
     )
 
     return () => { cancelled = true; gsapCleanup?.() }
-  }, [])
+  }, [ref])
 }
 
 function V2({ org, camps }: { org: OrganizationPublic; camps: CampPublic[] }) {
@@ -440,7 +440,7 @@ function useV3Motion(ref: React.RefObject<HTMLDivElement | null>) {
     })
 
     return () => { cancelled = true; gsapCleanup?.() }
-  }, [])
+  }, [ref])
 }
 
 function V3({ org, camps: _camps }: { org: OrganizationPublic; camps: CampPublic[] }) {

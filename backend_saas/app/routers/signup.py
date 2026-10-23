@@ -5,15 +5,26 @@ POST /public/signup — unauthenticated. Creates a Supabase Auth user and
 an organization in draft/unpublished state. The organization must be reviewed
 and approved by a platform owner before it becomes publicly visible.
 
-Rate-limited to 3 registrations per IP per hour (in-memory, single-process).
-This is sufficient for a single Render service; a Redis-backed counter would
-be needed for multi-instance deployments but adds infrastructure complexity
+POST /public/signup/resend — resend the confirmation email. Always returns
+202; never reveals whether the email address is registered.
+
+Rate-limited to 3 attempts per IP per hour (in-memory, single-process).
+Both endpoints share the same bucket. A Redis-backed counter would be
+needed for multi-instance deployments but adds infrastructure complexity
 that is not justified at current scale.
+
+IP extraction: controlled by TRUSTED_PROXY_HOPS env var (default 0).
+  0: use request.client.host — never trust X-Forwarded-For; a client could
+     forge it and bypass the limit.
+  n>0: take the n-th entry from the END of X-Forwarded-For (the hop appended
+       by the trusted proxy, which the client cannot control).
+On Render with one load-balancer in front: set TRUSTED_PROXY_HOPS=1.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import re
 import threading
 import time
@@ -24,6 +35,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from .. import supabase_auth
+from ..notifications import sending as notifications_sending
 from ..repositories import organizations as organizations_repo
 from ..supabase_auth import SupabaseAuthError, SupabaseEmailConflictError
 
@@ -55,6 +67,28 @@ def _check_rate_limit(ip: str) -> bool:
         times.append(now)
         _ip_timestamps[ip] = times
         return True
+
+
+def _get_client_ip(request: Request) -> str:
+    """Returns the IP to use for rate limiting.
+
+    With TRUSTED_PROXY_HOPS=0 (default): request.client.host.
+    With TRUSTED_PROXY_HOPS=n: the n-th entry from the END of
+    X-Forwarded-For (appended by the nth trusted proxy hop).
+    Reading TRUSTED_PROXY_HOPS from os.environ at call time so tests can
+    use monkeypatch.setenv without clearing the lru_cache'd Settings."""
+    try:
+        hops = int(os.environ.get("TRUSTED_PROXY_HOPS", "0") or "0")
+    except (TypeError, ValueError):
+        hops = 0
+    if hops > 0:
+        xff = request.headers.get("x-forwarded-for", "")
+        parts = [p.strip() for p in xff.split(",") if p.strip()]
+        if len(parts) >= hops:
+            return parts[-hops]
+    if request.client:
+        return request.client.host
+    return "unknown"
 
 
 # ---------------------------------------------------------------------------
@@ -136,10 +170,17 @@ class SignupRequest(BaseModel):
 class SignupResponse(BaseModel):
     organization_slug: str
     needs_email_confirmation: bool = True
+    confirmation_email_sent: bool = True
+
+
+class ResendRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    email: EmailStr
 
 
 # ---------------------------------------------------------------------------
-# Route
+# Routes
 # ---------------------------------------------------------------------------
 
 @router.post(
@@ -150,13 +191,13 @@ class SignupResponse(BaseModel):
 def signup(data: SignupRequest, request: Request) -> SignupResponse:
     """Self-registration for new organizations. Creates a Supabase Auth user
     and an organization in draft/review state. The org becomes publicly visible
-    only after a platform owner approves it."""
-    client_ip = (
-        request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-        or request.client.host
-        if request.client
-        else "unknown"
-    )
+    only after a platform owner approves it.
+
+    After successful creation, sends a confirmation email with a link generated
+    via the Supabase Admin API. Email sending is best-effort: a failure does not
+    roll back the registration; the response includes confirmation_email_sent to
+    indicate whether the email was dispatched."""
+    client_ip = _get_client_ip(request)
 
     if not _check_rate_limit(client_ip):
         logger.info("Signup rate limit exceeded (ip=%s)", client_ip)
@@ -220,4 +261,73 @@ def signup(data: SignupRequest, request: Request) -> SignupResponse:
         ) from exc
 
     logger.info("Signup successful (slug=%s)", org["slug"])
-    return SignupResponse(organization_slug=org["slug"], needs_email_confirmation=True)
+
+    # Generate confirmation link and send email — best-effort.
+    confirmation_email_sent = _send_confirmation_email(
+        email=str(data.email),
+        org_name=data.organization_name,
+        slug=org["slug"],
+    )
+
+    return SignupResponse(
+        organization_slug=org["slug"],
+        needs_email_confirmation=True,
+        confirmation_email_sent=confirmation_email_sent,
+    )
+
+
+def _send_confirmation_email(*, email: str, org_name: str, slug: str) -> bool:
+    """Generates a confirmation link via Supabase and sends the confirmation
+    email. Returns True if the email was dispatched, False on any failure.
+    Never raises."""
+    try:
+        link = supabase_auth.generate_confirmation_link(email)
+    except Exception as exc:
+        logger.warning(
+            "Signup confirmation link generation failed (slug=%s): %s", slug, exc
+        )
+        return False
+    sent = notifications_sending.send_signup_confirmation_email(
+        to_email=email,
+        org_name=org_name,
+        confirmation_link=link,
+    )
+    if not sent:
+        logger.warning("Signup confirmation email send failed (slug=%s)", slug)
+    return sent
+
+
+@router.post(
+    "/signup/resend",
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def signup_resend(data: ResendRequest, request: Request) -> dict:
+    """Resend the signup confirmation email.
+
+    Always returns 202 — never reveals whether the email address exists or
+    whether the email was actually sent. Uses the same rate limit bucket as
+    POST /public/signup (3 attempts per IP per hour)."""
+    client_ip = _get_client_ip(request)
+
+    if not _check_rate_limit(client_ip):
+        logger.info("Signup resend rate limit exceeded (ip=%s)", client_ip)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                "Zu viele Versuche. Bitte warten Sie eine Stunde "
+                "und versuchen Sie es erneut."
+            ),
+        )
+
+    # Best-effort: never reveal success or failure to the caller.
+    try:
+        link = supabase_auth.generate_confirmation_link(str(data.email))
+        notifications_sending.send_signup_confirmation_email(
+            to_email=str(data.email),
+            org_name="CampsPilot",
+            confirmation_link=link,
+        )
+    except Exception:
+        pass
+
+    return {}

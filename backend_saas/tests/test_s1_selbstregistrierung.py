@@ -38,6 +38,22 @@ from .auth_helpers import org_admin_headers, owner_headers
 
 
 # ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _clear_signup_rate_limiter():
+    """Reset the in-memory rate limiter before every test so rate-limit state
+    from one test never leaks into the next. With TRUSTED_PROXY_HOPS=0 (the
+    default in tests) all TestClient requests appear as 'testclient', so
+    without this reset they would accumulate across tests."""
+    from app.routers import signup as signup_mod
+    with signup_mod._rate_lock:
+        signup_mod._ip_timestamps.clear()
+    yield
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -193,14 +209,11 @@ def test_signup_accepted_terms_false_returns_422():
 
 
 def test_signup_rate_limit_4th_request_returns_429(monkeypatch):
-    """3 Registrierungen pro IP und Stunde — 4. wird abgelehnt."""
-    from app.routers import signup as signup_mod
+    """3 Registrierungen pro IP und Stunde — 4. wird abgelehnt.
 
-    # Reset the in-memory rate limiter for a fresh IP
-    test_ip = "10.0.0.42"
-    with signup_mod._rate_lock:
-        signup_mod._ip_timestamps.pop(test_ip, None)
-
+    Verwendet TRUSTED_PROXY_HOPS=1 + eindeutige XFF-IP so dass der Test
+    sauber isoliert ist und nicht von anderen Tests abhängt."""
+    monkeypatch.setenv("TRUSTED_PROXY_HOPS", "1")
     monkeypatch.setattr(
         supabase_auth, "create_user", lambda email, password: supabase_auth.SupabaseUser(id="u1", email=email)
     )
@@ -211,7 +224,7 @@ def test_signup_rate_limit_4th_request_returns_429(monkeypatch):
         lambda **kw: _org_row(slug="org-slug", review_status="draft", site_published=False),
     )
 
-    headers = {"X-Forwarded-For": test_ip}
+    headers = {"X-Forwarded-For": "10.0.0.42"}
     with TestClient(app) as client:
         for i in range(3):
             payload = {
@@ -649,6 +662,198 @@ def test_approve_sends_email_via_fake_provider(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# B1 — Bestätigungsmail nach Selbstregistrierung
+# ---------------------------------------------------------------------------
+
+
+def test_signup_sends_confirmation_email_with_link(monkeypatch):
+    """Nach erfolgreicher Registrierung: FakeProvider zählt 1 Mail, Link enthalten,
+    confirmation_email_sent=True."""
+    created_org = _org_row(slug="testverein-fc", review_status="draft", site_published=False)
+    fake_link = "https://test-project.supabase.co/auth/v1/verify?token=abc123type-signup"
+
+    monkeypatch.setattr(
+        supabase_auth, "create_user",
+        lambda email, password: supabase_auth.SupabaseUser(id="user-b1", email=email),
+    )
+    monkeypatch.setattr(organizations_repo, "get_organization_by_slug", lambda slug: None)
+    monkeypatch.setattr(organizations_repo, "create_signup_organization", lambda **kw: created_org)
+    monkeypatch.setattr(supabase_auth, "generate_confirmation_link", lambda email: fake_link)
+
+    fake_provider = FakeProvider()
+    reset_provider_for_testing(fake_provider)
+    try:
+        with TestClient(app) as client:
+            response = client.post("/public/signup", json=_VALID_SIGNUP)
+        assert response.status_code == 201
+        body = response.json()
+        assert body["confirmation_email_sent"] is True
+        assert len(fake_provider.sent) == 1
+        msg = fake_provider.sent[0]
+        assert "Bitte bestätigen" in msg.subject
+        assert fake_link in msg.html_content
+        assert "24 Stunden" in msg.html_content
+    finally:
+        reset_provider_for_testing(None)
+
+
+def test_signup_mail_failure_returns_201_with_sent_false(monkeypatch):
+    """Schlägt die Linkgenerierung fehl → 201 zurück mit confirmation_email_sent=False.
+    Die Registrierung selbst bleibt bestehen."""
+    created_org = _org_row(slug="testverein-fc", review_status="draft", site_published=False)
+
+    monkeypatch.setattr(
+        supabase_auth, "create_user",
+        lambda email, password: supabase_auth.SupabaseUser(id="user-b1fail", email=email),
+    )
+    monkeypatch.setattr(organizations_repo, "get_organization_by_slug", lambda slug: None)
+    monkeypatch.setattr(organizations_repo, "create_signup_organization", lambda **kw: created_org)
+    monkeypatch.setattr(
+        supabase_auth, "generate_confirmation_link",
+        lambda email: (_ for _ in ()).throw(SupabaseAuthError("service unavailable")),
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/public/signup", json=_VALID_SIGNUP)
+
+    assert response.status_code == 201
+    assert response.json()["confirmation_email_sent"] is False
+
+
+def test_resend_returns_202_for_unknown_address(monkeypatch):
+    """POST /public/signup/resend gibt immer 202 zurück, auch wenn die Adresse
+    unbekannt ist (generate_confirmation_link schlägt fehl)."""
+    monkeypatch.setattr(
+        supabase_auth, "generate_confirmation_link",
+        lambda email: (_ for _ in ()).throw(SupabaseAuthError("user not found")),
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/public/signup/resend", json={"email": "unbekannt@example.de"})
+
+    assert response.status_code == 202
+
+
+def test_resend_returns_202_for_known_address(monkeypatch):
+    """POST /public/signup/resend gibt auch bei bekannter Adresse 202 zurück."""
+    fake_link = "https://test-project.supabase.co/auth/v1/verify?token=xyz"
+    monkeypatch.setattr(supabase_auth, "generate_confirmation_link", lambda email: fake_link)
+
+    fake_provider = FakeProvider()
+    reset_provider_for_testing(fake_provider)
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/public/signup/resend", json={"email": "bekannt@example.de"}
+            )
+        assert response.status_code == 202
+    finally:
+        reset_provider_for_testing(None)
+
+
+# ---------------------------------------------------------------------------
+# B2 — Sichere IP-Begrenzung (TRUSTED_PROXY_HOPS)
+# ---------------------------------------------------------------------------
+
+
+def test_xff_ignored_with_proxy_hops_0_fourth_request_429(monkeypatch):
+    """TRUSTED_PROXY_HOPS=0: gefälschter X-Forwarded-For wird ignoriert.
+    Alle Requests zählen gegen client.host ('testclient').
+    Der 4. Versuch erhält 429.
+
+    MUTATIONSPROBE B2: Wenn _get_client_ip auf den ersten XFF-Eintrag zurückfällt
+    (altes Verhalten), werden die ersten 3 Requests gegen 'fake-ip' gezählt,
+    'testclient' ist nicht erschöpft, und der 4. Request gibt NICHT 429 zurück.
+    Dieser Test würde dann rot werden."""
+    # TRUSTED_PROXY_HOPS=0 is the default — set explicitly to document intent
+    monkeypatch.setenv("TRUSTED_PROXY_HOPS", "0")
+    monkeypatch.setattr(
+        supabase_auth, "create_user",
+        lambda email, password: supabase_auth.SupabaseUser(id="u-b2", email=email),
+    )
+    monkeypatch.setattr(organizations_repo, "get_organization_by_slug", lambda slug: None)
+    monkeypatch.setattr(
+        organizations_repo, "create_signup_organization",
+        lambda **kw: _org_row(slug="org-b2", review_status="draft", site_published=False),
+    )
+    # Different fake IP in each request — should be irrelevant with HOPS=0
+    fake_xff = "198.51.100.7"
+    headers = {"X-Forwarded-For": fake_xff}
+    with TestClient(app) as client:
+        for i in range(3):
+            r = client.post(
+                "/public/signup",
+                json={**_VALID_SIGNUP, "email": f"b2user{i}@example.de", "organization_name": f"B2 Verein {i}"},
+                headers=headers,
+            )
+            assert r.status_code == 201, f"Request {i}: expected 201, got {r.status_code}"
+        # 4th request — same fake XFF, but 'testclient' (client.host) is exhausted
+        r4 = client.post(
+            "/public/signup",
+            json={**_VALID_SIGNUP, "email": "b2user4@example.de", "organization_name": "B2 Verein 4"},
+            headers=headers,
+        )
+    assert r4.status_code == 429
+
+
+def test_xff_last_entry_used_with_proxy_hops_1(monkeypatch):
+    """TRUSTED_PROXY_HOPS=1: der LETZTE XFF-Eintrag wird verwendet.
+    Requests mit demselben letzten Eintrag zählen gegen dieselbe IP."""
+    monkeypatch.setenv("TRUSTED_PROXY_HOPS", "1")
+    monkeypatch.setattr(
+        supabase_auth, "create_user",
+        lambda email, password: supabase_auth.SupabaseUser(id="u-b2h1", email=email),
+    )
+    monkeypatch.setattr(organizations_repo, "get_organization_by_slug", lambda slug: None)
+    monkeypatch.setattr(
+        organizations_repo, "create_signup_organization",
+        lambda **kw: _org_row(slug="org-b2h1", review_status="draft", site_published=False),
+    )
+    # XFF with two entries: client-forged first, proxy-appended last
+    # HOPS=1 → use "203.0.113.5" (the last/proxy-appended entry)
+    xff_proxy = "10.99.99.1, 203.0.113.5"
+    headers = {"X-Forwarded-For": xff_proxy}
+    with TestClient(app) as client:
+        for i in range(3):
+            r = client.post(
+                "/public/signup",
+                json={**_VALID_SIGNUP, "email": f"hops1user{i}@example.de", "organization_name": f"Hops1 Verein {i}"},
+                headers=headers,
+            )
+            assert r.status_code == 201, f"Request {i}: expected 201, got {r.status_code}"
+        r4 = client.post(
+            "/public/signup",
+            json={**_VALID_SIGNUP, "email": "hops1user4@example.de", "organization_name": "Hops1 Verein 4"},
+            headers=headers,
+        )
+    assert r4.status_code == 429
+
+
+# ---------------------------------------------------------------------------
+# B3 — review_status ohne Default: fehlendes Feld → 404
+# ---------------------------------------------------------------------------
+
+
+def test_org_missing_review_status_field_returns_404(monkeypatch):
+    """Fehlt das review_status-Feld in der Org-Zeile ganz (kein NULL, kein Default),
+    dann wird die Org als nicht freigegeben behandelt → öffentlich 404.
+
+    B3-Anforderung: nicht wie 'approved' behandeln (fail closed)."""
+    org_without_review_status = {k: v for k, v in _org_row().items() if k != "review_status"}
+    monkeypatch.setattr(
+        organizations_repo,
+        "get_organization_by_slug",
+        lambda slug: org_without_review_status,
+    )
+
+    with TestClient(app) as client:
+        r = client.get("/api/v1/organizations/neuer-verein")
+
+    assert r.status_code == 404
+    assert r.json() == {"detail": "Organization not found"}
+
+
+# ---------------------------------------------------------------------------
 # MUTATIONSPROBE-MARKER (Pflichtkommentar)
 # ---------------------------------------------------------------------------
 # Wenn die review_status-Prüfung aus app/tenancy.py::resolve_tenant entfernt
@@ -659,3 +864,8 @@ def test_approve_sends_email_via_fake_provider(monkeypatch):
 # Wenn zusätzlich die review_status-Prüfung aus
 # app/repositories/registrations.py::create_registration entfernt wird,
 # schlägt test_registration_rejected_for_draft_org rot.
+#
+# B2 MUTATIONSPROBE: Wenn _get_client_ip auf xff.split(",")[0] zurückfällt
+# (altes Verhalten), schlägt test_xff_ignored_with_proxy_hops_0_fourth_request_429
+# rot: die ersten 3 Requests würden gegen 'fake-ip' (XFF[0]) gezählt statt
+# gegen 'testclient' (client.host), der 4. Request wäre deshalb nicht 429.

@@ -11,10 +11,13 @@ below — never a raw organization_id read straight off a request.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
 from .repositories import organizations
+
+logger = logging.getLogger(__name__)
 
 
 class TenantResolutionError(Exception):
@@ -108,10 +111,17 @@ def resolve_tenant(slug: str) -> TenantContext:
     if not org["site_published"]:
         raise TenantUnpublishedError(slug)
     # review_status check: only 'approved' orgs are publicly visible.
-    # Use .get() with default 'approved' for backward compat with existing
-    # test fixtures that don't include the new field.
-    if org.get("review_status", "approved") != "approved":
-        raise TenantNotApprovedError(slug, org["review_status"])
+    # A missing field is treated as not approved (not as approved) so that
+    # schema mismatches fail closed. Test fixtures must include the field.
+    review_status = org.get("review_status")
+    if review_status is None:
+        logger.warning(
+            "Organization '%s' is missing review_status field — treating as not approved",
+            slug,
+        )
+        raise TenantNotApprovedError(slug, "missing")
+    if review_status != "approved":
+        raise TenantNotApprovedError(slug, review_status)
     return TenantContext(
         organization_id=org["id"],
         slug=org["slug"],

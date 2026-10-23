@@ -21,6 +21,7 @@ def _org_row(slug: str, plan_status: str, **overrides) -> dict:
         "primary_color": None,
         "plan_status": plan_status,
         "site_published": True,
+        "review_status": "approved",
     }
     base.update(overrides)
     return base

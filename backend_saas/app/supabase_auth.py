@@ -233,6 +233,53 @@ def delete_user(user_id: str) -> None:
         _logger.exception("Auth user cleanup failed (user_id=%s): HTTP error", user_id)
 
 
+def generate_confirmation_link(email: str) -> str:
+    """Generates a signup confirmation link via the Supabase Admin API.
+    Uses POST /auth/v1/admin/generate_link with type='signup'.
+
+    Assumption: Supabase returns an 'action_link' field in the response body.
+    This matches the GoTrue admin generate_link endpoint behaviour documented
+    at https://supabase.com/docs/reference/javascript/auth-admin-generatelink
+    (type='signup' generates an email OTP confirm link for a freshly created,
+    unconfirmed user). If Supabase changes the field name this function raises
+    SupabaseAuthError with a clear message.
+
+    Raises SupabaseAuthError on any failure."""
+    settings = get_settings()
+    if not settings.supabase_service_role_key:
+        raise SupabaseAuthError("SUPABASE_SERVICE_ROLE_KEY not configured")
+
+    try:
+        response = get_client().post(
+            f"{settings.supabase_url}/auth/v1/admin/generate_link",
+            headers={
+                "Authorization": f"Bearer {settings.supabase_service_role_key}",
+                "apikey": settings.supabase_service_role_key,
+            },
+            json={"type": "signup", "email": email},
+            timeout=10.0,
+        )
+    except httpx.HTTPError as exc:
+        raise SupabaseAuthError("Supabase Auth admin API unreachable") from exc
+
+    if response.status_code not in (200, 201):
+        raise SupabaseAuthError(
+            f"Supabase generate_link failed (status={response.status_code})"
+        )
+
+    try:
+        body = response.json()
+    except ValueError as exc:
+        raise SupabaseAuthError("Invalid Supabase Auth response for generate_link") from exc
+
+    link = body.get("action_link") if isinstance(body, dict) else None
+    if not isinstance(link, str) or not link:
+        raise SupabaseAuthError(
+            "Supabase generate_link response missing 'action_link' field"
+        )
+    return link
+
+
 def find_user_by_email(email: str) -> SupabaseUser | None:
     """Admin-API lookup (Supabase's GoTrue `/auth/v1/admin/users`) — used
     only by the org_admin-assignment endpoint, which must resolve an email

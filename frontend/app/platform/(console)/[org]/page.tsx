@@ -6,6 +6,7 @@ import { fetchCampsAdmin, fetchOrganizationAdmin, fetchOrganizationMembersAdmin 
 import PublishToggle from '../../../components/saas/config/PublishToggle'
 import MembersSection from './MembersSection'
 import BillingNotesForm from './BillingNotesForm'
+import ReviewBox from './ReviewBox'
 import { computeSetupSteps, setupProgressCount } from '../../setupProgress'
 
 /** Ohne das erbt diese Seite den Layout-Titel "CampsPilot Plattform" —
@@ -115,6 +116,8 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
       <div className="mb-8">
         <PublishToggle orgSlug={org.slug} published={org.site_published} />
       </div>
+
+      <ReviewBox org={org} campCount={camps.length} />
 
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">

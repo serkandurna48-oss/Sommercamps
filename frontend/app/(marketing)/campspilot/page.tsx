@@ -88,8 +88,7 @@ export default function CampsPilotPage() {
               <li className="z-item"><span className="t">Überweisungen von Hand abgleichen</span><i className="strike" /></li>
             </ul>
             <div className="z-resolve" id="zResolve">
-              <p className="d3">Keines weiß, was das andere weiß.</p>
-              <p>Am Ende weiß es nur einer: Sie. Und wenn Sie im Urlaub sind, weiß es niemand.</p>
+              <p className="d1" id="zCampsPilot">CampsPilot</p>
             </div>
           </div>
         </div>
@@ -97,12 +96,27 @@ export default function CampsPilotPage() {
 
       <section className="light" id="ordnung">
         <div className="wrap sec">
-          <div className="sec-head">
-            <p className="label on-light" data-rise="">Die Ordnung</p>
-            <h2 className="d2" data-split="">Alles, was ein Camp braucht. An einer Stelle.</h2>
-            <p className="lead" data-rise="">Keine Plattform für alles. Eine Software für genau diesen einen Ablauf: ausschreiben, anmelden, bezahlen, durchführen.</p>
+          <div className="ordnung-top">
+            <div className="sec-head">
+              <p className="label on-light" data-rise="">Die Ordnung</p>
+              <h2 className="d2" data-split="">Alles, was ein Camp braucht. An einer Stelle.</h2>
+              <p className="lead" data-rise="">Keine Plattform für alles. Eine Software für genau diesen einen Ablauf: ausschreiben, anmelden, bezahlen, durchführen.</p>
+            </div>
+            <figure className="ordnung-right" data-rise="">
+              <div id="ordnungImg" className="cp-fill">
+                <Image
+                  src={CP_IMAGES.leibchen.src}
+                  alt="Ein sauber gefalteter Stapel oranger und dunkelblauer Trainingsleibchen auf einer Holzbank am Platzrand."
+                  fill
+                  sizes="(min-width: 860px) 42vw, 100vw"
+                  loading="lazy"
+                  placeholder="blur"
+                  blurDataURL={CP_IMAGES.leibchen.blurDataURL}
+                />
+              </div>
+            </figure>
           </div>
-          <div className="feat">
+          <div className="feat" data-group="feat">
             <article className="feat-i" data-rise="">
               <span className="k">Für Eltern</span>
               <h3>Eine Anmeldung, die in vier Minuten erledigt ist</h3>

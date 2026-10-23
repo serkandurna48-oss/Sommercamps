@@ -178,6 +178,12 @@ export default function SiteMotion() {
         ease: 'none',
         scrollTrigger: { trigger: '.trust-fig', start: 'top bottom', end: 'bottom top', scrub: true },
       })
+      // Leichter Parallax auf dem Produktbild "Die Ordnung" (max. 40px bei typischen Bildhöhen)
+      gsap.to('#ordnungImg', {
+        yPercent: -7,
+        ease: 'none',
+        scrollTrigger: { trigger: '.ordnung-right', start: 'top bottom', end: 'bottom top', scrub: true },
+      })
 
       // ── Überschriften steigen zeilenweise auf ───────────────────────
       //
@@ -206,6 +212,20 @@ export default function SiteMotion() {
         })
       }
 
+      // Feat-Karten als Gruppe mit Stagger — data-rise wird danach entfernt
+      // damit die allgemeine Schleife sie nicht nochmals einzeln startet.
+      document.querySelectorAll<HTMLElement>('[data-group="feat"]').forEach((group) => {
+        const items = gsap.utils.toArray<HTMLElement>('[data-rise]', group)
+        if (!items.length) return
+        items.forEach(el => el.removeAttribute('data-rise'))
+        const tween = gsap.fromTo(
+          items,
+          { y: 26, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.95, ease: 'expo.out', stagger: 0.12, paused: true },
+        )
+        revealOnScroll(group, 0.82, tween)
+      })
+
       document.querySelectorAll('[data-split]').forEach((h) => {
         const words = splitWords(h)
         if (!words.length) return
@@ -233,33 +253,53 @@ export default function SiteMotion() {
         playedTweens.forEach((t) => t.progress(1))
       }, 1500)
 
-      // ── Das Kapitel, das am Scrollrad hängt ──────────────────────────
+      // ── "Der Zettel": Punkte erscheinen, werden durchgestrichen, CampsPilot blendet ein
+      //
+      // Ablauf (mit scrub auf 900 px Scrollweg):
+      //   Phase 1 (0–1.08): 5 Punkte erscheinen nacheinander (Stagger 0.12, Dauer 0.6, expo.out)
+      //   Phase 2 (1.08–1.5): Punkte werden durchgestrichen + auf 30 % abgeblendet
+      //   Phase 3 (1.1–1.7): "CampsPilot" blendet ein (während Strikes laufen)
+      //
+      // z-list--animated-Klasse macht Punkte vor dem Trigger unsichtbar (CSS),
+      // wird nur gesetzt wenn !reduce — kein opacity:0 im SSR-Markup.
+      const zList = document.getElementById('zList')
+      if (zList) zList.classList.add('z-list--animated')
+      gsap.set('#zCampsPilot', { opacity: 0, y: 20 })
+
       const mm = gsap.matchMedia()
       mm.add('(min-width: 860px)', () => {
         const items = gsap.utils.toArray<HTMLElement>('#zList .z-item')
         const tl = gsap.timeline({
-          scrollTrigger: { trigger: '#zStage', start: 'top top', end: '+=1300', pin: true, scrub: 0.65, anticipatePin: 1 },
+          scrollTrigger: { trigger: '#zStage', start: 'top top', end: '+=900', pin: true, scrub: 0.65, anticipatePin: 1 },
         })
-        tl.to('#zImg', { scale: 1.14, ease: 'none' }, 0)
-        tl.to('#zDim', { opacity: 0.64, ease: 'none' }, 0.08)
+        tl.to('#zImg', { scale: 1.06, ease: 'none' }, 0)
+
+        // Phase 1: Punkte erscheinen
         items.forEach((it, i) => {
-          const at = 0.1 + i * 0.135
-          // Bestimmt, aber nicht hart: power3 statt power4 — die Linie setzt
-          // sich klar durch, ohne wie ein Blitz reinzuknallen.
-          tl.to(it.querySelector('.strike'), { scaleX: 1, duration: 0.09, ease: 'power3.out' }, at)
-          tl.to(it.querySelector('.t'), { opacity: 0.3, duration: 0.09, ease: 'none' }, at + 0.015)
-          // Erledigte Punkte setzen sich zusammen, statt liegen zu bleiben —
-          // macht sichtbar Platz für den Rest der Liste und die Auflösung,
-          // statt überall pauschal weniger Abstand zu erzwingen.
-          tl.to(it, { paddingTop: 4, paddingBottom: 4, duration: 0.1, ease: 'power3.out' }, at + 0.03)
+          tl.fromTo(it, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: 'expo.out' }, i * 0.12)
         })
-        tl.from('#zResolve', { opacity: 0, y: 44, scale: 0.97, duration: 0.16, ease: 'expo.out' }, 0.8)
+
+        // Phase 2: Punkte durchgestrichen + abgeblendet
+        tl.to('#zDim', { opacity: 0.4, ease: 'none' }, 1.0)
+        items.forEach((it, i) => {
+          const at = 1.08 + i * 0.09
+          tl.to(it.querySelector('.strike'), { scaleX: 1, duration: 0.08, ease: 'power3.out' }, at)
+          tl.to(it.querySelector('.t'), { opacity: 0.3, duration: 0.08, ease: 'none' }, at + 0.01)
+          tl.to(it, { paddingTop: 4, paddingBottom: 4, duration: 0.08, ease: 'power3.out' }, at + 0.02)
+        })
+
+        // Phase 3: CampsPilot einblenden (während Strikes laufen)
+        tl.to('#zCampsPilot', { opacity: 1, y: 0, duration: 0.5, ease: 'expo.out' }, 1.15)
+
         return () => {
           tl.scrollTrigger?.kill()
           tl.kill()
         }
       })
       mm.add('(max-width: 859px)', () => {
+        // Mobile: Endzustand sofort, Strike per Scroll
+        if (zList) zList.classList.remove('z-list--animated')
+        gsap.set('#zCampsPilot', { opacity: 1, y: 0 })
         gsap.utils.toArray<HTMLElement>('#zList .z-item').forEach((it, i) => {
           gsap.to(it.querySelector('.strike'), {
             scaleX: 1,
@@ -302,6 +342,7 @@ export default function SiteMotion() {
       clearTimeout(revealSafety)
       form?.removeEventListener('submit', onSubmit)
       anchorCleanups.forEach((fn) => fn())
+      document.getElementById('zList')?.classList.remove('z-list--animated')
       ctx.revert()
       lenis?.destroy()
     }

@@ -111,12 +111,15 @@
   text-wrap: balance;
 }
 .cp-scope .d2 {
-  font-size: clamp(30px, 5.1vw, 66px);
+  font-size: clamp(2.6rem, 5.5vw, 5.5rem);
   font-weight: 700;
   font-stretch: 113%;
-  letter-spacing: -0.032em;
-  line-height: 1.02;
+  letter-spacing: -.03em;
+  line-height: .95;
   text-wrap: balance;
+  max-width: 16ch;
+  hyphens: auto;
+  overflow-wrap: anywhere;
 }
 .cp-scope .d3 {
   font-size: clamp(21px, 2.5vw, 29px);
@@ -274,8 +277,9 @@
   align-items: center;
   justify-content: center;
   height: 48px;
-  padding: 0 22px;
+  padding: 0 26px;
   border: 1px solid var(--fog);
+  border-radius: 9999px;
   background: transparent;
   color: var(--fog);
   font-size: 15px;
@@ -283,6 +287,7 @@
   cursor: pointer;
   overflow: hidden;
   isolation: isolate;
+  transition: transform 0.25s var(--ease);
 }
 .cp-scope .btn::after {
   content: '';
@@ -294,13 +299,19 @@
   transform-origin: left;
   transition: transform 0.45s var(--ease);
 }
-.cp-scope .btn:hover { color: var(--night); }
+.cp-scope .btn:hover { color: var(--night); transform: scale(1.03); }
 .cp-scope .btn:hover::after { transform: scaleX(1); }
 .cp-scope .btn.fill { background: var(--accent); border-color: var(--accent); color: #fff; }
 .cp-scope .btn.fill::after { background: #fff; }
 .cp-scope .btn.fill:hover { color: var(--accent-ink); }
-.cp-scope .btn.ghost { border-color: var(--line-d); color: var(--fog-2); }
-.cp-scope .btn.ghost::after { background: var(--slate); }
+.cp-scope .btn.ghost {
+  border-color: rgba(255,255,255,.12);
+  color: var(--fog-2);
+  background: rgba(255,255,255,.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.cp-scope .btn.ghost::after { background: rgba(255,255,255,.14); }
 .cp-scope .btn.ghost:hover { color: var(--fog); }
 .cp-scope .btn.sm { height: 42px; padding: 0 17px; font-size: 14px; }
 .cp-scope .nav .btn { margin-left: 0; }
@@ -368,8 +379,10 @@
 }
 .cp-scope .z-dim { position: absolute; inset: 0; z-index: 2; background: var(--night); opacity: 0; }
 .cp-scope .z-in { position: relative; z-index: 3; width: 100%; padding-block: clamp(16px, 2.8vh, 34px); }
-.cp-scope .z-head { display: flex; flex-direction: column; gap: 11px; max-width: 20ch; }
+.cp-scope .z-head { display: flex; flex-direction: column; gap: 11px; max-width: 600px; }
 .cp-scope .z-list { display: flex; flex-direction: column; gap: 2px; padding-top: 12px; max-width: 40ch; }
+/* z-list--animated: added by JS only (never in SSR), items hidden until scroll-reveal */
+.cp-scope .z-list--animated .z-item { opacity: 0; transform: translateY(20px); }
 /* padding-top/bottom (statt der Shorthand) — GSAP tweent sie einzeln, wenn
    ein Punkt durchgestrichen wird: die Liste setzt sich mit jedem erledigten
    Punkt sichtbar zusammen. Das ist die eigentliche Antwort auf "die
@@ -395,16 +408,39 @@
   transform: scaleX(0);
   transform-origin: left center;
 }
-.cp-scope .z-resolve { padding-top: 14px; max-width: 32ch; display: flex; flex-direction: column; gap: 8px; }
-.cp-scope .z-resolve .d3 { color: var(--fog); }
-.cp-scope .z-resolve p { color: var(--fog-2); font-size: 17px; line-height: 1.55; }
+.cp-scope .z-resolve { padding-top: 24px; }
+.cp-scope #zCampsPilot { color: var(--fog); }
+
+/* ── "Die Ordnung"-Zweispalter ────────────────────────────── */
+.cp-scope .ordnung-top {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: clamp(32px, 5vw, 72px);
+  align-items: start;
+  margin-bottom: clamp(44px, 7vh, 72px);
+}
+@media (max-width: 860px) {
+  .cp-scope .ordnung-top { grid-template-columns: 1fr; }
+  .cp-scope .ordnung-right { order: -1; }
+}
+.cp-scope .ordnung-right {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  aspect-ratio: 4/5;
+  margin: 0;
+}
+.cp-scope .ordnung-right img { object-fit: cover; object-position: 50% 40%; }
 
 /* ── Helle Sektion ────────────────────────────────────────── */
 .cp-scope .light { background: var(--paper); color: var(--ink); }
 .cp-scope .light .lead { color: var(--ink-2); }
-.cp-scope .sec { padding-block: clamp(84px, 13vh, 148px); }
-.cp-scope .sec-head { display: flex; flex-direction: column; gap: 18px; max-width: 22ch; }
-.cp-scope .sec-head.wide { max-width: 26ch; }
+.cp-scope .sec { padding-block: clamp(72px, 9vw, 128px); }
+@media (max-width: 640px) {
+  .cp-scope .sec { padding-block: 72px; }
+}
+.cp-scope .sec-head { display: flex; flex-direction: column; gap: 18px; max-width: 600px; }
+.cp-scope .sec-head.wide { max-width: 720px; }
 
 .cp-scope .feat {
   display: grid;
@@ -535,4 +571,8 @@
   .cp-scope, .cp-scope *, .cp-scope *::before, .cp-scope *::after {
     transition-duration: 0.01ms !important;
   }
+  /* Zettel-Endzustand: Punkte durchgestrichen + CampsPilot sichtbar */
+  .cp-scope #zList .z-item .strike { transform: scaleX(1); }
+  .cp-scope #zList .z-item span.t { opacity: 0.3; }
+  .cp-scope #zCampsPilot { opacity: 1 !important; transform: none !important; }
 }

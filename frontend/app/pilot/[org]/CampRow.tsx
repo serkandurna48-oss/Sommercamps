@@ -50,12 +50,13 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
         </span>
         <span className="tags">
           {camp.is_full && <span className="chip info">Ausgebucht</span>}
-          {camp.location && <span className="tag">{camp.location}</span>}
-          <span className="tag">
-            {camp.age_min} bis {camp.age_max} Jahre
-          </span>
-          {camp.care_info && <span className="tag">{camp.care_info}</span>}
-          {camp.meals_info && <span className="tag">{camp.meals_info}</span>}
+          <span className="tag">{formatCampDateRange(camp.start_date, camp.end_date)}</span>
+          <span className="tag">{camp.age_min}–{camp.age_max} Jahre</span>
+          {!camp.is_full && camp.spots_remaining <= 10 && (
+            <span className="chip" style={{ color: 'var(--brand-strong)', background: 'transparent', border: '1px solid var(--brand)' }}>
+              Noch {camp.spots_remaining} {camp.spots_remaining === 1 ? 'Platz' : 'Plätze'}
+            </span>
+          )}
         </span>
         {camp.includes && camp.includes.length > 0 && (
           <ul className="inc">
@@ -77,7 +78,7 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
         </span>
         <span className="c-foot">
           <span className="c-price num">{formatPrice(camp.price_cents, camp.currency)}</span>
-          <span className="c-go">{camp.is_full ? 'Auf die Warteliste' : 'Ansehen'}</span>
+          <span className="c-go">{camp.is_full ? 'Auf die Warteliste' : 'Platz sichern'}</span>
         </span>
       </span>
     </button>

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { computeBrandSafe } from '../../lib/brandPipeline'
 import { fetchCamps, fetchOrganization } from '../../lib/saasApi'
+import { filterFutureCamps } from './campUtils'
 import GrainOverlay from './GrainOverlay'
 import ParentFlow from './ParentFlow'
 import { publicFontClassName } from './publicFonts'
@@ -59,7 +60,9 @@ export default async function PilotOrgPage({ params }: { params: Promise<{ org: 
   if (!org) notFound()
 
   if (campsOutcome.status === 'rejected') throw campsOutcome.reason
-  const camps = campsOutcome.value
+  const allCamps = campsOutcome.value
+  const camps = filterFutureCamps(allCamps)
+  const hadPastCamps = allCamps.length > 0 && camps.length === 0
   const ground = THEME_SURFACE[org.theme] ?? THEME_SURFACE.tradition
   const brand = computeBrandSafe(org.primary_color, ground)
 
@@ -77,7 +80,7 @@ export default async function PilotOrgPage({ params }: { params: Promise<{ org: 
     >
       <GrainOverlay />
       <div className="app">
-        <ParentFlow org={org} camps={camps} />
+        <ParentFlow org={org} camps={camps} hadPastCamps={hadPastCamps} />
       </div>
     </div>
   )

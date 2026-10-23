@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, OrganizationPublic, RegistrationCreated } from '../../lib/saasApi'
 import { formatCampDateRange, formatPrice, orgShortCode } from '../../lib/parentFlowFormat'
+import { truncateIntroForHero } from './campUtils'
+import { getClubAssets } from './clubAssets'
 import CampRow from './CampRow'
 import RegistrationFormScreen from './RegistrationFormScreen'
 import DoneScreen from './DoneScreen'
@@ -28,13 +30,20 @@ interface DoneState {
   parentEmail: string
 }
 
-export default function ParentFlow({ org, camps }: { org: OrganizationPublic; camps: CampPublic[] }) {
+export default function ParentFlow({
+  org,
+  camps,
+  hadPastCamps = false,
+}: {
+  org: OrganizationPublic
+  camps: CampPublic[]
+  hadPastCamps?: boolean
+}) {
   const router = useRouter()
   const [screen, setScreen] = useState<ScreenName>('org')
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
   const [done, setDone] = useState<DoneState | null>(null)
-  // Muss vor jedem early return stehen (Rules of Hooks) — greift nur, wenn
-  // der org-Screen tatsächlich gerendert ist (ref sonst null, No-op im Hook).
+  const [showStickyCta, setShowStickyCta] = useState(false)
   const orgContainerRef = useRef<HTMLElement>(null)
   useParentFlowMotion(org.theme, orgContainerRef)
 
@@ -46,6 +55,25 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
     const years = new Set(camps.map((c) => c.start_date.slice(0, 4)))
     return years.size === 1 ? [...years][0] : null
   }, [camps])
+
+  // Sticky CTA: show after hero scrolls out, hide in footer
+  useEffect(() => {
+    if (screen !== 'org') return
+    const container = orgContainerRef.current
+    if (!container) return
+    const heroEl = container.querySelector<Element>('.hero')
+    const footerEl = container.querySelector<Element>('.foot')
+    if (!heroEl) return
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.target === heroEl) setShowStickyCta(!e.isIntersecting)
+        if (e.target === footerEl && e.isIntersecting) setShowStickyCta(false)
+      })
+    }, { threshold: 0 })
+    io.observe(heroEl)
+    if (footerEl) io.observe(footerEl)
+    return () => io.disconnect()
+  }, [screen])
 
   function openCamp(camp: CampPublic) {
     setSelectedSlug(camp.slug)
@@ -125,13 +153,28 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
     )
   }
 
-  // Themes control presentation; content belongs to the organization.
-  const hero = org.hero_image_url?.trim()
+  // Resolve hero image: org-provided → club fallback → none
+  const clubAssets = getClubAssets(org.slug)
+  const heroFromOrg = org.hero_image_url?.trim() || null
+  const heroFallback = !heroFromOrg ? (clubAssets?.heroImage ?? null) : null
+  const heroImg = heroFromOrg ?? heroFallback
+
   const heading = org.intro_heading?.trim() || org.name
-  const intro = org.intro_text?.trim() || 'Alle Camps auf einen Blick — wählen Sie unten den passenden Termin für Ihr Kind.'
+  const introFull = org.intro_text?.trim() || 'Alle Camps auf einen Blick — wählen Sie unten den passenden Termin für Ihr Kind.'
+  const heroIntro = truncateIntroForHero(introFull)
+
+  // Gallery: up to 3 club images, never duplicate the hero
+  const galleryImages = clubAssets
+    ? clubAssets.galleryImages.filter(img => img !== heroImg).slice(0, 3)
+    : []
+
+  // Next camp for sticky CTA
+  const nextCamp = camps.find(c => !c.is_full) ?? camps[0] ?? null
 
   return (
     <section className="screen" id="s-org" ref={orgContainerRef}>
+
+      {/* ── Tradition Hero (full-bleed) ── */}
       {org.theme === 'tradition' && (() => {
         const ageMin = camps.length > 0 ? Math.min(...camps.map(c => c.age_min)) : null
         const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
@@ -149,21 +192,20 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
               </div>
               <button className="nav-cta-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
             </nav>
-            {hero && (
+            {heroImg && (
               <div className="h-trad-shot">
-                <Image id="shotA" src={hero} alt="" unoptimized fill priority style={{ objectFit: 'cover', objectPosition: 'center 25%' }} />
+                <Image id="shotA" src={heroImg} alt="" unoptimized fill priority style={{ objectFit: 'cover', objectPosition: 'center 25%' }} />
               </div>
             )}
             <div className="h-trad-in">
               <div className="in-main">
                 <span className="hero-label">{org.name}</span>
                 <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
-                <p className="intro">{intro}</p>
+                <p className="intro">{heroIntro}</p>
                 <div className="hero-btns">
                   <button className="h-btn-line" type="button" onClick={scrollToCamps}>Camps ansehen</button>
                   <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
                 </div>
-                <p className="hero-hint">Die Anmeldung dauert etwa vier Minuten. Kein Benutzerkonto nötig.</p>
               </div>
               {camps.length > 0 && (
                 <div className="h-trad-stats">
@@ -188,6 +230,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
         )
       })()}
 
+      {/* ── Akademie Hero (full-bleed, existing layout) ── */}
       {org.theme === 'akademie' && (() => {
         const ageMin = camps.length > 0 ? Math.min(...camps.map(c => c.age_min)) : null
         const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
@@ -205,18 +248,17 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
               </div>
               <button className="nav-cta" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
             </nav>
-            <div className="bg">{hero && <Image id="shotB" src={hero} alt="" unoptimized fill priority style={{ objectFit: 'cover' }} />}</div>
+            <div className="bg">{heroImg && <Image id="shotB" src={heroImg} alt="" unoptimized fill priority style={{ objectFit: 'cover' }} />}</div>
             <div className="veil" />
             <div className="in">
               <div className="in-main">
                 <span className="hero-label">{org.name}</span>
                 <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
-                <p className="intro">{intro}</p>
+                <p className="intro">{heroIntro}</p>
                 <div className="hero-btns">
                   <button className="h-btn-glass" type="button" onClick={scrollToCamps}>Camps ansehen</button>
                   <button className="h-btn-solid" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
                 </div>
-                <p className="hero-hint">Die Anmeldung dauert etwa vier Minuten. Kein Benutzerkonto nötig.</p>
               </div>
               {camps.length > 0 && (
                 <div className="hero-stats">
@@ -241,6 +283,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
         )
       })()}
 
+      {/* ── Kompakt Hero (text only) ── */}
       {org.theme === 'kompakt' && (() => {
         const ageMin = camps.length > 0 ? Math.min(...camps.map(c => c.age_min)) : null
         const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
@@ -262,12 +305,11 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
               <div className="in-main">
                 <span className="hero-label">{org.name}</span>
                 <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
-                <p className="intro">{intro}</p>
+                <p className="intro">{heroIntro}</p>
                 <div className="hero-btns">
                   <button className="h-btn-line" type="button" onClick={scrollToCamps}>Camps ansehen</button>
                   <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
                 </div>
-                <p className="hero-hint">Die Anmeldung dauert etwa vier Minuten. Kein Benutzerkonto nötig.</p>
               </div>
               {camps.length > 0 && (
                 <div className="h-komp-stats">
@@ -346,6 +388,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
         <span>Die Anmeldung dauert etwa vier Minuten. Sie brauchen kein Benutzerkonto.</span>
       </div>
 
+      {/* ── Camps ── */}
       <div className="pad sec" id="s-camps">
         <div className="sec-head">
           <div>
@@ -355,14 +398,55 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
         </div>
         <div className="camps">
           {camps.length === 0 ? (
-            <p className="muted" style={{ padding: '24px 0' }}>
-              Aktuell sind keine Camps veröffentlicht.
-            </p>
+            <div className="no-future-camps">
+              <p className="muted" style={{ padding: '24px 0' }}>
+                {hadPastCamps ? 'Neue Termine folgen in Kürze.' : 'Aktuell sind keine Camps veröffentlicht.'}
+              </p>
+              {hadPastCamps && (
+                <a
+                  href={`mailto:${org.contact_email}`}
+                  className="btn btn-pill primary"
+                  style={{ display: 'inline-flex', marginTop: 4, marginBottom: 24 }}
+                >
+                  Kontakt aufnehmen
+                </a>
+              )}
+            </div>
           ) : (
             camps.map((camp) => <CampRow key={camp.slug} camp={camp} onSelect={openCamp} />)
           )}
         </div>
       </div>
+
+      {/* ── Über uns ── */}
+      {org.intro_text?.trim() && (
+        <div className="pad sec" id="s-ueber-uns" data-section>
+          <div className="sec-head">
+            <div>
+              <span className="sec-label">Über uns</span>
+              <h2 className="d2" data-split>{org.name}</h2>
+            </div>
+          </div>
+          <p className="sec-body-text">{org.intro_text}</p>
+        </div>
+      )}
+
+      {/* ── Galerie-Band ── */}
+      {galleryImages.length > 0 && (
+        <div className="gallery-band pad" data-section>
+          {galleryImages.map((src, i) => (
+            <div key={i} className="gallery-img-wrap" data-gallery-img>
+              <Image
+                src={src}
+                alt=""
+                unoptimized
+                fill
+                style={{ objectFit: 'cover', objectPosition: 'center 25%' }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
 
       {org.trainer_image_url?.trim() && (
         <div className="pad sec" data-section>
@@ -435,6 +519,19 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
       </div>
 
       <PublicFooter org={org} />
+
+      {/* ── Mobile Sticky CTA ── */}
+      <div className={`sticky-cta${showStickyCta ? ' sticky-cta-on' : ''}`} aria-hidden={!showStickyCta}>
+        <div className="sticky-cta-in">
+          {nextCamp && (
+            <span className="sticky-cta-date">{formatCampDateRange(nextCamp.start_date, nextCamp.end_date)}</span>
+          )}
+          <button className="sticky-cta-btn" type="button" onClick={scrollToCamps}>
+            Jetzt anmelden
+          </button>
+        </div>
+      </div>
+
     </section>
   )
 }
@@ -646,4 +743,3 @@ function WaitScreen({
     </section>
   )
 }
-

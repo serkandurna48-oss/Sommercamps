@@ -71,6 +71,21 @@ class Settings(BaseSettings):
     # See app/routers/signup.py::_get_client_ip for the full extraction logic.
     trusted_proxy_hops: int = Field(default=0, alias="TRUSTED_PROXY_HOPS")
 
+    # Connection pool sizing (PF1b). maxconn must be at least 2 so the pool
+    # can satisfy concurrent requests without immediately exhausting itself.
+    # DB_POOL_WAIT_SECONDS: how long get_connection() blocks before raising
+    # DatabaseBusy; keep well below Render's 30 s request timeout.
+    db_pool_max: int = Field(default=15, alias="DB_POOL_MAX")
+    db_pool_min: int = Field(default=1, alias="DB_POOL_MIN")
+    db_pool_wait_seconds: int = Field(default=5, alias="DB_POOL_WAIT_SECONDS")
+
+    @field_validator("db_pool_max")
+    @classmethod
+    def _db_pool_max_at_least_two(cls, value: int) -> int:
+        if value < 2:
+            raise ValueError("DB_POOL_MAX must be at least 2")
+        return value
+
     @field_validator("database_url")
     @classmethod
     def _database_url_not_blank(cls, value: str) -> str:

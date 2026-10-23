@@ -17,11 +17,12 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from . import db
+from .db import DatabaseBusy
 from .config import get_settings
 from .routers import admin_router, camps_router, exports_router, organizations_router, registrations_router, signup_router
 
@@ -70,6 +71,17 @@ app.include_router(registrations_router)
 app.include_router(admin_router)
 app.include_router(exports_router)
 app.include_router(signup_router)
+
+
+@app.exception_handler(DatabaseBusy)
+async def _database_busy_handler(_request: Request, _exc: DatabaseBusy) -> JSONResponse:
+    # One warning line — no traceback, no connection details.
+    logger.warning("Request rejected: database pool exhausted")
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Server ausgelastet, bitte erneut versuchen"},
+        headers={"Retry-After": "2"},
+    )
 
 
 @app.get("/health", tags=["System"])

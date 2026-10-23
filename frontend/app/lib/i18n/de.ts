@@ -361,7 +361,7 @@ export const publicUI = {
   howItWorks: {
     heading: 'So einfach geht\'s',
     steps: [
-      { num: '1', title: 'Platz wählen', body: 'Suchen Sie den Termin, der passt, und klicken Sie auf „Ansehen“.' },
+      { num: '1', title: 'Platz wählen', body: 'Suchen Sie den Termin, der passt, und klicken Sie auf „Platz sichern”.' },
       { num: '2', title: 'Anmelden', body: 'Füllen Sie das Formular in ca. 4 Minuten aus – kein Konto nötig.' },
       { num: '3', title: 'Bestätigung', body: 'Sie erhalten Ihre Anmeldebestätigung mit allen Infos zum Camp.' },
     ],

@@ -194,7 +194,7 @@ export default function ParentFlow({
             </nav>
             {heroImg && (
               <div className="h-trad-shot">
-                <Image id="shotA" src={heroImg} alt="" unoptimized fill priority style={{ objectFit: 'cover', objectPosition: 'center 25%' }} />
+                <Image id="shotA" src={heroImg} alt="" unoptimized fill priority style={{ objectFit: 'cover', objectPosition: 'center 20%' }} />
               </div>
             )}
             <div className="h-trad-in">

@@ -50,7 +50,6 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
         </span>
         <span className="tags">
           {camp.is_full && <span className="chip info">Ausgebucht</span>}
-          <span className="tag">{formatCampDateRange(camp.start_date, camp.end_date)}</span>
           <span className="tag">{camp.age_min}–{camp.age_max} Jahre</span>
           {!camp.is_full && camp.spots_remaining <= 10 && (
             <span className="chip" style={{ color: 'var(--brand-strong)', background: 'transparent', border: '1px solid var(--brand)' }}>

@@ -63,6 +63,7 @@
   --track: #ddd8cc;
   --track-full: #a9a496;
   --grain: 0.045;
+  --h-tracking: -0.01em;
 }
 /* ── Thema 2 · Akademie ── */
 .cp-public[data-theme='akademie'] {
@@ -103,6 +104,7 @@
   --info: #7ba9f0;
   --info-bg: #17253a;
   --info-line: #2c4468;
+  --h-tracking: -0.03em;
 }
 /* ── Thema 3 · Kompakt (gebaut, keinem Piloten zugewiesen) ── */
 .cp-public[data-theme='kompakt'] {
@@ -131,6 +133,7 @@
   --track: #dde0dc;
   --track-full: #9aa39e;
   --grain: 0.03;
+  --h-tracking: -0.03em;
 }
 
 .cp-public * {
@@ -308,14 +311,13 @@
   flex-direction: column;
 }
 
-/* Mobile: photo on top */
+/* Mobile and desktop: full-bleed behind hero text */
 .cp-public .h-trad-shot {
-  position: relative;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: 260px;
-  flex-shrink: 0;
+  height: 100%;
   overflow: hidden;
-  order: -1;
 }
 .cp-public .h-trad-shot img {
   object-fit: cover;
@@ -327,9 +329,7 @@
   position: absolute;
   inset: 0;
   z-index: 1;
-  background:
-    linear-gradient(90deg, rgba(0,0,0,.62) 0%, rgba(0,0,0,.32) 45%, transparent 70%),
-    linear-gradient(to top, rgba(0,0,0,.75) 0%, transparent 55%);
+  background: linear-gradient(to top, rgba(0,0,0,.88) 0%, transparent 72%);
 }
 .cp-public .h-trad-in {
   position: relative;
@@ -349,7 +349,7 @@
 .cp-public .h-trad h1 {
   color: var(--on-band);
   line-height: .92;
-  letter-spacing: -.03em;
+  letter-spacing: var(--h-tracking);
   max-width: 20ch;
   overflow-wrap: anywhere;
   hyphens: auto;
@@ -417,19 +417,16 @@
 /* Dark variant (kompakt) */
 .cp-public .hstat-w-dark b { color: var(--ink); }
 
-/* Desktop: full-bleed photo behind text (D1b redesign) */
+/* Desktop: stronger gradient + padding override */
 @media (min-width: 900px) {
   .cp-public .h-trad {
     flex-direction: column;
     align-items: stretch;
   }
-  .cp-public .h-trad-shot {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 0;
-    order: 0;
+  .cp-public .h-trad-shot::after {
+    background:
+      linear-gradient(to right, rgba(0,0,0,.55) 0%, transparent 55%),
+      linear-gradient(to top, rgba(0,0,0,.82) 0%, rgba(0,0,0,.45) 38%, transparent 65%);
   }
   .cp-public .h-trad-in {
     padding: 100px 7vw 96px;
@@ -483,7 +480,7 @@
 .cp-public .h-akad h1 {
   color: #fff;
   line-height: .92;
-  letter-spacing: -.03em;
+  letter-spacing: var(--h-tracking);
   max-width: 20ch;
 }
 .cp-public .h-akad h1[data-scale='xl'] { font-size: clamp(2.8rem, 8vw, 7.5rem); }
@@ -575,7 +572,7 @@
 }
 .cp-public .h-komp h1 {
   line-height: .92;
-  letter-spacing: -.03em;
+  letter-spacing: var(--h-tracking);
   max-width: 20ch;
   overflow-wrap: anywhere;
   hyphens: manual;
@@ -649,16 +646,8 @@
 }
 .cp-public[data-theme='tradition'] .sec-head {
   flex-direction: column;
-  align-items: center;
-  text-align: center;
+  align-items: flex-start;
   gap: 10px;
-}
-.cp-public[data-theme='tradition'] .sec-head::after {
-  content: '';
-  width: 44px;
-  height: 1px;
-  background: var(--line);
-  margin-top: 4px;
 }
 .cp-public[data-theme='akademie'] .sec-head {
   flex-direction: row;

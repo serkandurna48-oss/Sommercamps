@@ -276,6 +276,102 @@ def send_registration_notification(
     )
 
 
+def send_review_decision_email(
+    *,
+    to_email: str,
+    org_name: str,
+    decision: str,
+    note: Optional[str],
+) -> None:
+    """Sends a review decision (approve/reject) notification to the
+    organization's contact email. Best-effort: never raises — a mail failure
+    must not roll back the already-committed review decision. Uses the same
+    provider as registration notifications (FakeProvider in tests)."""
+    from html import escape
+
+    if decision == "approve":
+        subject = "Ihr Verein wurde freigeschaltet - CampsPilot"
+        body = (
+            "<p>Sehr geehrte Damen und Herren,</p>"
+            "<p>Ihr Antrag auf Freischaltung des Vereins <strong>"
+            + escape(org_name)
+            + "</strong> wurde genehmigt. Ihr Verein ist nun fuer Eltern erreichbar.</p>"
+            "<p>Bitte melden Sie sich an, um Ihre Camps einzurichten und zu veroeffentlichen.</p>"
+            "<p>Mit freundlichen Gruessen,<br>das CampsPilot-Team</p>"
+        )
+    else:
+        note_html = "<p><strong>Begruendung:</strong> " + escape(note or "") + "</p>" if note else ""
+        subject = "Ihr Antrag wurde abgelehnt - CampsPilot"
+        body = (
+            "<p>Sehr geehrte Damen und Herren,</p>"
+            "<p>Ihr Antrag auf Freischaltung des Vereins <strong>"
+            + escape(org_name)
+            + "</strong> wurde leider abgelehnt.</p>"
+            + note_html
+            + "<p>Bitte korrigieren Sie die angegebenen Maengel und reichen Sie den Antrag erneut ein.</p>"
+            "<p>Mit freundlichen Gruessen,<br>das CampsPilot-Team</p>"
+        )
+
+    from .mail import MailMessage
+
+    msg = MailMessage(to_email=to_email, subject=subject, html_content=body)
+    try:
+        provider = get_provider()
+        provider.send(msg)
+    except Exception as exc:
+        logger.warning(
+            "send_review_decision_email failed (org=%s, decision=%s): %s",
+            org_name,
+            decision,
+            exc,
+        )
+
+
+def send_signup_confirmation_email(
+    *,
+    to_email: str,
+    org_name: str,
+    confirmation_link: str,
+) -> bool:
+    """Sends the signup confirmation email after self-registration.
+
+    Subject: "Bitte bestätigen Sie Ihre Registrierung"
+    Language: German, formal (gesiezt). Includes org name, confirmation link,
+    and a note that the link is valid for 24 hours.
+
+    Returns True if the provider accepted the message without raising,
+    False otherwise. Never raises — best-effort send."""
+    from html import escape
+
+    from .mail import MailMessage
+
+    e_org_name = escape(org_name)
+    e_link = escape(confirmation_link)
+    subject = "Bitte bestätigen Sie Ihre Registrierung"
+    body = (
+        "<p>Sehr geehrte Damen und Herren,</p>"
+        "<p>vielen Dank für Ihre Registrierung bei CampsPilot. "
+        "Bitte bestätigen Sie Ihre E-Mail-Adresse für den Verein <strong>"
+        + e_org_name
+        + "</strong>, indem Sie auf den folgenden Link klicken:</p>"
+        '<p><a href="' + e_link + '">E-Mail-Adresse bestätigen</a></p>'
+        "<p>Dieser Link ist 24 Stunden gültig.</p>"
+        "<p>Mit freundlichen Grüßen,<br>das CampsPilot-Team</p>"
+    )
+    msg = MailMessage(to_email=to_email, subject=subject, html_content=body)
+    try:
+        provider = get_provider()
+        provider.send(msg)
+        return True
+    except Exception as exc:
+        logger.warning(
+            "send_signup_confirmation_email failed (email=%s): %s",
+            to_email,
+            exc,
+        )
+        return False
+
+
 def retry_registration_notification(
     registration_token: UUID,
     organization_id: UUID,

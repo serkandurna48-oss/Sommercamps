@@ -22,6 +22,7 @@ def _org_row(slug: str, plan_status: str = "active", site_published: bool = True
         "primary_color": None,
         "plan_status": plan_status,
         "site_published": site_published,
+        "review_status": "approved",
     }
 
 

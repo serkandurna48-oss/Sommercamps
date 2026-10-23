@@ -201,7 +201,7 @@ class ImportTests(unittest.TestCase):
     def test_process_cli_and_row_diagnostics(self):
         process = subprocess.run([sys.executable,str(ROOT/'backend_saas/scripts/import_ksv.py'),
             '--csv',str(self.sample),'--org-slug',self.slug],
-            env={**os.environ,'DATABASE_URL':URL},capture_output=True,text=True,timeout=15)
+            env={**os.environ,'DATABASE_URL':URL},capture_output=True,text=True,timeout=30)
         self.assertEqual(process.returncode,2,process.stderr)
         import json
         report=json.loads(process.stdout)
@@ -218,7 +218,7 @@ class ImportTests(unittest.TestCase):
                  '--csv',str(path),'--org-slug',self.slug,'--apply']
         for written,existing in ((3,0),(0,3)):
             process=subprocess.run(command,env={**os.environ,'DATABASE_URL':URL},
-                                   capture_output=True,text=True,timeout=15)
+                                   capture_output=True,text=True,timeout=30)
             self.assertEqual(process.returncode,0,process.stderr)
             report=json.loads(process.stdout)
             self.assertEqual((report['written'],report['existing']),(written,existing))

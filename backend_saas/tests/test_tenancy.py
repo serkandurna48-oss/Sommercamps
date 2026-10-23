@@ -27,6 +27,7 @@ def test_resolve_tenant_returns_context_for_active_org(monkeypatch):
             "name": "Demo FC",
             "plan_status": "pilot",
             "site_published": True,
+            "review_status": "approved",
         },
     )
 
@@ -84,6 +85,7 @@ def test_resolve_tenant_accepts_both_active_plan_statuses(monkeypatch, plan_stat
             "name": "X",
             "plan_status": plan_status,
             "site_published": True,
+            "review_status": "approved",
         },
     )
 

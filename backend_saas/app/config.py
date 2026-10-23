@@ -63,6 +63,14 @@ class Settings(BaseSettings):
     # power, unlike supabase_anon_key.
     supabase_service_role_key: Optional[str] = Field(default=None, alias="SUPABASE_SERVICE_ROLE_KEY")
 
+    # Number of trusted reverse-proxy hops in front of this service.
+    # 0 (default, Render direct): use request.client.host; never trust
+    # X-Forwarded-For — a client could forge it and bypass IP rate limits.
+    # 1 (one proxy, e.g. Render's load balancer): take the last X-Forwarded-For
+    # entry (appended by the proxy), which the client cannot forge.
+    # See app/routers/signup.py::_get_client_ip for the full extraction logic.
+    trusted_proxy_hops: int = Field(default=0, alias="TRUSTED_PROXY_HOPS")
+
     @field_validator("database_url")
     @classmethod
     def _database_url_not_blank(cls, value: str) -> str:

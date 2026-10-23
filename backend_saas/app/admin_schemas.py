@@ -361,12 +361,23 @@ class OrganizationOrgAdminOut(BaseModel):
     site_published: bool = False
     # KV1: Zusatzfragen, lesbar für org_admin (Anmeldeformular-Konfiguration).
     registration_questions: list[RegistrationQuestion] = Field(default_factory=list)
+    # S1 Prüfstatus-Felder — nur lesend für org_admin; review_status ist
+    # nicht über OrganizationUpdate setzbar (extra="forbid" verhindert das).
+    review_status: str = "approved"
+    avv_accepted_at: Optional[datetime] = None
+    avv_version: Optional[str] = None
+    submitted_at: Optional[datetime] = None
+    approved_at: Optional[datetime] = None
+    review_note: Optional[str] = None
 
 
 class OrganizationAdminOut(OrganizationOrgAdminOut):
-    """Platform-owner view including internal contract notes."""
+    """Platform-owner view including internal contract notes and approval metadata."""
 
     billing_notes: Optional[str] = None
+    # approved_by ist die Supabase-User-ID des genehmigenden Betreibers —
+    # nur für den Platform-Owner relevant, nicht für den Verein selbst.
+    approved_by: Optional[UUID] = None
 
 
 class OrganizationAdminListItem(OrganizationAdminOut):
@@ -507,3 +518,28 @@ class AuditLogEntryOut(BaseModel):
     target_id: Optional[str] = None
     metadata: Optional[dict] = None
     created_at: datetime
+
+
+class SubmitReviewRequest(BaseModel):
+    """Body für POST /admin/organizations/{slug}/submit-review.
+    accept_avv muss true sein; avv_version benennt die akzeptierte AVV-Version.
+    Darf nur aus draft oder rejected aufgerufen werden."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    accept_avv: Literal[True]
+    avv_version: str = Field(min_length=1)
+
+
+class ReviewDecisionRequest(BaseModel):
+    """Body für POST /admin/organizations/{slug}/review (platform_owner only).
+    note ist Pflicht bei decision='reject'."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    decision: Literal["approve", "reject"]
+    note: Optional[str] = None
+
+    def model_post_init(self, __context: object) -> None:
+        if self.decision == "reject" and not self.note:
+            raise ValueError("note ist Pflicht bei Ablehnung (decision='reject')")

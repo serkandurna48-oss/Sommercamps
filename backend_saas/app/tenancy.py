@@ -11,10 +11,13 @@ below — never a raw organization_id read straight off a request.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
 from .repositories import organizations
+
+logger = logging.getLogger(__name__)
 
 
 class TenantResolutionError(Exception):
@@ -47,6 +50,20 @@ class TenantUnpublishedError(TenantResolutionError):
     def __init__(self, slug: str):
         self.slug = slug
         super().__init__(f"Organization '{slug}' is not published yet")
+
+
+class TenantNotApprovedError(TenantResolutionError):
+    """Organization exists, plan is active, and site is published, but
+    review_status is not 'approved' — the platform owner has not yet cleared
+    it for public access (S1 Selbstregistrierung). Distinct from
+    TenantUnpublishedError for server-side logging; app/deps.py maps both to
+    the identical public 404 so the public API never reveals draft/pending
+    status."""
+
+    def __init__(self, slug: str, review_status: str):
+        self.slug = slug
+        self.review_status = review_status
+        super().__init__(f"Organization '{slug}' is not approved (review_status={review_status})")
 
 
 # Mirrors organizations.plan_status's CHECK constraint (see
@@ -93,6 +110,18 @@ def resolve_tenant(slug: str) -> TenantContext:
         raise TenantInactiveError(slug, org["plan_status"])
     if not org["site_published"]:
         raise TenantUnpublishedError(slug)
+    # review_status check: only 'approved' orgs are publicly visible.
+    # A missing field is treated as not approved (not as approved) so that
+    # schema mismatches fail closed. Test fixtures must include the field.
+    review_status = org.get("review_status")
+    if review_status is None:
+        logger.warning(
+            "Organization '%s' is missing review_status field — treating as not approved",
+            slug,
+        )
+        raise TenantNotApprovedError(slug, "missing")
+    if review_status != "approved":
+        raise TenantNotApprovedError(slug, review_status)
     return TenantContext(
         organization_id=org["id"],
         slug=org["slug"],

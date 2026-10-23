@@ -3,5 +3,13 @@ from .camps import router as camps_router
 from .exports import router as exports_router
 from .organizations import router as organizations_router
 from .registrations import router as registrations_router
+from .signup import router as signup_router
 
-__all__ = ["admin_router", "camps_router", "exports_router", "organizations_router", "registrations_router"]
+__all__ = [
+    "admin_router",
+    "camps_router",
+    "exports_router",
+    "organizations_router",
+    "registrations_router",
+    "signup_router",
+]

@@ -36,6 +36,12 @@ import type { RefObject } from 'react'
 
 export type PublicTheme = 'tradition' | 'akademie' | 'kompakt'
 
+/** Exposed for testing — false when prefers-reduced-motion: reduce is set. */
+export function _isMotionEnabled(): boolean {
+  if (typeof window === 'undefined') return false
+  return !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
 type Gsap = typeof import('gsap').default
 type ScrollTriggerType = typeof import('gsap/ScrollTrigger').ScrollTrigger
 
@@ -183,7 +189,7 @@ const MOTION_KIND: Record<PublicTheme, MotionKind> = {
  */
 export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<HTMLElement | null>) {
   useEffect(() => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const reduce = !_isMotionEnabled()
     const container = containerRef.current
     if (reduce || !container) return
 
@@ -212,9 +218,31 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
     })
 
     let gsapCleanup: (() => void) | undefined
+    let lenisCleanup: (() => void) | undefined
     let cancelled = false
     const playedTweens: ReturnType<Gsap['to']>[] = []
     const allTweens: ReturnType<Gsap['to']>[] = []
+
+    // Lenis smooth scroll — desktop only
+    if (window.innerWidth >= 900) {
+      import('lenis').then(({ default: Lenis }) => {
+        if (cancelled) return
+        const lenis = new Lenis()
+        let rafStopped = false
+        let lenisRafId: number
+        function raf(time: number) {
+          if (rafStopped) return
+          lenis.raf(time)
+          lenisRafId = requestAnimationFrame(raf)
+        }
+        lenisRafId = requestAnimationFrame(raf)
+        lenisCleanup = () => {
+          rafStopped = true
+          cancelAnimationFrame(lenisRafId)
+          lenis.destroy()
+        }
+      })
+    }
 
     Promise.all([import('gsap'), import('gsap/ScrollTrigger')]).then(([{ default: gsap }, { ScrollTrigger }]) => {
       if (cancelled) return
@@ -401,6 +429,24 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
           runCounters(gsap, ScrollTrigger, container, 1.2, 'expo.out', playedTweens)
         }
 
+        // Gallery parallax — gentle 40px shift while scrolling
+        container.querySelectorAll<HTMLElement>('[data-gallery-img]').forEach(img => {
+          gsap.fromTo(
+            img,
+            { y: 0 },
+            {
+              y: -40,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: img,
+                start: 'top bottom',
+                end: 'bottom top',
+                scrub: true,
+              },
+            },
+          )
+        })
+
         ScrollTrigger.refresh()
       }, container)
 
@@ -429,6 +475,7 @@ export function useParentFlowMotion(theme: PublicTheme, containerRef: RefObject<
       container.classList.remove('m1-ready')
       io.disconnect()
       gsapCleanup?.()
+      lenisCleanup?.()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme])

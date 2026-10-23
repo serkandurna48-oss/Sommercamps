@@ -1,0 +1,24 @@
+/** Fixed mapping of org slugs to local club image assets. */
+
+export interface ClubAssets {
+  heroImage: string
+  galleryImages: readonly string[]
+  logoImage?: string
+}
+
+const ASSETS: Record<string, ClubAssets> = {
+  'ksv-baunatal': {
+    heroImage: '/clubs/ksv/ksv-gruppenfoto.jpg',
+    galleryImages: [
+      '/clubs/ksv/ksv-kinder-pokal.jpg',
+      '/clubs/ksv/ksv-torwart.jpg',
+      '/clubs/ksv/ksv-pokale.jpg',
+    ],
+    logoImage: '/clubs/ksv/ksv-logo.png',
+  },
+}
+
+/** Returns the static club assets for `orgSlug`, or null if none are defined. */
+export function getClubAssets(orgSlug: string): ClubAssets | null {
+  return ASSETS[orgSlug] ?? null
+}

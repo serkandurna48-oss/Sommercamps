@@ -47,7 +47,7 @@ export default function CampDetailScreen({ orgSlug, campSlug, org, camp, registr
           <StatCard label="Aufgaben" value={String(openTaskCount)} numericValue={openTaskCount} />
         </StatGrid>
 
-        <ParticipantList key={`${campSlug}-${initialFilter}-${initialSort}`} initialFilter={initialFilter} initialSort={initialSort} registrations={registrations} brandColor={brand.brand} orgSlug={orgSlug} campSlug={campSlug} camp={camp} />
+        <ParticipantList key={`${campSlug}-${initialFilter}-${initialSort}`} initialFilter={initialFilter} initialSort={initialSort} registrations={registrations} brandColor={brand.brand} orgSlug={orgSlug} orgName={org.name} campSlug={campSlug} camp={camp} />
       </main>
     </>
   )

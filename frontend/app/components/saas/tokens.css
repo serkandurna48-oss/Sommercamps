@@ -408,7 +408,9 @@
 .cp-daylist-preview th { font-weight: 700; }
 .cp-daylist-preview td { height: 44px; }
 .cp-daylist-preview :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.cp-daylist-check-col { width: 52px; text-align: center; }
 @media print {
+  @page { size: A4 portrait; margin: 12mm }
   body:has(.cp-daylist-preview) { overflow: visible !important; }
   body:has(.cp-daylist-preview) > :not(.cp-daylist-preview) { display: none !important; }
   .cp-daylist-preview {
@@ -424,12 +426,14 @@
     border: 0;
     font: 10pt Arial, sans-serif;
   }
+  .cp-daylist-preview.cp-daylist-many-cols { font: 9pt Arial, sans-serif; }
   .cp-daylist-preview::backdrop { display: none; }
   .cp-daylist-heading { display: block !important; break-inside: avoid; }
   .cp-daylist-table-scroll { overflow: visible; }
   .cp-daylist-preview table { min-width: 0; }
   .cp-daylist-preview thead { display: table-header-group; }
   .cp-daylist-preview tr { break-inside: avoid; }
+  .cp-daylist-check-col { width: 40px; }
 }
 
 /* ----------------------------------------------------------------------

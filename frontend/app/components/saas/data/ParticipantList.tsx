@@ -39,6 +39,7 @@ export default function ParticipantList({
   registrations,
   brandColor,
   orgSlug,
+  orgName,
   campSlug,
   camp,
   initialFilter = 'all',
@@ -47,6 +48,7 @@ export default function ParticipantList({
   registrations: RegistrationAdmin[]
   brandColor: string
   orgSlug: string
+  orgName?: string
   campSlug: string
   camp: CampAdmin
   initialFilter?: ParticipantFilter
@@ -79,6 +81,7 @@ export default function ParticipantList({
         registrations={registrations}
         camp={camp}
         orgSlug={orgSlug}
+        orgName={orgName}
         filter={filter}
         search={search}
         allColumns={PARTICIPANT_COLUMNS}

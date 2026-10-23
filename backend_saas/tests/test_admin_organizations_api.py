@@ -135,7 +135,7 @@ def test_patch_unknown_organization_returns_404(monkeypatch):
 
 def test_list_organizations_returns_camp_count(monkeypatch):
     rows = [_org_row("club-a", camp_count=3), _org_row("club-b", camp_count=0)]
-    monkeypatch.setattr(organizations, "list_organizations", lambda: rows)
+    monkeypatch.setattr(organizations, "list_organizations_filtered", lambda review_status=None: rows)
     headers = _auth_headers()
 
     with TestClient(app) as client:

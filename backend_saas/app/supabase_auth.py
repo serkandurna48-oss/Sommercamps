@@ -151,6 +151,88 @@ def verify_access_token(access_token: str) -> SupabaseUser:
     return SupabaseUser(id=user_id, email=email)
 
 
+class SupabaseEmailConflictError(SupabaseAuthError):
+    """A user with this email address already exists in Supabase Auth."""
+
+
+def create_user(email: str, password: str) -> SupabaseUser:
+    """Creates a new Supabase Auth user via the admin API. The user is created
+    without email confirmation (email_confirm=false), meaning they need to
+    confirm their address before they can sign in. Raises
+    SupabaseEmailConflictError if the email is already registered, and
+    SupabaseAuthError for any other failure."""
+    settings = get_settings()
+    if not settings.supabase_service_role_key:
+        raise SupabaseAuthError("SUPABASE_SERVICE_ROLE_KEY not configured")
+
+    try:
+        response = get_client().post(
+            f"{settings.supabase_url}/auth/v1/admin/users",
+            headers={
+                "Authorization": f"Bearer {settings.supabase_service_role_key}",
+                "apikey": settings.supabase_service_role_key,
+            },
+            json={"email": email, "password": password, "email_confirm": False},
+            timeout=10.0,
+        )
+    except httpx.HTTPError as exc:
+        raise SupabaseAuthError("Supabase Auth admin API unreachable") from exc
+
+    if response.status_code in (422, 400):
+        # Supabase returns 422 for duplicate emails with a message body
+        try:
+            msg = response.json().get("msg", "") or response.json().get("message", "")
+        except Exception:
+            msg = ""
+        if "already" in msg.lower() or "registered" in msg.lower() or "exists" in msg.lower():
+            raise SupabaseEmailConflictError(f"Email already registered: {email}")
+        raise SupabaseAuthError(f"Supabase Auth rejected user creation (status={response.status_code}): {msg}")
+
+    if response.status_code not in (200, 201):
+        raise SupabaseAuthError(f"Supabase Auth user creation failed (status={response.status_code})")
+
+    try:
+        body = response.json()
+    except ValueError as exc:
+        raise SupabaseAuthError("Invalid Supabase Auth response") from exc
+
+    user_id = body.get("id") if isinstance(body, dict) else None
+    if not isinstance(user_id, str) or not user_id.strip():
+        raise SupabaseAuthError("Supabase Auth response missing user id")
+
+    return SupabaseUser(id=user_id, email=email)
+
+
+def delete_user(user_id: str) -> None:
+    """Deletes a Supabase Auth user via the admin API. Used to clean up after
+    a failed self-signup DB transaction so orphaned auth users don't persist.
+    Failures are logged but not re-raised — a leaked auth user is better than
+    masking the original DB error."""
+    import logging as _logging
+
+    _logger = _logging.getLogger(__name__)
+    settings = get_settings()
+    if not settings.supabase_service_role_key:
+        _logger.warning("Cannot delete auth user %s: SUPABASE_SERVICE_ROLE_KEY not configured", user_id)
+        return
+
+    try:
+        response = get_client().delete(
+            f"{settings.supabase_url}/auth/v1/admin/users/{user_id}",
+            headers={
+                "Authorization": f"Bearer {settings.supabase_service_role_key}",
+                "apikey": settings.supabase_service_role_key,
+            },
+            timeout=10.0,
+        )
+        if response.status_code not in (200, 204):
+            _logger.warning(
+                "Auth user cleanup failed (user_id=%s, status=%s)", user_id, response.status_code
+            )
+    except httpx.HTTPError:
+        _logger.exception("Auth user cleanup failed (user_id=%s): HTTP error", user_id)
+
+
 def find_user_by_email(email: str) -> SupabaseUser | None:
     """Admin-API lookup (Supabase's GoTrue `/auth/v1/admin/users`) — used
     only by the org_admin-assignment endpoint, which must resolve an email

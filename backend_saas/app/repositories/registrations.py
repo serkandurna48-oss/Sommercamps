@@ -148,7 +148,7 @@ _LOCK_CAMP_CAPACITY = "select capacity, status from camps where id = %s for upda
 # conflicts with publication/plan UPDATEs. KEY SHARE does not protect these
 # non-key columns. Public registration always locks organization before camp.
 _LOCK_PUBLIC_ORGANIZATION = """
-    select site_published, plan_status
+    select site_published, plan_status, review_status
     from organizations
     where id = %s
     for share
@@ -508,6 +508,7 @@ def create_registration(
             organization is None
             or not organization["site_published"]
             or organization["plan_status"] not in ACTIVE_PLAN_STATUSES
+            or organization.get("review_status", "approved") != "approved"
         ):
             raise OrganizationNotAvailableError("Organization no longer available")
 

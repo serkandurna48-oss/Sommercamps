@@ -49,6 +49,20 @@ class TenantUnpublishedError(TenantResolutionError):
         super().__init__(f"Organization '{slug}' is not published yet")
 
 
+class TenantNotApprovedError(TenantResolutionError):
+    """Organization exists, plan is active, and site is published, but
+    review_status is not 'approved' — the platform owner has not yet cleared
+    it for public access (S1 Selbstregistrierung). Distinct from
+    TenantUnpublishedError for server-side logging; app/deps.py maps both to
+    the identical public 404 so the public API never reveals draft/pending
+    status."""
+
+    def __init__(self, slug: str, review_status: str):
+        self.slug = slug
+        self.review_status = review_status
+        super().__init__(f"Organization '{slug}' is not approved (review_status={review_status})")
+
+
 # Mirrors organizations.plan_status's CHECK constraint (see
 # supabase/migrations/20260917133748_create_saas_schema_v1.sql): pilot and
 # active are usable tenants; suspended and cancelled are not. This is a
@@ -93,6 +107,11 @@ def resolve_tenant(slug: str) -> TenantContext:
         raise TenantInactiveError(slug, org["plan_status"])
     if not org["site_published"]:
         raise TenantUnpublishedError(slug)
+    # review_status check: only 'approved' orgs are publicly visible.
+    # Use .get() with default 'approved' for backward compat with existing
+    # test fixtures that don't include the new field.
+    if org.get("review_status", "approved") != "approved":
+        raise TenantNotApprovedError(slug, org["review_status"])
     return TenantContext(
         organization_id=org["id"],
         slug=org["slug"],

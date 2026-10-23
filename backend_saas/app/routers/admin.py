@@ -60,9 +60,12 @@ from ..admin_schemas import (
     PlatformStatsOut,
     RegistrationAdminOut,
     RegistrationDetailsUpdate,
+    ReviewDecisionRequest,
+    SubmitReviewRequest,
     WaitlistPromoteResponse,
 )
 from ..registration_lifecycle import InvalidStatusTransitionError
+from ..notifications import sending as notifications_sending
 from ..repositories import camps as camps_repo
 from ..repositories import organizations as organizations_repo
 from ..repositories import platform_roles
@@ -103,12 +106,13 @@ def get_me(auth: AuthContext = Depends(get_auth_context)) -> MeOut:
     response_model=list[OrganizationAdminListItem],
     dependencies=[Depends(require_platform_owner)],
 )
-def list_organizations() -> list[OrganizationAdminListItem]:
+def list_organizations(review_status: str | None = None) -> list[OrganizationAdminListItem]:
     """Every organization regardless of plan_status, for the platform
     console's tenant list — platform_owner only (an org_admin has no
     business seeing organizations they don't administer, even just their
-    names/slugs)."""
-    rows = organizations_repo.list_organizations()
+    names/slugs). Optional filter: ?review_status=submitted shows only orgs
+    awaiting review."""
+    rows = organizations_repo.list_organizations_filtered(review_status=review_status)
     return [OrganizationAdminListItem.model_validate(row) for row in rows]
 
 
@@ -192,6 +196,99 @@ def update_organization(
     logger.info("Organization updated (slug=%s)", organization_slug)
     schema = OrganizationAdminOut if auth.is_owner else OrganizationOrgAdminOut
     return schema.model_validate(row)
+
+
+@router.post(
+    "/organizations/{organization_slug}/submit-review",
+    response_model=OrganizationAdminOut | OrganizationOrgAdminOut,
+)
+def submit_review(
+    organization_slug: str,
+    data: SubmitReviewRequest,
+    auth: AuthContext = Depends(require_org_access),
+) -> OrganizationAdminOut | OrganizationOrgAdminOut:
+    """Org-admin submits the organization for platform-owner review. Only
+    allowed when review_status is 'draft' or 'rejected'. Sets submitted_at and
+    avv_accepted_at server-side (never from the client). accept_avv must be
+    true; avv_version names the accepted AVV document version."""
+    row = organizations_repo.submit_for_review(organization_slug, data.avv_version)
+    if row is None:
+        org = require_organization(organization_slug)
+        current_status = org.get("review_status", "unknown")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Einreichung nicht möglich: Prüfstatus ist '{current_status}'. "
+                "Nur 'draft' oder 'rejected' dürfen eingereicht werden."
+            ),
+        )
+    logger.info("Organization submitted for review (slug=%s)", organization_slug)
+    platform_roles.write_audit_log(
+        actor_user_id=auth.user_id,
+        actor_email=auth.email,
+        action="organization.review_submitted",
+        organization_id=str(row["id"]),
+        target_type="organization",
+        target_id=organization_slug,
+        metadata={"avv_version": data.avv_version},
+    )
+    schema = OrganizationAdminOut if auth.is_owner else OrganizationOrgAdminOut
+    return schema.model_validate(row)
+
+
+@router.post(
+    "/organizations/{organization_slug}/review",
+    response_model=OrganizationAdminOut,
+    dependencies=[Depends(require_platform_owner)],
+)
+def review_organization(
+    organization_slug: str,
+    data: ReviewDecisionRequest,
+    auth: AuthContext = Depends(require_platform_owner),
+) -> OrganizationAdminOut:
+    """Platform-owner approves or rejects an organization. Only allowed when
+    review_status is 'submitted'. approve sets site_published=true so the org
+    becomes publicly visible. reject requires a note. A decision email is sent
+    to contact_email (best-effort, non-blocking)."""
+    if data.decision == "approve":
+        row = organizations_repo.approve_organization(organization_slug, auth.user_id)
+    else:
+        row = organizations_repo.reject_organization(organization_slug, data.note or "")
+
+    if row is None:
+        org = require_organization(organization_slug)
+        current_status = org.get("review_status", "unknown")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Entscheidung nicht möglich: Prüfstatus ist '{current_status}'. "
+                "Nur 'submitted' kann entschieden werden."
+            ),
+        )
+
+    logger.info(
+        "Organization review decision (slug=%s, decision=%s)",
+        organization_slug,
+        data.decision,
+    )
+    platform_roles.write_audit_log(
+        actor_user_id=auth.user_id,
+        actor_email=auth.email,
+        action=f"organization.review_{data.decision}d",
+        organization_id=str(row["id"]),
+        target_type="organization",
+        target_id=organization_slug,
+        metadata={"decision": data.decision, "note": data.note},
+    )
+
+    notifications_sending.send_review_decision_email(
+        to_email=row["contact_email"],
+        org_name=row["name"],
+        decision=data.decision,
+        note=data.note,
+    )
+
+    return OrganizationAdminOut.model_validate(row)
 
 
 @router.post(

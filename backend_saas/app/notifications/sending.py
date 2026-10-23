@@ -267,6 +267,57 @@ def send_registration_notification(
     )
 
 
+def send_review_decision_email(
+    *,
+    to_email: str,
+    org_name: str,
+    decision: str,
+    note: Optional[str],
+) -> None:
+    """Sends a review decision (approve/reject) notification to the
+    organization's contact email. Best-effort: never raises — a mail failure
+    must not roll back the already-committed review decision. Uses the same
+    provider as registration notifications (FakeProvider in tests)."""
+    from html import escape
+
+    if decision == "approve":
+        subject = "Ihr Verein wurde freigeschaltet - CampsPilot"
+        body = (
+            "<p>Sehr geehrte Damen und Herren,</p>"
+            "<p>Ihr Antrag auf Freischaltung des Vereins <strong>"
+            + escape(org_name)
+            + "</strong> wurde genehmigt. Ihr Verein ist nun fuer Eltern erreichbar.</p>"
+            "<p>Bitte melden Sie sich an, um Ihre Camps einzurichten und zu veroeffentlichen.</p>"
+            "<p>Mit freundlichen Gruessen,<br>das CampsPilot-Team</p>"
+        )
+    else:
+        note_html = "<p><strong>Begruendung:</strong> " + escape(note or "") + "</p>" if note else ""
+        subject = "Ihr Antrag wurde abgelehnt - CampsPilot"
+        body = (
+            "<p>Sehr geehrte Damen und Herren,</p>"
+            "<p>Ihr Antrag auf Freischaltung des Vereins <strong>"
+            + escape(org_name)
+            + "</strong> wurde leider abgelehnt.</p>"
+            + note_html
+            + "<p>Bitte korrigieren Sie die angegebenen Maengel und reichen Sie den Antrag erneut ein.</p>"
+            "<p>Mit freundlichen Gruessen,<br>das CampsPilot-Team</p>"
+        )
+
+    from .mail import MailMessage
+
+    msg = MailMessage(to_email=to_email, subject=subject, html_content=body)
+    try:
+        provider = get_provider()
+        provider.send(msg)
+    except Exception as exc:
+        logger.warning(
+            "send_review_decision_email failed (org=%s, decision=%s): %s",
+            org_name,
+            decision,
+            exc,
+        )
+
+
 def retry_registration_notification(
     registration_token: UUID,
     organization_id: UUID,

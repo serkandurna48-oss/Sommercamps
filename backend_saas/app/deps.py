@@ -14,6 +14,7 @@ from fastapi import HTTPException
 from .tenancy import (
     TenantContext,
     TenantInactiveError,
+    TenantNotApprovedError,
     TenantNotFoundError,
     TenantUnpublishedError,
     resolve_tenant,
@@ -45,6 +46,13 @@ def get_tenant_context(organization_slug: str) -> TenantContext:
         raise HTTPException(status_code=404, detail="Organization not found") from exc
     except TenantUnpublishedError as exc:
         logger.info("Rejected request for unpublished organization (slug=%s)", exc.slug)
+        raise HTTPException(status_code=404, detail="Organization not found") from exc
+    except TenantNotApprovedError as exc:
+        logger.info(
+            "Rejected request for not-approved organization (slug=%s, review_status=%s)",
+            exc.slug,
+            exc.review_status,
+        )
         raise HTTPException(status_code=404, detail="Organization not found") from exc
     except TenantNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Organization not found") from exc

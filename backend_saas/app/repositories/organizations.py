@@ -28,7 +28,8 @@ from ..admin_schemas import OrganizationCreate, OrganizationUpdate
 _ORGANIZATION_FIELDS = """
     id, slug, name, legal_name, legal_address, contact_email, contact_phone, contact_person_name,
     logo_url, primary_color, plan_status, theme, iban,
-    intro_heading, intro_text, hero_image_url, trainer_image_url, trainer_text, terms_text, billing_notes, site_published
+    intro_heading, intro_text, hero_image_url, trainer_image_url, trainer_text, terms_text, billing_notes, site_published,
+    review_status, avv_accepted_at, avv_version, submitted_at, approved_at, approved_by, review_note
 """
 
 _SELECT_BY_SLUG = f"""
@@ -147,6 +148,35 @@ def create_organization(data: OrganizationCreate) -> dict:
         return cur.fetchone()
 
 
+def list_organizations_filtered(review_status: Optional[str] = None) -> list[dict]:
+    """Platform-admin only — same as list_organizations but with optional
+    review_status filter. review_status=None returns all organizations."""
+    cols = ", ".join(f"o.{c.strip()}" for c in _ORGANIZATION_FIELDS.strip().split(","))
+    if review_status:
+        query = f"""
+            select {cols}, count(c.id) as camp_count
+            from organizations o
+            left join camps c on c.organization_id = o.id
+            where o.review_status = %s
+            group by o.id
+            order by o.name asc
+        """
+        with db.get_cursor() as cur:
+            cur.execute(query, (review_status,))
+            return cur.fetchall()
+    with db.get_cursor() as cur:
+        cur.execute(
+            f"""
+            select {cols}, count(c.id) as camp_count
+            from organizations o
+            left join camps c on c.organization_id = o.id
+            group by o.id
+            order by o.name asc
+            """
+        )
+        return cur.fetchall()
+
+
 def update_organization(slug: str, data: OrganizationUpdate) -> Optional[dict]:
     """
     Platform-admin only. Only fields the caller actually set (`exclude_unset`
@@ -178,3 +208,108 @@ def update_organization(slug: str, data: OrganizationUpdate) -> Optional[dict]:
     with db.get_cursor() as cur:
         cur.execute(query, (*fields.values(), slug))
         return cur.fetchone()
+
+
+def submit_for_review(slug: str, avv_version: str) -> Optional[dict]:
+    """Sets review_status='submitted', submitted_at and avv fields server-side.
+    Only allowed from draft or rejected — returns None if org not found or
+    status transition not allowed."""
+    with db.get_cursor() as cur:
+        cur.execute(
+            f"""
+            update organizations
+            set review_status = 'submitted',
+                submitted_at = now(),
+                avv_accepted_at = now(),
+                avv_version = %s
+            where slug = %s
+              and review_status in ('draft', 'rejected')
+            returning {_ORGANIZATION_FIELDS}
+            """,
+            (avv_version, slug),
+        )
+        return cur.fetchone()
+
+
+def approve_organization(slug: str, approved_by_user_id: str) -> Optional[dict]:
+    """Platform-owner action: approve → review_status='approved', approved_at=now(),
+    approved_by set, site_published=true. Only from submitted."""
+    with db.get_cursor() as cur:
+        cur.execute(
+            f"""
+            update organizations
+            set review_status = 'approved',
+                approved_at = now(),
+                approved_by = %s,
+                site_published = true
+            where slug = %s
+              and review_status = 'submitted'
+            returning {_ORGANIZATION_FIELDS}
+            """,
+            (approved_by_user_id, slug),
+        )
+        return cur.fetchone()
+
+
+def reject_organization(slug: str, note: str) -> Optional[dict]:
+    """Platform-owner action: reject → review_status='rejected', review_note set.
+    Only from submitted."""
+    with db.get_cursor() as cur:
+        cur.execute(
+            f"""
+            update organizations
+            set review_status = 'rejected',
+                review_note = %s
+            where slug = %s
+              and review_status = 'submitted'
+            returning {_ORGANIZATION_FIELDS}
+            """,
+            (note, slug),
+        )
+        return cur.fetchone()
+
+
+def create_signup_organization(
+    *,
+    slug: str,
+    name: str,
+    contact_email: str,
+    contact_person_name: str,
+    user_id: str,
+) -> dict:
+    """Atomically creates an organization (draft/unpublished/pilot), an
+    organization_members row (org_admin), and an audit_log entry — all in
+    one transaction. Called only from the self-signup flow; any DB error
+    rolls back all three and the caller is responsible for deleting the
+    Supabase Auth user. Returns the organization row."""
+    with db.get_cursor() as cur:
+        cur.execute(
+            f"""
+            insert into organizations (
+                slug, name, contact_email, contact_person_name,
+                plan_status, site_published, review_status
+            ) values (%s, %s, %s, %s, 'pilot', false, 'draft')
+            returning {_ORGANIZATION_FIELDS}
+            """,
+            (slug, name, contact_email, contact_person_name),
+        )
+        org = cur.fetchone()
+
+        cur.execute(
+            """
+            insert into organization_members (organization_id, user_id, role)
+            values (%s, %s, 'org_admin')
+            """,
+            (org["id"], user_id),
+        )
+
+        cur.execute(
+            """
+            insert into audit_log
+                (actor_user_id, actor_email, action, organization_id, target_type, target_id)
+            values (%s, %s, 'org.self_signup', %s, 'organization', %s)
+            """,
+            (user_id, contact_email, str(org["id"]), slug),
+        )
+
+        return org

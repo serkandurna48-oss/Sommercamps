@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { RegistrationAdmin } from '../../lib/saasAdminApi'
 import { toCsv } from '../../lib/exportCsv'
-import { DAY_LIST_COLUMNS, dayListCountText, dayListRows, exportFilterText } from './dayListExport'
+import { campAttendanceColumns, DAY_LIST_COLUMNS, dayListCountText, dayListRows, exportFilterText } from './dayListExport'
 
 export const registration: RegistrationAdmin = {
   id: '1', registration_token: 'token-1', payment_reference: 'CP-TOKEN-1', status: 'registered', payment_status: 'open',
@@ -38,5 +38,29 @@ describe('Camp-Tagesliste', () => {
     expect(toCsv([registration], DAY_LIST_COLUMNS)).toBe(
       'Kind;Jahrgang/Alter;Notfallkontakt Telefon;Abholberechtigt;Hinweise/Allergien;Anwesenheit\r\nLena Zimmer;2018;Anna · 0123;Oma;Hinweis · Nüsse;',
     )
+  })
+})
+
+describe('campAttendanceColumns', () => {
+  it('4-day camp yields exactly 4 columns', () => {
+    const cols = campAttendanceColumns('2027-07-05', '2027-07-08')
+    expect(cols).toHaveLength(4)
+    expect(cols.every(c => c.value({} as never) === '')).toBe(true)
+  })
+  it('1-day camp yields 1 column', () => {
+    expect(campAttendanceColumns('2027-07-05', '2027-07-05')).toHaveLength(1)
+  })
+  it('7-day camp yields 7 columns', () => {
+    expect(campAttendanceColumns('2027-07-05', '2027-07-11')).toHaveLength(7)
+  })
+  it('>7 days yields a single Anwesend column', () => {
+    const cols = campAttendanceColumns('2027-07-01', '2027-07-15')
+    expect(cols).toHaveLength(1)
+    expect(cols[0].header).toBe('Anwesend')
+  })
+  it('mutation probe: 2027-07-05 is a Monday — off-by-one in date or weekday shifts the header', () => {
+    const cols = campAttendanceColumns('2027-07-05', '2027-07-08')
+    // 2027-07-05 = Monday (Mo), 06 = Tuesday (Di), 07 = Wednesday (Mi), 08 = Thursday (Do)
+    expect(cols.map(c => c.header)).toEqual(['Mo 05.07.', 'Di 06.07.', 'Mi 07.07.', 'Do 08.07.'])
   })
 })

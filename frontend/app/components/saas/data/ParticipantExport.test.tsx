@@ -64,7 +64,7 @@ describe('participant export workflow', () => {
     expect(container.textContent).toContain('Tagesliste enthält 0 Teilnehmende (ohne Warteliste und Stornierungen)')
     expect(container.textContent).toContain('Suche: „unbekannt“')
     await click('Exportieren')
-    for (const label of ['Als CSV', 'Als Excel', 'Druckansicht']) expect(button(label).disabled).toBe(true)
+    for (const label of ['Als CSV', 'Als Excel', 'PDF / Drucken']) expect(button(label).disabled).toBe(true)
     await click('Als CSV')
     expect(downloadCsv).not.toHaveBeenCalled()
     await click('Filter zurücksetzen')
@@ -106,16 +106,82 @@ describe('participant export workflow', () => {
     })
     await render()
     await click('Exportieren')
-    await click('Druckansicht')
+    await click('PDF / Drucken')
     const dialog = document.querySelector('dialog')!
     expect(dialog.textContent).toContain('Camp-Tagesliste · Sommercamp')
     expect(dialog.textContent).toContain('05.07.2027')
-    expect(dialog.textContent).toContain('Erstellt:')
+    expect(dialog.textContent).toContain('Stand:')
     expect(dialog.textContent).toContain('1 Teilnehmende')
-    expect([...dialog.querySelectorAll('th')].map(c => c.textContent)).toEqual(['Kind', 'Jahrgang/Alter', 'Notfallkontakt Telefon', 'Abholberechtigt', 'Hinweise/Allergien', 'Anwesenheit'])
+    expect(dialog.textContent).toContain('Als PDF speichern')
+    // camp 2027-07-05 (Mo) to 2027-07-09 (Fr) = 5 days → 5 attendance columns
+    expect([...dialog.querySelectorAll('th')].map(c => c.textContent)).toEqual([
+      'Kind', 'Jahrgang/Alter', 'Notfallkontakt Telefon', 'Abholberechtigt', 'Hinweise/Allergien',
+      'Mo 05.07.', 'Di 06.07.', 'Mi 07.07.', 'Do 08.07.', 'Fr 09.07.',
+    ])
     expect(dialog.querySelector('tbody tr td:last-child')?.textContent).toBe('')
     await click('Zurück zur Liste')
     expect(document.querySelector('dialog')).toBeNull()
     expect(document.activeElement).toBe(button('Exportieren'))
+  })
+})
+
+describe('participant list print dialog', () => {
+  beforeEach(() => {
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.open = true
+        this.querySelector('button')?.focus()
+      },
+    })
+    Object.defineProperty(HTMLDialogElement.prototype, 'close', {
+      configurable: true,
+      value: function (this: HTMLDialogElement) { this.open = false },
+    })
+  })
+
+  async function openParticipantPrint() {
+    await render()
+    await click('Exportieren')
+    const select = container.querySelector<HTMLSelectElement>('select')!
+    await act(() => {
+      select.value = 'participants'
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await click('PDF / Drucken')
+  }
+
+  it('shows heading, count and all print columns', async () => {
+    await openParticipantPrint()
+    const dialog = document.querySelector('dialog')!
+    expect(dialog.textContent).toContain('Teilnehmerliste · Sommercamp')
+    expect(dialog.textContent).toContain('Stand:')
+    expect(dialog.textContent).toContain('1 Anmeldungen')
+    expect(dialog.textContent).toContain('Als PDF speichern')
+    expect([...dialog.querySelectorAll('th')].map(c => c.textContent)).toEqual([
+      'Kind', 'Jahrgang', 'Trikot', 'Notfallkontakt', 'Allergien/Hinweise', 'Abholberechtigt',
+      'Mo 05.07.', 'Di 06.07.', 'Mi 07.07.', 'Do 08.07.', 'Fr 09.07.',
+    ])
+  })
+  it('first row shows the participant name', async () => {
+    await openParticipantPrint()
+    const dialog = document.querySelector('dialog')!
+    expect(dialog.querySelector('tbody tr td:first-child')?.textContent).toBe('Lena Zimmer')
+  })
+  it('closes and returns focus to the Exportieren button', async () => {
+    await openParticipantPrint()
+    await click('Zurück zur Liste')
+    expect(document.querySelector('dialog')).toBeNull()
+    expect(document.activeElement).toBe(button('Exportieren'))
+  })
+  it('disables PDF / Drucken when no participants match the search', async () => {
+    await render([registration], 'unbekannt')
+    await click('Exportieren')
+    const select = container.querySelector<HTMLSelectElement>('select')!
+    await act(() => {
+      select.value = 'participants'
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(button('PDF / Drucken').disabled).toBe(true)
   })
 })

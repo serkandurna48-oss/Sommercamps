@@ -2,6 +2,24 @@ import type { ExportColumn } from '../../lib/exportCsv'
 import type { RegistrationAdmin } from '../../lib/saasAdminApi'
 import { filterRegistrations, isActiveRegistration, type ParticipantFilter } from './commandCenterLogic'
 
+const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'] as const
+
+export function campAttendanceColumns(startDate: string, endDate: string): ExportColumn<RegistrationAdmin>[] {
+  const [sy, sm, sd] = startDate.split('-').map(Number)
+  const [ey, em, ed] = endDate.split('-').map(Number)
+  const start = new Date(sy, sm - 1, sd)
+  const end = new Date(ey, em - 1, ed)
+  const numDays = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1
+  if (numDays < 1 || numDays > 7) return [{ header: 'Anwesend', value: () => '' }]
+  return Array.from({ length: numDays }, (_, i) => {
+    const d = new Date(sy, sm - 1, sd + i)
+    const day = WEEKDAYS[d.getDay()]
+    const dd = String(d.getDate()).padStart(2, '0')
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    return { header: `${day} ${dd}.${mm}.`, value: (): string => '' }
+  })
+}
+
 // Dictionary order: umlauts sort with their base letter, ß with ss.
 function sortKey(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/ß/g, 'ss')

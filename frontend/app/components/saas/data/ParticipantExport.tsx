@@ -8,18 +8,20 @@ import { filterRegistrations, type ParticipantFilter } from '../commandCenterLog
 import { DAY_LIST_COLUMNS, dayListRows, exportFilterText } from '../dayListExport'
 import ExportBar from '../ui/ExportBar'
 import DayListPrint from './DayListPrint'
+import ParticipantListPrint from './ParticipantListPrint'
 
-export default function ParticipantExport({ registrations, camp, orgSlug, filter, search, allColumns, onReset }: {
+export default function ParticipantExport({ registrations, camp, orgSlug, orgName, filter, search, allColumns, onReset }: {
   registrations: RegistrationAdmin[]
   camp: CampAdmin
   orgSlug: string
+  orgName?: string
   filter: ParticipantFilter
   search: string
   allColumns: ExportColumn<RegistrationAdmin>[]
   onReset: () => void
 }) {
   const [purpose, setPurpose] = useState('daylist')
-  const [printing, setPrinting] = useState(false)
+  const [printing, setPrinting] = useState<null | 'daylist' | 'participants'>(null)
   const purposeId = useId()
   const filtered = filterRegistrations(registrations, filter, search)
   const rows = purpose === 'daylist' ? dayListRows(registrations, filter, search) : filtered
@@ -52,9 +54,10 @@ export default function ParticipantExport({ registrations, camp, orgSlug, filter
         <p className="mt-2 text-sm">{purpose === 'daylist' ? 'Angemeldet und bestätigt · alphabetisch nach Nachname, Vorname.' : 'Aktuelle Suche und Filter gelten auch hier.'} Deine Checkbox-Auswahl hat keinen Einfluss auf den Export.</p>
       </>}
       onReset={onReset}
-      onPrint={() => setPrinting(true)}
-      printEnabled={purpose === 'daylist'}
+      onPrint={() => setPrinting(purpose === 'daylist' ? 'daylist' : 'participants')}
+      printEnabled={purpose !== 'payments'}
     />
-    {printing && <DayListPrint camp={camp} rows={rows} filterText={filterText} onClose={() => setPrinting(false)} />}
+    {printing === 'daylist' && <DayListPrint camp={camp} rows={rows} filterText={filterText} orgName={orgName} onClose={() => setPrinting(null)} />}
+    {printing === 'participants' && <ParticipantListPrint camp={camp} rows={filtered} filterText={filterText} orgName={orgName} onClose={() => setPrinting(null)} />}
   </>
 }

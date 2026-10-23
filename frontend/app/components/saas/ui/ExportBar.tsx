@@ -143,7 +143,7 @@ export default function ExportBar<T>({
             }}
             className="mt-1 w-full gap-2.5"
           >
-            <IconPrinter /> {onPrint ? 'Druckansicht' : 'Drucken'}
+            <IconPrinter /> PDF / Drucken
           </Button>}
         </div>
       )}

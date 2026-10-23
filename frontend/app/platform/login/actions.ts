@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { ADMIN_TOKEN_COOKIE } from '../../lib/adminSession'
+import { ADMIN_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '../../lib/adminSession'
 import { getSupabaseServerClient } from '../../lib/supabaseServer'
 
 export interface LoginState {
@@ -25,6 +25,7 @@ export async function platformLoginAction(_prev: LoginState, formData: FormData)
 
   let accessToken: string
   let expiresIn: number
+  let refreshToken: string
   try {
     const supabase = getSupabaseServerClient()
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
@@ -33,18 +34,20 @@ export async function platformLoginAction(_prev: LoginState, formData: FormData)
     }
     accessToken = data.session.access_token
     expiresIn = data.session.expires_in
+    refreshToken = data.session.refresh_token
   } catch {
     return { error: 'Anmeldung derzeit nicht möglich — Supabase Auth ist nicht konfiguriert.' }
   }
 
   const store = await cookies()
-  store.set(ADMIN_TOKEN_COOKIE, accessToken, {
+  const cookieBase = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'lax' as const,
     path: '/',
-    maxAge: expiresIn,
-  })
+  }
+  store.set(ADMIN_TOKEN_COOKIE, accessToken, { ...cookieBase, maxAge: expiresIn })
+  store.set(REFRESH_TOKEN_COOKIE, refreshToken, { ...cookieBase, maxAge: 30 * 24 * 60 * 60 })
 
   redirect('/platform')
 }

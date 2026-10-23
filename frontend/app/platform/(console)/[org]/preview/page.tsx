@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { computeBrandSafe } from '../../../../lib/brandPipeline'
-import { getAdminToken } from '../../../../lib/adminSession'
+import { getValidAccessToken } from '../../../../lib/supabaseServer'
 import { fetchCampsAdmin, fetchOrganizationAdmin, fetchRegistrationsAdmin } from '../../../../lib/saasAdminApi'
 import type { CampPublic, OrganizationPublic } from '../../../../lib/saasApi'
 import { computeCampStats } from '../../../../components/saas/dashboardLogic'
@@ -32,7 +32,7 @@ const THEME_SURFACE: Record<string, string> = {
  */
 export default async function PlatformOrgPreviewPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) redirect('/platform/login')
 
   const org = await fetchOrganizationAdmin(orgSlug, token)

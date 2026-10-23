@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { getAdminToken } from './adminSession'
+import { getValidAccessToken } from './supabaseServer'
 
 function baseUrl(): string {
   return process.env.NEXT_PUBLIC_SAAS_API_URL ?? 'http://localhost:8000'
@@ -23,7 +23,7 @@ export async function proxyXlsxExport(
   defaultView: string,
   defaultFilename: (view: string) => string,
 ): Promise<Response> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) {
     return new Response('Nicht angemeldet', { status: 401 })
   }

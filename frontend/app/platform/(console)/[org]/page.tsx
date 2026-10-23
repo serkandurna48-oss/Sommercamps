@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { getAdminToken } from '../../../lib/adminSession'
+import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { fetchCampsAdmin, fetchOrganizationAdmin, fetchOrganizationMembersAdmin } from '../../../lib/saasAdminApi'
 import PublishToggle from '../../../components/saas/config/PublishToggle'
 import MembersSection from './MembersSection'
@@ -15,7 +15,7 @@ import { computeSetupSteps, setupProgressCount } from '../../setupProgress'
  * Plattform [oder] einen bestimmten Verein ... sehe"). */
 export async function generateMetadata({ params }: { params: Promise<{ org: string }> }): Promise<Metadata> {
   const { org: orgSlug } = await params
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { title: 'CampsPilot Plattform' }
   try {
     const org = await fetchOrganizationAdmin(orgSlug, token)
@@ -50,7 +50,7 @@ const CAMP_STATUS_LABEL: Record<string, string> = {
  */
 export default async function PlatformOrgDetailPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) redirect('/platform/login')
 
   const org = await fetchOrganizationAdmin(orgSlug, token)

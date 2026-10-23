@@ -1,13 +1,13 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { getAdminToken } from '../../lib/adminSession'
+import { getValidAccessToken } from '../../lib/supabaseServer'
 import { fetchOrganizationsAdmin, fetchPlatformStats } from '../../lib/saasAdminApi'
 import OrganizationList from './OrganizationList'
 import StatsOverview from './StatsOverview'
 import SubmittedOrgsSection from './SubmittedOrgsSection'
 
 export default async function PlatformPage() {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) redirect('/platform/login')
 
   const [organizations, stats] = await Promise.all([fetchOrganizationsAdmin(token), fetchPlatformStats(token)])

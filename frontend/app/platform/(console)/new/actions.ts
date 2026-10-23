@@ -1,7 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { getAdminToken } from '../../../lib/adminSession'
+import { getValidAccessToken } from '../../../lib/supabaseServer'
 import {
   createCampAdmin,
   createOrganizationAdmin,
@@ -31,7 +31,7 @@ export async function createOrganizationWithCampAction(
   _prev: NewOrgState,
   formData: FormData,
 ): Promise<NewOrgState> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { error: 'Sitzung abgelaufen — bitte neu anmelden.', orgCreatedSlug: null }
 
   const orgSlug = str(formData, 'org_slug')

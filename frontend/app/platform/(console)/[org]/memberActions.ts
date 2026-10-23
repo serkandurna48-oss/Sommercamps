@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getAdminToken } from '../../../lib/adminSession'
+import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { addOrganizationMemberAdmin, removeOrganizationMemberAdmin } from '../../../lib/saasAdminApi'
 
 export interface AddMemberState {
@@ -17,7 +17,7 @@ export async function addOrganizationMemberAction(
   _prev: AddMemberState,
   formData: FormData,
 ): Promise<AddMemberState> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { error: 'Sitzung abgelaufen — bitte neu anmelden.' }
 
   const email = String(formData.get('email') ?? '').trim()
@@ -35,7 +35,7 @@ export async function addOrganizationMemberAction(
 }
 
 export async function removeOrganizationMemberAction(orgSlug: string, memberId: string): Promise<void> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return
   await removeOrganizationMemberAdmin(orgSlug, memberId, token).catch(() => undefined)
   revalidatePath(`/platform/${orgSlug}`)

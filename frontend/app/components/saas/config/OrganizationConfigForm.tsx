@@ -223,6 +223,30 @@ export default function OrganizationConfigForm({
           </Field>
         </section>
 
+        <section className="flex flex-col gap-4">
+          <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
+            Zusatzfragen bei der Anmeldung
+          </h3>
+          <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
+            Bis zu 5 Fragen. Eltern beantworten diese zusätzlich beim Anmeldeformular. Leer lassen für keine Zusatzfragen.
+          </p>
+          <Field
+            label="Fragen (JSON)"
+            htmlFor="registration_questions"
+            hint='Jede Frage als Objekt: { "key": "position", "label": "Position", "type": "choice", "options": ["Feldspieler", "Torwart"], "other_label": null, "required": true }'
+          >
+            <textarea
+              id="registration_questions"
+              name="registration_questions"
+              rows={6}
+              defaultValue={inputValue('registration_questions', JSON.stringify(org.registration_questions ?? [], null, 2))}
+              className={INPUT_CLASS}
+              style={INPUT_STYLE}
+              placeholder="[]"
+            />
+          </Field>
+        </section>
+
         {pending && <PendingNote>{de.configPage.saving}</PendingNote>}
         {!pending && state.error && (
           <p

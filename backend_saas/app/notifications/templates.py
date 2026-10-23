@@ -41,6 +41,8 @@ def build_registration_mail(
     iban: Optional[str],
     price_cents: Optional[int] = None,
     currency: Optional[str] = None,
+    extra_answers: Optional[dict] = None,
+    registration_questions: Optional[list] = None,
 ) -> MailMessage:
     # Escape all user-supplied strings before interpolating into HTML.
     e_org_name = escape(org_name)
@@ -59,6 +61,20 @@ def build_registration_mail(
         e_cur = escape(currency)
         formatted = f"{price_cents // 100},{price_cents % 100:02d}"
         amount_line = f"<p>Betrag: <strong>{formatted}&nbsp;{e_cur}</strong></p>\n"
+
+    # KV1: build extra_answers block for parent mail (registered status only).
+    answers_block = ""
+    if extra_answers and registration_questions:
+        lines = []
+        for q in registration_questions:
+            k = q.get('key', '')
+            answer = extra_answers.get(k, '')
+            if answer:
+                lines.append(
+                    f"<li><strong>{escape(str(q.get('label', k)))}:</strong> {escape(str(answer))}</li>"
+                )
+        if lines:
+            answers_block = f"<ul>{''.join(lines)}</ul>\n"
 
     if status == "registered":
         subject = f"Anmeldebestätigung – {camp_title}"
@@ -80,7 +96,7 @@ def build_registration_mail(
 <p>Guten Tag,</p>
 <p>Ihre Anmeldung für <strong>{e_camp_title}</strong>
 ({dates}) ist bei uns eingegangen.</p>
-{payment_block}
+{answers_block}{payment_block}
 <p>Bei Fragen wenden Sie sich direkt an {e_org_name}:<br>
 E-Mail: {e_org_email}{phone_line}</p>
 <p>Viele Grüße,<br>{e_org_name}</p>"""

@@ -17,7 +17,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-from app.schemas import RegistrationCreated
+from app.schemas import RegistrationCreated, RegistrationQuestion
 
 # Mirrors chk_organizations_slug_format / chk_camps_slug_format in
 # supabase/migrations/20260917133748_create_saas_schema_v1.sql — validated
@@ -85,6 +85,8 @@ class OrganizationCreate(BaseModel):
     # Altbestand-Zeilen vor dieser Änderung, nicht neue Inserts über diese
     # API, die immer explizit false mitschicken.
     site_published: bool = False
+    # KV1: Verein-konfigurierbare Zusatzfragen bei der Anmeldung (max. 5).
+    registration_questions: list[RegistrationQuestion] = Field(default_factory=list)
 
     @field_validator("slug")
     @classmethod
@@ -112,6 +114,13 @@ class OrganizationCreate(BaseModel):
             return None
         if len(value) > 20_000:
             raise ValueError("terms_text must not exceed 20 000 characters")
+        return value
+
+    @field_validator("registration_questions")
+    @classmethod
+    def _max_five_questions(cls, value: list) -> list:
+        if value is not None and len(value) > 5:
+            raise ValueError('At most 5 registration questions are allowed per organization')
         return value
 
 
@@ -145,6 +154,9 @@ class OrganizationUpdate(BaseModel):
     # exclude_unset (siehe update_organization) unterscheidet ohnehin schon
     # zwischen "nicht mitgeschickt" und "bewusst gesetzt".
     site_published: Optional[bool] = None
+    # KV1: Verein-konfigurierbare Zusatzfragen bei der Anmeldung (max. 5).
+    # None = nicht mitgeschickt (Feld bleibt unverändert, dank exclude_unset).
+    registration_questions: Optional[list[RegistrationQuestion]] = None
 
     @field_validator("primary_color")
     @classmethod
@@ -167,6 +179,13 @@ class OrganizationUpdate(BaseModel):
             return None
         if len(value) > 20_000:
             raise ValueError("terms_text must not exceed 20 000 characters")
+        return value
+
+    @field_validator("registration_questions")
+    @classmethod
+    def _max_five_questions(cls, value: Optional[list]) -> Optional[list]:
+        if value is not None and len(value) > 5:
+            raise ValueError('At most 5 registration questions are allowed per organization')
         return value
 
 
@@ -340,6 +359,8 @@ class OrganizationOrgAdminOut(BaseModel):
     trainer_text: Optional[str] = None
     terms_text: Optional[str] = None
     site_published: bool = False
+    # KV1: Zusatzfragen, lesbar für org_admin (Anmeldeformular-Konfiguration).
+    registration_questions: list[RegistrationQuestion] = Field(default_factory=list)
 
 
 class OrganizationAdminOut(OrganizationOrgAdminOut):
@@ -411,6 +432,8 @@ class RegistrationAdminOut(RegistrationCreated):
     pickup_authorized: Optional[str] = None
     photo_permission: bool
     created_at: datetime
+    # KV1: Antworten auf die Zusatzfragen des Vereins.
+    extra_answers: dict[str, str] = Field(default_factory=dict)
 
 
 class GlobalRegistrationOut(RegistrationAdminOut):

@@ -224,8 +224,10 @@ def _run_journey(cursor, identities, fake: FakeProvider) -> None:
             json=child_payload("Kind1"),
         ).json()
         assert r1["status"] == "registered"
-        expected_ref1 = f"CP-{r1['registration_token'][:8].upper()}"
-        assert r1["payment_reference"] == expected_ref1
+        expected_ref_prefix = f"CP-{r1['registration_token'][:8].upper()}"
+        # KV1: payment_reference enthält jetzt auch den Kindnamen (child_first/last_name).
+        assert r1["payment_reference"].startswith(expected_ref_prefix)
+        assert "Kind1" in r1["payment_reference"]
 
         # Bestätigungsmail im FakeProvider: kein Kind- oder Elternname im Betreff
         parent_mails = [m for m in fake.sent if m.to_email == "eva@example.com"]

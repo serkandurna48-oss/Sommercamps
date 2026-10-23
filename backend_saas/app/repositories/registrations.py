@@ -30,8 +30,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from html import escape
 from typing import Optional
 from uuid import UUID
+
+import psycopg2.extras
 
 from .. import db
 from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES, validate_transition
@@ -107,6 +110,61 @@ class DuplicateRegistrationError(RegistrationRejectedError):
         super().__init__(f"A non-cancelled registration for this child already exists for camp '{camp_slug}'")
 
 
+class ExtraAnswersInvalidError(RegistrationRejectedError):
+    """Answers to registration_questions are invalid (missing required,
+    unknown key, invalid choice, etc.) — maps to 422."""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+def validate_extra_answers(
+    questions: list[dict],  # from DB, plain dicts
+    answers: dict[str, str],
+) -> None:
+    """Validates extra_answers against the org's registration_questions.
+    Raises ExtraAnswersInvalidError on any violation.
+
+    Called inside the locked create_registration transaction so two
+    concurrent requests can never both slip through a validation that
+    depends on the org's current questions.
+    """
+    question_keys = {q['key'] for q in questions}
+    # Reject unknown keys
+    for key in answers:
+        if key not in question_keys:
+            raise ExtraAnswersInvalidError(f"Unknown answer key: {key!r}")
+
+    for q in questions:
+        key = q['key']
+        answer = answers.get(key, '').strip()
+        q_type = q['type']
+        required = q.get('required', True)
+
+        if not answer:
+            if required:
+                raise ExtraAnswersInvalidError(f"Required question not answered: {key!r}")
+            continue
+
+        if q_type == 'text':
+            if len(answer) > 80:
+                raise ExtraAnswersInvalidError(f"Text answer too long for key {key!r} (max 80 chars)")
+        elif q_type == 'choice':
+            options = q.get('options') or []
+            other_label = q.get('other_label')
+            if answer not in options:
+                if not other_label:
+                    raise ExtraAnswersInvalidError(
+                        f"Invalid choice for key {key!r}: {escape(answer)!r} is not one of {options}"
+                    )
+                # Sonstiges: any non-empty string is OK; length already bounded
+                # by RegistrationCreate._trim_and_limit_answers (max 80 chars).
+                if len(answer) > 80:
+                    raise ExtraAnswersInvalidError(
+                        f"Custom answer too long for key {key!r} (max 80 chars)"
+                    )
+
+
 @dataclass(frozen=True)
 class RegistrationTarget:
     """
@@ -147,8 +205,10 @@ _LOCK_CAMP_CAPACITY = "select capacity, status from camps where id = %s for upda
 # SHARE allows registrations in different camps to proceed together, but
 # conflicts with publication/plan UPDATEs. KEY SHARE does not protect these
 # non-key columns. Public registration always locks organization before camp.
+# KV1: registration_questions fetched here to validate extra_answers inside
+# the same locked transaction (no extra round-trip to the DB).
 _LOCK_PUBLIC_ORGANIZATION = """
-    select site_published, plan_status
+    select site_published, plan_status, registration_questions
     from organizations
     where id = %s
     for share
@@ -176,16 +236,18 @@ _INSERT_REGISTRATION = """
         child_first_name, child_last_name, child_birth_date,
         emergency_contact_name, emergency_contact_phone,
         medical_notes, allergies, jersey_size, pickup_authorized,
-        photo_permission, terms_accepted, privacy_accepted
+        photo_permission, terms_accepted, privacy_accepted,
+        extra_answers
     ) values (
         %s, %s, %s,
         %s, %s, %s, %s,
         %s, %s, %s,
         %s, %s,
         %s, %s, %s, %s,
-        %s, %s, %s
+        %s, %s, %s,
+        %s
     )
-    returning registration_token, status, payment_status
+    returning registration_token, status, payment_status, child_first_name, child_last_name
 """
 
 # Case-insensitive auf Vor-/Nachname, exaktes Geburtsdatum, gleicher Camp,
@@ -263,7 +325,7 @@ _ADMIN_REGISTRATION_FIELDS = """
     child_first_name, child_last_name, child_birth_date,
     emergency_contact_name, emergency_contact_phone,
     medical_notes, allergies, jersey_size, pickup_authorized,
-    photo_permission, created_at
+    photo_permission, created_at, extra_answers
 """
 
 _LIST_REGISTRATIONS_FOR_CAMP = f"""
@@ -511,6 +573,11 @@ def create_registration(
         ):
             raise OrganizationNotAvailableError("Organization no longer available")
 
+        # KV1: validate extra_answers against the org's registration_questions
+        # inside the same locked transaction — no extra round-trip needed.
+        registration_questions = organization.get('registration_questions') or []
+        validate_extra_answers(registration_questions, dict(data.extra_answers))
+
         cur.execute(_LOCK_CAMP_CAPACITY, (camp.id,))
         locked = cur.fetchone()
         if locked is None:
@@ -565,6 +632,7 @@ def create_registration(
                 data.photo_permission,
                 data.terms_accepted,
                 data.privacy_accepted,
+                psycopg2.extras.Json(dict(data.extra_answers)),
             ),
         )
         return cur.fetchone()

@@ -7,6 +7,9 @@
  * denselben öffentlichen Endpunkt läuft, den die Eltern-Ansicht auch nutzt.
  */
 
+import type { RegistrationQuestion } from './saasApi'
+export type { RegistrationQuestion } from './saasApi'
+
 function baseUrl(): string {
   return process.env.NEXT_PUBLIC_SAAS_API_URL ?? 'http://localhost:8000'
 }
@@ -68,6 +71,8 @@ export interface OrganizationAdmin {
   billing_notes?: string | null
   site_published: boolean
   camp_count?: number
+  // KV1: Verein-konfigurierbare Zusatzfragen bei der Anmeldung. Default [] wenn nicht vorhanden.
+  registration_questions?: RegistrationQuestion[]
 }
 
 export interface RegistrationAdmin {
@@ -91,6 +96,8 @@ export interface RegistrationAdmin {
   pickup_authorized: string | null
   photo_permission: boolean
   created_at: string
+  // KV1: Antworten auf die Zusatzfragen des Vereins. Default {} wenn nicht vorhanden.
+  extra_answers?: Record<string, string>
 }
 
 export class AdminActionError extends Error {
@@ -185,6 +192,8 @@ export interface OrganizationConfigUpdate {
   /** Der "Veröffentlichen"/"Zurückziehen"-Schalter — siehe
    * backend_saas admin_schemas.OrganizationUpdate.site_published. */
   site_published?: boolean
+  // KV1: Verein-konfigurierbare Zusatzfragen bei der Anmeldung (max. 5).
+  registration_questions?: RegistrationQuestion[]
 }
 
 /** Internal contract notes may only be changed by platform owners. */

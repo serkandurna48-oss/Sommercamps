@@ -140,7 +140,12 @@ def test_admin_payment_reference_matches_parent_schema_without_db_field():
     assert "payment_reference" not in row
     admin = RegistrationAdminOut.model_validate(row)
     parent = RegistrationCreated.model_validate(row)
-    assert admin.model_dump(mode="json")["payment_reference"] == parent.payment_reference == "CP-1A2B3C4D"
+    # KV1: payment_reference enthält jetzt auch den Kindnamen (child_first_name + child_last_name).
+    # _registration_row enthält child_first_name="Lena" und child_last_name="Mustermann".
+    assert admin.model_dump(mode="json")["payment_reference"] == parent.payment_reference
+    assert parent.payment_reference.startswith("CP-1A2B3C4D")
+    assert "Lena" in parent.payment_reference
+    assert "Mustermann" in parent.payment_reference
 
 
 def test_reopen_paid_payment_is_audited(monkeypatch):

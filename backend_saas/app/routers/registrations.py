@@ -26,6 +26,7 @@ from ..repositories.registrations import (
     CampNotAvailableError,
     ChildAgeNotEligibleError,
     DuplicateRegistrationError,
+    ExtraAnswersInvalidError,
     OrganizationNotAvailableError,
     RegistrationWindowClosedError,
 )
@@ -86,6 +87,16 @@ def create_registration(
 
     try:
         row = registrations_repo.create_registration(tenant, camp, data)
+    except ExtraAnswersInvalidError as exc:
+        logger.info(
+            "Registration rejected: extra_answers invalid (organization_slug=%s, camp_slug=%s)",
+            tenant.slug,
+            camp_slug,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
     except OrganizationNotAvailableError as exc:
         raise HTTPException(status_code=404, detail="Organization not found") from exc
     except DuplicateRegistrationError as exc:
@@ -143,5 +154,6 @@ def create_registration(
         parent_last_name=data.parent_last_name,
         child_first_name=data.child_first_name,
         child_last_name=data.child_last_name,
+        extra_answers=dict(data.extra_answers),
     )
     return RegistrationCreated.model_validate(row)

@@ -10,13 +10,44 @@ allowlist and why (e.g.) `id` and `plan_status` are excluded.
 
 from __future__ import annotations
 
+import re as _re
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator, model_validator
 
 from .utils import is_registration_open
+
+_QUESTION_KEY_RE = _re.compile(r'^[a-z][a-z0-9_]{0,29}$')
+
+
+class RegistrationQuestion(BaseModel):
+    """One additional question shown on the registration form."""
+    model_config = ConfigDict(str_strip_whitespace=True, extra='forbid')
+
+    key: str = Field(min_length=1, max_length=30)
+    label: str = Field(min_length=1, max_length=100)
+    type: Literal['choice', 'text']
+    options: Optional[list[str]] = None  # required for 'choice'
+    other_label: Optional[str] = None   # if set, adds "Sonstiges" option with freetext
+    required: bool = True
+
+    @field_validator('key')
+    @classmethod
+    def _key_slug(cls, value: str) -> str:
+        if not _QUESTION_KEY_RE.match(value):
+            raise ValueError('key must be lowercase, start with a letter, alphanumeric+underscore, max 30 chars')
+        return value
+
+    @model_validator(mode='after')
+    def _check_choice_has_options(self) -> 'RegistrationQuestion':
+        if self.type == 'choice':
+            if not self.options:
+                raise ValueError("choice questions must have at least one option")
+            if len(self.options) > 20:
+                raise ValueError("choice questions may have at most 20 options")
+        return self
 
 
 class OrganizationPublic(BaseModel):
@@ -57,6 +88,9 @@ class OrganizationPublic(BaseModel):
     # explizit zum Bezahlen herausgegeben wird, ist kein Geheimnis. NULL =
     # kein Zahlungshinweis, nichts erfinden (siehe Abschnitt 9.1-Prinzip).
     iban: Optional[str] = None
+    # KV1: Verein-konfigurierbare Zusatzfragen. Öffentlich, damit der
+    # Eltern-Flow die Fragen rendern kann, ohne Admin-Login zu erfordern.
+    registration_questions: list[RegistrationQuestion] = Field(default_factory=list)
 
 
 class CampPublic(BaseModel):
@@ -149,6 +183,16 @@ class RegistrationCreate(BaseModel):
     terms_accepted: bool
     privacy_accepted: bool
 
+    # KV1: Antworten auf die Zusatzfragen des Vereins. Keys müssen den
+    # keys der registration_questions entsprechen (serverseitig validiert
+    # in repositories/registrations.py::validate_extra_answers).
+    extra_answers: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator('extra_answers', mode='after')
+    @classmethod
+    def _trim_and_limit_answers(cls, value: dict[str, str]) -> dict[str, str]:
+        return {k: v.strip()[:80] for k, v in value.items()}
+
     @field_validator(
         "emergency_contact_name", "medical_notes", "allergies",
         "jersey_size", "pickup_authorized",
@@ -191,14 +235,27 @@ class RegistrationCreated(BaseModel):
     status: str
     payment_status: str
 
+    # KV1: Kindname fließt in den SEPA-Verwendungszweck ein. Aus der DB
+    # zurückgegeben (returning ... child_first_name, child_last_name) aber
+    # nie an den Client serialisiert — exclude=True sorgt dafür. Kein PII
+    # in der Anmeldebestätigung an Dritte. RegistrationAdminOut deklariert
+    # seine eigenen child_first_name/child_last_name OHNE exclude, was
+    # diese Felder in der Admin-Antwort wieder sichtbar macht (Pydantic v2
+    # child model field declarations override the parent's).
+    child_first_name: str = Field(default='', exclude=True)
+    child_last_name: str = Field(default='', exclude=True)
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def payment_reference(self) -> str:
         """
         Verwendungszweck für die Überweisungs-Zahlungsart (Eltern-Flow-
-        Auftrag Abschnitt 6.4). Deterministisch aus registration_token
-        abgeleitet statt als eigene Spalte gespeichert — Bestätigungsseite
-        und (später) Bestätigungs-E-Mail berechnen exakt denselben Wert aus
-        demselben, unveränderlichen Token, können also nie auseinanderlaufen.
+        Auftrag Abschnitt 6.4). Deterministisch aus registration_token und
+        Kindname abgeleitet (KV1) — Bestätigungsseite und -mail berechnen
+        exakt denselben Wert, können also nie auseinanderlaufen.
+        SEPA-Verwendungszweck: CP-XXXXXXXX + Kindname, max. 140 Zeichen.
         """
-        return f"CP-{str(self.registration_token)[:8].upper()}"
+        prefix = f"CP-{str(self.registration_token)[:8].upper()}"
+        name = f"{self.child_first_name} {self.child_last_name}".strip()
+        ref = f"{prefix} {name}" if name else prefix
+        return ref[:140]

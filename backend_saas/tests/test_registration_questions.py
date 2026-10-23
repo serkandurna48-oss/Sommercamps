@@ -35,7 +35,7 @@ def _org_row(slug: str = ORG_SLUG, registration_questions: list | None = None) -
         "contact_phone": None,
         "logo_url": None,
         "primary_color": None,
-        "plan_status": "active",
+        "plan_status": "active", "review_status": "approved",
         "site_published": True,
         "registration_questions": registration_questions if registration_questions is not None else [],
     }

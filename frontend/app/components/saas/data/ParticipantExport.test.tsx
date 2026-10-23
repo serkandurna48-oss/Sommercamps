@@ -119,3 +119,60 @@ describe('participant export workflow', () => {
     expect(document.activeElement).toBe(button('Exportieren'))
   })
 })
+
+describe('participant list print dialog', () => {
+  beforeEach(() => {
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.open = true
+        this.querySelector('button')?.focus()
+      },
+    })
+    Object.defineProperty(HTMLDialogElement.prototype, 'close', {
+      configurable: true,
+      value: function (this: HTMLDialogElement) { this.open = false },
+    })
+  })
+
+  async function openParticipantPrint() {
+    await render()
+    await click('Exportieren')
+    const select = container.querySelector<HTMLSelectElement>('select')!
+    await act(() => {
+      select.value = 'participants'
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await click('Druckansicht')
+  }
+
+  it('shows heading, count and all print columns', async () => {
+    await openParticipantPrint()
+    const dialog = document.querySelector('dialog')!
+    expect(dialog.textContent).toContain('Teilnehmerliste · Sommercamp')
+    expect(dialog.textContent).toContain('Erstellt:')
+    expect(dialog.textContent).toContain('1 Anmeldungen')
+    expect([...dialog.querySelectorAll('th')].map(c => c.textContent)).toEqual(['Kind', 'Jahrgang', 'Trikot', 'Notfallkontakt', 'Allergien/Hinweise', 'Abholberechtigt'])
+  })
+  it('first row shows the participant name', async () => {
+    await openParticipantPrint()
+    const dialog = document.querySelector('dialog')!
+    expect(dialog.querySelector('tbody tr td:first-child')?.textContent).toBe('Lena Zimmer')
+  })
+  it('closes and returns focus to the Exportieren button', async () => {
+    await openParticipantPrint()
+    await click('Zurück zur Liste')
+    expect(document.querySelector('dialog')).toBeNull()
+    expect(document.activeElement).toBe(button('Exportieren'))
+  })
+  it('disables Druckansicht when no participants match the search', async () => {
+    await render([registration], 'unbekannt')
+    await click('Exportieren')
+    const select = container.querySelector<HTMLSelectElement>('select')!
+    await act(() => {
+      select.value = 'participants'
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(button('Druckansicht').disabled).toBe(true)
+  })
+})

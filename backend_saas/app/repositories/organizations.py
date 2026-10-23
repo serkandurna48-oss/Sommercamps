@@ -21,6 +21,7 @@ from __future__ import annotations
 from typing import Optional
 
 import psycopg2.errors
+import psycopg2.extras
 
 from .. import db
 from ..admin_schemas import OrganizationCreate, OrganizationUpdate
@@ -28,7 +29,8 @@ from ..admin_schemas import OrganizationCreate, OrganizationUpdate
 _ORGANIZATION_FIELDS = """
     id, slug, name, legal_name, legal_address, contact_email, contact_phone, contact_person_name,
     logo_url, primary_color, plan_status, theme, iban,
-    intro_heading, intro_text, hero_image_url, trainer_image_url, trainer_text, terms_text, billing_notes, site_published
+    intro_heading, intro_text, hero_image_url, trainer_image_url, trainer_text, terms_text, billing_notes, site_published,
+    registration_questions
 """
 
 _SELECT_BY_SLUG = f"""
@@ -56,8 +58,9 @@ _INSERT_ORGANIZATION = f"""
     insert into organizations (
         slug, name, legal_name, legal_address, contact_email, contact_phone, contact_person_name,
         logo_url, primary_color, plan_status, iban,
-        intro_heading, intro_text, hero_image_url, trainer_image_url, trainer_text, terms_text, billing_notes, site_published
-    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        intro_heading, intro_text, hero_image_url, trainer_image_url, trainer_text, terms_text, billing_notes, site_published,
+        registration_questions
+    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     returning {_ORGANIZATION_FIELDS}
 """
 
@@ -140,6 +143,7 @@ def create_organization(data: OrganizationCreate) -> dict:
                     data.terms_text,
                     data.billing_notes,
                     data.site_published,
+                    psycopg2.extras.Json([q.model_dump() for q in data.registration_questions]),
                 ),
             )
         except psycopg2.errors.UniqueViolation as exc:
@@ -165,6 +169,13 @@ def update_organization(slug: str, data: OrganizationUpdate) -> Optional[dict]:
     fields = data.model_dump(exclude_unset=True)
     if "contact_email" in fields and fields["contact_email"] is not None:
         fields["contact_email"] = str(fields["contact_email"])
+    # registration_questions is a list of dicts after model_dump(); psycopg2
+    # cannot auto-adapt a list of dicts to JSONB — wrap it explicitly.
+    if "registration_questions" in fields:
+        rq = fields["registration_questions"]
+        fields["registration_questions"] = psycopg2.extras.Json(
+            rq if rq is not None else []
+        )
     if not fields:
         return get_organization_by_slug(slug)
 

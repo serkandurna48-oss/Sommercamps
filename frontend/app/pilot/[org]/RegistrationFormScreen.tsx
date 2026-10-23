@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { CampPublic, RegistrationCreated } from '../../lib/saasApi'
+import type { CampPublic, RegistrationCreated, RegistrationQuestion } from '../../lib/saasApi'
 import { submitRegistration } from '../../lib/saasApi'
 import { formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
 import CampSummary from './CampSummary'
+import ExtraQuestions from './ExtraQuestions'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -22,6 +23,7 @@ interface FormState {
   termsAccepted: boolean
   privacyAccepted: boolean
   photoPermission: boolean
+  extraAnswers: Record<string, string>
 }
 
 const EMPTY: FormState = {
@@ -38,6 +40,7 @@ const EMPTY: FormState = {
   termsAccepted: false,
   privacyAccepted: false,
   photoPermission: false,
+  extraAnswers: {},
 }
 
 type FieldKey =
@@ -56,6 +59,7 @@ export default function RegistrationFormScreen({
   orgName,
   hasBankDetails,
   camp,
+  questions = [],
   onBack,
   onSubmitted,
 }: {
@@ -64,6 +68,7 @@ export default function RegistrationFormScreen({
   /** Only promise bank details when the organization has supplied an IBAN. */
   hasBankDetails: boolean
   camp: CampPublic
+  questions?: RegistrationQuestion[]
   onBack: () => void
   onSubmitted: (result: RegistrationCreated, childFirstName: string, parentEmail: string) => void
 }) {
@@ -92,14 +97,19 @@ export default function RegistrationFormScreen({
 
   const emailValid = EMAIL_RE.test(form.parentEmail.trim())
 
+  const extraDone = useMemo(
+    () => questions.every((q) => !q.required || (form.extraAnswers[q.key] ?? '').trim() !== ''),
+    [questions, form.extraAnswers],
+  )
+
   const sectionDone = useMemo(
     () => ({
       1: form.childFirstName.trim() !== '' && form.childLastName.trim() !== '' && parseGermanDate(form.childBirthDate) !== null,
       2: form.parentName.trim() !== '' && form.parentEmail.trim() !== '' && form.parentPhone.trim() !== '' && emailValid,
       3: form.emergencyPhone.trim() !== '',
-      4: form.termsAccepted && form.privacyAccepted,
+      4: form.termsAccepted && form.privacyAccepted && extraDone,
     }),
-    [form, emailValid],
+    [form, emailValid, extraDone],
   )
   const doneCount = Object.values(sectionDone).filter(Boolean).length
 
@@ -168,6 +178,7 @@ export default function RegistrationFormScreen({
         terms_accepted: form.termsAccepted,
         privacy_accepted: form.privacyAccepted,
         photo_permission: form.photoPermission,
+        extra_answers: Object.keys(form.extraAnswers).length > 0 ? form.extraAnswers : undefined,
       })
       if (!outcome.ok) {
         setServerError(outcome.detail)
@@ -287,6 +298,13 @@ export default function RegistrationFormScreen({
               </div>
             </div>
           </section>
+
+          <ExtraQuestions
+            questions={questions}
+            answers={form.extraAnswers}
+            submitAttempted={submitAttempted}
+            onChange={(key, value) => setForm((prev) => ({ ...prev, extraAnswers: { ...prev.extraAnswers, [key]: value } }))}
+          />
 
           <section className="fsec">
             <div className="fsec-head">

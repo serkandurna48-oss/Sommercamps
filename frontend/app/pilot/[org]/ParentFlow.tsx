@@ -81,6 +81,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
         orgName={org.name}
         hasBankDetails={Boolean(org.iban)}
         camp={selectedCamp}
+        questions={org.registration_questions ?? []}
         onBack={() => {
           setScreen(selectedCamp.is_full ? 'wait' : 'camp')
           window.scrollTo(0, 0)

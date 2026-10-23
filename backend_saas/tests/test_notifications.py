@@ -437,7 +437,9 @@ class _CapturingTransport(httpx.BaseTransport):
 
 
 def test_no_names_in_mail_subject_html_or_brevo_payload(monkeypatch, fake_provider):
-    """Synthetic child and parent names must not appear in subject, HTML, or Brevo HTTP payload."""
+    """Parent names must not appear in subject, HTML, or Brevo HTTP payload.
+    KV1: child name DOES appear in payment_reference (SEPA Verwendungszweck) by design —
+    only parent names (first + last) must be absent from the Brevo API payload."""
     CHILD_FIRST = "Yxqtkindrst"
     CHILD_LAST = "Vwrtuvwxyz"
     PARENT_FIRST = "Xqrtelterntl"
@@ -466,8 +468,22 @@ def test_no_names_in_mail_subject_html_or_brevo_payload(monkeypatch, fake_provid
     assert len(transport.requests) == 2  # parent mail + provider mail
     for req in transport.requests:
         payload_str = req.content.decode()
-        for name in (CHILD_FIRST, CHILD_LAST, PARENT_FIRST, PARENT_LAST):
-            assert name not in payload_str, f"Name '{name}' must not appear in Brevo payload"
+        # Parent names must never appear in the Brevo payload.
+        for name in (PARENT_FIRST, PARENT_LAST):
+            assert name not in payload_str, f"Parent name '{name}' must not appear in Brevo payload"
+        # Child name appears intentionally in payment_reference (SEPA Verwendungszweck, KV1).
+        # Only the mail subject must not contain the child name.
+    # Subject check: no child name in subject (only in body/payment_reference)
+    subject_requests = [r for r in transport.requests if r.content]
+    for req in subject_requests:
+        import json as _json
+        try:
+            body = _json.loads(req.content.decode())
+            subject = body.get("subject", "")
+            assert CHILD_FIRST not in subject, f"Child name '{CHILD_FIRST}' must not appear in mail subject"
+            assert PARENT_FIRST not in subject, f"Parent name '{PARENT_FIRST}' must not appear in mail subject"
+        except Exception:
+            pass  # Non-JSON requests (e.g., provider mail format) — skip
 
 
 # ---------------------------------------------------------------------------

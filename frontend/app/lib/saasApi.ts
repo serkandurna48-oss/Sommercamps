@@ -15,6 +15,16 @@ function baseUrl(): string {
   return process.env.NEXT_PUBLIC_SAAS_API_URL ?? 'http://localhost:8000'
 }
 
+/** KV1: Eine Zusatzfrage auf dem Anmeldeformular. */
+export interface RegistrationQuestion {
+  key: string
+  label: string
+  type: 'choice' | 'text'
+  options: string[] | null
+  other_label: string | null
+  required: boolean
+}
+
 export interface OrganizationPublic {
   slug: string
   name: string
@@ -37,6 +47,8 @@ export interface OrganizationPublic {
   terms_text: string | null
   // Für die Zahlungsdaten auf der Bestätigungsseite (§6.4). null = kein Überweisungshinweis.
   iban: string | null
+  // KV1: Verein-konfigurierbare Zusatzfragen. Öffentlich (kein Admin-Login nötig). Default [].
+  registration_questions?: RegistrationQuestion[]
 }
 
 export interface CampPublic {
@@ -81,6 +93,8 @@ export interface RegistrationCreateInput {
   photo_permission: boolean
   terms_accepted: boolean
   privacy_accepted: boolean
+  // KV1: Antworten auf die Zusatzfragen des Vereins.
+  extra_answers?: Record<string, string>
 }
 
 export interface RegistrationCreated {

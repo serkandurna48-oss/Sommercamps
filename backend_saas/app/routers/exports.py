@@ -81,11 +81,13 @@ def _xlsx_response(headers: list[str], rows: list[list[object]], sheet_name: str
     )
 
 
-def _participants_sheet(camp: dict, registrations: list[dict]) -> tuple[list[str], list[list[object]]]:
+def _participants_sheet(camp: dict, registrations: list[dict], org: dict = None) -> tuple[list[str], list[list[object]]]:
     """Full roster, every column an organizer needs for camp day — mirrors
     ParticipantList/ParticipantDetail's field set exactly (incl. PII: this
-    is platform-admin-only, same sensitivity as GET .../registrations)."""
-    headers = [
+    is platform-admin-only, same sensitivity as GET .../registrations).
+    KV1: extra_answers columns appended dynamically from org's registration_questions."""
+    questions = (org.get('registration_questions') or []) if org else []
+    base_headers = [
         "Status", "Zahlung",
         "Kind Vorname", "Kind Nachname", "Geburtsdatum",
         "Elternteil Vorname", "Elternteil Nachname", "E-Mail", "Telefon",
@@ -93,8 +95,13 @@ def _participants_sheet(camp: dict, registrations: list[dict]) -> tuple[list[str
         "Allergien", "Hinweise", "Trikotgröße", "Abholberechtigt",
         "Fotoerlaubnis", "Angemeldet am",
     ]
-    rows = [
-        [
+    extra_headers = [q.get('label', q.get('key', '')) for q in questions]
+    headers = base_headers + extra_headers
+    rows = []
+    for r in registrations:
+        extra_answers = r.get('extra_answers') or {}
+        extra_vals = [extra_answers.get(q['key'], '') for q in questions]
+        rows.append([
             _STATUS_LABEL.get(r["status"], r["status"]),
             _PAYMENT_STATUS_LABEL.get(r["payment_status"], r["payment_status"]),
             r["child_first_name"], r["child_last_name"], r["child_birth_date"],
@@ -102,9 +109,7 @@ def _participants_sheet(camp: dict, registrations: list[dict]) -> tuple[list[str
             r["emergency_contact_name"], r["emergency_contact_phone"],
             r["allergies"], r["medical_notes"], r["jersey_size"], r["pickup_authorized"],
             "Ja" if r["photo_permission"] else "Nein", r["created_at"],
-        ]
-        for r in registrations
-    ]
+        ] + extra_vals)
     return headers, rows
 
 
@@ -133,27 +138,31 @@ def _payments_sheet(camp_registrations: list[tuple[dict, list[dict]]], include_c
     return headers, rows
 
 
-def _daylist_sheet(registrations: list[dict]) -> tuple[list[str], list[list[object]]]:
-    """Active children only; same columns and dictionary order as dayListExport.ts."""
+def _daylist_sheet(registrations: list[dict], org: dict = None) -> tuple[list[str], list[list[object]]]:
+    """Active children only; same columns and dictionary order as dayListExport.ts.
+    KV1: extra_answers columns appended dynamically from org's registration_questions."""
     def sort_key(value: object) -> str:
         return "".join(c for c in unicodedata.normalize("NFD", str(value)) if not unicodedata.combining(c)).lower().replace("ß", "ss")
 
+    questions = (org.get('registration_questions') or []) if org else []
     active = sorted(
         (r for r in registrations if r["status"] in ("registered", "confirmed")),
         key=lambda r: tuple(sort_key(r[field]) for field in ("child_last_name", "child_first_name", "registration_token")),
     )
-    headers = ["Kind", "Jahrgang/Alter", "Notfallkontakt Telefon", "Abholberechtigt", "Hinweise/Allergien", "Anwesenheit"]
-    rows = [
-        [
+    extra_headers = [q.get('label', q.get('key', '')) for q in questions]
+    headers = ["Kind", "Jahrgang/Alter", "Notfallkontakt Telefon", "Abholberechtigt", "Hinweise/Allergien", "Anwesenheit"] + extra_headers
+    rows = []
+    for r in active:
+        extra_answers = r.get('extra_answers') or {}
+        extra_vals = [extra_answers.get(q['key'], '') for q in questions]
+        rows.append([
             f"{r['child_first_name']} {r['child_last_name']}",
             str(r["child_birth_date"])[:4],
             " · ".join(filter(None, [r["emergency_contact_name"], r["emergency_contact_phone"]])),
             r["pickup_authorized"],
             " · ".join(filter(None, [r["medical_notes"], r["allergies"]])),
             "",
-        ]
-        for r in active
-    ]
+        ] + extra_vals)
     return headers, rows
 
 
@@ -198,9 +207,9 @@ def export_camp_xlsx(
     registrations = _filter_by_tokens(registrations_repo.list_registrations_for_camp(organization["id"], camp["id"]), tokens)
 
     if view == "daylist":
-        headers, rows = _daylist_sheet(registrations)
+        headers, rows = _daylist_sheet(registrations, org=organization)
     elif view == "participants":
-        headers, rows = _participants_sheet(camp, registrations)
+        headers, rows = _participants_sheet(camp, registrations, org=organization)
     elif view == "payments":
         headers, rows = _payments_sheet([(camp, registrations)], include_camp_column=False)
     else:

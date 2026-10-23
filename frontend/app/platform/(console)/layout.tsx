@@ -3,7 +3,7 @@ import StagingBanner from '../../components/saas/StagingBanner'
 import { archivo } from '../../components/saas/fonts'
 import GrainOverlay from '../../components/saas/GrainOverlay'
 import '../../components/saas/tokens.css'
-import { getAdminToken } from '../../lib/adminSession'
+import { getValidAccessToken } from '../../lib/supabaseServer'
 import { fetchMe } from '../../lib/saasAdminApi'
 import { redirect } from 'next/navigation'
 import { platformLogoutAction } from '../logoutAction'
@@ -27,7 +27,7 @@ export const metadata = { title: 'CampsPilot Plattform' }
  * Sicherheitsgrenze).
  */
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) redirect('/platform/login')
 
   const me = await fetchMe(token).catch(() => null)

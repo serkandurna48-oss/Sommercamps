@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getAdminToken } from '../../../lib/adminSession'
+import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { fetchMe, updateOrganizationAdmin } from '../../../lib/saasAdminApi'
 
 export interface BillingActionState {
@@ -14,7 +14,7 @@ export async function updateBillingNotesAction(
   _previous: BillingActionState,
   formData: FormData,
 ): Promise<BillingActionState> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', saved: false }
 
   const notes = formData.get('billing_notes')

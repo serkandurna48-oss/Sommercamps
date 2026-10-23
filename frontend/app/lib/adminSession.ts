@@ -13,6 +13,7 @@
 import { cookies } from 'next/headers'
 
 export const ADMIN_TOKEN_COOKIE = 'cp_admin_token'
+export const REFRESH_TOKEN_COOKIE = 'cp_admin_refresh'
 
 export async function getAdminToken(): Promise<string | null> {
   const store = await cookies()

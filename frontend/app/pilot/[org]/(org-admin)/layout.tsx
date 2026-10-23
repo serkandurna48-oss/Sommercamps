@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import AdminShell from '../../../components/saas/shell/AdminShell'
-import { getAdminToken } from '../../../lib/adminSession'
+import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { AdminAuthError, fetchMe } from '../../../lib/saasAdminApi'
 import { getOrganizationAdmin } from '../../../components/saas/orgAdminData'
 
@@ -19,7 +19,7 @@ import { getOrganizationAdmin } from '../../../components/saas/orgAdminData'
  */
 export async function generateMetadata({ params }: { params: Promise<{ org: string }> }): Promise<Metadata> {
   const { org: orgSlug } = await params
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { title: 'CampsPilot – Verwaltung' }
   try {
     const org = await getOrganizationAdmin(orgSlug, token)
@@ -62,7 +62,7 @@ export default async function OrgAdminLayout({
   params: Promise<{ org: string }>
 }) {
   const { org } = await params
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) {
     redirect(`/pilot/${org}/login`)
   }

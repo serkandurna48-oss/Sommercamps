@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getAdminToken } from '../../../lib/adminSession'
+import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { setPaymentStatusAdmin, type PaymentStatus } from '../../../lib/saasAdminApi'
 import type { ActionFormState } from '../ui/ActionForm'
 
@@ -21,7 +21,7 @@ export async function setPaymentStatusAction(
   successMessage: string,
   _prev: ActionFormState,
 ): Promise<ActionFormState> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', success: null }
 
   try {

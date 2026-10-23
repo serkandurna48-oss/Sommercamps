@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getAdminToken } from '../../../lib/adminSession'
+import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { reviewOrganization } from '../../../lib/saasAdminApi'
 
 export interface ReviewActionState {
@@ -15,7 +15,7 @@ export async function reviewOrganizationAction(
   _previous: ReviewActionState,
   formData: FormData,
 ): Promise<ReviewActionState> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', done: false, decision: null }
 
   const decision = formData.get('decision') as 'approve' | 'reject'

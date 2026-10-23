@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getAdminToken } from '../../../lib/adminSession'
+import { getValidAccessToken } from '../../../lib/supabaseServer'
 import {
   cancelRegistrationAdmin,
   promoteWaitlistAdmin,
@@ -24,7 +24,7 @@ export async function promoteWaitlistAction(
   campSlug: string,
   _prev: ActionFormState,
 ): Promise<ActionFormState> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', success: null }
 
   try {
@@ -53,7 +53,7 @@ export async function cancelRegistrationAction(
   registrationToken: string,
   _prev: ActionFormState,
 ): Promise<ActionFormState> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', success: null }
 
   try {
@@ -97,7 +97,7 @@ export async function updateRegistrationDetailsAction(
   _prev: RegistrationDetailsActionState,
   formData: FormData,
 ): Promise<RegistrationDetailsActionState> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', saved: false, registration: null }
 
   const childFirstName = String(formData.get('child_first_name') ?? '').trim()

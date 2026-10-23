@@ -1,13 +1,13 @@
 'use server'
 
-import { getAdminToken } from '../../../lib/adminSession'
+import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { AdminActionError, submitReviewAdmin } from '../../../lib/saasAdminApi'
 
 export async function submitReviewAction(
   orgSlug: string,
   avvVersion: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { ok: false, error: 'Nicht angemeldet.' }
   try {
     await submitReviewAdmin(orgSlug, token, avvVersion)

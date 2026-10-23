@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { getAdminToken } from '../../../lib/adminSession'
+import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { fetchGlobalRegistrationsAdmin, type GlobalRegistration } from '../../../lib/saasAdminApi'
 
 const STATUS_LABEL: Record<string, string> = {
@@ -27,7 +27,7 @@ export default async function GlobalRegistrationsPage({
 }: {
   searchParams: Promise<{ verein?: string; camp?: string; status?: string }>
 }) {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) redirect('/platform/login')
 
   const { verein, camp, status } = await searchParams

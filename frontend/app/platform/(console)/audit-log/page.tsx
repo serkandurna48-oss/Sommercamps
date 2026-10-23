@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getAdminToken } from '../../../lib/adminSession'
+import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { fetchAuditLogAdmin } from '../../../lib/saasAdminApi'
 
 const ACTION_LABEL: Record<string, string> = {
@@ -16,7 +16,7 @@ const ACTION_LABEL: Record<string, string> = {
  * write_audit_log-Aufrufe in app/routers/admin.py. Reine Anzeige, keine
  * Aktionen von hier aus. */
 export default async function AuditLogPage() {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) redirect('/platform/login')
 
   const entries = await fetchAuditLogAdmin(token)

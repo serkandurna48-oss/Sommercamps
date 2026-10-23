@@ -1,12 +1,12 @@
 import { redirect } from 'next/navigation'
 import HilfeScreen from '../../../../components/saas/screens/HilfeScreen'
 import { getOrganizationAdmin } from '../../../../components/saas/orgAdminData'
-import { getAdminToken } from '../../../../lib/adminSession'
+import { getValidAccessToken } from '../../../../lib/supabaseServer'
 import { AdminAuthError } from '../../../../lib/saasAdminApi'
 
 export default async function HilfePage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) redirect(`/pilot/${orgSlug}/login`)
 
   const org = await getOrganizationAdmin(orgSlug, token).catch(err => {

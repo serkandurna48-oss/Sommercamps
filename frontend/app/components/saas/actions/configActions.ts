@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { getAdminToken } from '../../../lib/adminSession'
+import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { CAMP_STATUSES } from '../../../lib/i18n/de'
 import { parseZonedDateTime } from '../../../lib/dateTimeInput'
 import { createCampAdmin, SlugConflictError, updateCampAdmin, updateOrganizationAdmin, type CampAdmin } from '../../../lib/saasAdminApi'
@@ -39,7 +39,7 @@ export async function updateOrganizationConfigAction(
   _prev: ConfigActionState,
   formData: FormData,
 ): Promise<ConfigActionState> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', saved: false }
 
   const name = str(formData, 'name')
@@ -108,7 +108,7 @@ export async function setOrganizationPublishedAction(
   _prev: PublishActionState,
   _formData: FormData,
 ): Promise<PublishActionState> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.' }
 
   try {
@@ -131,7 +131,7 @@ export async function updateCampConfigAction(
   _prev: ConfigActionState,
   formData: FormData,
 ): Promise<ConfigActionState> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', saved: false }
 
   const title = str(formData, 'title')
@@ -206,7 +206,7 @@ export async function createCampAction(
   _prev: CampCreateActionState,
   formData: FormData,
 ): Promise<CampCreateActionState> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.' }
 
   const slug = str(formData, 'slug')

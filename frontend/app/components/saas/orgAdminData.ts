@@ -1,6 +1,6 @@
 import { cache } from 'react'
 import { notFound, redirect } from 'next/navigation'
-import { getAdminToken } from '../../lib/adminSession'
+import { getValidAccessToken } from '../../lib/supabaseServer'
 import {
   AdminAuthError,
   fetchCampsAdmin,
@@ -42,7 +42,7 @@ export interface OrgAdminData {
 }
 
 export async function loadOrgAdminData(orgSlug: string): Promise<OrgAdminData> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) redirect(`/pilot/${orgSlug}/login`)
 
   // Admin-Sicht (fetchOrganizationAdmin), nicht die öffentliche
@@ -85,7 +85,7 @@ export interface CampAdminData {
 /** Camp-Ebene derselben Sequenz — 404 (nicht redirect), wenn der Slug zu
  * keinem Camp dieser Organisation gehört (mirrors CampStubScreen). */
 export async function loadCampAdminData(orgSlug: string, campSlug: string): Promise<CampAdminData> {
-  const token = await getAdminToken()
+  const token = await getValidAccessToken()
   if (!token) redirect(`/pilot/${orgSlug}/login`)
 
   const org = await getOrganizationAdmin(orgSlug, token)

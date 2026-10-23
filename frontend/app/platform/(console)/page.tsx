@@ -4,16 +4,19 @@ import { getAdminToken } from '../../lib/adminSession'
 import { fetchOrganizationsAdmin, fetchPlatformStats } from '../../lib/saasAdminApi'
 import OrganizationList from './OrganizationList'
 import StatsOverview from './StatsOverview'
+import SubmittedOrgsSection from './SubmittedOrgsSection'
 
 export default async function PlatformPage() {
   const token = await getAdminToken()
   if (!token) redirect('/platform/login')
 
   const [organizations, stats] = await Promise.all([fetchOrganizationsAdmin(token), fetchPlatformStats(token)])
+  const submitted = organizations.filter(o => o.review_status === 'submitted')
 
   return (
     <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
       <StatsOverview stats={stats} />
+      <SubmittedOrgsSection orgs={submitted} />
 
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>

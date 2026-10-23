@@ -68,6 +68,12 @@ export interface OrganizationAdmin {
   billing_notes?: string | null
   site_published: boolean
   camp_count?: number
+  /** S1 Prüfstatus-Felder — 'draft' | 'submitted' | 'approved' | 'rejected' */
+  review_status?: string
+  submitted_at?: string | null
+  avv_version?: string | null
+  review_note?: string | null
+  approved_at?: string | null
 }
 
 export interface RegistrationAdmin {
@@ -494,4 +500,30 @@ export async function removeOrganizationMemberAdmin(orgSlug: string, memberId: s
   })
   if (res.status === 401) throw new AdminAuthError()
   if (!res.ok) throw new AdminActionError('Zugriff konnte nicht entfernt werden')
+}
+
+/** Alle Vereine mit dem gegebenen Prüfstatus (z. B. 'submitted') — nur platform_owner.
+ * Liefert dieselbe Datenform wie fetchOrganizationsAdmin, nur gefiltert. */
+export async function listOrganizationsByReviewStatus(status: string, token: string): Promise<OrganizationAdmin[]> {
+  const res = await adminFetch(`/admin/organizations?review_status=${encodeURIComponent(status)}`, token)
+  if (!res.ok) throw new AdminActionError('Vereine konnten nicht geladen werden')
+  return res.json() as Promise<OrganizationAdmin[]>
+}
+
+/** Freigabe-Entscheidung (platform_owner only).
+ * decision='approve' → Verein wird freigegeben und öffentlich.
+ * decision='reject' → note ist Pflicht (min. 10 Zeichen). */
+export async function reviewOrganization(
+  slug: string,
+  decision: 'approve' | 'reject',
+  token: string,
+  note?: string,
+): Promise<OrganizationAdmin> {
+  const body: { decision: string; note?: string } = { decision }
+  if (note) body.note = note
+  const res = await adminMutate(`/admin/organizations/${slug}/review`, token, 'POST', body)
+  if (res.status === 409)
+    throw new AdminActionError('Entscheidung nicht möglich: Verein ist nicht im Status „eingereicht"')
+  if (!res.ok) throw new AdminActionError('Freigabe konnte nicht gespeichert werden')
+  return res.json() as Promise<OrganizationAdmin>
 }

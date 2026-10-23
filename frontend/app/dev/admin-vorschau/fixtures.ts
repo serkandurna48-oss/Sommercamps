@@ -13,6 +13,7 @@ export const organization: OrganizationAdmin = {
   hero_image_url: null, trainer_image_url: null, trainer_text: null,
   terms_text: 'Dies sind erfundene Beispieldaten für die lokale Vorschau.',
   billing_notes: 'Beispielverein für die Dev-Vorschau', site_published: true, camp_count: 3,
+  review_status: 'approved', review_note: null,
 }
 
 function dateAt(now: Date, days: number): string {

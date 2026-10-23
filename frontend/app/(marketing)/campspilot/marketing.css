@@ -491,6 +491,43 @@
 .cp-scope .foot-links a:hover { color: var(--fog-2); }
 .cp-scope .foot .cl { font-size: 14px; color: var(--fog-3); }
 
+/* ── Registrierungsseite ─────────────────────────────────── */
+.cp-scope .reg-page { min-height: 100svh; display: flex; flex-direction: column; }
+.cp-scope .reg-main { flex: 1; display: flex; align-items: flex-start; padding-block: clamp(80px, 12vh, 130px); }
+.cp-scope .reg-form { display: flex; flex-direction: column; gap: 22px; max-width: 460px; width: 100%; }
+.cp-scope .reg-confirm { display: flex; flex-direction: column; gap: 22px; max-width: 520px; }
+.cp-scope .reg-confirm-email { word-break: break-all; }
+.cp-scope .reg-resend-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+.cp-scope .reg-head { display: flex; flex-direction: column; gap: 8px; }
+.cp-scope .reg-field { display: flex; flex-direction: column; gap: 7px; }
+.cp-scope .reg-field-label { font-size: 13px; font-weight: 600; font-stretch: 84%; color: var(--fog-2); }
+.cp-scope .reg-input-wrap { position: relative; }
+.cp-scope .reg-input {
+  height: 52px; width: 100%;
+  background: rgba(234, 238, 236, 0.06);
+  border: 1px solid var(--line-d);
+  padding: 0 15px; font-size: 16px; color: var(--fog);
+}
+.cp-scope .reg-input[aria-invalid="true"] { border-color: #c44; }
+.cp-scope .reg-input::placeholder { color: var(--fog-3); }
+.cp-scope .reg-input:focus { border-color: var(--accent); background: rgba(234, 238, 236, 0.09); outline: none; }
+.cp-scope .reg-show-toggle {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; padding: 6px;
+  color: var(--fog-3); font-size: 13px; font-weight: 600; font-stretch: 84%;
+}
+.cp-scope .reg-show-toggle:hover { color: var(--fog-2); }
+.cp-scope .reg-hint { font-size: 13px; color: var(--fog-3); line-height: 1.45; }
+.cp-scope .reg-err { font-size: 13px; color: #e06060; line-height: 1.45; }
+.cp-scope .reg-check { display: flex; gap: 10px; align-items: flex-start; }
+.cp-scope .reg-check input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; accent-color: var(--accent); cursor: pointer; }
+.cp-scope .reg-check-label { font-size: 15px; line-height: 1.55; cursor: pointer; }
+.cp-scope .reg-check-label a { color: var(--fog-2); text-decoration: underline; text-underline-offset: 2px; }
+.cp-scope .reg-check-label a:hover { color: var(--fog); }
+.cp-scope .reg-submit { height: 52px; width: 100%; }
+.cp-scope .reg-banner { padding: 14px 18px; border: 1px solid; font-size: 15px; line-height: 1.5; }
+.cp-scope .reg-banner.error { border-color: rgba(200, 60, 60, 0.4); background: rgba(200, 60, 60, 0.12); color: var(--fog); }
+
 @media (prefers-reduced-motion: reduce) {
   .cp-scope .grain { animation: none; }
   .cp-scope .scroll-hint i::after { animation: none; transform: translateX(0); }

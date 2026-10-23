@@ -20,7 +20,7 @@ const org: OrganizationAdmin = {
   logo_url: null, primary_color: null, plan_status: 'pilot', theme: 'tradition', iban: null,
   intro_heading: null, intro_text: null, hero_image_url: null,
   trainer_image_url: null, trainer_text: null, terms_text: null, billing_notes: null,
-  site_published: true,
+  site_published: true, review_status: 'approved', review_note: null,
 }
 
 let container: HTMLDivElement

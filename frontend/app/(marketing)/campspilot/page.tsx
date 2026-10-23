@@ -24,7 +24,7 @@ export default function CampsPilotPage() {
             <a href="#vertrauen">Vertrauen</a>
             <a href="#pilot">Pilot</a>
           </div>
-          <a className="btn sm" href="#pilot">Pilotplatz anfragen</a>
+          <Link href="/campspilot/registrieren" className="btn sm">Verein kostenlos anlegen</Link>
         </div>
       </nav>
 
@@ -233,6 +233,9 @@ export default function CampsPilotPage() {
           <p className="form-note" id="formNote">
             Aktuelle Pilotvereine: <strong>KSV Baunatal</strong> und <strong>JK Performance Academy</strong>.
           </p>
+          <div style={{ marginTop: '28px' }}>
+            <Link href="/campspilot/registrieren" className="btn fill">Verein kostenlos anlegen</Link>
+          </div>
         </div>
       </section>
 

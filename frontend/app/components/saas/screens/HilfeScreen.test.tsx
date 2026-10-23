@@ -18,6 +18,7 @@ const org: OrganizationAdmin = {
   iban: null, intro_heading: 'Test', intro_text: 'Test.', hero_image_url: null,
   trainer_image_url: null, trainer_text: null, terms_text: null,
   billing_notes: null, site_published: true, camp_count: 0,
+  review_status: 'approved', review_note: null,
 }
 
 it('renders all 7 sections', () => {

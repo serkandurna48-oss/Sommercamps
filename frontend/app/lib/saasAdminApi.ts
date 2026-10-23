@@ -68,6 +68,9 @@ export interface OrganizationAdmin {
   billing_notes?: string | null
   site_published: boolean
   camp_count?: number
+  /** Set during review workflow. 'approved' for KSV/JK legacy orgs. */
+  review_status: string
+  review_note: string | null
 }
 
 export interface RegistrationAdmin {
@@ -494,4 +497,19 @@ export async function removeOrganizationMemberAdmin(orgSlug: string, memberId: s
   })
   if (res.status === 401) throw new AdminAuthError()
   if (!res.ok) throw new AdminActionError('Zugriff konnte nicht entfernt werden')
+}
+
+export async function submitReviewAdmin(
+  orgSlug: string,
+  token: string,
+  avvVersion: string,
+): Promise<OrganizationAdmin> {
+  const res = await adminMutate(
+    `/admin/organizations/${orgSlug}/submit-review`,
+    token,
+    'POST',
+    { accept_avv: true as const, avv_version: avvVersion },
+  )
+  if (!res.ok) throw new AdminActionError('Einreichung nicht möglich')
+  return res.json() as Promise<OrganizationAdmin>
 }

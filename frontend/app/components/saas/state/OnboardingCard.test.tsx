@@ -4,16 +4,29 @@ import { expect, it, describe } from 'vitest'
 import OnboardingCard from './OnboardingCard'
 import type { OrganizationAdmin, CampAdmin } from '../../../lib/saasAdminApi'
 
+const noopAction = async () => ({ ok: false as const, error: 'test' })
+
 const orgBase: OrganizationAdmin = {
   id: 'org', slug: 'demo', name: 'Testverein', legal_name: null, legal_address: null,
   contact_email: '', contact_phone: null, contact_person_name: null,
   logo_url: null, primary_color: '#116644', plan_status: 'active', theme: 'default',
   iban: null, intro_heading: null, intro_text: null, hero_image_url: null,
   trainer_image_url: null, trainer_text: null, terms_text: null, site_published: false,
+  review_status: 'draft', review_note: null,
 }
 const orgFull: OrganizationAdmin = {
   ...orgBase,
   contact_email: 'test@demo.example', legal_address: 'Musterstr. 1', terms_text: 'Bedingungen',
+}
+const orgApproved: OrganizationAdmin = {
+  ...orgFull,
+  review_status: 'approved',
+  review_note: null,
+}
+const orgRejected: OrganizationAdmin = {
+  ...orgFull,
+  review_status: 'rejected',
+  review_note: 'Pflichtfelder fehlen.',
 }
 const campDraft: CampAdmin = {
   id: 'camp', organization_id: 'org', slug: 'herbst', title: 'Herbstcamp',
@@ -23,9 +36,9 @@ const campDraft: CampAdmin = {
   status: 'draft',
 }
 
-function render(org: OrganizationAdmin, camps: CampAdmin[]) {
+function render(org: OrganizationAdmin, camps: CampAdmin[], action = noopAction) {
   const html = renderToStaticMarkup(
-    <OnboardingCard orgSlug="demo" org={org} camps={camps} brandStrong="#116644" brandOn="#fff" />
+    <OnboardingCard orgSlug="demo" org={org} camps={camps} brandStrong="#116644" brandOn="#fff" submitAction={action} />
   )
   const container = document.createElement('div')
   container.innerHTML = html
@@ -75,5 +88,31 @@ describe('OnboardingCard accessibility', () => {
     expect(steps[0].querySelector('.sr-only')?.textContent?.trim()).toBe('erledigt')
     expect(steps[1].querySelector('.sr-only')?.textContent?.trim()).toBe('aktiv')
     expect(steps[2].querySelector('.sr-only')?.textContent?.trim()).toBe('offen')
+  })
+})
+
+describe('OnboardingCard — review_status', () => {
+  it('draft: Schritt 3 zeigt „Zur Freigabe einreichen"', () => {
+    const dom = render(orgFull, [campDraft])
+    const steps = dom.querySelectorAll('ol > li')
+    const step3 = steps[2]
+    expect(step3.textContent).toContain('Zur Freigabe einreichen')
+    expect(step3.textContent).not.toContain('Jetzt veröffentlichen')
+  })
+
+  it('rejected: Schritt 3 zeigt „Zur Freigabe einreichen" und Ablehnungsgrund', () => {
+    const dom = render(orgRejected, [campDraft])
+    const steps = dom.querySelectorAll('ol > li')
+    const step3 = steps[2]
+    expect(step3.textContent).toContain('Zur Freigabe einreichen')
+    expect(step3.textContent).toContain('Pflichtfelder fehlen.')
+  })
+
+  it('approved: Schritt 3 zeigt „Jetzt veröffentlichen" (Regression)', () => {
+    const dom = render(orgApproved, [campDraft])
+    const steps = dom.querySelectorAll('ol > li')
+    const step3 = steps[2]
+    expect(step3.textContent).toContain('Jetzt veröffentlichen')
+    expect(step3.textContent).not.toContain('Zur Freigabe einreichen')
   })
 })

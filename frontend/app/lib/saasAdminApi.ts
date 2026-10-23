@@ -536,3 +536,18 @@ export async function reviewOrganization(
   if (!res.ok) throw new AdminActionError('Freigabe konnte nicht gespeichert werden')
   return res.json() as Promise<OrganizationAdmin>
 }
+
+export async function submitReviewAdmin(
+  orgSlug: string,
+  token: string,
+  avvVersion: string,
+): Promise<OrganizationAdmin> {
+  const res = await adminMutate(
+    `/admin/organizations/${orgSlug}/submit-review`,
+    token,
+    'POST',
+    { accept_avv: true as const, avv_version: avvVersion },
+  )
+  if (!res.ok) throw new AdminActionError('Einreichung nicht möglich')
+  return res.json() as Promise<OrganizationAdmin>
+}

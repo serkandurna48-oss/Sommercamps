@@ -3,13 +3,17 @@ import { ButtonLink } from '../ui/Button'
 import { computeOnboardingSteps } from '../onboardingSteps'
 import { de } from '../../../lib/i18n/de'
 import type { OrganizationAdmin, CampAdmin } from '../../../lib/saasAdminApi'
+import SubmitReviewButton from './SubmitReviewButton'
 
-export default function OnboardingCard({ orgSlug, org, camps, brandStrong, brandOn }: {
+type SubmitAction = (orgSlug: string, avvVersion: string) => Promise<{ ok: boolean; error?: string }>
+
+export default function OnboardingCard({ orgSlug, org, camps, brandStrong, brandOn, submitAction }: {
   orgSlug: string
   org: OrganizationAdmin
   camps: CampAdmin[]
   brandStrong: string
   brandOn: string
+  submitAction: SubmitAction
 }) {
   const { step1Done, step2Done } = computeOnboardingSteps(org, camps)
   const activeStep = !step1Done ? 1 : !step2Done ? 2 : 3
@@ -20,6 +24,10 @@ export default function OnboardingCard({ orgSlug, org, camps, brandStrong, brand
   const publishHref = firstCamp
     ? `/pilot/${orgSlug}/camps/${firstCamp.slug}/konfiguration`
     : newCampHref
+
+  const reviewStatus = org.review_status ?? 'approved'
+  const needsReview = reviewStatus === 'draft' || reviewStatus === 'rejected'
+  const reviewNote = needsReview ? (org.review_note ?? null) : null
 
   return (
     <div className="cp-card" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
@@ -39,11 +47,27 @@ export default function OnboardingCard({ orgSlug, org, camps, brandStrong, brand
             </ButtonLink>
           )}
         </Step>
-        <Step number={3} done={false} active={activeStep === 3} title={de.onboarding.step3Title} body={de.onboarding.step3Body}>
+        <Step
+          number={3}
+          done={false}
+          active={activeStep === 3}
+          title={needsReview ? de.onboarding.step3TitleSubmit : de.onboarding.step3Title}
+          body={needsReview ? de.onboarding.step3BodySubmit : de.onboarding.step3Body}
+        >
           {activeStep === 3 && (
-            <ButtonLink href={publishHref} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
-              {de.onboarding.step3Action}
-            </ButtonLink>
+            needsReview ? (
+              <SubmitReviewButton
+                orgSlug={orgSlug}
+                brandStrong={brandStrong}
+                brandOn={brandOn}
+                reviewNote={reviewNote}
+                submitAction={submitAction}
+              />
+            ) : (
+              <ButtonLink href={publishHref} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
+                {de.onboarding.step3Action}
+              </ButtonLink>
+            )
           )}
         </Step>
       </ol>

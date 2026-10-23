@@ -10,6 +10,7 @@ const baseOrg: OrganizationAdmin = {
   iban: null, intro_heading: null, intro_text: null,
   hero_image_url: null, trainer_image_url: null, trainer_text: null,
   terms_text: 'Bedingungen', site_published: false,
+  review_status: 'draft', review_note: null,
 }
 
 const baseCamp: CampAdmin = {
@@ -22,7 +23,7 @@ const baseCamp: CampAdmin = {
 }
 
 function org(overrides: Partial<OrganizationAdmin> = {}): OrganizationAdmin {
-  return { ...baseOrg, ...overrides }
+  return { ...baseOrg, ...overrides } as OrganizationAdmin
 }
 
 function camp(overrides: Partial<CampAdmin> = {}): CampAdmin {

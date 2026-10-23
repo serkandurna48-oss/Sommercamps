@@ -58,6 +58,7 @@ const org: Awaited<ReturnType<typeof loadOrgAdminData>>['org'] = {
   logo_url: null, primary_color: '#116644', plan_status: 'active', theme: 'default',
   iban: null, intro_heading: null, intro_text: null, hero_image_url: null,
   trainer_image_url: null, trainer_text: null, terms_text: 'Bedingungen', site_published: true,
+  review_status: 'approved', review_note: null,
 }
 function markup(element: React.ReactNode) {
   const container = document.createElement('div')

@@ -25,8 +25,10 @@ function org(overrides: Partial<OrganizationAdmin> = {}): OrganizationAdmin {
     terms_text: null,
     billing_notes: null,
     site_published: false,
+    review_status: 'approved',
+    review_note: null,
     ...overrides,
-  }
+  } as OrganizationAdmin
 }
 
 describe('computeSetupSteps', () => {

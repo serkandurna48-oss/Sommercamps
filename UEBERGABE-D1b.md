@@ -84,7 +84,7 @@ tsc    0 errors
 
 ## SHA
 
-Getesteter Commit: → wird nach `git commit` eingetragen (Branch `feat/d1b-elternseite-premium`).
+Getesteter Commit: `4be38f9` (Branch `feat/d1b-elternseite-premium`).
 
 ---
 

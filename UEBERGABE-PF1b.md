@@ -1,6 +1,6 @@
 fix/pf1b-pool
 STATUS: fertig zur Prüfung
-COMMIT: (wird nach git commit befüllt)
+COMMIT: 5884a03
 
 ---
 

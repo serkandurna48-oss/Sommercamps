@@ -1,7 +1,7 @@
 feat/s1c-registrierung
 STATUS: fertig zur Prüfung
 
-COMMIT: (wird nach git commit gesetzt)
+COMMIT: 73ecf09
 
 TESTS:
   python -m pytest backend_saas/tests -q

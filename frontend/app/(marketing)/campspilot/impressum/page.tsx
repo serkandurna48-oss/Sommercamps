@@ -1,9 +1,8 @@
-import type { Metadata } from 'next'
 import LegalPlaceholder from '../../../components/marketing/LegalPlaceholder'
+import { marketingMetadata } from '../seoMetadata'
 
-export const metadata: Metadata = {
-  title: 'Impressum – CampsPilot',
-  description: 'Impressum von CampsPilot.',
+export async function generateMetadata() {
+  return marketingMetadata('/campspilot/impressum', 'Impressum – CampsPilot', 'Das Impressum von CampsPilot ist noch nicht freigegeben und wird vor der Veröffentlichung ergänzt.')
 }
 
 export default function CampsPilotImpressumPage() {

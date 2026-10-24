@@ -1,11 +1,10 @@
-import type { Metadata } from 'next'
 import Link from 'next/link'
 import BrandMark from '../../../components/marketing/BrandMark'
 import RegistrierenForm from './RegistrierenForm'
+import { marketingMetadata } from '../seoMetadata'
 
-export const metadata: Metadata = {
-  title: 'Verein registrieren – CampsPilot',
-  description: 'Legen Sie Ihren Verein in CampsPilot an und starten Sie mit Ihrer ersten Anmeldeseite.',
+export async function generateMetadata() {
+  return marketingMetadata('/campspilot/registrieren', 'Verein registrieren – CampsPilot', 'Legen Sie Ihren Verein in CampsPilot an und starten Sie mit Ihrer ersten Anmeldeseite.')
 }
 
 export default function RegistrierenPage() {

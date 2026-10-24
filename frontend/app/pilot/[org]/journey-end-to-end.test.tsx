@@ -298,6 +298,7 @@ describe('Admin-Camp-Seite: Zahlung markieren', () => {
     await act(() =>
       root.render(
         <PaymentSection
+          org={orgWithIban}
           entries={[entry]}
           orgSlug="reise-verein"
           brandColor="#112233"

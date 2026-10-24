@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PaymentSection, { type PaymentEntry } from './PaymentSection'
 import { setPaymentStatusAction } from '../actions/paymentActions'
+import { buildPaymentReminder, type ReminderOrganization } from '../../../lib/zahlungserinnerung'
 
 vi.mock('../actions/paymentActions', () => ({ setPaymentStatusAction: vi.fn() }))
 
@@ -24,6 +25,7 @@ const entry: PaymentEntry = {
   },
 }
 const paidEntry: PaymentEntry = { ...entry, registration: { ...entry.registration, payment_status: 'paid' } }
+const org: ReminderOrganization = { name: 'Demo FC', legal_name: 'Demo Sportverein e. V.', iban: 'DE89370400440532013000', contact_person_name: 'Alex Verein', contact_email: 'verein@example.com' }
 let container: HTMLDivElement
 let root: Root
 
@@ -41,8 +43,8 @@ afterEach(async () => {
   vi.resetAllMocks()
 })
 
-async function render(entries: PaymentEntry[] = [entry]) {
-  await act(() => root.render(<PaymentSection entries={entries} orgSlug="demo" brandColor="#112233"
+async function render(entries: PaymentEntry[] = [entry], organization = org) {
+  await act(() => root.render(<PaymentSection entries={entries} org={organization} orgSlug="demo" brandColor="#112233"
     emptyLabel="Keine Anmeldungen" csvFilename="payments.csv" xlsxHref="/export" />))
 }
 
@@ -65,6 +67,77 @@ async function search(value: string) {
 }
 
 describe('payment workflow', () => {
+  it('copies a complete reminder and confirms inline', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    await render()
+    await click('Erinnerung kopieren')
+    expect(writeText).toHaveBeenCalledWith(buildPaymentReminder(entry, org))
+    expect(container.querySelector('[role="status"]')?.textContent).toBe('Text kopiert')
+    expect(container.textContent).not.toMatch(/\b(du|dein|deine|dir|dich)\b/i)
+    expect(setPaymentStatusAction).not.toHaveBeenCalled()
+  })
+
+  it.each([null, '', '   '])('disables the reminder without an IBAN (%s)', async iban => {
+    await render([entry], { ...org, iban })
+    expect(button('Erinnerung kopieren').disabled).toBe(true)
+    expect(button('Erinnerung kopieren').title).toBe('IBAN in den Vereinseinstellungen fehlt')
+    expect(button('Alle offenen als Liste kopieren').disabled).toBe(false)
+  })
+
+  it('only offers reminders for active open payments, even in the All filter', async () => {
+    const entries = ['paid', 'waived', 'refunded', 'cancelled'].map((payment_status, i) => ({
+      ...entry, registration: { ...entry.registration, id: `r-${i}`, payment_status: payment_status as PaymentEntry['registration']['payment_status'] },
+    }))
+    entries.push({ ...entry, registration: { ...entry.registration, id: 'cancelled', status: 'cancelled' } })
+    entries.push({ ...entry, registration: { ...entry.registration, id: 'waitlist', status: 'waitlist' } })
+    await render(entries)
+    await click('Alle6')
+    expect(container.textContent).not.toContain('Erinnerung kopieren')
+    expect(button('Alle offenen als Liste kopieren').disabled).toBe(true)
+  })
+
+  it('copies all open entries across camps independently of search and status filters', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    const second = { ...entry, camp: { ...entry.camp, title: 'Herbstcamp', price_cents: 9900 },
+      registration: { ...entry.registration, id: 'second', payment_reference: 'CP-Second' } }
+    await render([entry, second, { ...paidEntry, registration: { ...paidEntry.registration, id: 'paid' } },
+      { ...entry, registration: { ...entry.registration, id: 'cancelled', status: 'cancelled' } }])
+    await click('Bezahlt1')
+    await search('unrelated')
+    await click('Alle offenen als Liste kopieren')
+    expect(writeText).toHaveBeenCalledWith('Alex Beispiel – Mia Muster – Sommercamp – 149,00 € – CP-1A2B3C4D\nAlex Beispiel – Mia Muster – Herbstcamp – 99,00 € – CP-Second')
+    expect(container.textContent).toContain('Text kopiert')
+  })
+
+  it.each(['Erinnerung kopieren', 'Alle offenen als Liste kopieren'])('offers a read-only fallback for %s and recovers on retry', async label => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    await render()
+    await click(label)
+    const textarea = container.querySelector('textarea')!
+    expect(textarea.readOnly).toBe(true)
+    expect(textarea.value).toBe(writeText.mock.calls[0][0])
+    expect(textarea.value).toContain('CP-1A2B3C4D')
+    expect(container.textContent).toContain('Bitte wählen Sie den Text aus')
+    expect(container.textContent).not.toContain('Text kopiert')
+    expect(container.textContent).not.toMatch(/\b(du|dein|deine|dir|dich)\b/i)
+    textarea.focus()
+    expect(textarea.selectionEnd).toBe(textarea.value.length)
+    writeText.mockResolvedValue(undefined)
+    await click(label)
+    expect(container.querySelector('textarea')).toBeNull()
+    expect(container.textContent).toContain('Text kopiert')
+  })
+
+  it('also falls back when the Clipboard API is unavailable', async () => {
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined })
+    await render()
+    await click('Erinnerung kopieren')
+    expect(container.querySelector('textarea')?.value).toBe(buildPaymentReminder(entry, org))
+  })
+
   it.each(['CP-1A2B3C4D', 'CP- 1A2B 3C4D', ' cp-1a2b3c4d ', 'mIa mUsTeR', ' aLeX  bEiSpIeL '])('finds reference, child or parent: %s', async query => {
     await render([entry, { ...entry, registration: {
       ...entry.registration, id: 'registration-2', registration_token: '87654321-1234-5678-abcd-123456789abc',

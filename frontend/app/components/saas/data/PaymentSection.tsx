@@ -14,6 +14,8 @@ import EmptyState from '../state/EmptyState'
 import ExportBar from '../ui/ExportBar'
 import FilterButton from '../ui/FilterButton'
 import PaymentRow from './PaymentRow'
+import PaymentTextCopy from './PaymentTextCopy'
+import { buildOpenPaymentList, reminderLabels, type ReminderOrganization } from '../../../lib/zahlungserinnerung'
 
 export interface PaymentEntry {
   registration: RegistrationAdmin
@@ -37,6 +39,7 @@ function buildColumns(showCampTitle: boolean): ExportColumn<PaymentEntry>[] {
 
 export default function PaymentSection({
   entries,
+  org,
   orgSlug,
   brandColor,
   emptyLabel,
@@ -46,6 +49,7 @@ export default function PaymentSection({
   initialFilter = 'open',
 }: {
   entries: PaymentEntry[]
+  org: ReminderOrganization
   orgSlug: string
   brandColor: string
   emptyLabel: string
@@ -145,6 +149,10 @@ export default function PaymentSection({
         <FilterButton label={de.paymentsPage.filterAll} count={counts.all} active={filter === 'all'} brandColor={brandColor} onClick={() => setFilter('all')} />
       </div>
 
+      <div className="mb-4">
+        <PaymentTextCopy text={buildOpenPaymentList(entries)} label={reminderLabels.copyAll} />
+      </div>
+
       {filtered.length === 0 ? (
         <div>
           <EmptyState title={filter === 'open' && query
@@ -161,6 +169,7 @@ export default function PaymentSection({
               key={e.registration.id}
               registration={e.registration}
               camp={e.camp}
+              org={org}
               orgSlug={orgSlug}
               brandStrong={brand.brandStrong}
               brandOn={brand.brandOn}

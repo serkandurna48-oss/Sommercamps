@@ -7,6 +7,7 @@
  * denselben öffentlichen Endpunkt läuft, den die Eltern-Ansicht auch nutzt.
  */
 
+import { cache } from 'react'
 import type { RegistrationQuestion } from './saasApi'
 export type { RegistrationQuestion } from './saasApi'
 
@@ -125,10 +126,13 @@ export class SlugConflictError extends Error {
 }
 
 async function adminFetch(path: string, token: string): Promise<Response> {
-  const res = await fetch(`${baseUrl()}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  })
+  const url = `${baseUrl()}${path}`
+  const opts = { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' as const }
+  let res = await fetch(url, opts)
+  if (res.status === 503) {
+    await new Promise<void>(r => setTimeout(r, 400))
+    res = await fetch(url, opts)
+  }
   if (res.status === 401) throw new AdminAuthError()
   return res
 }
@@ -406,11 +410,13 @@ export interface Me {
   admin_organization_slugs: string[]
 }
 
-export async function fetchMe(token: string): Promise<Me> {
+/** Dedupliziert innerhalb eines Server-Requests: Layout und Seite teilen
+ * sich denselben Aufruf wenn beide fetchMe mit demselben Token aufrufen. */
+export const fetchMe = cache(async (token: string): Promise<Me> => {
   const res = await adminFetch('/admin/me', token)
   if (!res.ok) throw new AdminAuthError()
   return res.json() as Promise<Me>
-}
+})
 
 export interface PlatformStats {
   organizations_published: number

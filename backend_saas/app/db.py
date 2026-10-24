@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
 from contextlib import contextmanager
 from typing import Generator
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -23,7 +24,13 @@ from .config import get_settings
 
 logger = logging.getLogger(__name__)
 
+
+class DatabaseBusy(Exception):
+    """All pool connections are in use and the wait timeout expired."""
+
+
 _pool: psycopg2.pool.ThreadedConnectionPool | None = None
+_sem: threading.BoundedSemaphore | None = None
 
 _LOCAL_HOSTNAMES = {"127.0.0.1", "localhost", "::1"}
 
@@ -90,26 +97,30 @@ def _warn_if_ipv6_only_supabase_host(database_url: str) -> None:
 
 def init_pool() -> None:
     """Creates the connection pool. Called once from the FastAPI lifespan."""
-    global _pool
+    global _pool, _sem
     settings = get_settings()
+    pool_max = settings.db_pool_max
+    pool_min = settings.db_pool_min
     _warn_if_ipv6_only_supabase_host(settings.database_url)
     dsn = _dsn_with_sslmode(settings.database_url)
     _pool = psycopg2.pool.ThreadedConnectionPool(
-        minconn=1,
-        maxconn=10,
+        minconn=pool_min,
+        maxconn=pool_max,
         dsn=dsn,
         cursor_factory=psycopg2.extras.RealDictCursor,
     )
-    logger.info("Database connection pool initialized")
+    _sem = threading.BoundedSemaphore(pool_max)
+    logger.info("Database connection pool initialized (max=%d)", pool_max)
 
 
 def close_pool() -> None:
     """Closes all pooled connections. Called once from the FastAPI lifespan."""
-    global _pool
+    global _pool, _sem
     if _pool is not None:
         _pool.closeall()
         _pool = None
-        logger.info("Database connection pool closed")
+    _sem = None
+    logger.info("Database connection pool closed")
 
 
 @contextmanager
@@ -117,20 +128,37 @@ def get_connection() -> Generator[psycopg2.extensions.connection, None, None]:
     """
     Borrows a connection from the pool and returns it afterwards.
 
+    Blocks up to DB_POOL_WAIT_SECONDS for a free slot rather than throwing
+    immediately; raises DatabaseBusy (→ 503) if the timeout expires.
+    The BoundedSemaphore guards capacity so psycopg2's pool never sees more
+    concurrent getconn() calls than maxconn — eliminating the PoolError.
+
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
     """
-    if _pool is None:
+    if _pool is None or _sem is None:
         raise RuntimeError(
             "Database pool not initialized — init_pool() must run during app startup "
             "(see main.py's lifespan)."
         )
-    conn = _pool.getconn()
+    wait = get_settings().db_pool_wait_seconds
+    if not _sem.acquire(timeout=wait):
+        logger.warning("Database connection pool exhausted (waited %ss)", wait)
+        raise DatabaseBusy()
+    conn = None
     try:
+        conn = _pool.getconn()
         yield conn
+    except Exception:
+        if conn is not None:
+            _pool.putconn(conn, close=True)
+            conn = None
+        raise
     finally:
-        _pool.putconn(conn)
+        if conn is not None:
+            _pool.putconn(conn)
+        _sem.release()
 
 
 @contextmanager

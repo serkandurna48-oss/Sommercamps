@@ -2,10 +2,14 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, expect, it, vi } from 'vitest'
 
 let linkPending = false
+const capturedLinkProps: Array<Record<string, unknown>> = []
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/pilot/demoverein/dashboard' }))
 vi.mock('next/link', () => ({
-  default: ({ children, ...props }: { children: React.ReactNode }) => <a {...props}>{children}</a>,
+  default: ({ children, ...props }: { children: React.ReactNode; [k: string]: unknown }) => {
+    capturedLinkProps.push({ ...props })
+    return <a {...props}>{children}</a>
+  },
   useLinkStatus: () => ({ pending: linkPending }),
 }))
 
@@ -18,6 +22,7 @@ const tabs = [
 
 beforeEach(() => {
   linkPending = false
+  capturedLinkProps.length = 0
 })
 
 it('markiert den aktuellen Bereich', () => {
@@ -39,4 +44,12 @@ it('bestätigt den Klick, während die Zielseite noch lädt', () => {
   linkPending = true
   const html = renderToStaticMarkup(<BandTabs tabs={tabs} brandColor="#0B6E4F" />)
   expect(html).toContain('data-pending="true"')
+})
+
+/** PF1b: Prefetch auf false setzen verhindert, dass jeder Menüklick ~20
+ * gleichzeitige Backend-Anfragen auslöst (Layout + alle Tabs laden /admin/me). */
+it('alle Menü-Links im Band haben prefetch={false}', () => {
+  renderToStaticMarkup(<BandTabs tabs={tabs} brandColor="#0B6E4F" />)
+  expect(capturedLinkProps.length).toBe(tabs.length)
+  expect(capturedLinkProps.every(p => p.prefetch === false)).toBe(true)
 })

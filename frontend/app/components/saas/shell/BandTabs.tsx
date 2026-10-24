@@ -99,6 +99,7 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
           <Link
             key={tab.href}
             href={tab.href}
+            prefetch={false}
             data-active={active}
             aria-current={active ? 'page' : undefined}
             className="cp-subheading cp-band-tab inline-flex items-center justify-center gap-1.5 px-1 pt-3 pb-3 text-center md:shrink-0 md:justify-start md:px-0 md:whitespace-nowrap"

@@ -48,13 +48,13 @@ export default async function PlatformLayout({ children }: { children: React.Rea
               CampsPilot Plattform
             </Link>
             <nav className="hidden gap-4 sm:flex">
-              <Link href="/platform" className="cp-chip" style={{ color: 'rgba(255,255,255,0.8)' }}>
+              <Link href="/platform" prefetch={false} className="cp-chip" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Vereine
               </Link>
-              <Link href="/platform/registrations" className="cp-chip" style={{ color: 'rgba(255,255,255,0.8)' }}>
+              <Link href="/platform/registrations" prefetch={false} className="cp-chip" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Anmeldungen
               </Link>
-              <Link href="/platform/audit-log" className="cp-chip" style={{ color: 'rgba(255,255,255,0.8)' }}>
+              <Link href="/platform/audit-log" prefetch={false} className="cp-chip" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Änderungsverlauf
               </Link>
             </nav>

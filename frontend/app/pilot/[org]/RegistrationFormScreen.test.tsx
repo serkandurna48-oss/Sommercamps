@@ -57,7 +57,11 @@ function change(input: ElementNode, value: string | boolean) {
 }
 
 function checkbox(nodes: ElementNode[], heading: string) {
-  const label = nodes.find((node) => node.type === 'label' && walk(node.props.children).some((child) => child.type === 'b' && child.props.children === heading))
+  const label = nodes.find((node) => node.type === 'label' && walk(node.props.children).some((child) => {
+    if (child.type !== 'b') return false
+    const c = child.props.children
+    return c === heading || (Array.isArray(c) && c[0] === heading)
+  }))
   const input = walk(label?.props.children).find((node) => node.type === 'input')
   if (!input) throw new Error('Checkbox missing: ' + heading)
   return input

@@ -2406,8 +2406,7 @@
   margin-bottom: 18px;
 }
 .cp-public[data-theme='tradition'] .fsec-head {
-  align-items: center;
-  text-align: center;
+  align-items: flex-start;
 }
 .cp-public[data-theme='akademie'] .fsec-head {
   flex-direction: column;
@@ -3264,4 +3263,19 @@
 .cp-public .d3c-mob-spots-accent {
   color: var(--pending);
   font-weight: 600;
+}
+
+/* ── D3g: Pflichtfeld-Hinweis inline neben Titel ── */
+.cp-public .consent b .consent-req {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 4px;
+}
+/* ── D3g: Links in Einwilligungs-Text und Datenschutz-Hinweis: kein touch-44px-Aufblähen ── */
+.cp-public .consent .txt a,
+.cp-public .note a {
+  display: inline;
+  min-height: unset;
+  min-width: unset;
 }

@@ -525,8 +525,7 @@ export default function RegistrationFormScreen({
                       aria-describedby={badFields.agb ? 'err-agb' : undefined}
                     />
                     <span className="txt">
-                      <b>Teilnahmebedingungen</b>
-                      <span>Pflichtfeld *</span>
+                      <b>Teilnahmebedingungen<span className="consent-req"> Pflichtfeld *</span></b>
                       <span>Ich habe die <a href={`/pilot/${orgSlug}/teilnahmebedingungen`} target="_blank" rel="noopener noreferrer">Teilnahmebedingungen</a> gelesen und melde mein Kind verbindlich an.</span>
                       {badFields.agb && <span id="err-agb" role="alert" style={{ color: 'var(--error)' }}>{badFields.agb}</span>}
                     </span>
@@ -541,8 +540,7 @@ export default function RegistrationFormScreen({
                       aria-describedby={badFields.privacy ? 'err-privacy' : undefined}
                     />
                     <span className="txt">
-                      <b>Datenschutz</b>
-                      <span>Pflichtfeld *</span>
+                      <b>Datenschutz<span className="consent-req"> Pflichtfeld *</span></b>
                       <span>
                         Ich habe die <a href={`/pilot/${orgSlug}/datenschutz`} target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a> gelesen und stimme der Verarbeitung der Daten für die Camp-Anmeldung zu.
                       </span>

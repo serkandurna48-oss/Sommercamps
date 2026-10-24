@@ -175,3 +175,63 @@ it('consent cards are labels that contain their checkbox', () => {
     expect(checkbox, `consent label missing checkbox: ${JSON.stringify(label.props.className)}`).toBeDefined()
   }
 })
+
+// ── D3g. Step heads: no centered alignment class or inline style ──
+it('step heads have no centered alignment (mutation probe: add style.textAlign center → fail)', () => {
+  const nodes = renderForm()
+  const fsecHeads = nodes.filter(n =>
+    typeof n.props.className === 'string' && n.props.className.includes('fsec-head'),
+  )
+  expect(fsecHeads.length).toBeGreaterThan(0)
+  for (const n of fsecHeads) {
+    const cls = n.props.className as string
+    expect(cls).not.toMatch(/\btext-center\b/)
+    const style = n.props.style as Record<string, unknown> | undefined
+    expect(style?.textAlign).not.toBe('center')
+    expect(style?.justifyContent).not.toBe('center')
+    expect(style?.alignItems).not.toBe('center')
+  }
+})
+
+// ── D3g. All three consent cards use the same .txt class ──
+it('all three consent cards contain a span.txt', () => {
+  const nodes = renderForm()
+  const consentLabels = nodes.filter(n =>
+    n.type === 'label' &&
+    typeof n.props.className === 'string' &&
+    n.props.className.includes('consent'),
+  )
+  expect(consentLabels.length).toBe(3)
+  for (const label of consentLabels) {
+    const inner = walk(label.props.children)
+    const hasTxt = inner.some(n =>
+      n.type === 'span' &&
+      typeof n.props.className === 'string' &&
+      n.props.className === 'txt',
+    )
+    expect(hasTxt, `consent label must contain a span.txt`).toBe(true)
+  }
+})
+
+// ── D3g. "Pflichtfeld" is inside the title <b>, not a sibling span ──
+it('"Pflichtfeld" text is inside the title <b> element, not a sibling span', () => {
+  const nodes = renderForm()
+  const consentLabels = nodes.filter(n =>
+    n.type === 'label' &&
+    typeof n.props.className === 'string' &&
+    n.props.className.includes('consent'),
+  )
+  const pflichtCards = consentLabels.filter(label =>
+    JSON.stringify(label.props).includes('Pflichtfeld'),
+  )
+  expect(pflichtCards.length).toBeGreaterThanOrEqual(2)
+  for (const label of pflichtCards) {
+    const inner = walk(label.props.children)
+    const bEl = inner.find(n => n.type === 'b')
+    expect(bEl, 'Pflicht consent card must have a b element').toBeDefined()
+    expect(
+      JSON.stringify(bEl?.props),
+      '"Pflichtfeld" must be inside the b element (title row)',
+    ).toContain('Pflichtfeld')
+  }
+})

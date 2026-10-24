@@ -2,7 +2,12 @@
 
 import { useState } from 'react'
 
-const CONTACT_EMAIL = 'hallo@campspilot.app'
+// Kontaktadresse kommt aus der Umgebung (Vercel). Ohne Wert kein mailto-Link.
+const CONTACT_EMAIL = () => process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || ''
+const ContactLink = () => {
+  const mail = CONTACT_EMAIL()
+  return mail ? <>direkt an <a href={`mailto:${mail}`}>{mail}</a></> : <>später erneut</>
+}
 const SAAS_URL = () => process.env.NEXT_PUBLIC_SAAS_API_URL ?? 'http://localhost:8000'
 
 type SendState = 'idle' | 'sending' | 'success' | 'error429' | 'error503'
@@ -150,14 +155,12 @@ export default function PilotRequestForm() {
       </label>
       {sendState === 'error429' && (
         <p className="prf-err prf-full" role="alert">
-          Zu viele Anfragen. Bitte versuchen Sie es in einer Stunde erneut oder schreiben Sie
-          direkt an <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+          Zu viele Anfragen. Bitte versuchen Sie es in einer Stunde erneut oder schreiben Sie uns <ContactLink />.
         </p>
       )}
       {sendState === 'error503' && (
         <p className="prf-err prf-full" role="alert">
-          Das Formular ist gerade nicht verfügbar. Bitte schreiben Sie uns direkt an{' '}
-          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+          Das Formular ist gerade nicht verfügbar. Bitte schreiben Sie uns <ContactLink />.
         </p>
       )}
       <div className="act">

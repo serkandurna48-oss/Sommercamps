@@ -37,6 +37,7 @@ afterEach(async () => {
   await act(() => root.unmount())
   container.remove()
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
 })
 
 async function renderForm() {
@@ -129,6 +130,7 @@ describe('PilotRequestForm — Sendezustände', () => {
   })
 
   it('prf5 – 503 zeigt mailto-Link, Formular bleibt sichtbar', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CONTACT_EMAIL', 'kontakt@example.org')
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 503 }))
     await renderForm()
     await fillAndSubmit('Testverein FC', 'info@testverein.de')
@@ -137,10 +139,20 @@ describe('PilotRequestForm — Sendezustände', () => {
   })
 
   it('prf6 – Netzwerkfehler zeigt mailto-Link', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CONTACT_EMAIL', 'kontakt@example.org')
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network error'))
     await renderForm()
     await fillAndSubmit('Testverein FC', 'info@testverein.de')
     expect(container.querySelector('a[href^="mailto:"]')).not.toBeNull()
+  })
+
+  it('prf8 – ohne Kontaktadresse kein mailto, aber Hinweis', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CONTACT_EMAIL', '')
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 503 }))
+    await renderForm()
+    await fillAndSubmit('Testverein FC', 'info@testverein.de')
+    expect(container.querySelector('a[href^="mailto:"]')).toBeNull()
+    expect(container.textContent).toContain('später erneut')
   })
 })
 

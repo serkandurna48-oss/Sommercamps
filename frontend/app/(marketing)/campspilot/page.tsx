@@ -245,6 +245,52 @@ export default function CampsPilotPage() {
         </div>
       </section>
 
+      <section className="light" id="preis" aria-labelledby="preis-heading">
+        <div className="wrap sec">
+          <div className="sec-head wide">
+            <h2 className="d2" id="preis-heading" data-split="">Preis</h2>
+            <p className="lead" data-rise="">Der Preis richtet sich nach der Zahl Ihrer Camps. Für die ersten Vereine ist die Einrichtung inklusive.</p>
+            <div data-rise="">
+              <a className="btn price-cta" href="#pilot">Preis anfragen</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="fragen" aria-labelledby="fragen-heading">
+        <div className="wrap sec">
+          <div className="sec-head wide">
+            <h2 className="d2" id="fragen-heading" data-split="">Häufige Fragen</h2>
+          </div>
+          <div className="faq-list">
+            <details className="faq-item" data-rise="">
+              <summary>Wie lange dauert die Einrichtung?</summary>
+              <p>Sie legen Ihren Verein selbst an und durchlaufen einen Einrichtungsassistenten in vier Schritten. Anschließend prüft CampsPilot Ihre Angaben und gibt Ihren Verein innerhalb eines Werktags frei.</p>
+            </details>
+            <details className="faq-item" data-rise="">
+              <summary>Brauchen Eltern ein Konto?</summary>
+              <p>Nein, Eltern melden ihr Kind ohne Konto in etwa vier Minuten an.</p>
+            </details>
+            <details className="faq-item" data-rise="">
+              <summary>Wie kommt das Geld zu uns?</summary>
+              <p>Eltern überweisen direkt an Ihren Verein mit einem persönlichen Verwendungszweck je Anmeldung; Zahlungseingänge haken Sie in der Liste ab. Eine Online-Zahlung per Kreditkarte ist derzeit nicht möglich.</p>
+            </details>
+            <details className="faq-item" data-rise="">
+              <summary>Was passiert mit den Daten?</summary>
+              <p>Einwilligungen zu Teilnahmebedingungen, Datenschutz und Fotos werden mit Zeitstempel gespeichert. Die Daten werden nur für die Camp-Anmeldung verarbeitet.</p>
+            </details>
+            <details className="faq-item" data-rise="">
+              <summary>Können wir mehrere Standorte anbieten?</summary>
+              <p>Bitte sprechen Sie Ihren Bedarf an mehreren Standorten in der Pilotanfrage an.</p>
+            </details>
+            <details className="faq-item" data-rise="">
+              <summary>Was, wenn ein Camp voll ist?</summary>
+              <p>Es gibt eine Warteliste mit Nachrücken.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
       <section className="close" id="pilot">
         <div className="close-media">
           <div id="closeImg" className="cp-fill">

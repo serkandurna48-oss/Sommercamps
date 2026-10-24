@@ -145,6 +145,77 @@ describe('m1motion – SSR-Markup ohne opacity:0', () => {
   })
 })
 
+// Renaming either section anchor must make the corresponding anchor test fail.
+describe('CX2 – Preis und Fragen', () => {
+  let wrapper: HTMLDivElement
+
+  beforeEach(async () => {
+    const { default: CampsPilotPage } = await import('./page')
+    wrapper = document.createElement('div')
+    wrapper.innerHTML = renderToStaticMarkup(createElement(CampsPilotPage))
+  })
+
+  it.each(['preis', 'fragen'])('Anker #%s existiert genau einmal', (anchor) => {
+    const sections = wrapper.querySelectorAll(`section#${anchor}`)
+    expect(sections).toHaveLength(1)
+    const headingId = sections[0].getAttribute('aria-labelledby')
+    expect(sections[0].querySelector(`h2[id="${headingId}"]`)).not.toBeNull()
+  })
+
+  it('zeigt Preistext und Anfrageknopf vor dem Pilotabschnitt', () => {
+    const price = wrapper.querySelector('#preis')!
+    const pilot = wrapper.querySelector('#pilot')!
+    expect(price).not.toBeNull()
+    expect(pilot).not.toBeNull()
+    expect(price.querySelector('h2')?.textContent).toBe('Preis')
+    expect(price.querySelector('p')?.textContent).toBe('Der Preis richtet sich nach der Zahl Ihrer Camps. Für die ersten Vereine ist die Einrichtung inklusive.')
+    expect(price.querySelector('a[href="#pilot"]')?.textContent).toBe('Preis anfragen')
+    expect(price.compareDocumentPosition(pilot) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('nennt keine Eurobeträge im Preisabschnitt', () => {
+    const price = wrapper.querySelector('#preis')
+    expect(price).not.toBeNull()
+    expect(price!.textContent).not.toMatch(/\d\s*(?:€|Euro\b)/i)
+  })
+
+  it('enthält sechs native Aufklappelemente mit den vorgegebenen Fragen', () => {
+    const entries = Array.from(wrapper.querySelectorAll('#fragen details'))
+    expect(entries).toHaveLength(6)
+    expect(entries.map((entry) => entry.querySelector('summary')?.textContent)).toEqual([
+      'Wie lange dauert die Einrichtung?',
+      'Brauchen Eltern ein Konto?',
+      'Wie kommt das Geld zu uns?',
+      'Was passiert mit den Daten?',
+      'Können wir mehrere Standorte anbieten?',
+      'Was, wenn ein Camp voll ist?',
+    ])
+    for (const entry of entries) {
+      expect(entry.firstElementChild?.tagName).toBe('SUMMARY')
+      expect(entry.querySelectorAll('summary')).toHaveLength(1)
+      const answer = entry.querySelector('p')?.textContent?.trim() ?? ''
+      expect(answer.length).toBeGreaterThan(0)
+      expect(answer.split(/[.!?]+/).filter((sentence) => sentence.trim()).length).toBeLessThanOrEqual(2)
+    }
+  })
+
+  it('erwähnt Kreditkarte und Online-Zahlung ausschließlich in der negativen Geldantwort', () => {
+    const moneyEntry = Array.from(wrapper.querySelectorAll('#fragen details')).find(
+      (entry) => entry.querySelector('summary')?.textContent === 'Wie kommt das Geld zu uns?',
+    )
+    const answer = moneyEntry?.querySelector('p')
+    const negativeSentence = 'Eine Online-Zahlung per Kreditkarte ist derzeit nicht möglich.'
+    expect(answer).not.toBeNull()
+    expect(answer!.textContent).toContain(negativeSentence)
+    const withoutDisclaimer = wrapper.cloneNode(true) as HTMLDivElement
+    const moneyAnswer = Array.from(withoutDisclaimer.querySelectorAll('#fragen details')).find(
+      (entry) => entry.querySelector('summary')?.textContent === 'Wie kommt das Geld zu uns?',
+    )!.querySelector('p')!
+    moneyAnswer.textContent = moneyAnswer.textContent!.replace(negativeSentence, '')
+    expect(withoutDisclaimer.textContent).not.toMatch(/Kreditkarte|Online-Zahlung/i)
+  })
+})
+
 // ── m2pin: reduced-motion → kein ScrollTrigger-Pin ────────────────────────────
 describe('m2pin – reduced-motion: kein Pin', () => {
   let container: HTMLDivElement

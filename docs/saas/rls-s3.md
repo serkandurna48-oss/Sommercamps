@@ -25,9 +25,9 @@ Die Migration ist wiederholbar: eigene Policies werden mit `DROP POLICY IF EXIST
 ersetzt. Andere Policies werden nicht gelöscht; vor einer späteren Cloud-Anwendung
 muss deren tatsächlicher Stand geprüft werden. Dieses Paket enthält kein Deployment.
 
-## Spaltenrechte (UC6 — Column-Level Grants)
+## Spaltenrechte (UC6P — Column-Level Grants)
 
-Migration: `supabase/migrations/20261022000000_column_level_grants.sql`.
+Migration: `supabase/migrations/20261024130000_column_level_grants.sql`.
 Status: lokal vorbereitet und getestet; **nicht auf eine Cloud-DB angewendet**.
 
 ### Problem
@@ -46,35 +46,62 @@ direkt via `supabase-js` oder PostgREST). Der Schutz in den API-Schemas (`schema
 Tabellenweites `SELECT` für `authenticated` entziehen, dann **nur die unbedenklichen Spalten**
 als Column-Level-Grant wiedergeben.
 
-| Tabelle | Ausgenommene Spalten (nicht mehr lesbar) | Grund |
-|---|---|---|
-| `organizations` | `billing_notes` | Interne Vertragsnotizen des Plattformbetreibers |
-| `organizations` | `stripe_account_id` | Sensibles Stripe-Connect-Konfigurations-ID |
-| `organization_members` | `notification_email` | Private Kontaktdaten (Datenschutz) |
-| `organization_members` | `notification_phone` | Private Kontaktdaten, E.164 (Datenschutz) |
-| `organization_members` | `whatsapp_consent_at` | DSGVO-Einwilligungsstempel |
+#### Intern (nicht gewährt) — `organizations`
 
-Alle anderen Spalten beider Tabellen bleiben für `authenticated` über Column-Level-Grants
-zugänglich (selektiv benannt in der Migration, nicht per `SELECT *`).
+| Spalte | Grund | Quelle |
+|---|---|---|
+| `billing_notes` | Interne Vertragsnotizen des Plattformbetreibers | 20260923190000 |
+| `stripe_account_id` | Stripe-Connect-Konto-ID, sensibles Konfigurationsmerkmal | 20261021100000 |
+| `approved_by` | user_id des freigebenden Platform-Owners, intern | 20261023120000 |
+
+#### Intern (nicht gewährt) — `organization_members`
+
+| Spalte | Grund | Quelle |
+|---|---|---|
+| `notification_email` | Private Kontaktdaten (Datenschutz) | 20261021100100 |
+| `notification_phone` | Private Kontaktdaten, E.164 (Datenschutz) | 20261021100100 |
+| `whatsapp_consent_at` | DSGVO-Einwilligungsstempel | 20261021100100 |
+
+#### Lesbar (gewährt) — `organizations`
+
+| Spalte | Quelle |
+|---|---|
+| `id`, `slug`, `name`, `legal_name`, `contact_email`, `contact_phone`, `logo_url`, `primary_color`, `plan_status`, `created_at`, `updated_at` | 20260917133748 |
+| `theme`, `iban` | 20260922143506 |
+| `site_published`, `contact_person_name`, `intro_heading`, `intro_text`, `hero_image_url` | 20260923190000 |
+| `legal_address` | 20260924130000 |
+| `stripe_charges_enabled`, `online_payment_enabled` | 20261021100000 |
+| `trainer_image_url`, `trainer_text` | 20261019203000 |
+| `terms_text` | 20261020170000 |
+| `review_status`, `avv_accepted_at`, `avv_version`, `submitted_at`, `approved_at`, `review_note` | 20261023120000 |
+| `registration_questions` | 20261023130000 |
+
+#### Lesbar (gewährt) — `organization_members`
+
+| Spalte | Quelle |
+|---|---|
+| `id`, `organization_id`, `user_id`, `role`, `created_at` | 20260923220000 |
+| `notification_channel`, `notification_events` | 20261021100100 |
 
 ### Regel für neue sensible Spalten
 
 Bevor eine neue Spalte zu `organizations` oder `organization_members` hinzugefügt wird:
 1. **Ist die Spalte für Vereins-Admins sichtbar?** Wenn nein → ausschließlich über
    Backend-Endpunkte exponieren und die neue Spalte NICHT in den Column-Level-Grant
-   von `20261022000000` aufnehmen.
+   von `20261024130000` aufnehmen.
 2. **Ist die Spalte neu und soll sichtbar sein?** → Die neue Migration muss die Spalte
-   explizit zur `GRANT SELECT (...)` Liste in `20261022000000` hinzufügen (Folgemigration
+   explizit zur `GRANT SELECT (...)` Liste in `20261024130000` hinzufügen (Folgemigration
    oder Patch-Migration), oder eine neue Migration erstellt den Grant neu.
-3. **Keine impliziten Grants** — nach dem Deploy von `20261022000000` gibt es kein
+3. **Keine impliziten Grants** — nach dem Deploy von `20261024130000` gibt es kein
    tabellenweites `SELECT` mehr für `authenticated`; neue Spalten sind automatisch
    gesperrt, bis sie explizit gewährt werden.
 
-### Verifikation (UC6)
+### Verifikation (UC6P)
 
 Gleiche Umgebung wie S3 (Abschnitt unten). Zusätzliche Prüfungen:
 - `SELECT billing_notes FROM organizations` → `permission denied` für `authenticated`
 - `SELECT stripe_account_id FROM organizations` → `permission denied` für `authenticated`
+- `SELECT approved_by FROM organizations` → `permission denied` für `authenticated`
 - `SELECT name, slug FROM organizations WHERE id=...` → 1 Zeile für Vereins-Admin (eigene Org)
 - Entsprechende Tests für alle drei `organization_members`-Spalten
 

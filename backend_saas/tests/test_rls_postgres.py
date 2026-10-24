@@ -193,11 +193,54 @@ def test_migration_aborts_on_foreign_policy(local_database):
 
 
 # ---------------------------------------------------------------------------
-# UC6 — Column-level grants (20261022000000_column_level_grants.sql)
+# UC6P — Column-level grants (20261024130000_column_level_grants.sql)
 # ---------------------------------------------------------------------------
 
+# Column classification for organizations and organization_members.
+# These lists drive both test_column_grants_block_sensitive_fields and
+# test_column_grants_comprehensive. Mutation probe: adding billing_notes to
+# _ORG_READABLE causes test_column_grants_comprehensive to fail immediately.
+_ORG_READABLE = [
+    "id", "slug", "name", "legal_name", "contact_email", "contact_phone",
+    "logo_url", "primary_color", "plan_status", "created_at", "updated_at",
+    "theme", "iban", "site_published", "contact_person_name", "intro_heading",
+    "intro_text", "hero_image_url", "legal_address", "trainer_image_url",
+    "trainer_text", "terms_text", "stripe_charges_enabled", "online_payment_enabled",
+    "review_status", "avv_accepted_at", "avv_version", "submitted_at",
+    "approved_at", "review_note", "registration_questions",
+]
+_ORG_INTERNAL = ["billing_notes", "stripe_account_id", "approved_by"]
+
+_MEMBER_READABLE = [
+    "id", "organization_id", "user_id", "role", "created_at",
+    "notification_channel", "notification_events",
+]
+_MEMBER_INTERNAL = ["notification_email", "notification_phone", "whatsapp_consent_at"]
+
+
+def _apply_column_grants(cur):
+    """Replicate production column-level grant state (REVOKE ALL + explicit GRANT)."""
+    cur.execute("REVOKE ALL ON public.organizations FROM authenticated")
+    cur.execute(
+        sql.SQL("GRANT SELECT ({}) ON public.organizations TO authenticated").format(
+            sql.SQL(", ").join(sql.Identifier(c) for c in _ORG_READABLE)
+        )
+    )
+    cur.execute("REVOKE ALL ON public.organization_members FROM authenticated")
+    cur.execute(
+        sql.SQL("GRANT SELECT ({}) ON public.organization_members TO authenticated").format(
+            sql.SQL(", ").join(sql.Identifier(c) for c in _MEMBER_READABLE)
+        )
+    )
+
+
+def _restore_table_grants(cur):
+    cur.execute("GRANT SELECT ON public.organizations TO authenticated")
+    cur.execute("GRANT SELECT ON public.organization_members TO authenticated")
+
+
 def test_column_grants_block_sensitive_fields(local_database):
-    """UC6: billing_notes and stripe_account_id on organizations, and
+    """UC6P: billing_notes, stripe_account_id, approved_by on organizations, and
     notification_email/phone/whatsapp_consent_at on organization_members
     must raise InsufficientPrivilege for authenticated.
 
@@ -221,34 +264,16 @@ def test_column_grants_block_sensitive_fields(local_database):
                 "INSERT INTO organization_members(organization_id,user_id) VALUES (%s,%s)",
                 (org_id, user_id),
             )
-            # Remove ALL grants (table-level and any column-level) and then explicitly
-            # set only the column-level grants from the migration. The local_database
-            # fixture runs GRANT SELECT ON ALL TABLES after migrations; in that context,
-            # REVOKE SELECT alone may not preserve column-level grants from the migration.
             # REVOKE ALL + GRANT (col-level) replicates the production state exactly.
-            cur.execute("REVOKE ALL ON public.organizations FROM authenticated")
-            cur.execute(
-                """GRANT SELECT (
-                    id, slug, name, legal_name, contact_email, contact_phone, logo_url,
-                    primary_color, plan_status, created_at, updated_at, theme, iban,
-                    site_published, contact_person_name, intro_heading, intro_text,
-                    hero_image_url, legal_address, trainer_image_url, trainer_text,
-                    terms_text, stripe_charges_enabled, online_payment_enabled
-                ) ON public.organizations TO authenticated"""
-            )
-            cur.execute("REVOKE ALL ON public.organization_members FROM authenticated")
-            cur.execute(
-                """GRANT SELECT (
-                    id, organization_id, user_id, role, created_at,
-                    notification_channel, notification_events
-                ) ON public.organization_members TO authenticated"""
-            )
+            # The local_database fixture runs GRANT SELECT ON ALL TABLES after migrations;
+            # REVOKE SELECT alone may not preserve column-level grants in that context.
+            _apply_column_grants(cur)
     finally:
         setup.close()
 
     try:
-        # organizations: sensitive columns must be blocked
-        for col in ("billing_notes", "stripe_account_id"):
+        # organizations: all internal columns must be blocked
+        for col in _ORG_INTERNAL:
             with psycopg2.connect(**local_database) as conn:
                 with conn.cursor() as cur:
                     cur.execute(
@@ -274,8 +299,8 @@ def test_column_grants_block_sensitive_fields(local_database):
                 assert row is not None, "org_admin must be able to read safe org columns"
                 assert row["name"] == "ColTest"
 
-        # organization_members: sensitive notification columns must be blocked
-        for col in ("notification_email", "notification_phone", "whatsapp_consent_at"):
+        # organization_members: all internal columns must be blocked
+        for col in _MEMBER_INTERNAL:
             with psycopg2.connect(**local_database) as conn:
                 with conn.cursor() as cur:
                     cur.execute(
@@ -310,8 +335,7 @@ def test_column_grants_block_sensitive_fields(local_database):
         restore.autocommit = True
         try:
             with restore.cursor() as cur:
-                cur.execute("GRANT SELECT ON public.organizations TO authenticated")
-                cur.execute("GRANT SELECT ON public.organization_members TO authenticated")
+                _restore_table_grants(cur)
                 cur.execute(
                     "DELETE FROM organization_members WHERE organization_id=%s", (org_id,)
                 )
@@ -321,11 +345,114 @@ def test_column_grants_block_sensitive_fields(local_database):
             restore.close()
 
 
+def test_column_grants_comprehensive(local_database):
+    """UC6P: every 'readable' column is accessible, every 'internal' column raises
+    InsufficientPrivilege. Covers all columns from all migrations up to 24.10.2026.
+
+    Mutation probe: if billing_notes is moved to _ORG_READABLE, the static assertion
+    below fails immediately. If it is added to the GRANT block in the migration, the
+    pytest.raises block for billing_notes fails because no exception is raised.
+    """
+    # Static mutation probe — internal columns must never appear in the readable list.
+    assert "billing_notes" not in _ORG_READABLE, "billing_notes must stay internal"
+    assert "stripe_account_id" not in _ORG_READABLE
+    assert "approved_by" not in _ORG_READABLE
+    assert "notification_email" not in _MEMBER_READABLE
+    assert "notification_phone" not in _MEMBER_READABLE
+    assert "whatsapp_consent_at" not in _MEMBER_READABLE
+
+    user_id, org_id = uuid4(), uuid4()
+
+    setup = psycopg2.connect(**local_database)
+    setup.autocommit = True
+    try:
+        with setup.cursor() as cur:
+            cur.execute("INSERT INTO auth.users(id) VALUES (%s)", (user_id,))
+            cur.execute(
+                "INSERT INTO organizations(id,slug,name,contact_email) VALUES (%s,%s,'CmpTest','cmp@example.test')",
+                (org_id, f"cmp-{org_id.hex}"),
+            )
+            cur.execute(
+                "INSERT INTO organization_members(organization_id,user_id) VALUES (%s,%s)",
+                (org_id, user_id),
+            )
+            _apply_column_grants(cur)
+    finally:
+        setup.close()
+
+    jwt = json.dumps({"sub": str(user_id)})
+
+    try:
+        # All readable org columns must be accessible via RLS
+        for col in _ORG_READABLE:
+            with psycopg2.connect(**local_database) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT set_config('request.jwt.claims',%s,true)", (jwt,))
+                    cur.execute("SET LOCAL ROLE authenticated")
+                    cur.execute(
+                        sql.SQL("SELECT {} FROM organizations WHERE id=%s").format(
+                            sql.Identifier(col)
+                        ),
+                        (org_id,),
+                    )
+                    assert cur.fetchone() is not None, f"org column '{col}' should be readable"
+
+        # All readable member columns must be accessible via RLS
+        for col in _MEMBER_READABLE:
+            with psycopg2.connect(**local_database) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT set_config('request.jwt.claims',%s,true)", (jwt,))
+                    cur.execute("SET LOCAL ROLE authenticated")
+                    cur.execute(
+                        sql.SQL("SELECT {} FROM organization_members WHERE user_id=%s").format(
+                            sql.Identifier(col)
+                        ),
+                        (user_id,),
+                    )
+                    assert cur.fetchone() is not None, f"member column '{col}' should be readable"
+
+        # All internal org columns must raise InsufficientPrivilege
+        for col in _ORG_INTERNAL:
+            with psycopg2.connect(**local_database) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT set_config('request.jwt.claims',%s,true)", (jwt,))
+                    cur.execute("SET LOCAL ROLE authenticated")
+                    with pytest.raises(psycopg2.errors.InsufficientPrivilege):
+                        cur.execute(
+                            sql.SQL("SELECT {} FROM organizations").format(sql.Identifier(col))
+                        )
+
+        # All internal member columns must raise InsufficientPrivilege
+        for col in _MEMBER_INTERNAL:
+            with psycopg2.connect(**local_database) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT set_config('request.jwt.claims',%s,true)", (jwt,))
+                    cur.execute("SET LOCAL ROLE authenticated")
+                    with pytest.raises(psycopg2.errors.InsufficientPrivilege):
+                        cur.execute(
+                            sql.SQL("SELECT {} FROM organization_members").format(
+                                sql.Identifier(col)
+                            )
+                        )
+
+    finally:
+        restore = psycopg2.connect(**local_database)
+        restore.autocommit = True
+        try:
+            with restore.cursor() as cur:
+                _restore_table_grants(cur)
+                cur.execute("DELETE FROM organization_members WHERE organization_id=%s", (org_id,))
+                cur.execute("DELETE FROM organizations WHERE id=%s", (org_id,))
+                cur.execute("DELETE FROM auth.users WHERE id=%s", (user_id,))
+        finally:
+            restore.close()
+
+
 def test_column_grants_migration_is_repeatable(local_database):
-    """Running 20261022000000_column_level_grants.sql twice must not error."""
+    """Running 20261024130000_column_level_grants.sql twice must not error."""
     migration = (
         Path(__file__).resolve().parents[2]
-        / "supabase/migrations/20261022000000_column_level_grants.sql"
+        / "supabase/migrations/20261024130000_column_level_grants.sql"
     )
     sql_text = migration.read_text(encoding="utf-8")
     with psycopg2.connect(**local_database) as conn:

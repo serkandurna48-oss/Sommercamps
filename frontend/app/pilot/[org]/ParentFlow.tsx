@@ -126,7 +126,9 @@ export default function ParentFlow({
     if (camps.length === 1) {
       openCamp(camps[0])
     } else {
-      document.getElementById('s-camps')?.scrollIntoView({ behavior: 'smooth' })
+      const target = document.getElementById('s-camps')
+      target?.focus({ preventScroll: true })
+      target?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
     }
   }
 
@@ -417,7 +419,7 @@ export default function ParentFlow({
       </div>
 
       {/* ── Camps ── */}
-      <div className="pad sec" id="s-camps">
+      <div className="pad sec" id="s-camps" tabIndex={-1}>
         <div className="sec-head">
           <div>
             <span className="sec-label">{camps.length} {camps.length === 1 ? 'Termin' : 'Termine'}</span>
@@ -486,7 +488,7 @@ export default function ParentFlow({
             <div key={i} className="gallery-img-wrap" data-gallery-img>
               <Image
                 src={src}
-                alt=""
+                alt={clubAssets?.galleryAltTexts[src] ?? ''}
                 unoptimized
                 fill
                 style={{ objectFit: 'cover', objectPosition: 'center 25%' }}
@@ -504,7 +506,7 @@ export default function ParentFlow({
           <div className="trainer-sec" data-rise>
             <Image
               src={org.trainer_image_url}
-              alt={org.contact_person_name ?? ''}
+              alt={org.contact_person_name?.trim() || `Trainerteam von ${org.name}`}
               unoptimized
               width={120}
               height={120}
@@ -569,7 +571,7 @@ export default function ParentFlow({
       <PublicFooter org={org} />
 
       {/* ── Mobile Sticky CTA ── */}
-      <div className={`sticky-cta${showStickyCta ? ' sticky-cta-on' : ''}`} aria-hidden={!showStickyCta}>
+      <div className={`sticky-cta${showStickyCta ? ' sticky-cta-on' : ''}`} aria-hidden={!showStickyCta} inert={!showStickyCta}>
         <div className="sticky-cta-in">
           {nextCamp && (
             <span className="sticky-cta-date">{formatCampDateRange(nextCamp.start_date, nextCamp.end_date)}</span>

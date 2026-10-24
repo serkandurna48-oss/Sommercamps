@@ -24,6 +24,16 @@
   --info-bg: #e7edf6;
   --info-line: #b4c6e0;
   --ease: cubic-bezier(0.2, 0, 0, 1);
+  --focus-light: #ffffff;
+  --focus-dark: #000000;
+  --focus-width: 2px;
+  --focus-outer-width: 4px;
+  --target-min: 24px;
+  --focus-gap: 6px;
+  --hero-motion-duration: 4s;
+  --grain-motion-cycles: 4;
+  --marquee-motion-duration: 40s;
+  --marquee-motion-cycles: 0.125;
 
   margin: 0;
   background: var(--paper);
@@ -190,7 +200,7 @@
   pointer-events: none;
   opacity: var(--grain);
   background-repeat: repeat;
-  animation: cp-grain 1.1s steps(6) infinite;
+  animation: cp-grain 1.1s steps(6) var(--grain-motion-cycles) forwards;
 }
 @keyframes cp-grain {
   0% {
@@ -1540,7 +1550,10 @@
   .cp-public *::before,
   .cp-public *::after {
     animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      animation: none !important;
     transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
   }
 }
 
@@ -1793,10 +1806,10 @@
   to   { scale: 1; }
 }
 .cp-public .h-trad-shot img {
-  animation: cp-hero-ken-burns 14s ease-out;
+  animation: cp-hero-ken-burns var(--hero-motion-duration) ease-out;
 }
 .cp-public .h-akad .bg img {
-  animation: cp-hero-ken-burns 14s ease-out;
+  animation: cp-hero-ken-burns var(--hero-motion-duration) ease-out;
 }
 
 /* Abschnitt-Einblendung beim Scrollen.
@@ -2631,7 +2644,7 @@
 .cp-public .marquee-track {
   display: flex;
   width: max-content;
-  animation: cp-marquee 40s linear infinite;
+  animation: cp-marquee var(--marquee-motion-duration) linear var(--marquee-motion-cycles) forwards;
 }
 .cp-public .marquee-track:hover {
   animation-play-state: paused;
@@ -3293,7 +3306,7 @@
   gap: 8px 10px;
   align-items: center;
 }
-.cp-public .campfilter-ort { flex-shrink: 0; }
+.cp-public .campfilter-ort { flex-shrink: 0; display: flex; flex-direction: column; }
 .cp-public .campfilter-select {
   height: 44px;
   padding: 0 12px;
@@ -3415,4 +3428,26 @@
   .cp-public .campfilter-periods {
     max-width: none;
   }
+}
+
+/* Two-tone keyboard focus stays visible on club colors and photographs (21:1). */
+.cp-public .screen :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--focus-width) solid var(--focus-light);
+  outline-offset: var(--focus-width);
+  box-shadow: 0 0 0 var(--focus-outer-width) var(--focus-dark);
+}
+.cp-public :is(button, summary) {
+  min-width: var(--target-min);
+  min-height: var(--target-min);
+}
+.cp-public #s-form input:is([type='checkbox'], [type='radio']) {
+  width: var(--target-min);
+  height: var(--target-min);
+  min-width: var(--target-min);
+  flex-shrink: 0;
+}
+/* Leave room for the focus ring inside horizontal scroll containers. */
+.cp-public .campfilter-bar,
+.cp-public .campfilter-periods {
+  padding: var(--focus-gap);
 }

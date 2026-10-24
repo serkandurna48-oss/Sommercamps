@@ -3,6 +3,7 @@
 export interface ClubAssets {
   heroImage: string
   galleryImages: readonly string[]
+  galleryAltTexts: Readonly<Record<string, string>>
   logoImage?: string
   heroPosition?: string
 }
@@ -15,6 +16,11 @@ const ASSETS: Record<string, ClubAssets> = {
       '/clubs/ksv/ksv-kinder-pokal.jpg',
       '/clubs/ksv/ksv-torwart.jpg',
     ],
+    galleryAltTexts: {
+      '/clubs/ksv/ksv-gruppenfoto.jpg': 'Gruppenfoto beim KSV Baunatal',
+      '/clubs/ksv/ksv-kinder-pokal.jpg': 'Kinder mit Pokal beim KSV Baunatal',
+      '/clubs/ksv/ksv-torwart.jpg': 'Torwart beim KSV Baunatal',
+    },
     logoImage: '/clubs/ksv/ksv-logo.png',
     heroPosition: 'center 30%',
   },

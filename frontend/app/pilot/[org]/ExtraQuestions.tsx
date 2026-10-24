@@ -53,14 +53,18 @@ function ExtraQuestion({
   const [showOtherText, setShowOtherText] = useState(isOtherPreselected)
 
   const errorId = `err-extra-${question.key}`
+  const inputId = `extra-${question.key}`
   const showError = submitAttempted && question.required && !value.trim()
 
   if (question.type === 'text') {
     return (
-      <label className={`field${showError ? ' bad' : ''}`}>
+      <label htmlFor={inputId} className={`field${showError ? ' bad' : ''}`}>
         <span className="t-lab">{question.label}{question.required ? ' *' : ''}</span>
         <input
+          id={inputId}
           type="text"
+          required={question.required}
+          aria-required={question.required}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           maxLength={80}
@@ -69,7 +73,7 @@ function ExtraQuestion({
         />
         {showError && (
           <span className="err">
-            <span id={errorId}>Bitte geben Sie eine Antwort ein.</span>
+            <span id={errorId} role="alert">Bitte geben Sie eine Antwort ein.</span>
           </span>
         )}
       </label>
@@ -81,12 +85,15 @@ function ExtraQuestion({
   const selectedIsOther = hasOtherOption && value !== '' && !options.includes(value)
 
   return (
-    <fieldset className={`field${showError ? ' bad' : ''}`} style={{ border: 'none', padding: 0, margin: 0 }}>
+    <fieldset role="radiogroup" aria-required={question.required} aria-invalid={showError}
+      aria-describedby={showError ? errorId : undefined}
+      className={`field${showError ? ' bad' : ''}`} style={{ border: 'none', padding: 0, margin: 0 }}>
       <legend className="t-lab">{question.label}{question.required ? ' *' : ''}</legend>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
-        {options.map((opt) => (
+        {options.map((opt, index) => (
           <label
             key={opt}
+            htmlFor={`${inputId}-${index}`}
             style={{
               display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
               padding: '12px 16px', borderRadius: 'var(--cp-r-chip)',
@@ -95,7 +102,10 @@ function ExtraQuestion({
             }}
           >
             <input
+              id={`${inputId}-${index}`}
               type="radio"
+              required={question.required}
+              aria-describedby={showError ? errorId : undefined}
               name={`extra-${question.key}`}
               value={opt}
               checked={value === opt}
@@ -109,6 +119,7 @@ function ExtraQuestion({
         ))}
         {hasOtherOption && (
           <label
+            htmlFor={`${inputId}-other`}
             style={{
               display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
               padding: '12px 16px', borderRadius: 'var(--cp-r-chip)',
@@ -117,7 +128,10 @@ function ExtraQuestion({
             }}
           >
             <input
+              id={`${inputId}-other`}
               type="radio"
+              required={question.required}
+              aria-describedby={showError ? errorId : undefined}
               name={`extra-${question.key}`}
               checked={selectedIsOther || showOtherText}
               onChange={() => {
@@ -131,22 +145,29 @@ function ExtraQuestion({
           </label>
         )}
         {(showOtherText || selectedIsOther) && (
-          <input
-            data-testid={`extra-other-${question.key}`}
-            type="text"
-            placeholder={`${question.other_label} eingeben`}
-            value={selectedIsOther ? value : ''}
-            onChange={(e) => onChange(e.target.value)}
-            maxLength={80}
-            style={{ marginTop: 4 }}
-            className="field"
-            aria-label={`${question.other_label ?? ''} eingeben`}
-          />
+          <label htmlFor={`${inputId}-other-text`} className="field">
+            <span className="t-lab">{question.other_label} eingeben{question.required ? ' *' : ''}</span>
+            <input
+              id={`${inputId}-other-text`}
+              data-testid={`extra-other-${question.key}`}
+              type="text"
+              required={question.required}
+              aria-required={question.required}
+              aria-invalid={showError}
+              aria-describedby={showError ? errorId : undefined}
+              placeholder={`${question.other_label} eingeben`}
+              value={selectedIsOther ? value : ''}
+              onChange={(e) => onChange(e.target.value)}
+              maxLength={80}
+              style={{ marginTop: 4 }}
+              className="field"
+            />
+          </label>
         )}
       </div>
       {showError && (
         <span className="err">
-          <span id={errorId}>Bitte wählen Sie eine Option.</span>
+          <span id={errorId} role="alert">{showOtherText ? 'Bitte geben Sie eine Antwort ein.' : 'Bitte wählen Sie eine Option.'}</span>
         </span>
       )}
     </fieldset>

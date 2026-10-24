@@ -1,8 +1,11 @@
 'use server'
 
+import { de } from '../../../lib/i18n/de'
+
 import { revalidatePath } from 'next/cache'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
 import {
+  AdminConnectionError,
   cancelRegistrationAdmin,
   promoteWaitlistAdmin,
   updateRegistrationDetailsAdmin,
@@ -25,17 +28,17 @@ export async function promoteWaitlistAction(
   _prev: ActionFormState,
 ): Promise<ActionFormState> {
   const token = await getValidAccessToken()
-  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', success: null }
+  if (!token) return { error: de.adminActions.sessionExpired, success: null }
 
   try {
     const result = await promoteWaitlistAdmin(orgSlug, campSlug, token)
     if (!result.promoted) {
-      return { error: 'Kein freier Platz gerade – später erneut versuchen.', success: null }
+      return { error: de.adminActions.noCapacity, success: null }
     }
     revalidatePath(`/pilot/${orgSlug}`, 'layout')
-    return { error: null, success: 'Platz vergeben.', promoted: result.promoted }
-  } catch {
-    return { error: 'Konnte nicht aufrücken – erneut versuchen.', success: null }
+    return { error: null, success: de.adminActions.promoted, promoted: result.promoted }
+  } catch (error) {
+    return { error: error instanceof AdminConnectionError ? error.message : de.adminActions.promoteFailed, success: null }
   }
 }
 
@@ -54,18 +57,18 @@ export async function cancelRegistrationAction(
   _prev: ActionFormState,
 ): Promise<ActionFormState> {
   const token = await getValidAccessToken()
-  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', success: null }
+  if (!token) return { error: de.adminActions.sessionExpired, success: null }
 
   try {
     const result = await cancelRegistrationAdmin(orgSlug, campSlug, registrationToken, token)
     revalidatePath(`/pilot/${orgSlug}`, 'layout')
     return {
       error: null,
-      success: 'Anmeldung storniert.',
+      success: de.adminActions.cancelled,
       promoted: result.promoted,
     }
-  } catch {
-    return { error: 'Konnte nicht storniert werden – erneut versuchen.', success: null }
+  } catch (error) {
+    return { error: error instanceof AdminConnectionError ? error.message : de.adminActions.cancelFailed, success: null }
   }
 }
 
@@ -98,12 +101,12 @@ export async function updateRegistrationDetailsAction(
   formData: FormData,
 ): Promise<RegistrationDetailsActionState> {
   const token = await getValidAccessToken()
-  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', saved: false, registration: null }
+  if (!token) return { error: de.adminActions.sessionExpired, saved: false, registration: null }
 
   const childFirstName = String(formData.get('child_first_name') ?? '').trim()
   const childLastName = String(formData.get('child_last_name') ?? '').trim()
   if (!childFirstName || !childLastName) {
-    return { error: 'Vor- und Nachname dürfen nicht leer sein.', saved: false, registration: null }
+    return { error: de.adminActions.namesRequired, saved: false, registration: null }
   }
   const optional = (key: string) => {
     const value = String(formData.get(key) ?? '').trim()
@@ -120,7 +123,7 @@ export async function updateRegistrationDetailsAction(
     })
     revalidatePath(`/pilot/${orgSlug}`, 'layout')
     return { error: null, saved: true, registration }
-  } catch {
-    return { error: 'Konnte nicht gespeichert werden – Angaben prüfen und erneut versuchen.', saved: false, registration: null }
+  } catch (error) {
+    return { error: error instanceof AdminConnectionError ? error.message : de.adminActions.detailsFailed, saved: false, registration: null }
   }
 }

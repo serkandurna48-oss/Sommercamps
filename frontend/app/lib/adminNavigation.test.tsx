@@ -5,11 +5,11 @@ import OrgAdminLayout, { generateMetadata } from '../pilot/[org]/(org-admin)/lay
 import PlatformLayout from '../platform/(console)/layout'
 import OrgSwitcher from '../components/saas/shell/OrgSwitcher'
 import { getAdminToken } from './adminSession'
-import { fetchMe, fetchOrganizationAdmin, fetchOrganizationsAdmin, type OrganizationAdmin } from './saasAdminApi'
+import { AdminAuthError, fetchMe, fetchOrganizationAdmin, fetchOrganizationsAdmin, type OrganizationAdmin } from './saasAdminApi'
 import { reviewOrg } from '../platform/reviewFixtures'
 
 vi.mock('./adminSession', () => ({ getAdminToken: vi.fn() }))
-vi.mock('./saasAdminApi', () => ({ fetchMe: vi.fn(), fetchOrganizationAdmin: vi.fn(), fetchOrganizationsAdmin: vi.fn() }))
+vi.mock('./saasAdminApi', async () => ({ ...await vi.importActual<typeof import('./saasAdminApi')>('./saasAdminApi'), fetchMe: vi.fn(), fetchOrganizationAdmin: vi.fn(), fetchOrganizationsAdmin: vi.fn() }))
 vi.mock('../components/saas/fonts', () => ({ archivo: { variable: 'test-font' } }))
 vi.mock('../components/saas/GrainOverlay', () => ({ default: () => null }))
 vi.mock('../platform/logoutAction', () => ({ platformLogoutAction: vi.fn() }))
@@ -62,7 +62,7 @@ describe('admin navigation and role context', () => {
     vi.mocked(getAdminToken).mockResolvedValue(null)
     await expect(orgLayout('club-a')).rejects.toThrow('redirect:/pilot/club-a/login')
     vi.mocked(getAdminToken).mockResolvedValue('expired')
-    vi.mocked(fetchMe).mockRejectedValue(new Error('401'))
+    vi.mocked(fetchMe).mockRejectedValue(new AdminAuthError())
     await expect(orgLayout('club-a')).rejects.toThrow('redirect:/pilot/club-a/login')
   })
 

@@ -1,9 +1,9 @@
 import { de } from '../../../lib/i18n/de'
-import Button from '../ui/Button'
+import Button, { ButtonLink } from '../ui/Button'
 
 /** Fehlermeldungen entschuldigen sich nicht, nennen keinen Fehlercode —
  * sagen, was passiert ist und was jetzt zu tun ist (Abschnitt 9.2). */
-export default function ErrorState({ onRetry }: { onRetry?: () => void }) {
+export default function ErrorState({ onRetry, dashboardHref }: { onRetry?: () => void; dashboardHref?: string }) {
   return (
     <div
       className="rounded-[var(--cp-r-card)] border px-6 py-10 text-center"
@@ -17,10 +17,11 @@ export default function ErrorState({ onRetry }: { onRetry?: () => void }) {
         {de.states.errorBody}
       </p>
       {onRetry && (
-        <div className="mt-4 flex justify-center">
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
           <Button variant="secondary" onClick={onRetry}>
             {de.states.retry}
           </Button>
+          {dashboardHref && <ButtonLink href={dashboardHref} prefetch={false}>{de.states.dashboard}</ButtonLink>}
         </div>
       )}
     </div>

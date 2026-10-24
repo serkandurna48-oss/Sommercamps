@@ -1,5 +1,7 @@
 'use server'
 
+import { de } from '../../../lib/i18n/de'
+
 import { revalidatePath } from 'next/cache'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { reviewOrganization } from '../../../lib/saasAdminApi'
@@ -16,19 +18,19 @@ export async function reviewOrganizationAction(
   formData: FormData,
 ): Promise<ReviewActionState> {
   const token = await getValidAccessToken()
-  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', done: false, decision: null }
+  if (!token) return { error: de.adminActions.sessionExpired, done: false, decision: null }
 
   const decision = formData.get('decision') as 'approve' | 'reject'
   const note = (formData.get('note') as string | null) ?? ''
 
   if (decision === 'reject' && note.trim().length < 10) {
-    return { error: 'Bitte gib einen Ablehnungsgrund ein (min. 10 Zeichen).', done: false, decision: null }
+    return { error: de.adminActions.reviewNote, done: false, decision: null }
   }
 
   try {
     await reviewOrganization(orgSlug, decision, token, note.trim() || undefined)
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Freigabe konnte nicht gespeichert werden'
+    const msg = err instanceof Error ? err.message : de.adminApi.reviewSave
     return { error: msg, done: false, decision: null }
   }
 

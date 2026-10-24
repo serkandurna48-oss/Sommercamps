@@ -1,3 +1,4 @@
+import AdminLayoutUnavailable from '../../../components/saas/screens/AdminLayoutUnavailable'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import AdminShell from '../../../components/saas/shell/AdminShell'
@@ -67,7 +68,11 @@ export default async function OrgAdminLayout({
     redirect(`/pilot/${org}/login`)
   }
 
-  const me = await fetchMe(token).catch(() => null)
+  const me = await fetchMe(token).catch(error => {
+    if (error instanceof AdminAuthError) return null
+    return undefined
+  })
+  if (me === undefined) return <AdminLayoutUnavailable />
   if (!me) {
     redirect(`/pilot/${org}/login`)
   }

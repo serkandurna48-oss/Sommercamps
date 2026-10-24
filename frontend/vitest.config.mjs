@@ -9,7 +9,8 @@ export default defineConfig({
   test: process.platform === 'win32' ? {
     pool: 'vmThreads',
     maxWorkers: 1,
-    testTimeout: 30_000,
+    // Source scans and jsdom rendering can exceed 30 s on shared Windows worktrees.
+    testTimeout: 120_000,
     hookTimeout: 30_000,
     exclude: ['**/node_modules/**', 'e2e/**'],
   } : {

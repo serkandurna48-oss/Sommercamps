@@ -1,8 +1,10 @@
 'use server'
 
+import { de } from '../../../lib/i18n/de'
+
 import { revalidatePath } from 'next/cache'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
-import { setPaymentStatusAdmin, type PaymentStatus } from '../../../lib/saasAdminApi'
+import { AdminConnectionError, setPaymentStatusAdmin, type PaymentStatus } from '../../../lib/saasAdminApi'
 import type { ActionFormState } from '../ui/ActionForm'
 
 /**
@@ -22,12 +24,12 @@ export async function setPaymentStatusAction(
   _prev: ActionFormState,
 ): Promise<ActionFormState> {
   const token = await getValidAccessToken()
-  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', success: null }
+  if (!token) return { error: de.adminActions.sessionExpired, success: null }
 
   try {
     await setPaymentStatusAdmin(orgSlug, campSlug, registrationToken, token, paymentStatus)
-  } catch {
-    return { error: 'Konnte nicht gespeichert werden – erneut versuchen.', success: null }
+  } catch (error) {
+    return { error: error instanceof AdminConnectionError ? error.message : de.adminActions.saveFailed, success: null }
   }
 
   revalidatePath(`/pilot/${orgSlug}`, 'layout')

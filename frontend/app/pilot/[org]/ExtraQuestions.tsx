@@ -51,10 +51,11 @@ function ExtraQuestion({
   const isOtherPreselected = question.type === 'choice' && question.other_label !== null
     && value !== '' && !options.includes(value)
   const [showOtherText, setShowOtherText] = useState(isOtherPreselected)
+  const [touched, setTouched] = useState(false)
 
   const errorId = `err-extra-${question.key}`
   const inputId = `extra-${question.key}`
-  const showError = submitAttempted && question.required && !value.trim()
+  const showError = (submitAttempted || touched) && question.required && !value.trim()
 
   if (question.type === 'text') {
     return (
@@ -67,6 +68,7 @@ function ExtraQuestion({
           aria-required={question.required}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={() => setTouched(true)}
           maxLength={80}
           aria-invalid={showError}
           aria-describedby={showError ? errorId : undefined}
@@ -86,6 +88,9 @@ function ExtraQuestion({
 
   return (
     <fieldset role="radiogroup" aria-required={question.required} aria-invalid={showError}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setTouched(true)
+      }}
       aria-describedby={showError ? errorId : undefined}
       className={`field${showError ? ' bad' : ''}`} style={{ border: 'none', padding: 0, margin: 0 }}>
       <legend className="t-lab">{question.label}{question.required ? ' *' : ''}</legend>

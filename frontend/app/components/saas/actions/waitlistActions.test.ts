@@ -5,7 +5,8 @@ import { cancelRegistrationAction, promoteWaitlistAction } from './waitlistActio
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('../../../lib/adminSession', () => ({ getAdminToken: vi.fn() }))
-vi.mock('../../../lib/saasAdminApi', () => ({
+vi.mock('../../../lib/saasAdminApi', async () => ({
+  ...await vi.importActual('../../../lib/saasAdminApi'),
   cancelRegistrationAdmin: vi.fn(), promoteWaitlistAdmin: vi.fn(), updateRegistrationDetailsAdmin: vi.fn(),
 }))
 

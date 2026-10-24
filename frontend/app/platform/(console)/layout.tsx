@@ -1,10 +1,11 @@
+import AdminLayoutUnavailable from '../../components/saas/screens/AdminLayoutUnavailable'
 import Link from 'next/link'
 import StagingBanner from '../../components/saas/StagingBanner'
 import { archivo } from '../../components/saas/fonts'
 import GrainOverlay from '../../components/saas/GrainOverlay'
 import '../../components/saas/tokens.css'
 import { getValidAccessToken } from '../../lib/supabaseServer'
-import { fetchMe } from '../../lib/saasAdminApi'
+import { AdminAuthError, fetchMe } from '../../lib/saasAdminApi'
 import { redirect } from 'next/navigation'
 import { platformLogoutAction } from '../logoutAction'
 
@@ -30,7 +31,11 @@ export default async function PlatformLayout({ children }: { children: React.Rea
   const token = await getValidAccessToken()
   if (!token) redirect('/platform/login')
 
-  const me = await fetchMe(token).catch(() => null)
+  const me = await fetchMe(token).catch(error => {
+    if (error instanceof AdminAuthError) return null
+    return undefined
+  })
+  if (me === undefined) return <AdminLayoutUnavailable platform />
   if (!me) redirect('/platform/login')
   if (!me.is_platform_owner) {
     const firstOrg = me.admin_organization_slugs[0]

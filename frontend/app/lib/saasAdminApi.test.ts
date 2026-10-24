@@ -53,14 +53,16 @@ it('bei 503 dann 200 → Erfolg mit genau 2 fetch-Aufrufen', async () => {
     'fetch',
     vi.fn(async () => {
       calls++
-      if (calls === 1) return new Response('', { status: 503 })
+      if (calls === 1) return new Response('', { status: 503, headers: { 'Retry-After': '2' } })
       return new Response(JSON.stringify(okMe), { status: 200 })
     }),
   )
 
   vi.useFakeTimers()
   const promise = fetchMe('retry-token')
-  await vi.advanceTimersByTimeAsync(400)
+  await vi.advanceTimersByTimeAsync(1999)
+  expect(calls).toBe(1)
+  await vi.advanceTimersByTimeAsync(1)
   const result = await promise
 
   expect(calls).toBe(2)

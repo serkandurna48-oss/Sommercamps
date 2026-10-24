@@ -8,6 +8,7 @@
  */
 
 import { cache } from 'react'
+import { de } from './i18n/de'
 import type { RegistrationQuestion } from './saasApi'
 export type { RegistrationQuestion } from './saasApi'
 
@@ -17,7 +18,7 @@ function baseUrl(): string {
 
 export class AdminAuthError extends Error {
   constructor() {
-    super('Admin-Sitzung abgelaufen oder ungültig')
+    super(de.adminApi.auth)
     this.name = 'AdminAuthError'
   }
 }
@@ -108,7 +109,7 @@ export interface RegistrationAdmin {
 }
 
 export class AdminActionError extends Error {
-  constructor(message = 'Aktion konnte nicht ausgeführt werden') {
+  constructor(message: string = de.adminApi.action) {
     super(message)
     this.name = 'AdminActionError'
   }
@@ -120,41 +121,90 @@ export class AdminActionError extends Error {
  * platform/new/actions.ts). */
 export class SlugConflictError extends Error {
   constructor(public readonly slug: string) {
-    super(`Slug '${slug}' ist bereits vergeben`)
+    super(de.adminApi.slugConflict(slug))
     this.name = 'SlugConflictError'
   }
 }
 
-async function adminFetch(path: string, token: string): Promise<Response> {
-  const url = `${baseUrl()}${path}`
-  const opts = { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' as const }
-  let res = await fetch(url, opts)
-  if (res.status === 503) {
-    await new Promise<void>(r => setTimeout(r, 400))
-    res = await fetch(url, opts)
+/** Safe to expose through server actions; never includes response bodies or URLs. */
+export class AdminConnectionError extends AdminActionError {}
+
+function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false
+}
+
+function isTimeout(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const { name, code, cause } = error as { name?: string; code?: string; cause?: unknown }
+  return name === 'TimeoutError' || code === 'ETIMEDOUT' ||
+    code === 'UND_ERR_CONNECT_TIMEOUT' || code === 'UND_ERR_HEADERS_TIMEOUT' ||
+    code === 'UND_ERR_BODY_TIMEOUT' || (cause !== undefined && cause !== error && isTimeout(cause))
+}
+
+function retryDelay(value: string | null): number | null {
+  if (value === null || value.trim() === '') return null
+  const seconds = Number(value)
+  const milliseconds = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(value) - Date.now()
+  return Number.isFinite(milliseconds) ? Math.min(5000, Math.max(0, milliseconds)) : null
+}
+
+/** Only reads may retry. All attempts share a single retry budget. */
+async function adminRequest(path: string, token: string, method: 'GET' | 'POST' | 'PATCH' | 'DELETE', body?: unknown): Promise<Response> {
+  const canRetry = method === 'GET'
+  for (let attempt = 0; ; attempt++) {
+    if (isOffline()) throw new AdminConnectionError(de.states.offline)
+    const signal = AbortSignal.timeout(60_000)
+    let res: Response
+    try {
+      res = await fetch(`${baseUrl()}${path}`, {
+        method,
+        headers: { Authorization: `Bearer ${token}`, ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        cache: 'no-store',
+        signal,
+      })
+      // Fetch resolves at the headers; body timeouts must use the same retry budget.
+      if (res.ok && res.status !== 204 && res.status !== 205) {
+        res = new Response(await res.arrayBuffer(), {
+          status: res.status, statusText: res.statusText, headers: res.headers,
+        })
+      }
+    } catch (error) {
+      if (isOffline()) throw new AdminConnectionError(de.states.offline)
+      const timedOut = isTimeout(error) || (signal.aborted && isTimeout(signal.reason))
+      if (canRetry && attempt === 0 && timedOut) {
+        await new Promise<void>(resolve => setTimeout(resolve, 1000))
+        continue
+      }
+      throw new AdminConnectionError(timedOut ? de.states.serverRestarting : de.states.networkError)
+    }
+    const delay = res.status === 503 ? retryDelay(res.headers.get('Retry-After')) : null
+    if (canRetry && attempt === 0 && delay !== null) {
+      await res.body?.cancel().catch(() => undefined)
+      await new Promise<void>(resolve => setTimeout(resolve, delay))
+      continue
+    }
+    if (res.status === 401) throw new AdminAuthError()
+    if ([502, 503, 504].includes(res.status)) throw new AdminConnectionError(de.states.serverRestarting)
+    return res
   }
-  if (res.status === 401) throw new AdminAuthError()
-  return res
+}
+
+async function adminFetch(path: string, token: string): Promise<Response> {
+  return adminRequest(path, token, 'GET')
 }
 
 /** Für alle mutierenden Admin-Aufrufe (POST/PATCH) — anders als adminFetch
  * (nur GET) sendet dies einen JSON-Body. Ein 422 (z. B. ungültiger
  * payment_status) wird wie jeder andere Fehlerstatus zu AdminActionError —
  * die aufrufende Server Action entscheidet, was der Nutzer davon sieht. */
-async function adminMutate(path: string, token: string, method: 'POST' | 'PATCH', body?: unknown): Promise<Response> {
-  const res = await fetch(`${baseUrl()}${path}`, {
-    method,
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-    cache: 'no-store',
-  })
-  if (res.status === 401) throw new AdminAuthError()
-  return res
+async function adminMutate(path: string, token: string, method: 'POST' | 'PATCH' | 'DELETE', body?: unknown): Promise<Response> {
+  return adminRequest(path, token, method, body)
 }
 
 export async function fetchCampsAdmin(orgSlug: string, token: string): Promise<CampAdmin[]> {
   const res = await adminFetch(`/admin/organizations/${orgSlug}/camps`, token)
-  if (!res.ok) throw new Error(`GET admin camps failed: ${res.status}`)
+  if (!res.ok) throw new AdminActionError(de.adminApi.campsLoad)
   return res.json() as Promise<CampAdmin[]>
 }
 
@@ -165,7 +215,7 @@ export async function fetchCampsAdmin(orgSlug: string, token: string): Promise<C
 export async function fetchOrganizationAdmin(orgSlug: string, token: string): Promise<OrganizationAdmin | null> {
   const res = await adminFetch(`/admin/organizations/${orgSlug}`, token)
   if (res.status === 404) return null
-  if (!res.ok) throw new AdminActionError('Verein konnte nicht geladen werden')
+  if (!res.ok) throw new AdminActionError(de.adminApi.organizationLoad)
   return res.json() as Promise<OrganizationAdmin>
 }
 
@@ -176,7 +226,7 @@ export async function fetchRegistrationsAdmin(
 ): Promise<RegistrationAdmin[]> {
   const res = await adminFetch(`/admin/organizations/${orgSlug}/camps/${campSlug}/registrations`, token)
   if (res.status === 404) return []
-  if (!res.ok) throw new Error(`GET admin registrations failed: ${res.status}`)
+  if (!res.ok) throw new AdminActionError(de.adminApi.registrationsLoad)
   return res.json() as Promise<RegistrationAdmin[]>
 }
 
@@ -257,7 +307,7 @@ async function mutateOrThrow(path: string, token: string, method: 'POST' | 'PATC
  * Sicherheitsbegründung (nur hinter require_platform_admin, nie öffentlich). */
 export async function fetchOrganizationsAdmin(token: string): Promise<OrganizationAdmin[]> {
   const res = await adminFetch('/admin/organizations', token)
-  if (!res.ok) throw new AdminActionError('Vereine konnten nicht geladen werden')
+  if (!res.ok) throw new AdminActionError(de.adminApi.organizationsLoad)
   return res.json() as Promise<OrganizationAdmin[]>
 }
 
@@ -281,7 +331,7 @@ export interface OrganizationCreateInput {
 export async function createOrganizationAdmin(token: string, data: OrganizationCreateInput): Promise<OrganizationAdmin> {
   const res = await adminMutate('/admin/organizations', token, 'POST', data)
   if (res.status === 409) throw new SlugConflictError(data.slug)
-  if (!res.ok) throw new AdminActionError('Verein konnte nicht angelegt werden')
+  if (!res.ok) throw new AdminActionError(de.adminApi.organizationCreate)
   return res.json() as Promise<OrganizationAdmin>
 }
 
@@ -300,7 +350,7 @@ export interface CampCreateInput {
 export async function createCampAdmin(orgSlug: string, token: string, data: CampCreateInput): Promise<CampAdmin> {
   const res = await adminMutate(`/admin/organizations/${orgSlug}/camps`, token, 'POST', data)
   if (res.status === 409) throw new SlugConflictError(data.slug)
-  if (!res.ok) throw new AdminActionError('Camp konnte nicht angelegt werden')
+  if (!res.ok) throw new AdminActionError(de.adminApi.campCreate)
   return res.json() as Promise<CampAdmin>
 }
 
@@ -431,7 +481,7 @@ export interface PlatformStats {
 
 export async function fetchPlatformStats(token: string): Promise<PlatformStats> {
   const res = await adminFetch('/admin/stats', token)
-  if (!res.ok) throw new AdminActionError('Kennzahlen konnten nicht geladen werden')
+  if (!res.ok) throw new AdminActionError(de.adminApi.statsLoad)
   return res.json() as Promise<PlatformStats>
 }
 
@@ -458,7 +508,7 @@ export async function fetchGlobalRegistrationsAdmin(
   if (filter.status) params.set('registration_status', filter.status)
   const query = params.toString()
   const res = await adminFetch(`/admin/registrations${query ? `?${query}` : ''}`, token)
-  if (!res.ok) throw new AdminActionError('Anmeldungen konnten nicht geladen werden')
+  if (!res.ok) throw new AdminActionError(de.adminApi.registrationsLoad)
   return res.json() as Promise<GlobalRegistration[]>
 }
 
@@ -477,7 +527,7 @@ export interface AuditLogEntry {
 export async function fetchAuditLogAdmin(token: string, organizationSlug?: string): Promise<AuditLogEntry[]> {
   const query = organizationSlug ? `?organization_slug=${encodeURIComponent(organizationSlug)}` : ''
   const res = await adminFetch(`/admin/audit-log${query}`, token)
-  if (!res.ok) throw new AdminActionError('Änderungsverlauf konnte nicht geladen werden')
+  if (!res.ok) throw new AdminActionError(de.adminApi.auditLoad)
   return res.json() as Promise<AuditLogEntry[]>
 }
 
@@ -492,7 +542,7 @@ export interface OrganizationMember {
 
 export async function fetchOrganizationMembersAdmin(orgSlug: string, token: string): Promise<OrganizationMember[]> {
   const res = await adminFetch(`/admin/organizations/${orgSlug}/members`, token)
-  if (!res.ok) throw new AdminActionError('Zugriffsliste konnte nicht geladen werden')
+  if (!res.ok) throw new AdminActionError(de.adminApi.membersLoad)
   return res.json() as Promise<OrganizationMember[]>
 }
 
@@ -501,27 +551,21 @@ export async function fetchOrganizationMembersAdmin(orgSlug: string, token: stri
  * Docstring). 404 heißt: noch kein Konto für diese E-Mail vorhanden. */
 export async function addOrganizationMemberAdmin(orgSlug: string, token: string, email: string): Promise<OrganizationMember> {
   const res = await adminMutate(`/admin/organizations/${orgSlug}/members`, token, 'POST', { email })
-  if (res.status === 404) throw new AdminActionError('Für diese E-Mail existiert noch kein Konto')
-  if (res.status === 503) throw new AdminActionError('Konto-Suche derzeit nicht verfügbar')
-  if (!res.ok) throw new AdminActionError('Zugriff konnte nicht zugewiesen werden')
+  if (res.status === 404) throw new AdminActionError(de.adminApi.accountMissing)
+  if (!res.ok) throw new AdminActionError(de.adminApi.memberAdd)
   return res.json() as Promise<OrganizationMember>
 }
 
 export async function removeOrganizationMemberAdmin(orgSlug: string, memberId: string, token: string): Promise<void> {
-  const res = await fetch(`${baseUrl()}/admin/organizations/${orgSlug}/members/${memberId}`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  })
-  if (res.status === 401) throw new AdminAuthError()
-  if (!res.ok) throw new AdminActionError('Zugriff konnte nicht entfernt werden')
+  const res = await adminMutate(`/admin/organizations/${orgSlug}/members/${memberId}`, token, 'DELETE')
+  if (!res.ok) throw new AdminActionError(de.adminApi.memberRemove)
 }
 
 /** Alle Vereine mit dem gegebenen Prüfstatus (z. B. 'submitted') — nur platform_owner.
  * Liefert dieselbe Datenform wie fetchOrganizationsAdmin, nur gefiltert. */
 export async function listOrganizationsByReviewStatus(status: string, token: string): Promise<OrganizationAdmin[]> {
   const res = await adminFetch(`/admin/organizations?review_status=${encodeURIComponent(status)}`, token)
-  if (!res.ok) throw new AdminActionError('Vereine konnten nicht geladen werden')
+  if (!res.ok) throw new AdminActionError(de.adminApi.organizationsLoad)
   return res.json() as Promise<OrganizationAdmin[]>
 }
 
@@ -538,8 +582,8 @@ export async function reviewOrganization(
   if (note) body.note = note
   const res = await adminMutate(`/admin/organizations/${slug}/review`, token, 'POST', body)
   if (res.status === 409)
-    throw new AdminActionError('Entscheidung nicht möglich: Verein ist nicht im Status „eingereicht"')
-  if (!res.ok) throw new AdminActionError('Freigabe konnte nicht gespeichert werden')
+    throw new AdminActionError(de.adminApi.reviewConflict)
+  if (!res.ok) throw new AdminActionError(de.adminApi.reviewSave)
   return res.json() as Promise<OrganizationAdmin>
 }
 
@@ -554,6 +598,6 @@ export async function submitReviewAdmin(
     'POST',
     { accept_avv: true as const, avv_version: avvVersion },
   )
-  if (!res.ok) throw new AdminActionError('Einreichung nicht möglich')
+  if (!res.ok) throw new AdminActionError(de.adminApi.reviewSubmit)
   return res.json() as Promise<OrganizationAdmin>
 }

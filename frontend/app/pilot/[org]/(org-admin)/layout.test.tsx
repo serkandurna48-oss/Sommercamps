@@ -26,3 +26,11 @@ it('still redirects an expired club authorization to login', async () => {
   vi.mocked(getOrganizationAdmin).mockRejectedValue(new AdminAuthError())
   await expect(OrgAdminLayout({ children: 'private', params: Promise.resolve({ org: 'demo' }) })).rejects.toThrow('redirect:/pilot/demo/login')
 })
+import AdminLayoutUnavailable from '../../../components/saas/screens/AdminLayoutUnavailable'
+
+it('keeps an unavailable backend out of the login redirect and hides protected children', async () => {
+  vi.mocked(fetchMe).mockRejectedValue(new Error('503 unavailable'))
+  const layout = await OrgAdminLayout({ children: 'private', params: Promise.resolve({ org: 'demo' }) })
+  expect(layout.type).toBe(AdminLayoutUnavailable)
+  expect(layout.props.children).toBeUndefined()
+})

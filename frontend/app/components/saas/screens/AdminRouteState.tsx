@@ -1,6 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
+import { de } from '../../../lib/i18n/de'
 import { computeBrandTokens } from '../brandPipeline'
 import { campTabs, orgTabs } from '../navTabs'
 import MatchdayBand from '../shell/MatchdayBand'
@@ -15,15 +16,15 @@ export default function AdminRouteState({ reset }: { reset?: () => void }) {
   const org = useOrganizationIdentity()
   const campSlug = segments[2] === 'camps' && segments[3] !== 'new' ? segments[3] : undefined
   const section = segments.at(-1)
-  const titles: Record<string, string> = { dashboard: 'Übersicht', zahlungen: 'Zahlungen', warteliste: 'Warteliste', aufgaben: 'Aufgaben', anmeldungen: 'Neue Anmeldungen heute', new: 'Neues Camp', konfiguration: campSlug ? 'Camp-Einstellungen' : 'Vereinseinstellungen' }
+  const titles: Record<string, string> = { ...de.adminRoute.titles, konfiguration: campSlug ? de.adminRoute.campConfiguration : de.adminRoute.titles.konfiguration }
   const backHref = section === 'dashboard' ? undefined : campSlug && section !== campSlug ? `/pilot/${orgSlug}/camps/${campSlug}` : `/pilot/${orgSlug}/dashboard`
   return <>
-    <MatchdayBand orgSlug={orgSlug} orgName={org?.name ?? 'Verein'} orgLogoUrl={org?.logo_url ?? null}
-      title={titles[section ?? ''] ?? 'Camp-Übersicht'} backHref={backHref}
+    <MatchdayBand orgSlug={orgSlug} orgName={org?.name ?? de.adminRoute.organization} orgLogoUrl={org?.logo_url ?? null}
+      title={titles[section ?? ''] ?? de.adminRoute.campOverview} backHref={backHref}
       brandColor={computeBrandTokens(org?.primary_color ?? null).brand}
       tabs={campSlug ? campTabs(orgSlug, campSlug) : orgTabs(orgSlug)} />
     <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
-      {reset ? <ErrorState onRetry={reset} /> : <div role="status" aria-label="Wird geladen …"><Skeleton className="mb-4 h-20 w-full" /><Skeleton className="h-48 w-full" /></div>}
+      {reset ? <ErrorState onRetry={reset} dashboardHref={`/pilot/${orgSlug}/dashboard`} /> : <div role="status" aria-label={de.states.loading}><Skeleton className="mb-4 h-20 w-full" /><Skeleton className="h-48 w-full" /></div>}
     </main>
   </>
 }

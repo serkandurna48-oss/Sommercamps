@@ -23,6 +23,7 @@ export default function CampsPilotPage() {
           <div className="nav-links">
             <a href="#ordnung">Wie es funktioniert</a>
             <a href="#vertrauen">Vertrauen</a>
+            <a href="#fussballschulen">Fußballschulen</a>
             <a href="#pilot">Pilot</a>
           </div>
           <Link href="/campspilot/registrieren" className="btn sm">Verein kostenlos anlegen</Link>
@@ -213,6 +214,33 @@ export default function CampsPilotPage() {
             <div className="metric"><span className="v num" data-count="95" data-pre="über " data-post=" %">über 95 %</span><span className="c">Anmeldungen ohne manuelle Korrektur</span></div>
             <div className="metric"><span className="v num" data-count="2" data-pre="unter " data-post=" Std.">unter 2 Std.</span><span className="c">bis ein neuer Verein eingerichtet ist</span></div>
             <div className="metric"><span className="v num" data-count="0" data-pre="" data-post="">0</span><span className="c">Anmeldungen, die im falschen Verein landen</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="fussballschulen">
+        <div className="wrap sec">
+          <div className="sec-head wide">
+            <p className="label" data-rise="">Fußballschulen</p>
+            <h2 className="d2" data-split="">Für Fußballschulen mit vielen Standorten.</h2>
+          </div>
+          <ul className="fs-list">
+            <li data-rise="">
+              <span className="n">01</span>
+              <p>Alle Camps an allen Gastvereinen auf einer Seite; jedes Camp mit eigenem Ort, Termin, Preis und Plätzen.</p>
+            </li>
+            <li data-rise="">
+              <span className="n">02</span>
+              <p>Eltern bekommen sofort eine Bestätigung mit Überweisungsdaten und eigenem Verwendungszweck; Zahlungseingänge haken Sie in einer Liste ab, statt Bargeld an jedem Standort einzusammeln.</p>
+            </li>
+            <li data-rise="">
+              <span className="n">03</span>
+              <p>Tagesliste je Camp zum Drucken und Excel-Export für die Trainer vor Ort.</p>
+            </li>
+          </ul>
+          <p className="lead fs-brand" data-rise="" style={{ color: 'var(--fog-2)' }}>Ihr Logo, Ihre Farben – die Gastvereine sehen Ihre Marke.</p>
+          <div data-rise="" style={{ marginTop: '32px' }}>
+            <a className="btn fill" href="#pilot">Pilotplatz anfragen</a>
           </div>
         </div>
       </section>

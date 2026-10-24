@@ -42,6 +42,7 @@ export default function CampPaymentsScreen({ orgSlug, campSlug, org, camp, regis
         </StatGrid>
 
         <PaymentSection
+          org={{ name: org.name, legal_name: org.legal_name, iban: org.iban, contact_person_name: org.contact_person_name, contact_email: org.contact_email }}
           key={`${campSlug}-${initialFilter}`}
           initialFilter={initialFilter}
           entries={entries}

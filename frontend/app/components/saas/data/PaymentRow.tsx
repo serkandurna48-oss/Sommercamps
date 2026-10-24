@@ -10,10 +10,13 @@ import type { ActionFormState } from '../ui/ActionForm'
 import Button from '../ui/Button'
 import ListRow from '../ui/ListRow'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from './StatusChip'
+import PaymentTextCopy, { PaymentTextFallback } from './PaymentTextCopy'
+import { buildPaymentReminder, reminderLabels, type ReminderOrganization } from '../../../lib/zahlungserinnerung'
 
 export default function PaymentRow({
   registration,
   camp,
+  org,
   orgSlug,
   onPaid,
   brandStrong,
@@ -21,12 +24,15 @@ export default function PaymentRow({
 }: {
   registration: RegistrationAdmin
   camp: CampAdmin
+  org: ReminderOrganization
   orgSlug: string
   onPaid: () => void
   brandStrong: string
   brandOn: string
 }) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle')
+  const reminder = buildPaymentReminder({ registration, camp }, org)
+  const [fallbackText, setFallbackText] = useState<string | null>(null)
   async function markPaid(previous: ActionFormState) {
     const result = await setPaymentStatusAction(orgSlug, camp.slug, registration.registration_token, 'paid', de.paymentsPage.markPaidSuccess, previous)
     if (result.success && !result.error) onPaid()
@@ -77,6 +83,9 @@ export default function PaymentRow({
           )}
         </div>} action={<>        {isOpenPayment(registration) && (
           <div className="flex flex-wrap items-center gap-2">
+            <PaymentTextCopy text={reminder} label={reminderLabels.copy}
+              onFallback={setFallbackText}
+              disabledReason={reminder === null ? reminderLabels.missingIban : undefined} />
             <ActionForm
               action={markPaid}
               label={de.paymentsPage.markPaid}
@@ -104,6 +113,9 @@ export default function PaymentRow({
             requireConfirm="Bereits erfolgte Rückzahlung als erstattet markieren? CampsPilot überweist kein Geld."
           />
         )}</>} />
+      {isOpenPayment(registration) && fallbackText && fallbackText === reminder && (
+        <div className="cp-list-row-padded"><PaymentTextFallback text={fallbackText} /></div>
+      )}
     </div>
   )
 }

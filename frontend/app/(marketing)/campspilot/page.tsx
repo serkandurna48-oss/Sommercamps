@@ -7,6 +7,7 @@ import SiteMotion from '../../components/marketing/SiteMotion'
 import { CP_IMAGES } from './images'
 import PilotRequestForm from './PilotRequestForm'
 import { marketingMetadata } from './seoMetadata'
+import { faq, pakete, paketAnfrageHref, preise } from '../preise/pakete'
 
 export async function generateMetadata() {
   return marketingMetadata(
@@ -35,6 +36,7 @@ export default function CampsPilotPage() {
             <a href="#ordnung">Wie es funktioniert</a>
             <a href="#vertrauen">Vertrauen</a>
             <a href="#fussballschulen">Fußballschulen</a>
+            <a href="#preis">{preise.navigation}</a>
             <a href="#pilot">Pilot</a>
           </div>
           <Link href="/campspilot/registrieren" className="btn sm">Verein kostenlos anlegen</Link>
@@ -246,45 +248,43 @@ export default function CampsPilotPage() {
       <section className="light" id="preis" aria-labelledby="preis-heading">
         <div className="wrap sec">
           <div className="sec-head wide">
-            <h2 className="d2" id="preis-heading" data-split="">Preis</h2>
-            <p className="lead" data-rise="">Der Preis richtet sich nach der Zahl Ihrer Camps. Für die ersten Vereine ist die Einrichtung inklusive.</p>
-            <div data-rise="">
-              <a className="btn price-cta" href="#pilot">Preis anfragen</a>
-            </div>
+            <p className="label on-light">{preise.navigation}</p>
+            <h2 className="d2" id="preis-heading">{preise.titel}</h2>
+            <p className="lead">{preise.einleitung}</p>
           </div>
+          <div className="price-grid">
+            {pakete.map((paket) => (
+              <article className="price-card" key={paket.name} aria-label={paket.name}>
+                <h3 className="d3">{paket.name}</h3>
+                <p className="price-target">{paket.zielgruppe}</p>
+                <p className="price-amount"><strong className="num">{paket.preis} {preise.waehrung}</strong> <span>{preise.zeitraum}</span></p>
+                <p className="price-scope">{paket.umfang}</p>
+                <ul className="price-features">
+                  {paket.features.map((feature) => <li key={feature}>{feature}</li>)}
+                </ul>
+                <a className="btn price-cta" href={paketAnfrageHref(paket.name)}>
+                  {preise.anfrage}<span className="sr"> – {paket.name}</span>
+                </a>
+              </article>
+            ))}
+          </div>
+          <p className="price-tax">{preise.steuerhinweis}</p>
+          {preise.entwurf && <p className="price-note"><small>{preise.saisonhinweis}</small></p>}
         </div>
       </section>
 
       <section id="fragen" aria-labelledby="fragen-heading">
         <div className="wrap sec">
           <div className="sec-head wide">
-            <h2 className="d2" id="fragen-heading" data-split="">Häufige Fragen</h2>
+            <h2 className="d2" id="fragen-heading" data-split="">{preise.faqTitel}</h2>
           </div>
           <div className="faq-list">
-            <details className="faq-item" data-rise="">
-              <summary>Wie lange dauert die Einrichtung?</summary>
-              <p>Sie legen Ihren Verein selbst an und durchlaufen einen Einrichtungsassistenten in vier Schritten. Anschließend prüft CampsPilot Ihre Angaben und gibt Ihren Verein innerhalb eines Werktags frei.</p>
-            </details>
-            <details className="faq-item" data-rise="">
-              <summary>Brauchen Eltern ein Konto?</summary>
-              <p>Nein, Eltern melden ihr Kind ohne Konto in etwa vier Minuten an.</p>
-            </details>
-            <details className="faq-item" data-rise="">
-              <summary>Wie kommt das Geld zu uns?</summary>
-              <p>Eltern überweisen direkt an Ihren Verein mit einem persönlichen Verwendungszweck je Anmeldung; Zahlungseingänge haken Sie in der Liste ab. Eine Online-Zahlung per Kreditkarte ist derzeit nicht möglich.</p>
-            </details>
-            <details className="faq-item" data-rise="">
-              <summary>Was passiert mit den Daten?</summary>
-              <p>Einwilligungen zu Teilnahmebedingungen, Datenschutz und Fotos werden mit Zeitstempel gespeichert. Die Daten werden nur für die Camp-Anmeldung verarbeitet.</p>
-            </details>
-            <details className="faq-item" data-rise="">
-              <summary>Können wir mehrere Standorte anbieten?</summary>
-              <p>Bitte sprechen Sie Ihren Bedarf an mehreren Standorten in der Pilotanfrage an.</p>
-            </details>
-            <details className="faq-item" data-rise="">
-              <summary>Was, wenn ein Camp voll ist?</summary>
-              <p>Es gibt eine Warteliste mit Nachrücken.</p>
-            </details>
+            {faq.map((eintrag) => (
+              <details className="faq-item" key={eintrag.frage}>
+                <summary>{eintrag.frage}</summary>
+                <p>{eintrag.antwort}</p>
+              </details>
+            ))}
           </div>
         </div>
       </section>
@@ -308,7 +308,7 @@ export default function CampsPilotPage() {
           <div className="sec-head wide">
             <p className="label" data-rise="">Pilot</p>
             <h2 className="d2" data-split="">Zwei Vereine sind drauf. Es ist Platz für wenige mehr.</h2>
-            <p className="lead" style={{ color: 'var(--fog-2)' }} data-rise="">CampsPilot ist im Pilotbetrieb. Wir nehmen Vereine auf, die im kommenden Jahr ein bis zehn Camps veranstalten und bereit sind, uns zu sagen, was fehlt.</p>
+            <p className="lead" style={{ color: 'var(--fog-2)' }} data-rise="">{preise.pilotEinleitung}</p>
           </div>
           <PilotRequestForm />
           <p className="form-note" id="formNote">
@@ -329,7 +329,8 @@ export default function CampsPilotPage() {
             CampsPilot
           </a>
           <span className="cl">Anmeldung und Verwaltung für Fußballcamps</span>
-          <nav className="foot-links" aria-label="Rechtliches">
+          <nav className="foot-links" aria-label="Preise und Rechtliches">
+            <a href="#preis">{preise.navigation}</a>
             <Link href="/campspilot/impressum">Impressum</Link>
             <Link href="/campspilot/datenschutz">Datenschutz</Link>
             <Link href="/campspilot/teilnahmebedingungen">Teilnahmebedingungen</Link>

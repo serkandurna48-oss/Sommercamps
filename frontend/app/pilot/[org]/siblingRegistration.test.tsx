@@ -172,6 +172,22 @@ it('übernimmt nur Elternangaben für das zweite und dritte Kind; alle Einwillig
   expectNoPersistence()
 })
 
+it('CX32: zeigt nach Submit Camp, Kind und E-Mail; weiteres Kind behält die E-Mail und leert den Namen', async () => {
+  await firstRegistration()
+  const heading = host.querySelector('h1')!
+  expect(heading.textContent?.trim()).toBe('Anmeldung eingegangen')
+  expect(heading.getAttribute('role')).toBe('status')
+  expect(document.activeElement).toBe(heading)
+  expect(host.querySelector('.done-summary')?.textContent).toContain(camp.title)
+  expect(host.querySelector('.done-summary')?.textContent).toContain('Mia')
+  expect(host.querySelector('.done-summary')?.textContent).toContain('5.–9. Juli 2027')
+  expect(host.querySelector('.done-email')?.textContent?.trim()).toBe(`Wir haben eine Bestätigung an ${parents.parentEmail} geschickt.`)
+  await click('Weiteres Kind anmelden')
+  expect(field('parent_email').value).toBe(parents.parentEmail)
+  expect(field('child_first_name').value).toBe('')
+  expect(field('child_last_name').value).toBe('')
+})
+
 it('wählt dasselbe Camp vor und meldet nach Camp-Wechsel beim gewählten Termin an', async () => {
   const second = { ...camp, slug: 'herbst', title: 'Herbstcamp', price_cents: 19900, is_full: true }
   const closed = { ...camp, slug: 'geschlossen', title: 'Geschlossen', registration_open: false }

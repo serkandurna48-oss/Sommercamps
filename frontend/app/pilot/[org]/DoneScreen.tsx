@@ -34,6 +34,7 @@ export default function DoneScreen({
   const [copiedField, setCopiedField] = useState<'ref' | 'iban' | 'betrag' | null>(null)
   const waitlisted = result.status === 'waitlist'
   const payTo = org.legal_name ?? org.name
+  const bandTextColor = org.theme === 'tradition' ? 'var(--brand-on)' : 'var(--on-band)'
   // Only show transfer instructions when the organization has supplied an IBAN.
   const iban = org.iban
   const priceText = formatPrice(camp.price_cents, camp.currency)
@@ -95,14 +96,17 @@ export default function DoneScreen({
           role="status"
           className="d1 done-headline"
           lang="de"
-          style={{ color: 'var(--on-band)' }}
+          style={{ color: bandTextColor }}
         >
-          {waitlisted ? `${childName} ist auf der Warteliste` : 'Anmeldung eingegangen'}
+          Anmeldung eingegangen
         </h1>
-        <p className="done-sub" style={{ color: 'var(--on-band-2)' }}>
+        <p className="done-sub" style={{ color: org.theme === 'tradition' ? bandTextColor : 'var(--on-band-2)' }}>
           {waitlisted
-            ? `${payTo} meldet sich bei Ihnen — unter ${parentEmail} oder telefonisch —, sobald beim ${camp.title} ein Platz frei wird. Es entstehen noch keine Kosten.`
+            ? `${childName} ist auf der Warteliste. ${payTo} meldet sich bei Ihnen — unter ${parentEmail} oder telefonisch —, sobald beim ${camp.title} ein Platz frei wird. Es entstehen noch keine Kosten.`
             : `${childName} ist angemeldet — der Platz beim ${camp.title} vom ${formatCampDateRange(camp.start_date, camp.end_date)} ist reserviert.`}
+        </p>
+        <p className="done-sub done-email" style={{ color: bandTextColor }}>
+          Wir haben eine Bestätigung an {parentEmail} geschickt.
         </p>
       </header>
 
@@ -213,6 +217,7 @@ export default function DoneScreen({
 
       <div className="pad" style={{ paddingBottom: 30, display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 28 }}>
         <h2 className="d3">Was als Nächstes passiert</h2>
+        <p>Der Verein meldet sich bei Ihnen mit den weiteren Details.</p>
         <ol className="steps">
           <li data-rise>
             <div className="col">
@@ -225,7 +230,7 @@ export default function DoneScreen({
             </div>
             <div className="txt">
               <b>{waitlisted ? 'Auf der Warteliste eingetragen' : 'Anmeldung gespeichert'}</b>
-              <span>Wir schicken Ihnen eine Bestätigung an {parentEmail}. Bitte sehen Sie auch im Spam-Ordner nach.</span>
+              <span>Bitte sehen Sie auch im Spam-Ordner nach.</span>
             </div>
           </li>
           {waitlisted ? (
@@ -283,12 +288,15 @@ export default function DoneScreen({
             </>
           )}
         </ol>
-        <div className="done-contact">
+        {(org.contact_person_name || org.contact_email || org.contact_phone) && <div className="done-contact">
           <h2 className="d3">Kontakt zum Verein</h2>
           <p>{org.contact_person_name || org.name}</p>
-          <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>
+          {org.contact_email && <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>}
           {org.contact_phone && <a href={`tel:${org.contact_phone.replace(/[^+\d]/g, '')}`}>{org.contact_phone}</a>}
-        </div>
+        </div>}
+        <button className="btn btn-pill" type="button" onClick={() => window.print()}>
+          Seite drucken
+        </button>
         {!waitlisted && (
           <>
             <button className="btn btn-pill" type="button" onClick={downloadCalendar}>

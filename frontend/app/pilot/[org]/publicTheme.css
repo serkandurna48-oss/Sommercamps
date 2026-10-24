@@ -3569,3 +3569,45 @@
     mask-image: none;
   }
 }
+
+/* Confirmation: long addresses wrap within the existing theme typography. */
+.cp-public .done-email {
+  overflow-wrap: anywhere;
+}
+
+/* Print the confirmation, including its heading, without site chrome or actions. */
+@media print {
+  .cp-public:has(#s-done) {
+    --print-ink: var(--focus-dark);
+    --print-paper: var(--focus-light);
+    background: var(--print-paper);
+    color: var(--print-ink);
+    padding: 0;
+    overflow: visible;
+  }
+  .cp-public:has(#s-done) :is(header:not(.ok-band), footer, nav, button, .btn, .grain) {
+    display: none !important;
+  }
+  .cp-public:has(#s-done) .app,
+  .cp-public #s-done {
+    max-width: none;
+    min-height: 0;
+    margin: 0;
+    overflow: visible;
+  }
+  .cp-public #s-done,
+  .cp-public #s-done * {
+    color: var(--print-ink) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+  }
+  .cp-public #s-done :is(.done-summary-row, .done-transfer-row, .steps li, .done-contact) {
+    break-inside: avoid;
+  }
+}

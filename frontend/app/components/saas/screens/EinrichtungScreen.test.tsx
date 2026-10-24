@@ -4,6 +4,7 @@ import { expect, it, describe } from 'vitest'
 import { computeWizardStep } from '../onboardingSteps'
 import { VORLAGE_TEILNAHMEBEDINGUNGEN } from '../../../lib/vorlagen'
 import OnboardingCard from '../state/OnboardingCard'
+import { de } from '../../../lib/i18n/de'
 import type { OrganizationAdmin, CampAdmin } from '../../../lib/saasAdminApi'
 
 // ── shared fixtures ───────────────────────────────────────────────────────────
@@ -139,7 +140,38 @@ describe('OnboardingCard wizard links', () => {
   })
 })
 
-// ── 5. Schritt 4: SubmitReviewButton nur bei draft/rejected ───────────────────
+// ── 5. B1 – Siezen: kein Du in Admin-Texten ──────────────────────────────────
+
+describe('B1 – Siezen: Admin-Texte enthalten kein Du (Elternseite ausgenommen)', () => {
+  const DU_WORDS = /\b(du|dein|deine|deinem|deinen|ergänze|prüfe)\b/i
+
+  function collectStrings(obj: unknown): string[] {
+    if (typeof obj === 'string') return [obj]
+    if (Array.isArray(obj)) return obj.flatMap(collectStrings)
+    if (obj !== null && typeof obj === 'object') return Object.values(obj as object).flatMap(collectStrings)
+    return []
+  }
+
+  it('de.ts Admin-Sektionen ohne Du-Wörter (Mutationsprobe: Du einfügen → rot)', () => {
+    const adminSections = collectStrings({
+      dashboard: de.dashboard,
+      tasks: de.tasks,
+      command: de.command,
+      states: de.states,
+      tasksPage: de.tasksPage,
+      waitlistPage: de.waitlistPage,
+      paymentsPage: de.paymentsPage,
+      onboarding: de.onboarding,
+      hilfe: de.hilfe,
+      einrichtung: de.einrichtung,
+      configPage: de.configPage,
+    })
+    const violations = adminSections.filter(s => DU_WORDS.test(s))
+    expect(violations).toEqual([])
+  })
+})
+
+// ── 6. Schritt 4: SubmitReviewButton nur bei draft/rejected ───────────────────
 
 describe('Schritt 4 SubmitReviewButton — needsReview-Bedingung', () => {
   function needsReview(reviewStatus: string | undefined) {

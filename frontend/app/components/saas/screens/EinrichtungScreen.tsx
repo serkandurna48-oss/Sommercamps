@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useActionState, useId } from 'react'
+import { useState, useActionState, useId, type ChangeEvent } from 'react'
 import type { CampAdmin, OrganizationAdmin } from '../../../lib/saasAdminApi'
 import { computeBrandTokens, type BrandTokens } from '../brandPipeline'
 import { computeWizardStep } from '../onboardingSteps'
@@ -174,20 +174,20 @@ function WizardNavButtons({
 }) {
   const isLast = step === total
   return (
-    <div className="mt-8 flex flex-wrap items-center gap-3">
-      {onBack && (
-        <Button type="button" variant="secondary" onClick={onBack} disabled={pending}>
-          {de.einrichtung.back}
-        </Button>
-      )}
+    <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
       {!isLast && submitType && (
-        <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn}>
+        <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto sm:order-2">
           {pending ? de.einrichtung.weiterSaving : de.einrichtung.weiter}
         </Button>
       )}
       {!isLast && !submitType && onNext && (
-        <Button type="button" variant="primary" onClick={onNext} brandStrong={brandStrong} brandOn={brandOn}>
+        <Button type="button" variant="primary" onClick={onNext} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto sm:order-2">
           {de.einrichtung.weiter}
+        </Button>
+      )}
+      {onBack && (
+        <Button type="button" variant="secondary" onClick={onBack} disabled={pending} className="sm:order-1">
+          {de.einrichtung.back}
         </Button>
       )}
     </div>
@@ -227,7 +227,7 @@ function AuftrittPreview({ name, safeLogoUrl, color }: { name: string; safeLogoU
             aria-hidden="true"
           />
         )}
-        <span className="cp-subheading truncate" style={{ color: 'var(--cp-ink)' }}>
+        <span className="cp-subheading" style={{ color: 'var(--cp-ink)', overflowWrap: 'break-word' }}>
           {name || 'Vereinsname'}
         </span>
       </div>
@@ -262,7 +262,22 @@ function Step1Auftritt({
   const [name, setName] = useState(org.name)
   const [logoUrl, setLogoUrl] = useState(org.logo_url ?? '')
   const [color, setColor] = useState(org.primary_color ?? '')
+  const [hexError, setHexError] = useState('')
   const feedbackId = useId()
+
+  const HEX_RE = /^#[0-9a-fA-F]{3}$|^#[0-9a-fA-F]{6}$/
+  const colorPickerValue = HEX_RE.test(color) ? color : '#000000'
+
+  function handleColorText(e: ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value
+    setColor(val)
+    setHexError(val && !HEX_RE.test(val) ? 'Ungültiger Hex-Code – z. B. #1c6b45' : '')
+  }
+
+  function handleColorPicker(e: ChangeEvent<HTMLInputElement>) {
+    setColor(e.target.value)
+    setHexError('')
+  }
 
   const [state, formAction, pending] = useActionState<SaveState, FormData>(
     async (prev, formData) => {
@@ -298,22 +313,24 @@ function Step1Auftritt({
               className={INPUT_CLASS} style={INPUT_STYLE}
             />
           </Field>
-          <Field label={de.configPage.field.primaryColor} htmlFor="w-primary_color" hint={de.configPage.hint.primaryColor}>
-            <div className="flex items-center gap-3">
+          <Field label={de.configPage.field.primaryColor} htmlFor="w-primary_color" hint={de.configPage.hint.primaryColor} error={hexError || undefined}>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                aria-label="Farbwähler"
+                value={colorPickerValue}
+                onChange={handleColorPicker}
+                className="h-10 w-10 shrink-0 cursor-pointer rounded-[var(--cp-r-chip)] border p-0.5"
+                style={{ borderColor: 'var(--cp-field-line)', background: 'var(--cp-surface)' }}
+              />
               <input
                 id="w-primary_color" name="primary_color"
-                value={color} onChange={e => setColor(e.target.value)}
+                value={color} onChange={handleColorText}
                 placeholder="#1c6b45"
                 className={INPUT_CLASS}
-                style={{ ...INPUT_STYLE, maxWidth: '180px' }}
+                style={{ ...INPUT_STYLE, maxWidth: '160px' }}
+                aria-invalid={!!hexError || undefined}
               />
-              {color && (
-                <span
-                  aria-hidden="true"
-                  className="h-9 w-9 shrink-0 rounded-[var(--cp-r-chip)] border"
-                  style={{ background: color, borderColor: 'var(--cp-field-line)' }}
-                />
-              )}
             </div>
           </Field>
 
@@ -504,12 +521,16 @@ function Step3Camp({
   return (
     <>
       <StepHeader title={de.einrichtung.step3Title} kicker={de.einrichtung.step3Kicker} />
-      <CampCreateForm orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
-      <div className="mt-4">
-        <Button type="button" variant="secondary" onClick={onBack}>
-          {de.einrichtung.back}
-        </Button>
-      </div>
+      <CampCreateForm
+        orgSlug={orgSlug}
+        brandStrong={brand.brandStrong}
+        brandOn={brand.brandOn}
+        backButton={
+          <Button type="button" variant="secondary" onClick={onBack} className="sm:order-1">
+            {de.einrichtung.back}
+          </Button>
+        }
+      />
     </>
   )
 }

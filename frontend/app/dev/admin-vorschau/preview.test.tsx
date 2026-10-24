@@ -110,11 +110,8 @@ describe('development-only admin preview', () => {
             if (link.textContent?.trim() === 'Ansehen') expect(link.className).toContain('cp-btn-primary')
           }
         }
-        // Hilfe intentionally contains 'Sie'/'Ihnen' in parent-facing copy templates and FAQ
+        // Admin-UI uses Sie-form; parent-facing hilfe additionally contains Sie/Ihnen in FAQ templates
         expect(document.body.textContent).not.toMatch(/—|\.\.\./)
-        if (screen !== 'hilfe') {
-          expect(document.body.textContent).not.toMatch(/\bSie\b|\bIhnen\b/)
-        }
         expect(html).not.toMatch(/href="\/(pilot|platform)\//)
         if (['dashboard', 'camp', 'zahlungen', 'warteliste', 'aufgaben', 'konfiguration', 'camp-konfiguration', 'camp-zahlungen', 'camp-warteliste', 'camp-aufgaben'].includes(screen) && !(empty && screen.startsWith('camp'))) {
           expect(html).toContain('aria-current="page"')

@@ -1,7 +1,7 @@
 'use client'
 
 import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
-import { useId, useActionState, useState } from 'react'
+import { useId, useActionState, useState, type ReactNode } from 'react'
 import Button from '../ui/Button'
 import Field from '../ui/Field'
 import PriceInput from '../ui/PriceInput'
@@ -26,10 +26,12 @@ export default function CampCreateForm({
   orgSlug,
   brandStrong,
   brandOn,
+  backButton,
 }: {
   orgSlug: string
   brandStrong: string
   brandOn: string
+  backButton?: ReactNode
 }) {
   const feedbackId = useId()
   const preview = useAdminPreview()
@@ -49,7 +51,7 @@ export default function CampCreateForm({
         <Field label="Titel" htmlFor="title">
           <input id="title" name="title" required value={title} onChange={event => setTitle(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
-        <Field label="Web-Adresse" htmlFor="slug" hint="Aus deinem Titel vorgeschlagen. Du kannst sie vor dem Anlegen ändern: Kleinbuchstaben, Zahlen und Bindestriche.">
+        <Field label="Web-Adresse" htmlFor="slug" hint="Aus Ihrem Titel vorgeschlagen. Sie können sie vor dem Anlegen ändern: Kleinbuchstaben, Zahlen und Bindestriche.">
           <input id="slug" name="slug" required pattern="[a-z0-9-]+" value={customSlug ?? suggestCampSlug(title)} onChange={event => setCustomSlug(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -72,7 +74,7 @@ export default function CampCreateForm({
             <PriceInput id="price_euros" name="price_euros"    required defaultValue={submitted.price_euros ?? ''}   />
           </Field>
         </div>
-        <p className="cp-body" style={{ color: 'var(--cp-ink-2)' }}>Dein Camp wird als Entwurf angelegt. Ergänze danach Ort und Ablauf, bevor du es veröffentlichst.</p>
+        <p className="cp-body" style={{ color: 'var(--cp-ink-2)' }}>Ihr Camp wird als Entwurf angelegt. Ergänzen Sie danach Ort und Ablauf, bevor Sie es veröffentlichen.</p>
       </section>
 
       {!pending && state.error && (
@@ -85,10 +87,11 @@ export default function CampCreateForm({
         </p>
       )}
 
-      <div>
-        <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto sm:order-2">
           {pending ? 'Wird angelegt …' : 'Camp anlegen'}
         </Button>
+        {backButton}
       </div>
     </form>
   )

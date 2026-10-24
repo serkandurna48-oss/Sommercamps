@@ -111,13 +111,13 @@ describe('daily overview', () => {
   })
   it('shows success card after publishing when no tasks remain', async () => {
     vi.mocked(loadOrgAdminData).mockResolvedValue({ token: 'test', org, camps: [camp], registrationsByCamp: [[]] })
-    expect(markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) })).textContent).toContain('Deine Anmeldeseite ist live.')
+    expect(markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) })).textContent).toContain('Ihre Anmeldeseite ist live.')
   })
   it('shows onboarding card (Schritt 3) when camp exists but site not yet published', async () => {
     vi.mocked(loadOrgAdminData).mockResolvedValue({ token: 'test', org: { ...org, site_published: false }, camps: [camp], registrationsByCamp: [[]] })
     const dom = markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) }))
     expect(dom.textContent).toContain('In 3 Schritten zur Anmeldeseite')
-    expect(dom.textContent).not.toContain('Deine Anmeldeseite ist live.')
+    expect(dom.textContent).not.toContain('Ihre Anmeldeseite ist live.')
   })
 
   it('degrades "Camp anlegen" to secondary while the onboarding card is visible', async () => {
@@ -143,7 +143,7 @@ describe('daily overview', () => {
   it('shows launch success card with copy-link button when first camp just published and no registrations', async () => {
     vi.mocked(loadOrgAdminData).mockResolvedValue({ token: 'test', org, camps: [camp], registrationsByCamp: [[]] })
     const dom = markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) }))
-    expect(dom.textContent).toContain('Deine Anmeldeseite ist live.')
+    expect(dom.textContent).toContain('Ihre Anmeldeseite ist live.')
     expect(dom.textContent).toContain('Anmeldelink kopieren')
     expect(dom.textContent).toContain('Elternseite ansehen')
   })
@@ -152,7 +152,7 @@ describe('daily overview', () => {
     // entries are all paid with emergency contacts → no tasks → regular success state shown
     vi.mocked(loadOrgAdminData).mockResolvedValue({ token: 'test', org, camps: [camp], registrationsByCamp: [entries] })
     const dom = markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) }))
-    expect(dom.textContent).toContain('Deine Anmeldeseite ist live.')
+    expect(dom.textContent).toContain('Ihre Anmeldeseite ist live.')
     expect(dom.textContent).not.toContain('Anmeldelink kopieren')
   })
 })

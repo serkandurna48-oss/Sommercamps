@@ -27,7 +27,7 @@ async function render() {
 
 it('shows success label, copy-link button and parent-site link', async () => {
   await render()
-  expect(container.textContent).toContain('Deine Anmeldeseite ist live.')
+  expect(container.textContent).toContain('Ihre Anmeldeseite ist live.')
   expect(container.textContent).toContain('Anmeldelink kopieren')
   expect(container.textContent).toContain('Elternseite ansehen')
   const parentLink = container.querySelector<HTMLAnchorElement>('a[href="/pilot/demo"]')

@@ -58,6 +58,16 @@ it('offers no immediate publication and explains the draft', () => {
   expect(container.textContent).toContain('als Entwurf angelegt')
 })
 
+it('CampCreateForm enthält kein Du in Texten (B1 – Siezen)', () => {
+  const DU_WORDS = /\b(du|dein|deine|deinem|deinen|ergänze|prüfe)\b/i
+  expect(container.textContent).not.toMatch(DU_WORDS)
+  // Hints are in aria-describedby elements; check their text too
+  const hints = Array.from(container.querySelectorAll('[id$="-hint"]'))
+  for (const hint of hints) {
+    expect(hint.textContent).not.toMatch(DU_WORDS)
+  }
+})
+
 it('keeps all input values after an error and resubmits them', async () => {
   const fields = { title: 'Mein Camp', slug: 'meine-adresse', start_date: '2027-07-05', end_date: '2027-07-09', age_min: '6', age_max: '12', capacity: '20', price_euros: '149.50' }
   for (const [name, value] of Object.entries(fields)) await enter(name, value)

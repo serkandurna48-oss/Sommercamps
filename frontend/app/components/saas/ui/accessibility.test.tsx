@@ -125,7 +125,7 @@ describe('admin accessibility primitives', () => {
     expect(contrast(brand.brandStrong, '#FFFFFF')).toBeGreaterThanOrEqual(4.5)
     expect(contrast(brand.brandStrong, '#F4F5F2')).toBeGreaterThanOrEqual(4.5)
     expect(contrast(brand.brandStrong, brand.brandOn)).toBeGreaterThanOrEqual(4.5)
-    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement
+    const checkbox = container.querySelector('.cp-roster-row input[type="checkbox"]') as HTMLInputElement
     minimumTarget(checkbox.closest('label')!)
     await act(() => checkbox.closest('label')!.click())
     const action = container.querySelector('a[href^="mailto:?bcc"]') as HTMLAnchorElement

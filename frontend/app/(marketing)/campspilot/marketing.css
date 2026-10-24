@@ -550,6 +550,14 @@
   pointer-events: none;
 }
 
+/* ── Fußballschulen ─────────────────────────────────────────── */
+.cp-scope .fs-list { display: flex; flex-direction: column; margin-top: 44px; max-width: 680px; }
+.cp-scope .fs-list li { display: flex; gap: 18px; padding-block: 22px; border-top: 1px solid var(--line-d); }
+.cp-scope .fs-list li:last-child { border-bottom: 1px solid var(--line-d); }
+.cp-scope .fs-list .n { font-size: 13px; font-weight: 600; font-stretch: 84%; color: var(--accent); flex-shrink: 0; width: 26px; padding-top: 4px; }
+.cp-scope .fs-list p { font-size: 16px; line-height: 1.6; color: var(--fog-2); max-width: 52ch; }
+.cp-scope .fs-brand { margin-top: 44px; max-width: 38em; }
+
 /* ── Fuß ──────────────────────────────────────────────────── */
 .cp-scope .foot { border-top: 1px solid var(--line-d); padding-block: 34px 44px; }
 .cp-scope .foot-in { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }

@@ -207,3 +207,38 @@ describe('m4pill – Hero-Buttons sind Pills', () => {
     expect(block).toMatch(/border-radius\s*:\s*9999px/)
   })
 })
+
+// ── fs: Fußballschulen-Abschnitt ──────────────────────────────────────────────
+// Mutationsprobe: id="fussballschulen" umbenennen → sectionEl ist null → alle Tests rot.
+describe('fs – Fußballschulen-Abschnitt', () => {
+  let sectionEl: Element | null = null
+
+  beforeEach(async () => {
+    const { default: CampsPilotPage } = await import('./page')
+    const html = renderToStaticMarkup(createElement(CampsPilotPage))
+    const wrapper = document.createElement('div')
+    wrapper.innerHTML = html
+    sectionEl = wrapper.querySelector('#fussballschulen')
+  })
+
+  it('Anker #fussballschulen existiert im Markup', () => {
+    expect(sectionEl).not.toBeNull()
+  })
+
+  it('enthält alle drei Punkte', () => {
+    const text = sectionEl?.textContent ?? ''
+    expect(text).toContain('Alle Camps an allen Gastvereinen auf einer Seite')
+    expect(text).toContain('Eltern bekommen sofort eine Bestätigung mit Überweisungsdaten')
+    expect(text).toContain('Tagesliste je Camp zum Drucken')
+  })
+
+  it('Knopf verweist auf #pilot', () => {
+    const btn = sectionEl?.querySelector('a[href="#pilot"]')
+    expect(btn).not.toBeNull()
+    expect(btn?.textContent?.trim()).toBe('Pilotplatz anfragen')
+  })
+
+  it('enthält kein „Online-Zahlung"', () => {
+    expect(sectionEl?.textContent ?? '').not.toContain('Online-Zahlung')
+  })
+})

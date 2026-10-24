@@ -31,6 +31,23 @@ _CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
 # Mirrors chk_organizations_iban_format (migration 20260922143506).
 _IBAN_RE = re.compile(r"^[A-Z]{2}[0-9A-Z]{13,32}$")
 
+
+def _check_image_url(value: Optional[str]) -> Optional[str]:
+    """Allow empty, https://, or an absolute path starting with / (not //).
+    Rejects javascript:, data:, http://, protocol-relative //, and paths with .."""
+    if not value:
+        return None
+    if " " in value or "\t" in value or "\n" in value:
+        raise ValueError("image URL must not contain whitespace")
+    if value.startswith("https://"):
+        return value
+    if value.startswith("/") and not value.startswith("//") and ".." not in value:
+        return value
+    raise ValueError(
+        "image URL must be an https:// URL or an absolute path like /clubs/example/logo.png "
+        "(not //, not containing ..)"
+    )
+
 PlanStatus = Literal["pilot", "active", "suspended", "cancelled"]
 CampStatus = Literal["draft", "published", "closed", "archived"]
 
@@ -123,6 +140,11 @@ class OrganizationCreate(BaseModel):
             raise ValueError('At most 5 registration questions are allowed per organization')
         return value
 
+    @field_validator("logo_url", "hero_image_url", "trainer_image_url")
+    @classmethod
+    def _image_url_format(cls, value: Optional[str]) -> Optional[str]:
+        return _check_image_url(value)
+
 
 class OrganizationUpdate(BaseModel):
     """Same fields as OrganizationCreate minus `slug` (immutable — a slug
@@ -187,6 +209,11 @@ class OrganizationUpdate(BaseModel):
         if value is not None and len(value) > 5:
             raise ValueError('At most 5 registration questions are allowed per organization')
         return value
+
+    @field_validator("logo_url", "hero_image_url", "trainer_image_url")
+    @classmethod
+    def _image_url_format(cls, value: Optional[str]) -> Optional[str]:
+        return _check_image_url(value)
 
 
 class CampCreate(BaseModel):

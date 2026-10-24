@@ -1,8 +1,38 @@
+﻿import type { ReactNode } from 'react'
 import { computeBrandTokens } from '../brandPipeline'
 import MatchdayBand from '../shell/MatchdayBand'
 import { orgTabs } from '../navTabs'
 import { de } from '../../../lib/i18n/de'
 import type { OrganizationIdentityProps } from './types'
+
+const sections = [
+  { id: 'einrichtung', title: de.hilfe.s1 },
+  { id: 'camp-veroeffentlichen', title: de.hilfe.s2 },
+  { id: 'camp-filter', title: de.hilfe.s8 },
+  { id: 'anmeldelink', title: de.hilfe.s3 },
+  { id: 'zahlungen', title: de.hilfe.s4 },
+  { id: 'warteliste', title: de.hilfe.s5 },
+  { id: 'tagesliste', title: de.hilfe.s6 },
+  { id: 'elternfragen', title: de.hilfe.s7 },
+] as const
+
+function HelpSection({ index, children }: { index: number; children: ReactNode }) {
+  const { id, title } = sections[index]
+  return (
+    <section id={id} aria-labelledby={`${id}-titel`} className="scroll-mt-24">
+      <h2 id={`${id}-titel`} className="cp-title mb-3" style={{ color: 'var(--cp-ink)' }}>{title}</h2>
+      {children}
+    </section>
+  )
+}
+
+function Steps({ items }: { items: readonly string[] }) {
+  return (
+    <ol className="cp-body list-decimal space-y-2 pl-5" style={{ color: 'var(--cp-ink-2)' }}>
+      {items.map(item => <li key={item}>{item}</li>)}
+    </ol>
+  )
+}
 
 export default function HilfeScreen({ orgSlug, org }: OrganizationIdentityProps) {
   const brand = computeBrandTokens(org.primary_color)
@@ -22,107 +52,77 @@ export default function HilfeScreen({ orgSlug, org }: OrganizationIdentityProps)
         className="mx-auto max-w-[920px] space-y-10 px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6"
         style={{ color: 'var(--cp-ink)' }}
       >
-        <section>
-          <h2 className="cp-title mb-3" style={{ color: 'var(--cp-ink)' }}>{de.hilfe.s1}</h2>
-          <p className="cp-body mb-2" style={{ color: 'var(--cp-ink-2)' }}>
-            Beim ersten Start zeigt das Dashboard eine Startkarte mit drei Schritten.
-          </p>
-          <ol className="cp-body list-decimal space-y-1 pl-5" style={{ color: 'var(--cp-ink-2)' }}>
-            <li>Kontakt-E-Mail, Anschrift und Teilnahmebedingungen eintragen</li>
-            <li>Erstes Camp anlegen</li>
-            <li>Vereinsseite und Camp veröffentlichen</li>
-          </ol>
-          <p className="cp-body mt-2" style={{ color: 'var(--cp-ink-2)' }}>
-            Jeder Schritt enthält einen direkten Link zur passenden Seite. Sobald alles veröffentlicht ist, verschwindet die Startkarte.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="cp-title mb-3" style={{ color: 'var(--cp-ink)' }}>{de.hilfe.s2}</h2>
-          <ol className="cp-body list-decimal space-y-2 pl-5" style={{ color: 'var(--cp-ink-2)' }}>
-            <li>{`Im Dashboard auf „+ Camp anlegen" klicken`}</li>
-            <li>Titel, Termin, Kapazität und Preis eintragen, dann speichern</li>
-            <li>{`Im Camp → Tab „Einstellungen" → Status auf „Veröffentlicht" setzen`}</li>
-            <li>{`In „Vereinseinstellungen" → „Seite veröffentlichen" aktivieren`}</li>
-          </ol>
-          <p className="cp-body mt-2" style={{ color: 'var(--cp-ink-2)' }}>Fertig – deine Anmeldeseite ist live.</p>
-        </section>
-
-        <section>
-          <h2 className="cp-title mb-3" style={{ color: 'var(--cp-ink)' }}>{de.hilfe.s3}</h2>
-          <p className="cp-body mb-1" style={{ color: 'var(--cp-ink-2)' }}>
-            Dein Anmeldelink: <code className="cp-label">/pilot/{orgSlug}</code>
-          </p>
-          <p className="cp-body mb-4" style={{ color: 'var(--cp-ink-2)' }}>
-            Den vollständigen Link (mit Domain) siehst du auf dem Dashboard. Kopiere ihn von dort direkt in deine Nachricht.
-          </p>
-          <h3 className="cp-subheading mb-2" style={{ color: 'var(--cp-ink)' }}>WhatsApp-Vorlage</h3>
-          <textarea
-            readOnly
-            rows={6}
-            defaultValue={de.hilfe.whatsappTemplate(orgSlug)}
-            className="cp-body w-full rounded border p-3 font-[inherit]"
-            style={{
-              borderColor: 'var(--cp-field-line)',
-              background: 'var(--cp-surface-2)',
-              color: 'var(--cp-ink)',
-              resize: 'vertical',
-            }}
-          />
-          <h3 className="cp-subheading mb-2 mt-4" style={{ color: 'var(--cp-ink)' }}>Instagram / Facebook</h3>
-          <textarea
-            readOnly
-            rows={3}
-            defaultValue={de.hilfe.instagramTemplate(orgSlug)}
-            className="cp-body w-full rounded border p-3 font-[inherit]"
-            style={{
-              borderColor: 'var(--cp-field-line)',
-              background: 'var(--cp-surface-2)',
-              color: 'var(--cp-ink)',
-              resize: 'vertical',
-            }}
-          />
-        </section>
-
-        <section>
-          <h2 className="cp-title mb-3" style={{ color: 'var(--cp-ink)' }}>{de.hilfe.s4}</h2>
-          <p className="cp-body mb-2" style={{ color: 'var(--cp-ink-2)' }}>
-            Jede Anmeldung erhält automatisch eine CP-Referenz (z. B. <code className="cp-label">CP-ABC12345</code>).
-            Das ist der Verwendungszweck, den die Eltern bei der Überweisung angeben.
-          </p>
-          <ol className="cp-body list-decimal space-y-1 pl-5" style={{ color: 'var(--cp-ink-2)' }}>
-            <li>{`Geh zur Seite „Zahlungen"`}</li>
-            <li>Suche die Anmeldung anhand der CP-Referenz oder des Namens</li>
-            <li>{`Sobald die Überweisung auf deinem Konto eingegangen ist, klick auf „Als bezahlt markieren"`}</li>
-          </ol>
-        </section>
-
-        <section>
-          <h2 className="cp-title mb-3" style={{ color: 'var(--cp-ink)' }}>{de.hilfe.s5}</h2>
-          <ul className="cp-body list-disc space-y-2 pl-5" style={{ color: 'var(--cp-ink-2)' }}>
-            <li>Wenn ein Camp voll ist, landen neue Anmeldungen automatisch auf der Warteliste.</li>
-            <li>Bei einer Stornierung rückt das nächste Kind auf der Warteliste automatisch nach – keine manuelle Aktion nötig.</li>
-            <li>Der Verein informiert die Eltern selbst über das Nachrücken. Es gibt keine automatische Benachrichtigung.</li>
-            <li>{`Stornieren: Camp → Teilnehmerliste → Anmeldung öffnen → „Stornieren"`}</li>
+        <nav aria-label={de.hilfe.contents}>
+          <p className="cp-subheading mb-2">{de.hilfe.contents}</p>
+          <ul className="cp-body grid gap-x-6 sm:grid-cols-2">
+            {sections.map(({ id, title }) => (
+              <li key={id}>
+                <a className="cp-focus inline-flex min-h-[44px] items-center underline" href={`#${id}`}>{title}</a>
+              </li>
+            ))}
           </ul>
-        </section>
+        </nav>
 
-        <section>
-          <h2 className="cp-title mb-3" style={{ color: 'var(--cp-ink)' }}>{de.hilfe.s6}</h2>
-          <ol className="cp-body list-decimal space-y-1 pl-5" style={{ color: 'var(--cp-ink-2)' }}>
-            <li>{`Geh zum Camp → Tab „Teilnehmer"`}</li>
-            <li>{`Klick auf „Exportieren" → „Tagesliste herunterladen"`}</li>
+        <HelpSection index={0}>
+          <p className="cp-body mb-2" style={{ color: 'var(--cp-ink-2)' }}>{de.hilfe.setupIntro}</p>
+          <ol className="cp-body list-decimal space-y-2 pl-5" style={{ color: 'var(--cp-ink-2)' }}>
+            {de.hilfe.setupSteps.map(({ title, text }) => <li key={title}><strong>{title}</strong>{' – '}{text}</li>)}
           </ol>
-          <p className="cp-body mt-2" style={{ color: 'var(--cp-ink-2)' }}>
-            Die Liste enthält alle aktiven Teilnehmer ohne Warteliste und Stornierungen.
-          </p>
-        </section>
+          <p className="cp-body mt-2" style={{ color: 'var(--cp-ink-2)' }}>{de.hilfe.setupReview}</p>
+        </HelpSection>
 
-        <section>
-          <h2 className="cp-title mb-3" style={{ color: 'var(--cp-ink)' }}>{de.hilfe.s7}</h2>
-          <p className="cp-body mb-4" style={{ color: 'var(--cp-ink-2)' }}>
-            Kurze Antworten, die du an Eltern weitergeben kannst.
+        <HelpSection index={1}>
+          <Steps items={de.hilfe.campSteps} />
+          <p className="cp-body mt-2" style={{ color: 'var(--cp-ink-2)' }}>{de.hilfe.campPublished}</p>
+        </HelpSection>
+
+        <HelpSection index={2}>
+          {[de.hilfe.filterIntro, de.hilfe.filterDetails, de.hilfe.filterShare].map(text => (
+            <p key={text} className="cp-body mb-2" style={{ color: 'var(--cp-ink-2)' }}>{text}</p>
+          ))}
+        </HelpSection>
+
+        <HelpSection index={3}>
+          <p className="cp-body mb-1" style={{ color: 'var(--cp-ink-2)' }}>
+            {de.hilfe.linkLabel}{' '}<code className="cp-label">{de.hilfe.linkPath(orgSlug)}</code>
           </p>
+          <p className="cp-body mb-4" style={{ color: 'var(--cp-ink-2)' }}>{de.hilfe.linkHint}</p>
+          {[
+            { id: 'whatsapp-vorlage', title: de.hilfe.whatsappHeading, text: de.hilfe.whatsappTemplate(orgSlug), rows: 6 },
+            { id: 'instagram-vorlage', title: de.hilfe.instagramHeading, text: de.hilfe.instagramTemplate(orgSlug), rows: 3 },
+          ].map(({ id, title, text, rows }) => (
+            <div key={id} className="mt-4">
+              <h3 id={id} className="cp-subheading mb-2" style={{ color: 'var(--cp-ink)' }}>{title}</h3>
+              <textarea
+                aria-labelledby={id}
+                readOnly
+                rows={rows}
+                defaultValue={text}
+                className="cp-body w-full rounded border p-3 font-[inherit]"
+                style={{ borderColor: 'var(--cp-field-line)', background: 'var(--cp-surface-2)', color: 'var(--cp-ink)', resize: 'vertical' }}
+              />
+            </div>
+          ))}
+        </HelpSection>
+
+        <HelpSection index={4}>
+          <p className="cp-body mb-2" style={{ color: 'var(--cp-ink-2)' }}>{de.hilfe.paymentIntro}</p>
+          <Steps items={de.hilfe.paymentSteps} />
+        </HelpSection>
+
+        <HelpSection index={5}>
+          <ul className="cp-body list-disc space-y-2 pl-5" style={{ color: 'var(--cp-ink-2)' }}>
+            {de.hilfe.waitlistItems.map(item => <li key={item}>{item}</li>)}
+          </ul>
+        </HelpSection>
+
+        <HelpSection index={6}>
+          <Steps items={de.hilfe.exportSteps} />
+          <p className="cp-body mt-2" style={{ color: 'var(--cp-ink-2)' }}>{de.hilfe.exportHint}</p>
+        </HelpSection>
+
+        <HelpSection index={7}>
+          <p className="cp-body mb-4" style={{ color: 'var(--cp-ink-2)' }}>{de.hilfe.faqIntro}</p>
           <dl className="space-y-5">
             {de.hilfe.faq.map(({ q, a }) => (
               <div key={q}>
@@ -131,7 +131,7 @@ export default function HilfeScreen({ orgSlug, org }: OrganizationIdentityProps)
               </div>
             ))}
           </dl>
-        </section>
+        </HelpSection>
       </main>
     </>
   )

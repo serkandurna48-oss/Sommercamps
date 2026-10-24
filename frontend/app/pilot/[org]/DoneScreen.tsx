@@ -21,6 +21,7 @@ export default function DoneScreen({
   childName,
   parentEmail,
   onBackToOrg,
+  onRegisterSibling,
 }: {
   org: OrganizationPublic
   camp: CampPublic
@@ -28,6 +29,7 @@ export default function DoneScreen({
   childName: string
   parentEmail: string
   onBackToOrg: () => void
+  onRegisterSibling?: () => void
 }) {
   const [copiedField, setCopiedField] = useState<'ref' | 'iban' | 'betrag' | null>(null)
   const waitlisted = result.status === 'waitlist'
@@ -296,6 +298,11 @@ export default function DoneScreen({
               Per WhatsApp teilen
             </a>
           </>
+        )}
+        {onRegisterSibling && (
+          <button className="btn primary btn-pill" type="button" onClick={onRegisterSibling}>
+            Weiteres Kind anmelden
+          </button>
         )}
         <button className="btn btn-pill" type="button" onClick={onBackToOrg} style={{ marginTop: 6 }}>
           Zurück zur Übersicht

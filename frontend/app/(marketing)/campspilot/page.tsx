@@ -10,11 +10,12 @@ import PilotRequestForm from './PilotRequestForm'
 export default function CampsPilotPage() {
   return (
     <div className="cp-scope">
+      <a className="skip-link" href="#inhalt">Zum Inhalt springen</a>
       <SiteMotion />
       <BootCurtain />
       <Grain />
 
-      <nav className="nav" id="nav">
+      <nav className="nav" id="nav" aria-label="Hauptnavigation">
         <div className="wrap nav-in">
           <a className="brand" href="#top">
             <BrandMark className="mark-svg" width={35} height={24} />
@@ -30,6 +31,7 @@ export default function CampsPilotPage() {
         </div>
       </nav>
 
+      <main id="inhalt" tabIndex={-1}>
       <header className="hero" id="top">
         <div className="hero-media">
           <div id="heroImg" className="cp-fill">
@@ -137,20 +139,6 @@ export default function CampsPilotPage() {
           </div>
         </div>
       </section>
-
-      <div className="band">
-        <div id="bandImg" className="cp-fill-tall">
-          <Image
-            src={CP_IMAGES.leibchen.src}
-            alt="Ein sauber gefalteter Stapel oranger und dunkelblauer Trainingsleibchen auf einer Holzbank am Platzrand."
-            fill
-            sizes="100vw"
-            loading="lazy"
-            placeholder="blur"
-            blurDataURL={CP_IMAGES.leibchen.blurDataURL}
-          />
-        </div>
-      </div>
 
       <section id="vertrauen">
         <div className="wrap sec">
@@ -322,6 +310,8 @@ export default function CampsPilotPage() {
         </div>
       </section>
 
+      </main>
+
       <footer className="foot">
         <div className="wrap foot-in">
           <a className="brand" href="#top">
@@ -329,7 +319,7 @@ export default function CampsPilotPage() {
             CampsPilot
           </a>
           <span className="cl">Anmeldung und Verwaltung für Fußballcamps</span>
-          <nav className="foot-links">
+          <nav className="foot-links" aria-label="Rechtliches">
             <Link href="/campspilot/impressum">Impressum</Link>
             <Link href="/campspilot/datenschutz">Datenschutz</Link>
             <Link href="/campspilot/teilnahmebedingungen">Teilnahmebedingungen</Link>

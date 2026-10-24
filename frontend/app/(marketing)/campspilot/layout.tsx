@@ -9,6 +9,7 @@ const archivo = Archivo({
   subsets: ['latin'],
   axes: ['wdth'],
   display: 'swap',
+  adjustFontFallback: true,
   variable: '--font-archivo',
 })
 

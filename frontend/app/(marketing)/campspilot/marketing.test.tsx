@@ -252,7 +252,7 @@ describe('m2pin – reduced-motion: kein Pin', () => {
   })
 
   it('registriert keinen Pin wenn prefers-reduced-motion aktiv ist', async () => {
-    const { default: SiteMotion } = await import('../../components/marketing/SiteMotion')
+    const { default: SiteMotion } = await vi.importActual<typeof import('../../components/marketing/SiteMotion')>('../../components/marketing/SiteMotion')
     await act(() => root.render(createElement(SiteMotion)))
     expect(pinCreatedConfigs).toHaveLength(0)
   })

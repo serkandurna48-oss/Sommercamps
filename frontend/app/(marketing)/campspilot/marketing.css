@@ -16,7 +16,7 @@
   --slate: #182226;
   --fog: #eaeeec;
   --fog-2: #9da9a6;
-  --fog-3: #6c7976;
+  --fog-3: #9da9a6;
   --paper: #f1f2ef;
   --paper-2: #ffffff;
   --ink: #101618;
@@ -41,6 +41,19 @@
   --faq-answer-size: 17px;
   --price-button-bg: var(--ink);
   --price-button-text: var(--paper);
+  --focus-color: var(--fog);
+  --focus-backdrop: var(--night);
+  --focus-width: 3px;
+  --focus-offset: 4px;
+  --link-offset: 0.2em;
+  --skip-inset: 12px;
+  --skip-padding: 12px 20px;
+  --skip-layer: 110;
+  --anchor-offset: 100px;
+  --button-text: var(--night);
+  --field-border: var(--fog-3);
+  --grain-loops: 4;
+  --hint-loops: 1;
 
   margin: 0;
   min-height: 100dvh;
@@ -85,17 +98,32 @@
 }
 .cp-scope a {
   color: inherit;
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: var(--link-offset);
 }
+.cp-scope a:is(.brand, .btn) { text-decoration: none; }
 .cp-scope button, .cp-scope input {
   font: inherit;
   color: inherit;
 }
 .cp-scope :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-  border-radius: 2px;
+  outline: var(--focus-width) solid var(--focus-color) !important;
+  outline-offset: var(--focus-offset);
+  box-shadow: 0 0 0 var(--focus-offset) var(--focus-backdrop);
 }
+.cp-scope .light { --focus-color: var(--ink); --focus-backdrop: var(--paper); }
+.cp-scope [id], .cp-scope :focus-visible { scroll-margin-top: var(--anchor-offset); }
+.cp-scope .skip-link {
+  position: fixed;
+  top: var(--skip-inset);
+  left: var(--skip-inset);
+  z-index: var(--skip-layer);
+  padding: var(--skip-padding);
+  background: var(--night);
+  color: var(--fog);
+  transform: translateY(calc(-100% - var(--skip-inset) - var(--focus-offset) - var(--focus-width)));
+}
+.cp-scope .skip-link:focus { transform: none; }
 .cp-scope .sr {
   position: absolute;
   width: 1px;
@@ -238,7 +266,7 @@
   pointer-events: none;
   opacity: 0.055;
   background-repeat: repeat;
-  animation: cp-grain 1.1s steps(6) infinite;
+  animation: cp-grain 1.1s steps(6) var(--grain-loops);
   will-change: transform;
 }
 @keyframes cp-grain {
@@ -314,11 +342,11 @@
 }
 .cp-scope .btn:hover { color: var(--night); transform: scale(1.03); }
 .cp-scope .btn:hover::after { transform: scaleX(1); }
-.cp-scope .btn.fill { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cp-scope .btn.fill { background: var(--accent); border-color: var(--accent); color: var(--button-text); }
 .cp-scope .btn.fill::after { background: #fff; }
 .cp-scope .btn.fill:hover { color: var(--accent-ink); }
 .cp-scope .btn.ghost {
-  border-color: rgba(255,255,255,.12);
+  border-color: var(--fog-3);
   color: var(--fog-2);
   background: rgba(255,255,255,.06);
   backdrop-filter: blur(12px);
@@ -372,7 +400,7 @@
   inset: 0;
   background: var(--accent);
   transform: translateX(-100%);
-  animation: cp-sweep 2.6s var(--ease) infinite;
+  animation: cp-sweep 2.6s var(--ease) var(--hint-loops);
 }
 @keyframes cp-sweep {
   0% { transform: translateX(-100%); }
@@ -535,7 +563,7 @@
 .cp-scope .form input {
   height: 52px;
   background: rgba(234, 238, 236, 0.06);
-  border: 1px solid var(--line-d);
+  border: 1px solid var(--field-border);
   padding: 0 15px;
   font-size: 16px;
   color: var(--fog);
@@ -552,7 +580,7 @@
 .cp-scope .form textarea {
   width: 100%;
   background: rgba(234, 238, 236, 0.06);
-  border: 1px solid var(--line-d);
+  border: 1px solid var(--field-border);
   padding: 10px 15px;
   font-size: 16px;
   color: var(--fog);
@@ -604,7 +632,7 @@
 .cp-scope .reg-input {
   height: 52px; width: 100%;
   background: rgba(234, 238, 236, 0.06);
-  border: 1px solid var(--line-d);
+  border: 1px solid var(--field-border);
   padding: 0 15px; font-size: 16px; color: var(--fog);
 }
 .cp-scope .reg-input[aria-invalid="true"] { border-color: #c44; }
@@ -632,10 +660,15 @@
   .cp-scope .scroll-hint i::after { animation: none; transform: translateX(0); }
   .cp-scope .boot { display: none; }
   .cp-scope, .cp-scope *, .cp-scope *::before, .cp-scope *::after {
-    transition-duration: 0.01ms !important;
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
   }
-  /* Zettel-Endzustand: Punkte durchgestrichen + CampsPilot sichtbar */
-  .cp-scope #zList .z-item .strike { transform: scaleX(1); }
-  .cp-scope #zList .z-item span.t { opacity: 0.3; }
-  .cp-scope #zCampsPilot { opacity: 1 !important; transform: none !important; }
+  .cp-scope .btn:hover { transform: none; }
+  /* Keep every text readable, even while a running motion context is reverting. */
+  .cp-scope [data-rise], .cp-scope .mask-w .w,
+  .cp-scope #zList .z-item, .cp-scope #zList .t, .cp-scope #zCampsPilot {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

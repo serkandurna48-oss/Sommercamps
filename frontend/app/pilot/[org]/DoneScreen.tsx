@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CampPublic, OrganizationPublic, RegistrationCreated } from '../../lib/saasApi'
 import { formatCampDateRange, formatPrice } from '../../lib/parentFlowFormat'
+import { buildCampIcs } from '../../lib/ics'
 import { useParentFlowMotion } from './motion'
 
 /**
@@ -38,6 +39,35 @@ export default function DoneScreen({
   useParentFlowMotion(org.theme, containerRef)
   const headingRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => { headingRef.current?.focus() }, [])
+
+  // This screen mounts only after a registration in the browser. Exclude filters and tokens.
+  const publicPath = `/pilot/${encodeURIComponent(org.slug)}`
+  const publicPageUrl = typeof window === 'undefined'
+    ? publicPath
+    : new URL(publicPath, window.location.origin).href
+  const whatsappHref = `https://wa.me/?text=${encodeURIComponent(`Ich habe mein Kind für ${camp.title} angemeldet: ${publicPageUrl}`)}`
+
+  function downloadCalendar() {
+    const calendar = buildCampIcs({
+      // The public API identifies camps by organization + slug, not an internal database ID.
+      campId: `${org.slug}/${camp.slug}`,
+      registrationToken: result.registration_token,
+      title: camp.title,
+      clubName: org.name,
+      ranges: [{ start_date: camp.start_date, end_date: camp.end_date }],
+      location: camp.location,
+      careInfo: camp.care_info,
+    }, new Date())
+    const url = URL.createObjectURL(new Blob([calendar], { type: 'text/calendar;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${camp.slug}.ics`
+    document.body.append(link)
+    link.click()
+    link.remove()
+    // Keep the URL alive until the browser has started the download.
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
 
   async function handleCopy(field: 'ref' | 'iban' | 'betrag', text: string) {
     try {
@@ -257,6 +287,16 @@ export default function DoneScreen({
           <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>
           {org.contact_phone && <a href={`tel:${org.contact_phone.replace(/[^+\d]/g, '')}`}>{org.contact_phone}</a>}
         </div>
+        {!waitlisted && (
+          <>
+            <button className="btn btn-pill" type="button" onClick={downloadCalendar}>
+              In den Kalender eintragen
+            </button>
+            <a className="btn btn-pill" href={whatsappHref} target="_blank" rel="noopener noreferrer">
+              Per WhatsApp teilen
+            </a>
+          </>
+        )}
         <button className="btn btn-pill" type="button" onClick={onBackToOrg} style={{ marginTop: 6 }}>
           Zurück zur Übersicht
         </button>

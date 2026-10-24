@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { getSiteUrl } from '../../pilot/[org]/socialMetadata'
+import { pageMetadata } from '../../lib/seo'
 
 export async function marketingMetadata(
   path: string,
@@ -7,15 +7,8 @@ export async function marketingMetadata(
   description: string,
   index = false,
 ): Promise<Metadata> {
-  const siteUrl = await getSiteUrl()
-  const url = new URL(path, siteUrl).href
-
   return {
-    metadataBase: siteUrl,
-    title,
-    description,
-    alternates: { canonical: url },
+    ...pageMetadata(path, title, description, '/campspilot/opengraph-image.png'),
     robots: { index, follow: true },
-    openGraph: { title, description, url, type: 'website', locale: 'de_DE', siteName: 'CampsPilot' },
   }
 }

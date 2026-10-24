@@ -59,7 +59,7 @@ it('copies the real public registration page and reports clipboard errors', asyn
   await act(() => root.render(<CampPublicationCard orgSlug="review" org={{ ...org, site_published: true }} camp={{ ...camp, status: 'published' }} pending={false} brandStrong="#112233" brandOn="#ffffff" />))
   const copy = Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Anmeldelink kopieren')!
   await act(async () => copy.click())
-  expect(writeText).toHaveBeenCalledWith(new URL('/pilot/review', window.location.origin).href)
+  expect(writeText).toHaveBeenCalledWith(new URL('/pilot/review?camp=summer', window.location.origin).href)
   expect(container.textContent).toContain('Anmeldelink kopiert.')
   writeText.mockRejectedValue(new Error('denied'))
   await act(async () => copy.click())

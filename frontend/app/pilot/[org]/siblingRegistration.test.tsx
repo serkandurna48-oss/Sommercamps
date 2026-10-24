@@ -64,6 +64,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(() => root.unmount())
   host.remove()
+  window.history.replaceState(null, '', initialUrl)
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
@@ -107,6 +108,7 @@ async function firstRegistration(camps = [camp]) {
   await act(() => root.render(<StrictMode><ParentFlow org={org} camps={camps} /></StrictMode>))
   expect(host.textContent).not.toContain('Weiteres Kind anmelden')
   await act(() => host.querySelector<HTMLButtonElement>('button.camp')!.click())
+  expect(new URL(location.href).searchParams.get('camp')).toBe(camp.slug)
   await click('Jetzt anmelden')
   expect(host.textContent).not.toContain('Ihre Angaben aus der letzten Anmeldung')
   await fillChild()
@@ -136,7 +138,14 @@ function expectNoPersistence() {
   expect(localStorage.length).toBe(0)
   expect(storageWrite).not.toHaveBeenCalled()
   expect(cookieWrite).not.toHaveBeenCalled()
-  expect(location.href).toBe(initialUrl)
+  // Only the public camp slug may change; no transfer token or personal data.
+  const current = new URL(location.href)
+  const original = new URL(initialUrl)
+  expect(current.searchParams.getAll('camp').length).toBeLessThanOrEqual(1)
+  if (current.searchParams.has('camp')) expect(current.searchParams.get('camp')).toMatch(/^(sommer|herbst)$/)
+  current.searchParams.delete('camp')
+  original.searchParams.delete('camp')
+  expect(current.href).toBe(original.href)
 }
 
 it('übernimmt nur Elternangaben für das zweite und dritte Kind; alle Einwilligungen bleiben leer', async () => {
@@ -184,6 +193,7 @@ it('wählt dasselbe Camp vor und meldet nach Camp-Wechsel beim gewählten Termin
   await fillChild('Jonas')
   await acceptAll()
   await change(field('sibling_camp'), second.slug)
+  expect(new URL(location.href).searchParams.get('camp')).toBe(second.slug)
   expectFreshChildAndConsents()
   expect(field('parent_name').value).toBe(parents.parentName)
   expect(host.querySelector('h1')!.textContent).toContain(second.title)
@@ -242,7 +252,7 @@ it('behält Kalender und WhatsApp nach erster und zweiter Anmeldung bei', async 
     expect([...host.querySelectorAll('button')].some(button => button.textContent?.trim() === 'In den Kalender eintragen')).toBe(true)
     const whatsapp = host.querySelector<HTMLAnchorElement>('a[href^="https://wa.me/"]')!
     expect(whatsapp.textContent).toContain('Per WhatsApp teilen')
-    expect(new URL(whatsapp.href).searchParams.get('text')).toBe(`Ich habe mein Kind für ${camp.title} angemeldet: ${location.origin}/pilot/${org.slug}`)
+    expect(new URL(whatsapp.href).searchParams.get('text')).toBe(`Ich habe mein Kind für ${camp.title} angemeldet: ${location.origin}/pilot/${org.slug}?camp=${encodeURIComponent(camp.slug)}`)
     expect(document.activeElement).toBe(host.querySelector('h1'))
   }
   expectSuccessActions()

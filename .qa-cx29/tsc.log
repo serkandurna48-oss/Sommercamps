@@ -1,0 +1,4 @@
+START=2026-10-24T22:42:53.940Z
+COMMAND=C:/Program Files/nodejs/node_modules/npm/bin/npx-cli.js tsc --noEmit -p frontend
+
+EXIT_CODE=0

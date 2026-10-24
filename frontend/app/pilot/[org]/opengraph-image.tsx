@@ -5,7 +5,7 @@ import { fetchOrganization } from '../../lib/saasApi'
 import { getClubAssets } from './clubAssets'
 import { getSiteUrl } from './socialMetadata'
 
-export const alt = 'Fußballcamps 2027'
+export const alt = 'Fußballcamps'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -29,7 +29,7 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ org
         {name}
       </div>
       <div style={{ display: 'flex', background: brand, color: readableTextOn(brand), padding: '36px 64px', fontSize: 44, fontWeight: 700 }}>
-        Fußballcamps 2027
+        Fußballcamps
       </div>
     </div>,
     size,

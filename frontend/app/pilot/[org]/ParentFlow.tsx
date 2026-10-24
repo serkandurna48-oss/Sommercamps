@@ -49,15 +49,19 @@ export default function ParentFlow({
   camps,
   hadPastCamps = false,
   testFilter,
+  initialCampSlug,
 }: {
   org: OrganizationPublic
   camps: CampPublic[]
   hadPastCamps?: boolean
   testFilter?: FilterState
+  initialCampSlug?: string
 }) {
   const router = useRouter()
-  const [screen, setScreen] = useState<ScreenName>('org')
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
+  const [screen, setScreen] = useState<ScreenName>(() => initialCampSlug
+    ? (camps.find(camp => camp.slug === initialCampSlug)?.is_full ? 'wait' : 'camp')
+    : 'org')
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(initialCampSlug ?? null)
   const [done, setDone] = useState<DoneState | null>(null)
   const [showStickyCta, setShowStickyCta] = useState(false)
   const [filter, setFilter] = useState<FilterState>(() =>
@@ -110,8 +114,15 @@ export default function ParentFlow({
     }
   }
 
+  function selectCamp(slug: string) {
+    const url = new URL(window.location.href)
+    url.searchParams.set('camp', slug)
+    window.history.replaceState(null, '', url.pathname + url.search)
+    setSelectedSlug(slug)
+  }
+
   function openCamp(camp: CampPublic) {
-    setSelectedSlug(camp.slug)
+    selectCamp(camp.slug)
     setScreen(camp.is_full ? 'wait' : 'camp')
     window.scrollTo(0, 0)
   }
@@ -122,6 +133,9 @@ export default function ParentFlow({
   }
 
   function backToOrg() {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('camp')
+    window.history.replaceState(null, '', url.pathname + url.search)
     router.refresh()
     setScreen('org')
     setSelectedSlug(null)
@@ -166,7 +180,7 @@ export default function ParentFlow({
         parentPrefill={parentPrefill}
         onPrefillConsumed={() => setParentPrefill(null)}
         siblingCamps={siblingMode ? camps : []}
-        onCampChange={setSelectedSlug}
+        onCampChange={selectCamp}
         onBack={() => {
           setParentPrefill(null)
           setSiblingMode(false)

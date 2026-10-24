@@ -193,3 +193,15 @@ it('akademie hero-stats enthält keine Anmeldungshinweiszeile', () => {
   expect(html).not.toContain('hero-assure')
   expect(html).not.toContain('Anmeldung in ca. 4 Minuten')
 })
+
+it('öffnet einen geteilten Camp-Link bereits beim serverseitigen Rendern', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={org} camps={[mockCamp]} initialCampSlug={mockCamp.slug} />)
+  expect(html).toContain('Sommercamp A')
+  expect(html).toContain('Jetzt anmelden')
+  expect(html).not.toContain('Unser Fußballsommer')
+})
+
+it('zeigt bei unbekanntem Camp-Link den bestehenden Fehlerzustand', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={org} camps={[mockCamp]} initialCampSlug="unbekannt" />)
+  expect(html).toContain('Camp nicht gefunden')
+})

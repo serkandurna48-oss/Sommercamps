@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { computeBrandSafe } from '../../lib/brandPipeline'
 import { readableTextOn } from '../../lib/readableTextOn'
-import { fetchCamps, fetchOrganization } from '../../lib/saasApi'
+import { getPublicCamps, getPublicOrganization } from './publicData'
 import { filterFutureCamps } from './campUtils'
 import CampStructuredData from './CampStructuredData'
 import GrainOverlay from './GrainOverlay'
@@ -12,12 +12,22 @@ import { publicFontClassName } from './publicFonts'
 import { clubMetadata, getSiteUrl, neutralMetadata } from './socialMetadata'
 import './publicTheme.css'
 
-/** Override the legacy root metadata for the public club page. */
-export async function generateMetadata({ params }: { params: Promise<{ org: string }> }): Promise<Metadata> {
+type PageProps = {
+  params: Promise<{ org: string }>
+  searchParams?: Promise<{ camp?: string | string[] }>
+}
+
+/** Override the legacy root metadata for public club and camp links. */
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { org: orgSlug } = await params
+  const selectedSlug = (await searchParams)?.camp
   try {
-    const org = await fetchOrganization(orgSlug)
-    return org ? clubMetadata(org, await getSiteUrl()) : neutralMetadata
+    const org = await getPublicOrganization(orgSlug)
+    if (!org) return neutralMetadata
+    const camp = typeof selectedSlug === 'string'
+      ? (await getPublicCamps(orgSlug)).find(camp => camp.slug === selectedSlug)
+      : undefined
+    return clubMetadata(org, getSiteUrl(), camp)
   } catch {
     return neutralMetadata
   }
@@ -46,11 +56,12 @@ const THEME_SURFACE: Record<string, string> = {
  * `data-theme` sitzt auf diesem Wrapper, nicht auf `<html>` (§3.2) — das
  * Org-Admin-Dashboard unter (org-admin)/ bleibt davon unberührt.
  */
-export default async function PilotOrgPage({ params }: { params: Promise<{ org: string }> }) {
+export default async function PilotOrgPage({ params, searchParams }: PageProps) {
   const { org: orgSlug } = await params
+  const selectedSlug = (await searchParams)?.camp
   const [orgOutcome, campsOutcome] = await Promise.allSettled([
-    fetchOrganization(orgSlug),
-    fetchCamps(orgSlug),
+    getPublicOrganization(orgSlug),
+    getPublicCamps(orgSlug),
   ])
 
   if (orgOutcome.status === 'rejected') return <PublicLoadError />
@@ -80,7 +91,7 @@ export default async function PilotOrgPage({ params }: { params: Promise<{ org: 
       <CampStructuredData org={org} camps={allCamps} />
       <GrainOverlay />
       <div className="app">
-        <ParentFlow org={org} camps={camps} hadPastCamps={hadPastCamps} />
+        <ParentFlow org={org} camps={camps} hadPastCamps={hadPastCamps} initialCampSlug={typeof selectedSlug === 'string' ? selectedSlug : undefined} />
       </div>
     </div>
   )

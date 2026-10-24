@@ -43,7 +43,7 @@ export default function DoneScreen({
   useEffect(() => { headingRef.current?.focus() }, [])
 
   // This screen mounts only after a registration in the browser. Exclude filters and tokens.
-  const publicPath = `/pilot/${encodeURIComponent(org.slug)}`
+  const publicPath = `/pilot/${encodeURIComponent(org.slug)}?camp=${encodeURIComponent(camp.slug)}`
   const publicPageUrl = typeof window === 'undefined'
     ? publicPath
     : new URL(publicPath, window.location.origin).href

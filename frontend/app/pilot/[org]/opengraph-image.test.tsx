@@ -39,7 +39,7 @@ it('rendert ein echtes PNG in 1200 × 630 mit Vereinsname, Farbbalken und Logo o
   expect(png.readUInt32BE(20)).toBe(630)
   const markup = renderToStaticMarkup(captured.element)
   expect(markup).toContain('Testverein Fußball')
-  expect(markup).toContain('Fußballcamps 2027')
+  expect(markup).toContain('Fußballcamps')
   expect(markup).toContain('background:#123456')
   expect(markup).toContain(pixel)
   expect(network).not.toHaveBeenCalled()

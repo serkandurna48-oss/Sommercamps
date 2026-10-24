@@ -1,9 +1,8 @@
-import type { Metadata } from 'next'
 import LegalPlaceholder from '../../../components/marketing/LegalPlaceholder'
+import { marketingMetadata } from '../seoMetadata'
 
-export const metadata: Metadata = {
-  title: 'Teilnahmebedingungen – CampsPilot',
-  description: 'Teilnahmebedingungen von CampsPilot.',
+export async function generateMetadata() {
+  return marketingMetadata('/campspilot/teilnahmebedingungen', 'Teilnahmebedingungen – CampsPilot', 'Die Teilnahmebedingungen von CampsPilot sind noch nicht freigegeben und werden vor der Veröffentlichung ergänzt.')
 }
 
 export default function CampsPilotTeilnahmebedingungenPage() {

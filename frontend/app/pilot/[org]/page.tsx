@@ -4,6 +4,7 @@ import { computeBrandSafe } from '../../lib/brandPipeline'
 import { readableTextOn } from '../../lib/readableTextOn'
 import { fetchCamps, fetchOrganization } from '../../lib/saasApi'
 import { filterFutureCamps } from './campUtils'
+import CampStructuredData from './CampStructuredData'
 import GrainOverlay from './GrainOverlay'
 import ParentFlow from './ParentFlow'
 import PublicLoadError from './PublicLoadError'
@@ -76,6 +77,7 @@ export default async function PilotOrgPage({ params }: { params: Promise<{ org: 
         } as React.CSSProperties
       }
     >
+      <CampStructuredData org={org} camps={allCamps} />
       <GrainOverlay />
       <div className="app">
         <ParentFlow org={org} camps={camps} hadPastCamps={hadPastCamps} />

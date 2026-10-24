@@ -6,6 +6,16 @@ import Grain from '../../components/marketing/Grain'
 import SiteMotion from '../../components/marketing/SiteMotion'
 import { CP_IMAGES } from './images'
 import PilotRequestForm from './PilotRequestForm'
+import { marketingMetadata } from './seoMetadata'
+
+export async function generateMetadata() {
+  return marketingMetadata(
+    '/campspilot',
+    'Anmeldung Fußballcamp online – CampsPilot',
+    'Online-Anmeldung für Fußballcamps von Vereinen und Fußballschulen. Camps, Teilnehmer, Zahlungen und Wartelisten an einer Stelle verwalten.',
+    true,
+  )
+}
 
 export default function CampsPilotPage() {
   return (

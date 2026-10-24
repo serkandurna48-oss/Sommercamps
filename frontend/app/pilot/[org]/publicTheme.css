@@ -3279,3 +3279,140 @@
   min-height: unset;
   min-width: unset;
 }
+
+/* ══════════════════════════════════════════════
+   CF1 — Campfilter nach Ort und Zeitraum
+   ══════════════════════════════════════════════ */
+
+.cp-public .campfilter {
+  margin-bottom: 20px;
+}
+.cp-public .campfilter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: center;
+}
+.cp-public .campfilter-ort { flex-shrink: 0; }
+.cp-public .campfilter-select {
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--field);
+  border-radius: var(--r-chip);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  min-width: 140px;
+  transition: border-color 0.18s var(--ease);
+}
+.cp-public .campfilter-select:focus {
+  outline: 2px solid var(--brand-strong);
+  outline-offset: 2px;
+}
+.cp-public[data-theme='kompakt'] .campfilter-select {
+  border-width: 1.5px;
+}
+.cp-public .campfilter-periods {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+  max-width: calc(100vw - 40px);
+}
+.cp-public .campfilter-periods::-webkit-scrollbar { display: none; }
+.cp-public .campfilter-chip {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.18s var(--ease), color 0.18s var(--ease), border-color 0.18s var(--ease);
+}
+.cp-public .campfilter-chip:hover {
+  background: var(--surface-2);
+  border-color: var(--brand-strong);
+  color: var(--ink);
+}
+.cp-public .campfilter-chip.active {
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
+  color: var(--on-primary);
+}
+.cp-public[data-theme='kompakt'] .campfilter-chip {
+  border-width: 1.5px;
+  border-radius: 6px;
+}
+.cp-public .campfilter-chip-n {
+  font-size: 11px;
+  opacity: 0.65;
+}
+.cp-public .campfilter-chip.active .campfilter-chip-n {
+  opacity: 0.8;
+}
+.cp-public .campfilter-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.cp-public .campfilter-count {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.cp-public .campfilter-reset {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  padding: 0;
+  min-height: 44px;
+  transition: color 0.18s var(--ease);
+}
+.cp-public .campfilter-reset:hover { color: var(--ink); }
+.cp-public .campfilter-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 28px 0;
+}
+@media (max-width: 699px) {
+  .cp-public .campfilter-bar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .cp-public .campfilter-bar::-webkit-scrollbar { display: none; }
+  .cp-public .campfilter-foot {
+    flex-shrink: 0;
+    margin-left: 0;
+  }
+}
+@media (min-width: 700px) {
+  .cp-public .campfilter-bar {
+    flex-wrap: wrap;
+  }
+  .cp-public .campfilter-periods {
+    max-width: none;
+  }
+}

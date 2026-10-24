@@ -6,7 +6,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, OrganizationPublic, RegistrationCreated } from '../../lib/saasApi'
 import { formatCampDateRange, formatPrice, orgShortCode } from '../../lib/parentFlowFormat'
 import { truncateIntroForHero } from './campUtils'
+import {
+  type FilterState,
+  EMPTY_FILTER,
+  FILTER_THRESHOLD,
+  applyFilter,
+  buildUrlSearch,
+  parseUrlFilter,
+} from './campFilterUtils'
 import { getClubAssets } from './clubAssets'
+import CampFilter from './CampFilter'
 import CampRow from './CampRow'
 import RegistrationFormScreen from './RegistrationFormScreen'
 import DoneScreen from './DoneScreen'
@@ -34,16 +43,23 @@ export default function ParentFlow({
   org,
   camps,
   hadPastCamps = false,
+  testFilter,
 }: {
   org: OrganizationPublic
   camps: CampPublic[]
   hadPastCamps?: boolean
+  testFilter?: FilterState
 }) {
   const router = useRouter()
   const [screen, setScreen] = useState<ScreenName>('org')
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
   const [done, setDone] = useState<DoneState | null>(null)
   const [showStickyCta, setShowStickyCta] = useState(false)
+  const [filter, setFilter] = useState<FilterState>(() =>
+    testFilter !== undefined
+      ? testFilter
+      : (typeof window !== 'undefined' ? parseUrlFilter(window.location.search) : EMPTY_FILTER)
+  )
   const orgContainerRef = useRef<HTMLElement>(null)
   useParentFlowMotion(org.theme, orgContainerRef)
 
@@ -55,6 +71,11 @@ export default function ParentFlow({
     const years = new Set(camps.map((c) => c.start_date.slice(0, 4)))
     return years.size === 1 ? [...years][0] : null
   }, [camps])
+
+  const filteredCamps = useMemo(
+    () => camps.length > FILTER_THRESHOLD ? applyFilter(camps, filter) : camps,
+    [camps, filter],
+  )
 
   // Sticky CTA: show after hero scrolls out, hide in footer
   useEffect(() => {
@@ -74,6 +95,13 @@ export default function ParentFlow({
     if (footerEl) io.observe(footerEl)
     return () => io.disconnect()
   }, [screen])
+
+  function handleFilterChange(newFilter: FilterState) {
+    setFilter(newFilter)
+    if (testFilter === undefined) {
+      window.history.replaceState(null, '', window.location.pathname + buildUrlSearch(newFilter))
+    }
+  }
 
   function openCamp(camp: CampPublic) {
     setSelectedSlug(camp.slug)
@@ -396,6 +424,14 @@ export default function ParentFlow({
             <h2 className="d2" data-split>Camps{campsByYear ? ` ${campsByYear}` : ''}</h2>
           </div>
         </div>
+        {camps.length > FILTER_THRESHOLD && (
+          <CampFilter
+            camps={camps}
+            filter={filter}
+            filteredCount={filteredCamps.length}
+            onFilterChange={handleFilterChange}
+          />
+        )}
         <div className="camps">
           {camps.length === 0 ? (
             <div className="no-future-camps">
@@ -412,8 +448,20 @@ export default function ParentFlow({
                 </a>
               )}
             </div>
+          ) : filteredCamps.length === 0 ? (
+            <div className="campfilter-empty">
+              <p className="muted">Kein Camp passt zu Ihrer Filterauswahl.</p>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => handleFilterChange(EMPTY_FILTER)}
+                style={{ marginTop: 12, width: 'auto' }}
+              >
+                Alle Camps zeigen
+              </button>
+            </div>
           ) : (
-            camps.map((camp) => <CampRow key={camp.slug} camp={camp} onSelect={openCamp} />)
+            filteredCamps.map((camp) => <CampRow key={camp.slug} camp={camp} onSelect={openCamp} />)
           )}
         </div>
       </div>

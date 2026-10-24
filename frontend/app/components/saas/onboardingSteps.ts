@@ -19,6 +19,21 @@ export function computeOnboardingSteps(org: OrganizationAdmin, camps: CampAdmin[
   return { step1Done, step2Done, step3Done }
 }
 
+/**
+ * Returns the first wizard step (1–4) that is not yet complete:
+ *   1 Auftritt    – primary_color not set
+ *   2 Rechtliches – contact_email / legal_address / terms_text missing
+ *   3 Erstes Camp – no camp exists
+ *   4 Prüfen      – all above done, waiting for review / approval
+ */
+export function computeWizardStep(org: OrganizationAdmin, camps: CampAdmin[]): 1 | 2 | 3 | 4 {
+  if (!org.primary_color?.trim()) return 1
+  const { step1Done, step2Done } = computeOnboardingSteps(org, camps)
+  if (!step1Done) return 2
+  if (!step2Done) return 3
+  return 4
+}
+
 /** Required org fields that are currently empty (independent of step3Done). */
 export function missingRequiredOrgFields(org: OrganizationAdmin): string[] {
   const missing: string[] = []

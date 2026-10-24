@@ -12,4 +12,8 @@
   ['aufgaben', 'Aufgaben'],
   ['konfiguration', 'Vereinseinstellungen'],
   ['hilfe', 'Hilfe'],
+  ['einrichtung-1', 'Einrichtung Schritt 1: Auftritt'],
+  ['einrichtung-2', 'Einrichtung Schritt 2: Rechtliches'],
+  ['einrichtung-3', 'Einrichtung Schritt 3: Erstes Camp'],
+  ['einrichtung-4', 'Einrichtung Schritt 4: Prüfen (offen)'],
 ] as const

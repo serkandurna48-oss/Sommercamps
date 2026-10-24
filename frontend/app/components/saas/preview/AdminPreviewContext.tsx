@@ -22,7 +22,7 @@ export function previewHref(href: string, empty: boolean): string {
   const path = pathname.split('/').slice(3)
   const params = new URLSearchParams()
   const sourceParams = new URLSearchParams(query)
-  for (const key of ['filter', 'sort']) {
+  for (const key of ['filter', 'sort', 'schritt']) {
     const value = sourceParams.get(key)
     if (value) params.set(key, value)
   }
@@ -30,6 +30,10 @@ export function previewHref(href: string, empty: boolean): string {
   if (path[0] === 'camps') {
     screen = path[1] === 'new' ? 'camp-neu' : path[2] ? `camp-${path[2]}` : 'camp'
     if (!empty && path[1] !== 'new') params.set('camp', path[1])
+  } else if (path[0] === 'einrichtung') {
+    const schritt = sourceParams.get('schritt')
+    screen = schritt ? `einrichtung-${schritt}` : 'einrichtung-1'
+    params.delete('schritt')
   }
   if (empty) params.set('leer', '1')
   const search = params.toString()

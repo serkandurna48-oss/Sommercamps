@@ -3,31 +3,24 @@ import { ButtonLink } from '../ui/Button'
 import { computeOnboardingSteps } from '../onboardingSteps'
 import { de } from '../../../lib/i18n/de'
 import type { OrganizationAdmin, CampAdmin } from '../../../lib/saasAdminApi'
-import SubmitReviewButton from './SubmitReviewButton'
 
-type SubmitAction = (orgSlug: string, avvVersion: string) => Promise<{ ok: boolean; error?: string }>
-
-export default function OnboardingCard({ orgSlug, org, camps, brandStrong, brandOn, submitAction }: {
+export default function OnboardingCard({ orgSlug, org, camps, brandStrong, brandOn }: {
   orgSlug: string
   org: OrganizationAdmin
   camps: CampAdmin[]
   brandStrong: string
   brandOn: string
-  submitAction: SubmitAction
 }) {
   const { step1Done, step2Done } = computeOnboardingSteps(org, camps)
   const activeStep = !step1Done ? 1 : !step2Done ? 2 : 3
 
-  const configHref = `/pilot/${orgSlug}/konfiguration`
-  const newCampHref = `/pilot/${orgSlug}/camps/new`
-  const firstCamp = camps.find(c => c.status === 'draft') ?? camps[0]
-  const publishHref = firstCamp
-    ? `/pilot/${orgSlug}/camps/${firstCamp.slug}/konfiguration`
-    : newCampHref
+  const wizardHref1 = `/pilot/${orgSlug}/einrichtung?schritt=1`
+  const wizardHref3 = `/pilot/${orgSlug}/einrichtung?schritt=3`
+  const wizardHref4 = `/pilot/${orgSlug}/einrichtung?schritt=4`
 
   const reviewStatus = org.review_status ?? 'approved'
   const needsReview = reviewStatus === 'draft' || reviewStatus === 'rejected'
-  const reviewNote = needsReview ? (org.review_note ?? null) : null
+  const reviewNote = needsReview && org.review_note ? org.review_note : null
 
   return (
     <div className="cp-card" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
@@ -35,14 +28,14 @@ export default function OnboardingCard({ orgSlug, org, camps, brandStrong, brand
       <ol className="mt-5 flex flex-col gap-5">
         <Step number={1} done={step1Done} active={activeStep === 1} title={de.onboarding.step1Title} body={de.onboarding.step1Body}>
           {activeStep === 1 && (
-            <ButtonLink href={configHref} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
+            <ButtonLink href={wizardHref1} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
               {de.onboarding.step1Action}
             </ButtonLink>
           )}
         </Step>
         <Step number={2} done={step2Done} active={activeStep === 2} title={de.onboarding.step2Title} body={de.onboarding.step2Body}>
           {activeStep === 2 && (
-            <ButtonLink href={newCampHref} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
+            <ButtonLink href={wizardHref3} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
               {de.onboarding.step2Action}
             </ButtonLink>
           )}
@@ -54,20 +47,16 @@ export default function OnboardingCard({ orgSlug, org, camps, brandStrong, brand
           title={needsReview ? de.onboarding.step3TitleSubmit : de.onboarding.step3Title}
           body={needsReview ? de.onboarding.step3BodySubmit : de.onboarding.step3Body}
         >
+          {activeStep === 3 && reviewNote && (
+            <p className="cp-body mb-3" style={{ color: 'var(--cp-ink-2)' }}>
+              <span style={{ color: 'var(--cp-error)', fontWeight: 600 }}>{de.onboarding.reviewRejectedPrefix}</span>
+              {' '}{reviewNote}
+            </p>
+          )}
           {activeStep === 3 && (
-            needsReview ? (
-              <SubmitReviewButton
-                orgSlug={orgSlug}
-                brandStrong={brandStrong}
-                brandOn={brandOn}
-                reviewNote={reviewNote}
-                submitAction={submitAction}
-              />
-            ) : (
-              <ButtonLink href={publishHref} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
-                {de.onboarding.step3Action}
-              </ButtonLink>
-            )
+            <ButtonLink href={wizardHref4} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
+              {needsReview ? de.onboarding.step3ActionSubmit : de.onboarding.step3Action}
+            </ButtonLink>
           )}
         </Step>
       </ol>

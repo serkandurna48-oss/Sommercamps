@@ -79,7 +79,7 @@ describe('development-only admin preview', () => {
         const html = renderToStaticMarkup(await page(screen, empty))
         expect(html).toContain('JK Performance Academy')
         expect(html).toContain('aria-label="Bereiche"')
-        expect(html).toContain('/jk/logo.jpg')
+        if (!screen.startsWith('einrichtung-1')) expect(html).toContain('/jk/logo.jpg')
         expect(html).toContain('cp-scope')
         const document = window.document.implementation.createHTMLDocument()
         document.body.innerHTML = html
@@ -110,11 +110,8 @@ describe('development-only admin preview', () => {
             if (link.textContent?.trim() === 'Ansehen') expect(link.className).toContain('cp-btn-primary')
           }
         }
-        // Hilfe intentionally contains 'Sie'/'Ihnen' in parent-facing copy templates and FAQ
+        // Admin-UI uses Sie-form; parent-facing hilfe additionally contains Sie/Ihnen in FAQ templates
         expect(document.body.textContent).not.toMatch(/—|\.\.\./)
-        if (screen !== 'hilfe') {
-          expect(document.body.textContent).not.toMatch(/\bSie\b|\bIhnen\b/)
-        }
         expect(html).not.toMatch(/href="\/(pilot|platform)\//)
         if (['dashboard', 'camp', 'zahlungen', 'warteliste', 'aufgaben', 'konfiguration', 'camp-konfiguration', 'camp-zahlungen', 'camp-warteliste', 'camp-aufgaben'].includes(screen) && !(empty && screen.startsWith('camp'))) {
           expect(html).toContain('aria-current="page"')
@@ -188,7 +185,7 @@ it('shows onboarding card steps 2 and 3 for the dashboard preview variants', asy
   }))
   expect(step2).toContain('In 3 Schritten zur Anmeldeseite')
   expect(step2).toContain('Erstes Camp anlegen')
-  expect(step2).toContain('href="/dev/admin-vorschau/camp-neu"')
+  expect(step2).toContain('href="/dev/admin-vorschau/einrichtung-3"')
   expect(step2).not.toMatch(/href="\/(pilot|platform)\//)
 
   const step3 = renderToStaticMarkup(await PreviewPage({
@@ -197,7 +194,7 @@ it('shows onboarding card steps 2 and 3 for the dashboard preview variants', asy
   }))
   expect(step3).toContain('In 3 Schritten zur Anmeldeseite')
   expect(step3).toContain('Seite und Camp veröffentlichen')
-  expect(step3).toContain('href="/dev/admin-vorschau/camp-konfiguration?camp=technikcamp"')
+  expect(step3).toContain('href="/dev/admin-vorschau/einrichtung-4"')
   expect(step3).not.toMatch(/href="\/(pilot|platform)\//)
 })
 

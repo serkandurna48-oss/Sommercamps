@@ -4,8 +4,6 @@ import { expect, it, describe } from 'vitest'
 import OnboardingCard from './OnboardingCard'
 import type { OrganizationAdmin, CampAdmin } from '../../../lib/saasAdminApi'
 
-const noopAction = async () => ({ ok: false as const, error: 'test' })
-
 const orgBase: OrganizationAdmin = {
   id: 'org', slug: 'demo', name: 'Testverein', legal_name: null, legal_address: null,
   contact_email: '', contact_phone: null, contact_person_name: null,
@@ -36,9 +34,9 @@ const campDraft: CampAdmin = {
   status: 'draft',
 }
 
-function render(org: OrganizationAdmin, camps: CampAdmin[], action = noopAction) {
+function render(org: OrganizationAdmin, camps: CampAdmin[]) {
   const html = renderToStaticMarkup(
-    <OnboardingCard orgSlug="demo" org={org} camps={camps} brandStrong="#116644" brandOn="#fff" submitAction={action} />
+    <OnboardingCard orgSlug="demo" org={org} camps={camps} brandStrong="#116644" brandOn="#fff" />
   )
   const container = document.createElement('div')
   container.innerHTML = html

@@ -8,6 +8,7 @@ import type { CampAdmin, RegistrationAdmin, RegistrationQuestion } from '../../.
 import { countByFilter, filterRegistrations, isActiveRegistration, type ParticipantFilter } from '../commandCenterLogic'
 import EmptyState from '../state/EmptyState'
 import ParticipantExport from './ParticipantExport'
+import ParentEmailCopy from './ParentEmailCopy'
 import FilterButton from '../ui/FilterButton'
 import SelectionBar from '../ui/SelectionBar'
 import { sortRegistrations, type ParticipantSort } from '../registrationDates'
@@ -90,6 +91,7 @@ export default function ParticipantList({
         questions={questions}
         onReset={() => { setFilter('all'); setSearch('') }}
       />
+      <ParentEmailCopy registrations={registrations} />
 
       <div className="mb-4 flex flex-col gap-2 xl:flex-row xl:items-center">
         <label className="cp-label flex flex-col gap-1">

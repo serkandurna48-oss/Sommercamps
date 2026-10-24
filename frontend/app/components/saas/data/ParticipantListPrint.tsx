@@ -4,9 +4,9 @@ import { useEffect, useId, useRef, useState } from 'react'
 import Button from '../ui/Button'
 import { formatDateRange, formatDateTime } from '../../../lib/i18n/de'
 import { createPortal } from 'react-dom'
-import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
+import type { CampAdmin, RegistrationAdmin, RegistrationQuestion } from '../../../lib/saasAdminApi'
 import type { ExportColumn } from '../../../lib/exportCsv'
-import { campAttendanceColumns } from '../dayListExport'
+import { buildPrintExtraColumns, campAttendanceColumns } from '../dayListExport'
 
 export const PARTICIPANT_PRINT_COLUMNS: ExportColumn<RegistrationAdmin>[] = [
   { header: 'Kind', value: r => `${r.child_first_name} ${r.child_last_name}` },
@@ -17,11 +17,12 @@ export const PARTICIPANT_PRINT_COLUMNS: ExportColumn<RegistrationAdmin>[] = [
   { header: 'Abholberechtigt', value: r => r.pickup_authorized },
 ]
 
-export default function ParticipantListPrint({ camp, rows, filterText, orgName, onClose }: {
+export default function ParticipantListPrint({ camp, rows, filterText, orgName, questions, onClose }: {
   camp: CampAdmin
   rows: RegistrationAdmin[]
   filterText: string
   orgName?: string
+  questions?: RegistrationQuestion[]
   onClose: () => void
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -38,8 +39,9 @@ export default function ParticipantListPrint({ camp, rows, filterText, orgName, 
     }
   }, [])
 
+  const extraCols = buildPrintExtraColumns(questions ?? [])
   const attendanceCols = campAttendanceColumns(camp.start_date, camp.end_date)
-  const printColumns = [...PARTICIPANT_PRINT_COLUMNS, ...attendanceCols]
+  const printColumns = [PARTICIPANT_PRINT_COLUMNS[0], ...extraCols, ...PARTICIPANT_PRINT_COLUMNS.slice(1), ...attendanceCols]
   const manyColumns = printColumns.length > 7
 
   return createPortal(
@@ -60,12 +62,12 @@ export default function ParticipantListPrint({ camp, rows, filterText, orgName, 
       <div className="cp-daylist-table-scroll">
         <table>
           <thead>
-            <tr>{printColumns.map(column => <th key={column.header} scope="col" className={attendanceCols.includes(column) ? 'cp-daylist-check-col' : ''}>{column.header}</th>)}</tr>
+            <tr>{printColumns.map(column => <th key={column.header} scope="col" title={column.title} className={attendanceCols.includes(column) ? 'cp-daylist-check-col' : ''}>{column.header}</th>)}</tr>
           </thead>
           <tbody>
             {rows.map(row => (
               <tr key={row.registration_token}>
-                {printColumns.map(column => <td key={column.header} className={attendanceCols.includes(column) ? 'cp-daylist-check-col' : ''}>{column.value(row)}</td>)}
+                {printColumns.map(column => <td key={column.header} className={attendanceCols.includes(column) ? 'cp-daylist-check-col' : ''} style={column.header === 'Weitere' ? { fontSize: '9pt' } : undefined}>{column.value(row)}</td>)}
               </tr>
             ))}
           </tbody>

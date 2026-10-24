@@ -1,0 +1,14 @@
+
+> frontend@0.1.0 test
+> vitest run --configLoader native
+
+
+ RUN  v5.0.1 C:/Users/serka/Desktop/Projekte/wt/CX32/frontend
+
+
+ Test Files  89 passed (89)
+      Tests  943 passed (943)
+   Start at  00:40:36
+   Duration  43.99s (tests 57%, import 18%, transform 12%, worker 8%, environment 5%)
+
+Command exit code: 0

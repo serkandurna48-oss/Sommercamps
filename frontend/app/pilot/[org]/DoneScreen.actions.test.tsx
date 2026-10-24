@@ -96,3 +96,18 @@ it('behauptet auf der Warteliste keine feste Camp-Teilnahme', async () => {
   expect(host.textContent).not.toContain('In den Kalender eintragen')
   expect(host.textContent).not.toContain('Per WhatsApp teilen')
 })
+
+it.each(['registered', 'waitlist'])('CX32: fokussiert die Statusüberschrift und druckt bei %s', async status => {
+  const print = vi.spyOn(window, 'print').mockImplementation(() => {})
+  await render('tradition', status)
+  const heading = host.querySelector('h1')!
+  expect(heading.textContent?.trim()).toBe('Anmeldung eingegangen')
+  expect(heading.getAttribute('role')).toBe('status')
+  expect(heading.tabIndex).toBe(-1)
+  expect(document.activeElement).toBe(heading)
+  expect(host.querySelector('.done-email')?.textContent?.trim()).toBe('Wir haben eine Bestätigung an eva@example.de geschickt.')
+  const button = [...host.querySelectorAll('button')].find(node => node.textContent === 'Seite drucken')!
+  expect(button).toBeTruthy()
+  await act(async () => button.click())
+  expect(print).toHaveBeenCalledOnce()
+})

@@ -104,10 +104,14 @@ it('rendert Überweisungsblock mit kopierbarem Verwendungszweck bei gesetzter IB
   expect(html).toContain('CP-1234') // Verwendungszweck
 })
 
-it('F7: kündigt Bestätigungsmail an statt Versand zu behaupten', () => {
+it('CX32: bestätigt den Eingang mit Camp, Kind, Zeitraum und versendeter E-Mail', () => {
   const html = render()
-  expect(html).toContain('schicken')
-  expect(html).not.toContain('geschickt')
+  expect(html).toContain('Anmeldung eingegangen')
+  expect(html).toContain('Sommercamp')
+  expect(html).toContain('Mia')
+  expect(html).toContain('5.–9. Juli 2027')
+  expect(html).toContain('Wir haben eine Bestätigung an eva@example.de geschickt.')
+  expect(html).toContain('Der Verein meldet sich bei Ihnen mit den weiteren Details.')
 })
 
 it('F4: ohne IBAN kündigt Verein Zahlungsdetails an statt nachfragen zu fordern', () => {
@@ -124,8 +128,14 @@ it.each(['registered', 'waitlist'])('shows club contact and confirmation mail fo
   const html = render({ result: { status } })
   expect(html).toContain('mailto:kontakt@testverein.example')
   expect(html).toContain('tel:05611234')
-  expect(html).toContain('Wir schicken Ihnen eine Bestätigung an eva@example.de')
+  expect(html).toContain('Wir haben eine Bestätigung an eva@example.de geschickt.')
   expect(html).toContain('5.–9. Juli 2027')
+})
+
+it('zeigt ohne Vereinskontakt keinen leeren Kontaktblock oder E-Mail-Link', () => {
+  const html = render({ org: { contact_email: '', contact_phone: null, contact_person_name: null } })
+  expect(html).not.toContain('done-contact')
+  expect(html).not.toContain('mailto:')
 })
 
 it('zeigt keinen Überweisungsblock bei Warteliste', () => {

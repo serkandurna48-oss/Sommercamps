@@ -1223,7 +1223,7 @@
   font-weight: 600;
 }
 .cp-public .consent .txt span {
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
   color: var(--ink-2);
 }
@@ -2431,8 +2431,8 @@
   font-size: 14px;
 }
 .cp-public #s-form .consent input[type='checkbox'] {
-  width: 44px;
-  height: 44px;
+  width: 24px;
+  height: 24px;
 }
 
 /* ── M3 Formular: Fortschrittsanzeige als Text ── */
@@ -3161,4 +3161,107 @@
 }
 @media (min-width: 900px) {
   .cp-public .sticky-cta { display: none; }
+}
+
+/* ── D3c: Fortschrittsbalken ── */
+.cp-public .d3c-prog { height: 3px; background: var(--track, #e5e7eb); position: sticky; top: 65px; z-index: 17; overflow: hidden; }
+.cp-public .d3c-prog-fill { height: 100%; background: var(--brand-strong, var(--brand)); transition: width 0.35s cubic-bezier(0.16,1,0.3,1); }
+
+/* ── D3c: Split-Layout ── */
+.cp-public .d3c-layout { display: block; }
+@media (min-width: 1000px) {
+  .cp-public .d3c-layout { display: grid; grid-template-columns: 5fr 7fr; }
+}
+
+/* ── D3c: Desktop Aside ── */
+.cp-public .d3c-aside { display: none; }
+@media (min-width: 1000px) {
+  .cp-public .d3c-aside {
+    display: flex; flex-direction: column; gap: 28px;
+    padding: 40px 36px; border-right: 1px solid var(--line);
+    position: sticky; top: 0; align-self: start; min-height: 100vh;
+  }
+}
+.cp-public .d3c-aside-photo { width: 100%; height: 200px; object-fit: cover; border-radius: 24px; }
+.cp-public .d3c-aside-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-2); margin: 0; }
+.cp-public .d3c-aside-title { margin: 4px 0 0; }
+.cp-public .d3c-aside-facts { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 0; }
+.cp-public .d3c-aside-row { display: flex; gap: 8px; font-size: 14px; }
+.cp-public .d3c-aside-row dt { color: var(--ink-2); min-width: 60px; }
+.cp-public .d3c-aside-price { font-size: clamp(1.6rem, 2.5vw, 2.2rem); font-family: var(--display, inherit); margin-top: 8px; }
+
+/* ── D3c: Mobile Bar ── */
+.cp-public .d3c-mob-bar-wrap { border-bottom: 1px solid var(--line); }
+@media (min-width: 1000px) { .cp-public .d3c-mob-bar-wrap { display: none; } }
+.cp-public .d3c-mob-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; padding: 14px 20px; background: transparent; border: none; cursor: pointer; text-align: left;
+}
+.cp-public .d3c-mob-bar-left { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.cp-public .d3c-mob-bar-price { font-size: 16px; font-weight: 600; }
+.cp-public .d3c-mob-bar-body { padding-top: 8px; padding-bottom: 16px; }
+
+/* ── D3c: Sections slide-in (JS-gated, SSR-safe via .m1-ready) ── */
+.m1-ready .d3c-layout [data-section] { opacity: 0; transform: translateY(18px); transition: opacity 0.5s cubic-bezier(0.16,1,0.3,1), transform 0.5s cubic-bezier(0.16,1,0.3,1); }
+.m1-ready .d3c-layout [data-section].m1-in { opacity: 1; transform: none; }
+.m1-ready .d3c-layout [data-section]:nth-child(2) { transition-delay: 80ms; }
+.m1-ready .d3c-layout [data-section]:nth-child(3) { transition-delay: 160ms; }
+.m1-ready .d3c-layout [data-section]:nth-child(4) { transition-delay: 240ms; }
+
+/* ── D3f: Schritt-Label statt Zifferkreis ── */
+.cp-public .fsec-step-lbl {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.cp-public #s-form .fsec-head .d3 { font-size: 24px; font-weight: 600; }
+
+/* ── D3c: Checkmark animation ── */
+@keyframes cp-check-draw { from { stroke-dashoffset: 28; } to { stroke-dashoffset: 0; } }
+.cp-public .d3c-check-path { stroke-dasharray: 28; stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .cp-public .d3c-check-path { stroke-dashoffset: 28; animation: cp-check-draw 0.6s cubic-bezier(0.16,1,0.3,1) 0.1s forwards; }
+}
+
+/* ── D3c: Transfer-row with copy button ── */
+.cp-public .done-transfer-row.has-copy { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; }
+
+/* ── D3c: Field sizing 56px / 16px (overrides prior 50px) ── */
+.cp-public #s-form .field input,
+.cp-public #s-form .field select { height: 56px; font-size: 16px; }
+
+/* ── D3f: Dock sticky in rechter Spalte auf Desktop ── */
+@media (min-width: 1000px) {
+  .cp-public #s-form .d3c-main .dock {
+    position: sticky;
+    bottom: 0;
+  }
+  .cp-public .d3c-layout {
+    max-width: 1200px;
+    margin-inline: auto;
+    width: 100%;
+  }
+  .cp-public #s-form .top {
+    max-width: 1200px;
+    margin-inline: auto;
+  }
+}
+
+/* ── D3f: Plätze-Info in Zusammenfassung ── */
+.cp-public .d3c-aside-spots {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.cp-public .d3c-aside-spots.accent {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pending);
+}
+.cp-public .d3c-mob-spots-accent {
+  color: var(--pending);
+  font-weight: 600;
 }

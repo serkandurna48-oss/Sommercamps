@@ -119,12 +119,12 @@ it('keeps values after a network failure and permits a retry', async () => {
   expect(submitRegistration).toHaveBeenCalledTimes(2)
 })
 
-it('shows price, date, location, age and availability above the form', () => {
-  const summary = host.querySelector('.camp-summary')!
-  for (const text of ['149,00 €', '25.–29. Okt. 2027', 'Sportplatz', '6 bis 12 Jahre', '2 Plätze frei']) {
-    expect(summary.textContent).toContain(text)
+it('shows price, date, location and availability in the aside above the form', () => {
+  const aside = host.querySelector('.d3c-aside')!
+  for (const text of ['149,00 €', '25.–29. Okt. 2027', 'Sportplatz', '2 Plätze frei']) {
+    expect(aside.textContent).toContain(text)
   }
-  expect(summary.compareDocumentPosition(host.querySelector('form')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(aside.compareDocumentPosition(host.querySelector('form')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })
 
 it('clearly identifies the waitlist and handles a missing venue', async () => {

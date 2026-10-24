@@ -3,14 +3,14 @@
 import { useId, useState } from 'react'
 import { xlsxHrefWithFilter, type ExportColumn } from '../../../lib/exportCsv'
 import { paymentStatusLabel } from '../../../lib/i18n/de'
-import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
+import type { CampAdmin, RegistrationAdmin, RegistrationQuestion } from '../../../lib/saasAdminApi'
 import { filterRegistrations, type ParticipantFilter } from '../commandCenterLogic'
 import { DAY_LIST_COLUMNS, dayListRows, exportFilterText } from '../dayListExport'
 import ExportBar from '../ui/ExportBar'
 import DayListPrint from './DayListPrint'
 import ParticipantListPrint from './ParticipantListPrint'
 
-export default function ParticipantExport({ registrations, camp, orgSlug, orgName, filter, search, allColumns, onReset }: {
+export default function ParticipantExport({ registrations, camp, orgSlug, orgName, filter, search, allColumns, questions, onReset }: {
   registrations: RegistrationAdmin[]
   camp: CampAdmin
   orgSlug: string
@@ -18,6 +18,7 @@ export default function ParticipantExport({ registrations, camp, orgSlug, orgNam
   filter: ParticipantFilter
   search: string
   allColumns: ExportColumn<RegistrationAdmin>[]
+  questions?: RegistrationQuestion[]
   onReset: () => void
 }) {
   const [purpose, setPurpose] = useState('daylist')
@@ -57,7 +58,7 @@ export default function ParticipantExport({ registrations, camp, orgSlug, orgNam
       onPrint={() => setPrinting(purpose === 'daylist' ? 'daylist' : 'participants')}
       printEnabled={purpose !== 'payments'}
     />
-    {printing === 'daylist' && <DayListPrint camp={camp} rows={rows} filterText={filterText} orgName={orgName} onClose={() => setPrinting(null)} />}
-    {printing === 'participants' && <ParticipantListPrint camp={camp} rows={filtered} filterText={filterText} orgName={orgName} onClose={() => setPrinting(null)} />}
+    {printing === 'daylist' && <DayListPrint camp={camp} rows={rows} filterText={filterText} orgName={orgName} questions={questions} onClose={() => setPrinting(null)} />}
+    {printing === 'participants' && <ParticipantListPrint camp={camp} rows={filtered} filterText={filterText} orgName={orgName} questions={questions} onClose={() => setPrinting(null)} />}
   </>
 }

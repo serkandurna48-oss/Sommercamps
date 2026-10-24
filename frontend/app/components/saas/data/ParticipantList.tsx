@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import Button, { ButtonLink } from '../ui/Button'
 import { de, formatDate, formatDateTime, registrationStatusLabel, paymentStatusLabel } from '../../../lib/i18n/de'
 import { type ExportColumn } from '../../../lib/exportCsv'
-import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
+import type { CampAdmin, RegistrationAdmin, RegistrationQuestion } from '../../../lib/saasAdminApi'
 import { countByFilter, filterRegistrations, isActiveRegistration, type ParticipantFilter } from '../commandCenterLogic'
 import EmptyState from '../state/EmptyState'
 import ParticipantExport from './ParticipantExport'
@@ -42,6 +42,7 @@ export default function ParticipantList({
   orgName,
   campSlug,
   camp,
+  questions,
   initialFilter = 'all',
   initialSort = 'newest',
 }: {
@@ -51,6 +52,7 @@ export default function ParticipantList({
   orgName?: string
   campSlug: string
   camp: CampAdmin
+  questions?: RegistrationQuestion[]
   initialFilter?: ParticipantFilter
   initialSort?: ParticipantSort
 }) {
@@ -85,6 +87,7 @@ export default function ParticipantList({
         filter={filter}
         search={search}
         allColumns={PARTICIPANT_COLUMNS}
+        questions={questions}
         onReset={() => { setFilter('all'); setSearch('') }}
       />
 

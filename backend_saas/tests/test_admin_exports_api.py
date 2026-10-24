@@ -236,3 +236,65 @@ def test_export_organization_waitlist_xlsx_without_auth_returns_401():
         response = client.get("/admin/organizations/demo-fc/export.xlsx?view=waitlist")
 
     assert response.status_code == 401
+
+
+def _ksv_questions():
+    return [
+        {"key": "position", "label": "Position", "type": "choice", "options": ["Feldspieler", "Torwart"], "other_label": None, "required": False},
+        {"key": "verein", "label": "Verein", "type": "choice", "options": ["KSV Baunatal"], "other_label": "Anderer Verein", "required": False},
+    ]
+
+
+def test_export_daylist_extra_answers_columns_present_with_correct_values(monkeypatch):
+    org = {**_org_row(), "registration_questions": _ksv_questions()}
+    camp = _camp_row(org["id"])
+    r1 = _registration_row(child_last_name="Abt", extra_answers={"position": "Feldspieler", "verein": "KSV Baunatal"})
+    r2 = _registration_row(child_last_name="Zahn", extra_answers={"position": "Torwart", "verein": ""})
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+    monkeypatch.setattr(registrations_repo, "list_registrations_for_camp", lambda org_id, camp_id: [r1, r2])
+
+    with TestClient(app) as client:
+        response = client.get("/admin/organizations/demo-fc/camps/summer-1/export.xlsx?view=daylist", headers=_auth_headers())
+
+    assert response.status_code == 200
+    sheet = _load(response.content).active
+    headers = [c.value for c in sheet[1]]
+    assert "Position" in headers
+    assert "Verein" in headers
+    # column order follows registration_questions order (mutation probe: swap → assertion fails)
+    assert headers.index("Position") < headers.index("Verein")
+    pos_col = headers.index("Position") + 1
+    verein_col = headers.index("Verein") + 1
+    # rows sorted alphabetically: Abt first, Zahn second
+    assert sheet.cell(row=2, column=pos_col).value == "Feldspieler"
+    assert sheet.cell(row=2, column=verein_col).value == "KSV Baunatal"
+    assert sheet.cell(row=3, column=pos_col).value == "Torwart"
+    # openpyxl returns None for cells written with an empty string
+    assert sheet.cell(row=3, column=verein_col).value in ("", None)
+
+
+def test_export_participants_extra_answers_all_questions_no_truncation(monkeypatch):
+    long_questions = [
+        {"key": f"q{i}", "label": f"Sehr langes Label Nummer {i}", "type": "text", "options": None, "other_label": None, "required": False}
+        for i in range(1, 6)
+    ]
+    org = {**_org_row(), "registration_questions": long_questions}
+    camp = _camp_row(org["id"])
+    r = _registration_row(extra_answers={f"q{i}": f"Antwort {i}" for i in range(1, 6)})
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+    monkeypatch.setattr(registrations_repo, "list_registrations_for_camp", lambda org_id, camp_id: [r])
+
+    with TestClient(app) as client:
+        response = client.get("/admin/organizations/demo-fc/camps/summer-1/export.xlsx?view=participants", headers=_auth_headers())
+
+    assert response.status_code == 200
+    sheet = _load(response.content).active
+    headers = [c.value for c in sheet[1]]
+    # all 5 questions present, full labels (no truncation)
+    for i in range(1, 6):
+        assert f"Sehr langes Label Nummer {i}" in headers
+    # column order preserved (mutation probe)
+    positions = [headers.index(f"Sehr langes Label Nummer {i}") for i in range(1, 6)]
+    assert positions == sorted(positions)

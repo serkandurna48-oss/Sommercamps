@@ -8,6 +8,7 @@
 
 export interface ExportColumn<T> {
   header: string
+  title?: string
   value: (row: T) => string | number | null | undefined
 }
 

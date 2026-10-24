@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, OrganizationPublic, RegistrationCreated } from '../../lib/saasApi'
 import { formatCampDateRange, formatPrice, orgShortCode } from '../../lib/parentFlowFormat'
 import { truncateIntroForHero } from './campUtils'
@@ -186,6 +186,12 @@ export default function ParentFlow({
   const heroFromOrg = org.hero_image_url?.trim() || null
   const heroFallback = !heroFromOrg ? (clubAssets?.heroImage ?? null) : null
   const heroImg = heroFromOrg ?? heroFallback
+  const heroPosition = clubAssets?.heroPosition ?? 'center 20%'
+  const heroImageStyle = {
+    '--hero-position': heroPosition,
+    '--hero-position-mobile': clubAssets?.heroPositionMobile ?? heroPosition,
+  } as CSSProperties
+  const heroCopyClass = `in-main${heroImg ? ' hero-scrim' : ''}`
 
   const heading = org.intro_heading?.trim() || org.name
   const introFull = org.intro_text?.trim() || 'Alle Camps auf einen Blick — wählen Sie unten den passenden Termin für Ihr Kind.'
@@ -208,7 +214,7 @@ export default function ParentFlow({
         const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
         const totalSeats = camps.reduce((s, c) => s + c.capacity, 0)
         return (
-          <header className="hero h-trad" lang="de">
+          <header className={`hero h-trad${heroImg ? ' hero-photo' : ''}`} lang="de">
             <nav className="h-trad-nav" aria-label="Seitennavigation">
               <div className="nav-left">
                 <span className="nav-logo-trad">
@@ -222,11 +228,11 @@ export default function ParentFlow({
             </nav>
             {heroImg && (
               <div className="h-trad-shot">
-                <Image id="shotA" src={heroImg} alt="" unoptimized fill priority style={{ objectFit: 'cover', objectPosition: clubAssets?.heroPosition ?? 'center 20%' }} />
+                <Image id="shotA" className="hero-image" src={heroImg} alt="" unoptimized fill priority style={heroImageStyle} />
               </div>
             )}
             <div className="h-trad-in">
-              <div className="in-main">
+              <div className={heroCopyClass}>
                 <span className="hero-label">{org.name}</span>
                 <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
                 <p className="intro">{heroIntro}</p>
@@ -264,7 +270,7 @@ export default function ParentFlow({
         const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
         const totalSeats = camps.reduce((s, c) => s + c.capacity, 0)
         return (
-          <header className="hero h-akad" lang="de">
+          <header className={`hero h-akad${heroImg ? ' hero-photo' : ''}`} lang="de">
             <nav className="h-akad-nav" aria-label="Seitennavigation">
               <div className="nav-left">
                 <span className="nav-logo">
@@ -276,10 +282,10 @@ export default function ParentFlow({
               </div>
               <button className="nav-cta" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
             </nav>
-            <div className="bg">{heroImg && <Image id="shotB" src={heroImg} alt="" unoptimized fill priority style={{ objectFit: 'cover', objectPosition: clubAssets?.heroPosition ?? 'center 20%' }} />}</div>
-            <div className="veil" />
+            <div className="bg">{heroImg && <Image id="shotB" className="hero-image" src={heroImg} alt="" unoptimized fill priority style={heroImageStyle} />}</div>
+            {!heroImg && <div className="veil" />}
             <div className="in">
-              <div className="in-main">
+              <div className={heroCopyClass}>
                 <span className="hero-label">{org.name}</span>
                 <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
                 <p className="intro">{heroIntro}</p>
@@ -311,13 +317,13 @@ export default function ParentFlow({
         )
       })()}
 
-      {/* ── Kompakt Hero (text only) ── */}
+      {/* ── Kompakt Hero (optional photo) ── */}
       {org.theme === 'kompakt' && (() => {
         const ageMin = camps.length > 0 ? Math.min(...camps.map(c => c.age_min)) : null
         const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
         const totalSeats = camps.reduce((s, c) => s + c.capacity, 0)
         return (
-          <header className="hero h-komp" lang="de">
+          <header className={`hero h-komp${heroImg ? ' hero-photo' : ''}`} lang="de">
             <nav className="h-trad-nav h-komp-nav" aria-label="Seitennavigation">
               <div className="nav-left">
                 <span className="nav-logo-trad">
@@ -329,8 +335,13 @@ export default function ParentFlow({
               </div>
               <button className="nav-cta-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
             </nav>
+            {heroImg && (
+              <div className="h-trad-shot">
+                <Image id="shotC" className="hero-image" src={heroImg} alt="" unoptimized fill priority style={heroImageStyle} />
+              </div>
+            )}
             <div className="h-komp-in">
-              <div className="in-main">
+              <div className={heroCopyClass}>
                 <span className="hero-label">{org.name}</span>
                 <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
                 <p className="intro">{heroIntro}</p>

@@ -8,33 +8,31 @@ COMMIT: deed4f7ee0ce37864a72b8ae44f56b110ec63d8a
 
 ## TESTS
 
+Befehl: `npm run test --prefix frontend`
+
 ```
-Test Files  4 failed | 62 passed (66)
-      Tests  4 failed | 615 passed (619)
+Test Files  66 passed (66)
+      Tests  625 passed (625)
 ```
 
-Die 4 fehlgeschlagenen Tests sind **pre-existing ENOENT-Fehler** (CSS-Dateien, die der Test-Runner
-im falschen Arbeitsverzeichnis sucht) — alle existierten bereits auf Commit 102b8e4 und wurden
-durch diese Änderungen weder erzeugt noch berührt:
-
-| Datei | Fehler |
-|---|---|
-| `app/pilot/[org]/d1c.test.tsx` | ENOENT: `app/pilot/[org]/publicTheme.css` |
-| `app/components/saas/adminConsistency.test.ts` | globSync findet 0 Dateien (CWD-Abweichung) |
-| `app/components/saas/ui/accessibility.test.tsx` | ENOENT: `app/components/saas/ui/focus.css` |
-| `app/components/saas/ui/adminLayout.test.tsx` | ENOENT: `app/components/saas/tokens.css` |
+0 failed / 0 errors.
 
 Neuer Test B1 (Sie-Test) **grün** in:
-- `EinrichtungScreen.test.tsx` – Beschreibung „B1 – Siezen: Admin-Texte enthalten kein Du"
+- `EinrichtungScreen.test.tsx` – „B1 – Siezen: Admin-Texte enthalten kein Du"
 - `CampCreateForm.test.tsx` – „CampCreateForm enthält kein Du in Texten (B1 – Siezen)"
 
 ---
 
 ## MUTATIONSPROBE
 
-Ich habe lokal `de.ts` kurz mit `dein: 'test'` in `einrichtung` ergänzt → der Test
-„B1 – Siezen: Admin-Texte enthalten kein Du" schlug sofort fehl (violations: `['test']`).
-Revert danach, Tests wieder grün. Der Test reagiert korrekt auf Du-Wörter.
+`_mutationProbe: 'dein Test'` in `de.ts > einrichtung` eingefügt →
+Test „B1 – Siezen: Admin-Texte enthalten kein Du" schlug sofort fehl:
+
+```
+AssertionError: expected [ 'dein Test' ] to deeply equal []
+```
+
+Revert → alle Tests wieder grün (66 passed, 625 passed). Der Test reagiert korrekt.
 
 ---
 
@@ -119,3 +117,12 @@ Keine. Alle Änderungen folgen GESCHMACK.md:
 
 Nichts aus dem Auftrag wurde ausgelassen. Alle 5 Befunde (B1–B5) sind umgesetzt und durch
 Tests oder Screenshots belegt.
+
+---
+
+## HINWEIS TEST-BEFEHL
+
+Der korrekte Test-Befehl ist `npm run test --prefix frontend` (setzt CWD auf `frontend/`).
+`npx vitest run --root frontend` führt zu ENOENT-Fehlern bei Tests mit relativen Pfaden
+(d1c.test.tsx, accessibility.test.tsx, adminLayout.test.tsx, adminConsistency.test.ts),
+weil CWD beim Direktaufruf auf Repo-Root zeigt statt auf `frontend/`.

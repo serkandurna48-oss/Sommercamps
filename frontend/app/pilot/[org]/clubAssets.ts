@@ -6,6 +6,7 @@ export interface ClubAssets {
   galleryAltTexts: Readonly<Record<string, string>>
   logoImage?: string
   heroPosition?: string
+  heroPositionMobile?: string
 }
 
 const ASSETS: Record<string, ClubAssets> = {
@@ -23,6 +24,7 @@ const ASSETS: Record<string, ClubAssets> = {
     },
     logoImage: '/clubs/ksv/ksv-logo.png',
     heroPosition: 'center 30%',
+    heroPositionMobile: 'center 15%',
   },
 }
 

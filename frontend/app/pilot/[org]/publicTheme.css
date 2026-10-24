@@ -43,6 +43,17 @@
   --grain-motion-cycles: 4;
   --marquee-motion-duration: 40s;
   --marquee-motion-cycles: 0.125;
+  --hero-scrim-rgb: 0 0 0;
+  --hero-scrim-opacity: .82;
+  --hero-photo-text: #ffffff;
+  --hero-photo-muted: rgb(255 255 255 / .85);
+  --hero-copy-width: 48rem;
+  --hero-scrim-rise: 72px;
+  --hero-scrim-feather: 128px;
+  --hero-scrim-bottom: 100vh;
+  --hero-photo-gutter: 24px;
+  --hero-photo-height: 100svh;
+  --hero-photo-stats-padding: 16px 24px;
 
   margin: 0;
   background: var(--paper);
@@ -381,15 +392,7 @@
 }
 .cp-public .h-trad-shot img {
   object-fit: cover;
-  object-position: center 25%;
   will-change: transform;
-}
-.cp-public .h-trad-shot::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: linear-gradient(to top, rgba(0,0,0,.88) 0%, transparent 72%);
 }
 .cp-public .h-trad-in {
   position: relative;
@@ -477,16 +480,11 @@
 /* Dark variant (kompakt) */
 .cp-public .hstat-w-dark b { color: var(--ink); }
 
-/* Desktop: stronger gradient + padding override */
+/* Desktop padding */
 @media (min-width: 900px) {
   .cp-public .h-trad {
     flex-direction: column;
     align-items: stretch;
-  }
-  .cp-public .h-trad-shot::after {
-    background:
-      linear-gradient(to right, rgba(0,0,0,.55) 0%, transparent 55%),
-      linear-gradient(to top, rgba(0,0,0,.82) 0%, rgba(0,0,0,.45) 38%, transparent 65%);
   }
   .cp-public .h-trad-in {
     padding: 100px 7vw 96px;
@@ -510,7 +508,6 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 30%;
   will-change: transform;
 }
 .cp-public .h-akad .veil {
@@ -3491,13 +3488,83 @@
   min-height: var(--target-min);
 }
 .cp-public #s-form input:is([type='checkbox'], [type='radio']) {
-  width: var(--target-min);
-  height: var(--target-min);
-  min-width: var(--target-min);
+  /* Serkan 24.10.: 20px; die ganze Zeile/Karte ist Klickfläche (WCAG 2.5.8 durch Abstand erfüllt). */
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
   flex-shrink: 0;
 }
 /* Leave room for the focus ring inside horizontal scroll containers. */
 .cp-public .campfilter-bar,
 .cp-public .campfilter-periods {
   padding: var(--focus-gap);
+/* Photo heroes: protect the entire copy, feather only outside its bounds.
+ * At .82 black over white, even .85 white text exceeds 4.5:1.
+ * The pseudo-element follows content height, including wrapped/zoomed text.
+ * Its isolated stacking context keeps it behind copy and outside motion targets. */
+.cp-public .hero .hero-image {
+  object-fit: cover;
+  object-position: var(--hero-position);
+}
+.cp-public .hero-photo .in-main {
+  max-width: var(--hero-copy-width);
+}
+.cp-public .hero-scrim {
+  position: relative;
+  isolation: isolate;
+}
+.cp-public .hero-scrim::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  inset: calc(-1 * var(--hero-scrim-rise)) calc(-1 * var(--hero-scrim-feather)) calc(-1 * var(--hero-scrim-bottom)) calc(-1 * var(--hero-photo-gutter));
+  background: linear-gradient(to bottom, transparent, rgb(var(--hero-scrim-rgb) / var(--hero-scrim-opacity)) var(--hero-scrim-rise));
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--hero-scrim-feather)), transparent);
+}
+.cp-public .hero-photo h1 {
+  color: var(--hero-photo-text);
+}
+.cp-public .hero-photo .intro,
+.cp-public .hero-photo .hero-label {
+  color: var(--hero-photo-muted);
+  opacity: 1;
+}
+.cp-public .h-komp.hero-photo {
+  min-height: var(--hero-photo-height);
+  color: var(--hero-photo-text);
+}
+.cp-public .hero-photo .h-btn-line {
+  color: var(--hero-photo-text);
+}
+.cp-public .hero-photo :is(.hero-stats, .h-trad-stats, .h-komp-stats) {
+  position: relative;
+  z-index: 1;
+  background: rgb(var(--hero-scrim-rgb) / var(--hero-scrim-opacity));
+  padding: var(--hero-photo-stats-padding);
+  border-radius: var(--r-card);
+  align-self: flex-start;
+}
+.cp-public .hero-photo :is(.hstat, .hstat-w) b {
+  color: var(--hero-photo-text);
+}
+.cp-public .hero-photo :is(.hstat, .hstat-w) span {
+  color: var(--hero-photo-muted);
+}
+@media (min-width: 900px) {
+  .cp-public {
+    --hero-photo-gutter: 7vw;
+  }
+  .cp-public .hero-photo .hero-stats {
+    align-self: flex-end;
+  }
+}
+@media (max-width: 767px) {
+  .cp-public .hero .hero-image {
+    object-position: var(--hero-position-mobile, var(--hero-position));
+  }
+  .cp-public .hero-scrim::before {
+    right: calc(-1 * var(--hero-photo-gutter));
+    mask-image: none;
+  }
 }

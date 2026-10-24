@@ -144,8 +144,8 @@ it('tradition hero rendert kein Foto-Element ohne hero_image_url', () => {
   expect(html).not.toContain('h-trad-shot')
 })
 
-it('kompakt hero rendert kein Foto (Text-Hero)', () => {
-  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'kompakt' }} camps={[mockCamp]} />)
+it('kompakt hero bleibt ohne konfiguriertes Foto ein Text-Hero', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'kompakt', hero_image_url: null }} camps={[mockCamp]} />)
   expect(html).not.toContain('h-trad-shot')
   expect(html).not.toContain(org.hero_image_url)
 })

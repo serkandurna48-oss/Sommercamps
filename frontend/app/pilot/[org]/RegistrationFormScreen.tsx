@@ -11,6 +11,7 @@ import { submitErrorMessage } from './submitError'
 import { parentDetailsOnly, type ParentDetails } from './siblingRegistration'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+const PHONE_RE = /^\+?[\d ]*\d[\d ]*$/
 
 interface FormState {
   childFirstName: string
@@ -56,6 +57,39 @@ type FieldKey =
   | 'emergencyPhone'
   | 'agb'
   | 'privacy'
+
+// One source for blur feedback, progress and submit validation.
+function validateForm(form: FormState): Partial<Record<FieldKey, string>> {
+  const bad: Partial<Record<FieldKey, string>> = {}
+  if (!form.childFirstName.trim()) bad.childFirstName = 'Bitte tragen Sie den Vornamen ein.'
+  if (!form.childLastName.trim()) bad.childLastName = 'Bitte tragen Sie den Nachnamen ein.'
+  if (parseGermanDate(form.childBirthDate) === null) bad.childBirthDate = 'Bitte im Format TT.MM.JJJJ.'
+  if (!form.parentName.trim().includes(' ')) bad.parentName = 'Bitte Vor- und Nachnamen angeben.'
+  if (!EMAIL_RE.test(form.parentEmail.trim())) bad.parentEmail = 'Diese Adresse ist unvollständig. Beispiel: name@beispiel.de'
+  if (!form.parentPhone.trim()) bad.parentPhone = 'Bitte tragen Sie eine Telefonnummer ein.'
+  else if (!PHONE_RE.test(form.parentPhone.trim())) bad.parentPhone = 'Bitte verwenden Sie nur Ziffern, Leerzeichen und ein + am Anfang.'
+  if (!form.emergencyPhone.trim()) bad.emergencyPhone = 'Ohne Notfallnummer dürfen wir Ihr Kind am ersten Tag nicht übernehmen.'
+  else if (!PHONE_RE.test(form.emergencyPhone.trim())) bad.emergencyPhone = 'Bitte verwenden Sie nur Ziffern, Leerzeichen und ein + am Anfang.'
+  if (!form.termsAccepted) bad.agb = 'Bitte akzeptieren Sie die Teilnahmebedingungen.'
+  if (!form.privacyAccepted) bad.privacy = 'Bitte stimmen Sie der Datenschutzerklärung zu.'
+  return bad
+}
+
+function formatBirthDate(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8)
+  return digits.slice(0, 2) + (digits.length >= 2 ? '.' : '')
+    + digits.slice(2, 4) + (digits.length >= 4 ? '.' : '') + digits.slice(4)
+}
+
+function ageHintForCamp(value: string, camp: CampPublic): string | null {
+  const birth = parseGermanDate(value)
+  if (!birth) return null
+  const age = Number(camp.start_date.slice(0, 4)) - Number(birth.slice(0, 4))
+    - (camp.start_date.slice(5, 10) < birth.slice(5, 10) ? 1 : 0)
+  return age < camp.age_min || age > camp.age_max
+    ? `Dieses Camp ist für Kinder von ${camp.age_min} bis ${camp.age_max} Jahren vorgesehen. Bitte prüfen Sie das Geburtsdatum oder sprechen Sie mit dem Verein. Sie können die Anmeldung trotzdem absenden.`
+    : null
+}
 
 export default function RegistrationFormScreen({
   orgSlug,
@@ -121,6 +155,29 @@ export default function RegistrationFormScreen({
   useEffect(() => {
     if (parentPrefill) onPrefillConsumed?.()
   }, [parentPrefill, onPrefillConsumed])
+  const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({})
+  const [submitted, setSubmitted] = useState(false)
+  const birthSelection = useRef<{ input: HTMLInputElement; start: number; end: number } | null>(null)
+  useEffect(() => {
+    const selection = birthSelection.current
+    if (selection) {
+      selection.input.setSelectionRange(selection.start, selection.end)
+      birthSelection.current = null
+    }
+  })
+  const dirty = !submitted && Object.values(form).some(value =>
+    typeof value === 'string' ? value.trim() !== ''
+      : typeof value === 'boolean' ? value : Object.values(value).some(answer => typeof answer === 'string' && answer.trim() !== ''),
+  )
+  useEffect(() => {
+    if (!dirty) return
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [dirty])
 
   const assets = getClubAssets(orgSlug)
 
@@ -130,11 +187,35 @@ export default function RegistrationFormScreen({
     setServerFields((prev) => ({ ...prev, [field]: undefined }))
   }
 
+  function touch(field: FieldKey) {
+    setTouched(previous => ({ ...previous, [field]: true }))
+  }
+
+  function updateBirthDate(input: HTMLInputElement, raw: string, start: number, end = start, inputType?: string) {
+    // Deleting a separator should delete a digit, not trap the cursor at the dot.
+    if (inputType?.startsWith('delete') && raw.length < form.childBirthDate.length
+      && raw.replace(/\D/g, '') === form.childBirthDate.replace(/\D/g, '')) {
+      const index = inputType === 'deleteContentBackward' ? start - 1 : start
+      raw = raw.slice(0, index) + raw.slice(index + 1)
+      start = Math.max(0, index)
+      end = start
+    }
+    const formatted = formatBirthDate(raw)
+    const position = (offset: number) => {
+      if (offset === raw.length) return formatted.length
+      const digits = raw.slice(0, offset).replace(/\D/g, '').length
+      return Math.min(formatted.length, digits + (digits >= 2 ? 1 : 0) + (digits >= 4 ? 1 : 0))
+    }
+    birthSelection.current = { input, start: position(start), end: position(end) }
+    set('childBirthDate', formatted)
+  }
+
   function focusFirstInvalid() {
     setFocusRequest((request) => request + 1)
   }
 
-  const emailValid = EMAIL_RE.test(form.parentEmail.trim())
+  const validation = useMemo(() => validateForm(form), [form])
+  const ageHint = (submitAttempted || touched.childBirthDate) ? ageHintForCamp(form.childBirthDate, camp) : null
 
   const extraDone = useMemo(
     () => questions.every((q) => !q.required || (form.extraAnswers[q.key] ?? '').trim() !== ''),
@@ -143,31 +224,22 @@ export default function RegistrationFormScreen({
 
   const sectionDone = useMemo(
     () => ({
-      1: form.childFirstName.trim() !== '' && form.childLastName.trim() !== '' && parseGermanDate(form.childBirthDate) !== null,
-      2: form.parentName.trim() !== '' && form.parentEmail.trim() !== '' && form.parentPhone.trim() !== '' && emailValid,
-      3: form.emergencyPhone.trim() !== '',
+      1: !validation.childFirstName && !validation.childLastName && !validation.childBirthDate,
+      2: !validation.parentName && !validation.parentEmail && !validation.parentPhone,
+      3: !validation.emergencyPhone,
       4: form.termsAccepted && form.privacyAccepted && extraDone,
     }),
-    [form, emailValid, extraDone],
+    [form, validation, extraDone],
   )
   const doneCount = Object.values(sectionDone).filter(Boolean).length
 
   const badFields = useMemo<Partial<Record<FieldKey, string>>>(() => {
-    if (!submitAttempted) return {}
     const bad: Partial<Record<FieldKey, string>> = Object.fromEntries(Object.entries(serverFields).filter(([, value]) => value))
-    if (form.childFirstName.trim() === '') bad.childFirstName = 'Bitte tragen Sie den Vornamen ein.'
-    if (form.childLastName.trim() === '') bad.childLastName = 'Bitte tragen Sie den Nachnamen ein.'
-    if (parseGermanDate(form.childBirthDate) === null) bad.childBirthDate = 'Bitte im Format TT.MM.JJJJ.'
-    if (form.parentName.trim() === '' || !form.parentName.trim().includes(' ')) bad.parentName = 'Bitte Vor- und Nachnamen angeben.'
-    if (!emailValid) bad.parentEmail = 'Diese Adresse ist unvollständig. Beispiel: name@beispiel.de'
-    if (form.parentPhone.trim() === '') bad.parentPhone = 'Bitte tragen Sie eine Telefonnummer ein.'
-    if (form.emergencyPhone.trim() === '') {
-      bad.emergencyPhone = 'Ohne Notfallnummer dürfen wir Ihr Kind am ersten Tag nicht übernehmen.'
+    for (const field of Object.keys(validation) as FieldKey[]) {
+      if (submitAttempted || touched[field]) bad[field] = validation[field]
     }
-    if (!form.termsAccepted) bad.agb = 'Bitte akzeptieren Sie die Teilnahmebedingungen.'
-    if (!form.privacyAccepted) bad.privacy = 'Bitte stimmen Sie der Datenschutzerklärung zu.'
     return bad
-  }, [submitAttempted, form, emailValid, serverFields])
+  }, [submitAttempted, touched, validation, serverFields])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -179,18 +251,7 @@ export default function RegistrationFormScreen({
     setErrorStatus(null)
     setServerFields({})
 
-    const bad: FieldKey[] = []
-    if (form.childFirstName.trim() === '') bad.push('childFirstName')
-    if (form.childLastName.trim() === '') bad.push('childLastName')
-    if (parseGermanDate(form.childBirthDate) === null) bad.push('childBirthDate')
-    if (form.parentName.trim() === '' || !form.parentName.trim().includes(' ')) bad.push('parentName')
-    if (!emailValid) bad.push('parentEmail')
-    if (form.parentPhone.trim() === '') bad.push('parentPhone')
-    if (form.emergencyPhone.trim() === '') bad.push('emergencyPhone')
-    if (!form.termsAccepted) bad.push('agb')
-    if (!form.privacyAccepted) bad.push('privacy')
-
-    if (bad.length > 0 || !extraDone) {
+    if (Object.keys(validation).length > 0 || !extraDone) {
       focusFirstInvalid()
       return
     }
@@ -241,6 +302,7 @@ export default function RegistrationFormScreen({
         else requestAnimationFrame(() => serverErrorRef.current?.focus())
         return
       }
+      setSubmitted(true)
       onSubmitted(outcome.data, form.childFirstName.trim() || 'Ihr Kind', form.parentEmail.trim(), parentDetailsOnly(form))
     } catch {
       setErrorStatus(0)
@@ -375,6 +437,8 @@ export default function RegistrationFormScreen({
                     <select id="sibling_camp" name="sibling_camp" value={camp.slug} disabled={submitting} onChange={(event) => {
                       setForm({ ...EMPTY, ...parentDetailsOnly(form) })
                       setSubmitAttempted(false)
+                      setTouched({})
+                      setSubmitted(false)
                       setServerError(null)
                       setErrorStatus(null)
                       setServerFields({})
@@ -410,6 +474,7 @@ export default function RegistrationFormScreen({
                       autoComplete="section-child given-name"
                       value={form.childFirstName}
                       onChange={(e) => set('childFirstName', e.target.value)}
+                      onBlur={() => touch('childFirstName')}
                       aria-invalid={!!badFields.childFirstName}
                       aria-describedby={badFields.childFirstName ? 'err-child-first-name' : undefined}
                     />
@@ -426,6 +491,7 @@ export default function RegistrationFormScreen({
                       autoComplete="section-child family-name"
                       value={form.childLastName}
                       onChange={(e) => set('childLastName', e.target.value)}
+                      onBlur={() => touch('childLastName')}
                       aria-invalid={!!badFields.childLastName}
                       aria-describedby={badFields.childLastName ? 'err-child-last-name' : undefined}
                     />
@@ -443,16 +509,31 @@ export default function RegistrationFormScreen({
                         autoComplete="section-child bday"
                         placeholder="TT.MM.JJJJ"
                         inputMode="numeric"
+                        pattern="[0-9.]*"
                         className="num"
                         value={form.childBirthDate}
                         onChange={(e) => {
-                          const value = e.target.value
-                          set('childBirthDate', /^\d{8}$/.test(value) ? `${value.slice(0, 2)}.${value.slice(2, 4)}.${value.slice(4)}` : value)
+                          const input = e.target
+                          updateBirthDate(input, input.value, input.selectionStart ?? input.value.length,
+                            input.selectionEnd ?? input.value.length, (e.nativeEvent as InputEvent | undefined)?.inputType)
                         }}
+                        onPaste={(e) => {
+                          e.preventDefault()
+                          const input = e.currentTarget
+                          const start = input.selectionStart ?? 0
+                          const end = input.selectionEnd ?? input.value.length
+                          const pasted = e.clipboardData.getData('text').trim().replace(
+                            /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/,
+                            (_, day: string, month: string, year: string) => `${day.padStart(2, '0')}.${month.padStart(2, '0')}.${year}`,
+                          )
+                          updateBirthDate(input, input.value.slice(0, start) + pasted + input.value.slice(end), start + pasted.length)
+                        }}
+                        onBlur={() => touch('childBirthDate')}
                         aria-invalid={!!badFields.childBirthDate}
-                        aria-describedby={badFields.childBirthDate ? 'err-child-birth-date' : undefined}
+                        aria-describedby={badFields.childBirthDate ? 'err-child-birth-date' : ageHint ? 'hint-child-age' : undefined}
                       />
                       <span className="err">{badFields.childBirthDate && <span id="err-child-birth-date">{badFields.childBirthDate}</span>}</span>
+                      {ageHint && <span className="hint" id="hint-child-age" role="status">{ageHint}</span>}
                     </label>
                     <label htmlFor="jersey_size" className="field s">
                       <span className="t-lab">Trikotgröße</span>
@@ -493,6 +574,7 @@ export default function RegistrationFormScreen({
                       aria-required="true"
                       value={form.parentName}
                       onChange={(e) => set('parentName', e.target.value)}
+                      onBlur={() => touch('parentName')}
                       aria-invalid={!!badFields.parentName}
                       aria-describedby={badFields.parentName ? 'err-parent-name' : undefined}
                     />
@@ -510,6 +592,7 @@ export default function RegistrationFormScreen({
                       inputMode="email"
                       value={form.parentEmail}
                       onChange={(e) => set('parentEmail', e.target.value)}
+                      onBlur={() => touch('parentEmail')}
                       aria-invalid={!!badFields.parentEmail}
                       aria-describedby={badFields.parentEmail ? 'err-parent-email hint-parent-email' : 'hint-parent-email'}
                     />
@@ -529,6 +612,7 @@ export default function RegistrationFormScreen({
                       className="num"
                       value={form.parentPhone}
                       onChange={(e) => set('parentPhone', e.target.value)}
+                      onBlur={() => touch('parentPhone')}
                       aria-invalid={!!badFields.parentPhone}
                       aria-describedby={badFields.parentPhone ? 'err-parent-phone' : undefined}
                     />
@@ -548,6 +632,7 @@ export default function RegistrationFormScreen({
                       className="num"
                       value={form.emergencyPhone}
                       onChange={(e) => set('emergencyPhone', e.target.value)}
+                      onBlur={() => touch('emergencyPhone')}
                       aria-invalid={!!badFields.emergencyPhone}
                       aria-describedby={badFields.emergencyPhone ? 'err-emergency-phone' : undefined}
                     />
@@ -582,6 +667,7 @@ export default function RegistrationFormScreen({
 
               {/* Section 3: Zusatzfragen — only rendered when questions exist */}
               <ExtraQuestions
+                key={camp.slug}
                 questions={questions}
                 answers={form.extraAnswers}
                 submitAttempted={submitAttempted}
@@ -604,6 +690,7 @@ export default function RegistrationFormScreen({
                       required
                       aria-required="true"
                       onChange={(e) => set('termsAccepted', e.target.checked)}
+                      onBlur={() => touch('agb')}
                       aria-invalid={!!badFields.agb}
                       aria-describedby={badFields.agb ? 'err-agb' : undefined}
                     />
@@ -621,6 +708,7 @@ export default function RegistrationFormScreen({
                       required
                       aria-required="true"
                       onChange={(e) => set('privacyAccepted', e.target.checked)}
+                      onBlur={() => touch('privacy')}
                       aria-invalid={!!badFields.privacy}
                       aria-describedby={badFields.privacy ? 'err-privacy' : undefined}
                     />

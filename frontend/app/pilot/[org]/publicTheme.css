@@ -3498,6 +3498,7 @@
 .cp-public .campfilter-bar,
 .cp-public .campfilter-periods {
   padding: var(--focus-gap);
+}
 /* Photo heroes: protect the entire copy, feather only outside its bounds.
  * At .82 black over white, even .85 white text exceeds 4.5:1.
  * The pseudo-element follows content height, including wrapped/zoomed text.

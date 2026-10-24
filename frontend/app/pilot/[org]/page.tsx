@@ -7,22 +7,17 @@ import { filterFutureCamps } from './campUtils'
 import GrainOverlay from './GrainOverlay'
 import ParentFlow from './ParentFlow'
 import { publicFontClassName } from './publicFonts'
+import { clubMetadata, getSiteUrl, neutralMetadata } from './socialMetadata'
 import './publicTheme.css'
 
-/**
- * Ohne dies erbt jede /pilot/[org]-Seite den Titel aus dem geteilten
- * Root-Layout (app/layout.tsx) — dort hart auf "KSV Baunatal –
- * Fußballschule" gesetzt, weil dieses Layout ursprünglich nur für die
- * KSV/JK-Seite existierte. Jeder SaaS-Verein zeigte dadurch bislang den
- * KSV-Titel im Browser-Tab an, unabhängig vom tatsächlichen Verein.
- */
+/** Override the legacy root metadata for the public club page. */
 export async function generateMetadata({ params }: { params: Promise<{ org: string }> }): Promise<Metadata> {
   const { org: orgSlug } = await params
   try {
     const org = await fetchOrganization(orgSlug)
-    return { title: org ? org.name : 'CampsPilot' }
+    return org ? clubMetadata(org, await getSiteUrl()) : neutralMetadata
   } catch {
-    return { title: 'CampsPilot' }
+    return neutralMetadata
   }
 }
 

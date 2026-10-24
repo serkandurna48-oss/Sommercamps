@@ -19,6 +19,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createElement } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { pakete, faq } from '../preise/pakete'
 
 // ── Tracking-Variable für m2pin ───────────────────────────────────────────────
 const pinCreatedConfigs: unknown[] = []
@@ -167,29 +168,58 @@ describe('CX2 – Preis und Fragen', () => {
     const pilot = wrapper.querySelector('#pilot')!
     expect(price).not.toBeNull()
     expect(pilot).not.toBeNull()
-    expect(price.querySelector('h2')?.textContent).toBe('Preis')
-    expect(price.querySelector('p')?.textContent).toBe('Der Preis richtet sich nach der Zahl Ihrer Camps. Für die ersten Vereine ist die Einrichtung inklusive.')
-    expect(price.querySelector('a[href="#pilot"]')?.textContent).toBe('Preis anfragen')
+    expect(price.querySelector('h2')?.textContent).toBe('Ihr Camp. Ihr Paket.')
+    expect(price.querySelectorAll('article')).toHaveLength(3)
+    expect(price.querySelectorAll('a.btn')).toHaveLength(3)
     expect(price.compareDocumentPosition(pilot) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('nennt keine Eurobeträge im Preisabschnitt', () => {
-    const price = wrapper.querySelector('#preis')
-    expect(price).not.toBeNull()
-    expect(price!.textContent).not.toMatch(/\d\s*(?:€|Euro\b)/i)
+  it('enthält drei Pakete mit aufsteigenden Jahrespreisen', () => {
+    expect(pakete.map(({ name, preis }) => [name, preis])).toEqual([
+      ['Start', 199], ['Verein', 490], ['Fußballschule', 990],
+    ])
+    expect(pakete.every((paket, index) => index === 0 || paket.preis > pakete[index - 1].preis)).toBe(true)
+    const cards = Array.from(wrapper.querySelectorAll('#preis article'))
+    for (const [index, paket] of pakete.entries()) {
+      expect(cards[index].querySelector('h3')?.textContent).toBe(paket.name)
+      expect(cards[index].textContent).toContain(`${paket.preis} €`)
+      expect(cards[index].textContent).toContain('pro Jahr')
+      expect(cards[index].querySelectorAll('li')).toHaveLength(5)
+    }
+  })
+
+  it('zeigt den vollständigen MwSt-Hinweis und den Saisonhinweis', () => {
+    expect(wrapper.querySelector('#preis')?.textContent).toContain('Alle Preise zzgl. MwSt. Keine Gebühr pro Anmeldung.')
+    expect(wrapper.querySelector('#preis small')?.textContent).toBe('Preise gültig für die Saison 2027')
+  })
+
+  it('verlinkt jedes Paket mit seinem Namen zum vorhandenen Anfrageformular', () => {
+    const buttons = Array.from(wrapper.querySelectorAll<HTMLAnchorElement>('#preis a.btn'))
+    expect(buttons).toHaveLength(3)
+    for (const [index, button] of buttons.entries()) {
+      const url = new URL(button.getAttribute('href')!, 'https://campspilot.example')
+      expect(url.pathname).toBe('/campspilot')
+      expect(url.hash).toBe('#pilot')
+      expect(url.searchParams.get('paket')).toBe(pakete[index].name)
+      expect(button.textContent).toContain('Unverbindlich anfragen')
+      expect(wrapper.querySelector(url.hash + ' form')).not.toBeNull()
+    }
+    expect(wrapper.querySelector('.nav a[href="#preis"]')?.textContent).toBe('Preise')
+    expect(wrapper.querySelector('footer a[href="#preis"]')?.textContent).toBe('Preise')
   })
 
   it('enthält sechs native Aufklappelemente mit den vorgegebenen Fragen', () => {
     const entries = Array.from(wrapper.querySelectorAll('#fragen details'))
     expect(entries).toHaveLength(6)
     expect(entries.map((entry) => entry.querySelector('summary')?.textContent)).toEqual([
-      'Wie lange dauert die Einrichtung?',
+      'Gibt es eine Testphase?',
       'Brauchen Eltern ein Konto?',
-      'Wie kommt das Geld zu uns?',
-      'Was passiert mit den Daten?',
-      'Können wir mehrere Standorte anbieten?',
-      'Was, wenn ein Camp voll ist?',
+      'Können wir unser Vereinslogo und unsere Farben nutzen?',
+      'Wo liegen die Daten (Deutschland/EU)?',
+      'Können wir jederzeit kündigen?',
+      'Wie läuft der Start ab?',
     ])
+    expect(faq).toHaveLength(6)
     for (const entry of entries) {
       expect(entry.firstElementChild?.tagName).toBe('SUMMARY')
       expect(entry.querySelectorAll('summary')).toHaveLength(1)
@@ -199,20 +229,13 @@ describe('CX2 – Preis und Fragen', () => {
     }
   })
 
-  it('erwähnt Kreditkarte und Online-Zahlung ausschließlich in der negativen Geldantwort', () => {
-    const moneyEntry = Array.from(wrapper.querySelectorAll('#fragen details')).find(
-      (entry) => entry.querySelector('summary')?.textContent === 'Wie kommt das Geld zu uns?',
-    )
-    const answer = moneyEntry?.querySelector('p')
-    const negativeSentence = 'Eine Online-Zahlung per Kreditkarte ist derzeit nicht möglich.'
-    expect(answer).not.toBeNull()
-    expect(answer!.textContent).toContain(negativeSentence)
-    const withoutDisclaimer = wrapper.cloneNode(true) as HTMLDivElement
-    const moneyAnswer = Array.from(withoutDisclaimer.querySelectorAll('#fragen details')).find(
-      (entry) => entry.querySelector('summary')?.textContent === 'Wie kommt das Geld zu uns?',
-    )!.querySelector('p')!
-    moneyAnswer.textContent = moneyAnswer.textContent!.replace(negativeSentence, '')
-    expect(withoutDisclaimer.textContent).not.toMatch(/Kreditkarte|Online-Zahlung/i)
+  it('macht keine Zusage zu Testphase oder jederzeitiger Kündigung', () => {
+    for (const question of ['Gibt es eine Testphase?', 'Können wir jederzeit kündigen?']) {
+      const entry = Array.from(wrapper.querySelectorAll('#fragen details')).find(
+        (item) => item.querySelector('summary')?.textContent === question,
+      )
+      expect(entry?.querySelector('p')?.textContent).toContain('Sprechen Sie uns an.')
+    }
   })
 })
 

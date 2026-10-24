@@ -38,11 +38,31 @@ afterEach(async () => {
   container.remove()
   vi.restoreAllMocks()
   vi.unstubAllEnvs()
+  window.history.replaceState({}, '', '/')
 })
 
 async function renderForm() {
   await act(() => root.render(<PilotRequestForm />))
 }
+
+describe('Paketauswahl aus der Preisübersicht', () => {
+  it.each(['Start', 'Verein', 'Fußballschule'])('füllt %s aus der URL vor und lässt die Nachricht bearbeiten', async (name) => {
+    window.history.replaceState({}, '', `/campspilot?paket=${encodeURIComponent(name)}#pilot`)
+    await renderForm()
+    const field = container.querySelector<HTMLTextAreaElement>('#prf-nachricht')!
+    expect(field.value).toBe(`Ich interessiere mich für das Paket „${name}“. Bitte senden Sie mir weitere Informationen.`)
+    field.value = 'Meine eigene Frage'
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }))
+    await fillAndSubmit('Testverein FC', 'info@example.test')
+    expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string).nachricht).toBe('Meine eigene Frage')
+  })
+
+  it.each(['', '?paket=Unbekannt', '?paket=%3Cscript%3E'])('lässt die Nachricht ohne gültiges Paket leer (%s)', async (query) => {
+    window.history.replaceState({}, '', `/campspilot${query}`)
+    await renderForm()
+    expect(container.querySelector<HTMLTextAreaElement>('#prf-nachricht')?.value).toBe('')
+  })
+})
 
 function getInput(id: string): HTMLInputElement | null {
   return container.querySelector<HTMLInputElement>(`#${id}`)

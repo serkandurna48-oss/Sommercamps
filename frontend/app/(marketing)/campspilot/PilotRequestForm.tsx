@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { paketNachricht, preise } from '../preise/pakete'
 
 // Kontaktadresse kommt aus der Umgebung (Vercel). Ohne Wert kein mailto-Link.
 const CONTACT_EMAIL = () => process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || ''
@@ -33,6 +34,16 @@ function validateFields(verein: string, email: string): FieldErrors {
 export default function PilotRequestForm() {
   const [sendState, setSendState] = useState<SendState>('idle')
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const messageRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    const field = messageRef.current
+    // Preserve restored browser drafts and accept only known package names.
+    if (field && !field.value) {
+      const name = new URLSearchParams(window.location.search).get(preise.paketParameter)
+      field.value = paketNachricht(name)
+    }
+  }, [])
 
   if (sendState === 'success') {
     return (
@@ -147,6 +158,7 @@ export default function PilotRequestForm() {
           Nachricht <span className="prf-opt">(optional)</span>
         </span>
         <textarea
+          ref={messageRef}
           id="prf-nachricht"
           name="nachricht"
           rows={3}

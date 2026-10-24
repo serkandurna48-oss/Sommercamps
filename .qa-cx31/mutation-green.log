@@ -1,0 +1,15 @@
+
+> frontend@0.1.0 test
+> vitest run --configLoader native app/(marketing)/campspilot/marketing.test.tsx -t vollständigen MwSt
+
+
+ RUN  v5.0.1 C:/Users/serka/Desktop/Projekte/wt/CX31/frontend
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 16 skipped (17)
+   Start at  00:40:26
+   Duration  1.65s (environment 74%, tests 10%, worker 9%, import 7%)
+
+
+Exit code: 0

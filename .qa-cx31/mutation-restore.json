@@ -1,0 +1,5 @@
+{
+  "before": "b8a0f03a7581bd71e6c3a4b78464fc89aef231352a92de6b79ce141dc01f001b",
+  "after": "b8a0f03a7581bd71e6c3a4b78464fc89aef231352a92de6b79ce141dc01f001b",
+  "removed": "<p className=\"price-tax\">{preise.steuerhinweis}</p>"
+}

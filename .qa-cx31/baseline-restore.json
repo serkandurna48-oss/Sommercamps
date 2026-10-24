@@ -1,0 +1,17 @@
+[
+  {
+    "file": "frontend/app/(marketing)/campspilot/page.tsx",
+    "before": "b8a0f03a7581bd71e6c3a4b78464fc89aef231352a92de6b79ce141dc01f001b",
+    "after": "b8a0f03a7581bd71e6c3a4b78464fc89aef231352a92de6b79ce141dc01f001b"
+  },
+  {
+    "file": "frontend/app/(marketing)/campspilot/marketing.css",
+    "before": "73aa1425fa6e30eff82dd0a7880ef179f0c9d9f62037c829f53c4db6fdfc4664",
+    "after": "73aa1425fa6e30eff82dd0a7880ef179f0c9d9f62037c829f53c4db6fdfc4664"
+  },
+  {
+    "file": "frontend/app/(marketing)/campspilot/PilotRequestForm.tsx",
+    "before": "e63053acd2481888ced661c9f9c20418299e19ee45ef183067fac7f359943cc8",
+    "after": "e63053acd2481888ced661c9f9c20418299e19ee45ef183067fac7f359943cc8"
+  }
+]

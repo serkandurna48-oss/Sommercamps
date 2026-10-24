@@ -5,6 +5,7 @@ import BootCurtain from '../../components/marketing/BootCurtain'
 import Grain from '../../components/marketing/Grain'
 import SiteMotion from '../../components/marketing/SiteMotion'
 import { CP_IMAGES } from './images'
+import PilotRequestForm from './PilotRequestForm'
 
 export default function CampsPilotPage() {
   return (
@@ -237,13 +238,7 @@ export default function CampsPilotPage() {
             <h2 className="d2" data-split="">Zwei Vereine sind drauf. Es ist Platz für wenige mehr.</h2>
             <p className="lead" style={{ color: 'var(--fog-2)' }} data-rise="">CampsPilot ist im Pilotbetrieb. Wir nehmen Vereine auf, die im kommenden Jahr ein bis zehn Camps veranstalten und bereit sind, uns zu sagen, was fehlt.</p>
           </div>
-          <form className="form" id="pilotForm" noValidate>
-            <label htmlFor="pf-verein"><span>Verein oder Fußballschule</span>
-              <input id="pf-verein" name="verein" type="text" placeholder="KSV Baunatal" autoComplete="organization" /></label>
-            <label htmlFor="pf-mail"><span>E-Mail</span>
-              <input id="pf-mail" name="email" type="email" placeholder="name@verein.de" autoComplete="email" /></label>
-            <div className="act"><button className="btn fill" type="submit">Pilotplatz anfragen</button></div>
-          </form>
+          <PilotRequestForm />
           <p className="form-note" id="formNote">
             Aktuelle Pilotvereine: <strong>KSV Baunatal</strong> und <strong>JK Performance Academy</strong>.
           </p>

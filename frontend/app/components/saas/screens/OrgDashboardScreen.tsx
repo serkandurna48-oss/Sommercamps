@@ -8,8 +8,7 @@ import { computeOnboardingSteps, missingRequiredOrgFields } from '../onboardingS
 import MatchdayBand from '../shell/MatchdayBand'
 import TaskCard from '../tasks/TaskCard'
 import TaskRow from '../tasks/TaskRow'
-import CampRow from '../data/CampRow'
-import EmptyState from '../state/EmptyState'
+import DashboardCampsCard from '../data/DashboardCampsCard'
 import OnboardingCard from '../state/OnboardingCard'
 import LaunchSuccessCard from '../state/LaunchSuccessCard'
 import SuccessNote from '../state/SuccessNote'
@@ -113,32 +112,14 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
           </section>
         )}
 
-        <section>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="cp-title">{de.dashboard.allCamps}</h2>
+        <DashboardCampsCard camps={campsWithStats} orgSlug={orgSlug} brandColor={brand.brand} action={
             <ButtonLink
               href={`/pilot/${orgSlug}/camps/new`}
               variant={showCard ? 'secondary' : 'primary'} brandStrong={brand.brandStrong} brandOn={brand.brandOn}
             >
               + Camp anlegen
             </ButtonLink>
-          </div>
-          {campsWithStats.length === 0 ? (
-            <EmptyState title={de.dashboard.noCamps} />
-          ) : (
-            <div className="cp-roster">
-              {campsWithStats.map(c => (
-                <CampRow
-                  key={c.camp.slug}
-                  orgSlug={orgSlug}
-                  camp={c.camp}
-                  registeredCount={c.registeredCount}
-                  brandColor={brand.brand}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+        } />
       </main>
     </>
   )

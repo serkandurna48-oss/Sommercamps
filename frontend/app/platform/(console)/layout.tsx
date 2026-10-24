@@ -3,8 +3,10 @@ import StagingBanner from '../../components/saas/StagingBanner'
 import { archivo } from '../../components/saas/fonts'
 import GrainOverlay from '../../components/saas/GrainOverlay'
 import '../../components/saas/tokens.css'
+import './review.css'
 import { getValidAccessToken } from '../../lib/supabaseServer'
-import { fetchMe } from '../../lib/saasAdminApi'
+import { fetchMe, fetchOrganizationsAdmin } from '../../lib/saasAdminApi'
+import ReviewNavLink from './ReviewNavLink'
 import { redirect } from 'next/navigation'
 import { platformLogoutAction } from '../logoutAction'
 
@@ -37,17 +39,20 @@ export default async function PlatformLayout({ children }: { children: React.Rea
     redirect(firstOrg ? `/pilot/${firstOrg}/dashboard` : '/platform/login')
   }
 
+  const organizations = await fetchOrganizationsAdmin(token)
+
   return (
     <div className={`${archivo.variable} cp-scope min-h-screen`}>
       <StagingBanner />
       <GrainOverlay />
       <header className="border-b" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-ink)' }}>
-        <div className="mx-auto flex max-w-[1080px] items-center justify-between px-4 py-4 md:px-8">
-          <div className="flex items-center gap-6">
+        <div className="mx-auto flex max-w-[1080px] flex-wrap items-center justify-between gap-3 px-4 py-4 md:px-8">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link href="/platform" className="cp-subheading" style={{ color: '#FFFFFF' }}>
               CampsPilot Plattform
             </Link>
-            <nav className="hidden gap-4 sm:flex">
+            <nav aria-label="Plattform-Konsole" className="flex flex-wrap items-center gap-4">
+              <ReviewNavLink orgs={organizations} />
               <Link href="/platform" prefetch={false} className="cp-chip" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Vereine
               </Link>

@@ -33,5 +33,6 @@ export async function reviewOrganizationAction(
   }
 
   revalidatePath(`/platform/${orgSlug}`)
+  revalidatePath('/platform', 'layout')
   return { error: null, done: true, decision }
 }

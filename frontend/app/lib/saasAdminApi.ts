@@ -78,6 +78,7 @@ export interface OrganizationAdmin {
   review_status?: string
   submitted_at?: string | null
   avv_version?: string | null
+  avv_accepted_at?: string | null
   review_note?: string | null
   approved_at?: string | null
 }

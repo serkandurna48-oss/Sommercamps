@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { ReactNode } from 'react'
+import type { ComponentProps } from 'react'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -8,10 +8,11 @@ import SubmittedOrgsSection from '../SubmittedOrgsSection'
 import ReviewBox from './ReviewBox'
 import { reviewOrganizationAction, type ReviewActionState } from './reviewActions'
 import type { OrganizationAdmin } from '../../../lib/saasAdminApi'
+import { reviewCamp, reviewOrg } from '../../reviewFixtures'
 
 vi.mock('./reviewActions', () => ({ reviewOrganizationAction: vi.fn() }))
 vi.mock('next/link', () => ({
-  default: ({ children, href }: { children: ReactNode; href: string }) => <a href={href}>{children}</a>,
+  default: (props: ComponentProps<'a'>) => <a {...props} />,
 }))
 
 const baseOrg: OrganizationAdmin = {
@@ -45,13 +46,13 @@ const baseOrg: OrganizationAdmin = {
 // ── Abschnitt-Tests (SubmittedOrgsSection) ───────────────────────────────────
 
 it('shows submitted section when there are orgs waiting for review', () => {
-  const html = renderToStaticMarkup(<SubmittedOrgsSection orgs={[baseOrg]} />)
+  const html = renderToStaticMarkup(<SubmittedOrgsSection orgs={[baseOrg]} campsByOrg={{}} loadedAt={Date.parse('2026-10-20T13:00:00Z')} />)
   expect(html).toContain('Wartet auf Freigabe')
   expect(html).toContain('Test Verein')
 })
 
 it('hides submitted section when no orgs are waiting', () => {
-  const html = renderToStaticMarkup(<SubmittedOrgsSection orgs={[]} />)
+  const html = renderToStaticMarkup(<SubmittedOrgsSection orgs={[]} campsByOrg={{}} loadedAt={0} />)
   expect(html).toBe('')
 })
 
@@ -78,8 +79,8 @@ afterEach(async () => {
   vi.resetAllMocks()
 })
 
-async function renderBox(org: OrganizationAdmin = baseOrg, campCount = 1) {
-  await act(() => root.render(<ReviewBox org={org} campCount={campCount} />))
+async function renderBox(org: OrganizationAdmin = reviewOrg) {
+  await act(() => root.render(<ReviewBox org={org} camps={[reviewCamp]} />))
 }
 
 function getBtn(text: string): HTMLButtonElement | undefined {
@@ -87,6 +88,49 @@ function getBtn(text: string): HTMLButtonElement | undefined {
     b.textContent?.includes(text),
   )
 }
+
+it('blocks approval for a missing logo and names the missing item in the tooltip', async () => {
+  await renderBox({ ...reviewOrg, logo_url: null })
+  expect(getBtn('Freigeben')?.disabled).toBe(true)
+  expect(container.querySelector('[role="tooltip"]')?.textContent).toBe('Es fehlen: Logo')
+  expect(container.querySelector('[aria-label="Fehlende Angaben"]')?.textContent).toBe('Fehlt: Logo')
+  await submitForm('approve')
+  expect(reviewOrganizationAction).not.toHaveBeenCalled()
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain('Logo')
+})
+
+it('requires an explicit in-page confirmation before overriding the checklist', async () => {
+  await renderBox({ ...reviewOrg, logo_url: null })
+  await act(() => getBtn('Trotzdem freigeben')!.click())
+  expect(reviewOrganizationAction).not.toHaveBeenCalled()
+  const panel = container.querySelector<HTMLElement>('[aria-label="Ausnahme bestätigen"]')!
+  expect(document.activeElement).toBe(panel)
+  expect(panel.textContent).toContain('Es fehlen: Logo')
+  expect(panel.textContent).toContain('öffentlich')
+  await act(async () => {
+    panel.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+  expect(reviewOrganizationAction).toHaveBeenCalledOnce()
+  expect(vi.mocked(reviewOrganizationAction).mock.calls[0][2].get('decision')).toBe('approve')
+  expect(vi.mocked(reviewOrganizationAction).mock.calls[0][2].get('override')).toBe('confirmed')
+})
+
+it('cancels the override without approval and restores focus', async () => {
+  await renderBox({ ...reviewOrg, logo_url: null })
+  await act(() => getBtn('Trotzdem freigeben')!.click())
+  await act(() => getBtn('Abbrechen')!.click())
+  expect(container.querySelector('[aria-label="Ausnahme bestätigen"]')).toBeNull()
+  expect(document.activeElement).toBe(getBtn('Trotzdem freigeben'))
+  expect(getBtn('Freigeben')?.disabled).toBe(true)
+  expect(reviewOrganizationAction).not.toHaveBeenCalled()
+})
+
+it('opens the existing preview in a separate tab', async () => {
+  await renderBox()
+  const preview = container.querySelector<HTMLAnchorElement>('a[href="/platform/test-verein/preview"]')!
+  expect(preview.target).toBe('_blank')
+  expect(preview.rel).toContain('noopener')
+})
 
 function getForm(decision: 'approve' | 'reject'): HTMLFormElement {
   const forms = Array.from(container.querySelectorAll<HTMLFormElement>('form'))

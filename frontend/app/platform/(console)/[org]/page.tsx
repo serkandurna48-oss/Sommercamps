@@ -64,7 +64,7 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
   const progress = setupProgressCount(steps)
 
   return (
-    <main className="mx-auto max-w-[880px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+    <main className={`mx-auto max-w-[880px] px-4 py-10 md:px-8 xl:px-6 ${org.review_status === 'submitted' ? 'cp-review-page' : 'pb-24 md:pb-10'}`}>
       <Link href="/platform" className="cp-chip mb-4 inline-block" style={{ color: 'var(--cp-muted)' }}>
         ← Alle Vereine
       </Link>
@@ -117,7 +117,7 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
         <PublishToggle orgSlug={org.slug} published={org.site_published} />
       </div>
 
-      <ReviewBox org={org} campCount={camps.length} />
+      <ReviewBox org={org} camps={camps} />
 
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">

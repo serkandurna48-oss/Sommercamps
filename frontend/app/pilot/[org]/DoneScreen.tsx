@@ -28,21 +28,22 @@ export default function DoneScreen({
   parentEmail: string
   onBackToOrg: () => void
 }) {
-  const [copied, setCopied] = useState(false)
+  const [copiedField, setCopiedField] = useState<'ref' | 'iban' | 'betrag' | null>(null)
   const waitlisted = result.status === 'waitlist'
   const payTo = org.legal_name ?? org.name
   // Only show transfer instructions when the organization has supplied an IBAN.
   const iban = org.iban
+  const priceText = formatPrice(camp.price_cents, camp.currency)
   const containerRef = useRef<HTMLElement>(null)
   useParentFlowMotion(org.theme, containerRef)
   const headingRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => { headingRef.current?.focus() }, [])
 
-  async function handleCopy() {
+  async function handleCopy(field: 'ref' | 'iban' | 'betrag', text: string) {
     try {
-      await navigator.clipboard.writeText(result.payment_reference)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1600)
+      await navigator.clipboard.writeText(text)
+      setCopiedField(field)
+      setTimeout(() => setCopiedField(null), 1600)
     } catch {
       // Zwischenablage ohne Berechtigung — kein Fehlerzustand nötig, der Wert steht ohnehin sichtbar da.
     }
@@ -53,7 +54,7 @@ export default function DoneScreen({
       <header className="ok-band">
         <div className="ok-mark">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M5 12.5l4.5 4.5L19 7" />
+            <path className="d3c-check-path" d="M5 12.5l4.5 4.5L19 7" />
           </svg>
         </div>
         <h1
@@ -109,9 +110,39 @@ export default function DoneScreen({
                   <dd>{payTo}</dd>
                 </div>
                 {iban && (
-                  <div className="done-transfer-row">
+                  <div className="done-transfer-row has-copy">
                     <dt>IBAN</dt>
                     <dd className="num">{iban}</dd>
+                    <button className="copy" type="button" onClick={() => handleCopy('iban', iban)} aria-label="IBAN kopieren">
+                      {copiedField === 'iban' ? (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M5 12.5l4.5 4.5L19 7" />
+                        </svg>
+                      ) : (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ opacity: 0.7 }}>
+                          <rect x="9" y="9" width="11" height="11" rx="2" />
+                          <path d="M6 15H5a1 1 0 01-1-1V5a1 1 0 011-1h9a1 1 0 011 1v1" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                )}
+                {iban && (
+                  <div className="done-transfer-row has-copy">
+                    <dt>Betrag</dt>
+                    <dd className="num">{priceText}</dd>
+                    <button className="copy" type="button" onClick={() => handleCopy('betrag', priceText)} aria-label="Betrag kopieren">
+                      {copiedField === 'betrag' ? (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M5 12.5l4.5 4.5L19 7" />
+                        </svg>
+                      ) : (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ opacity: 0.7 }}>
+                          <rect x="9" y="9" width="11" height="11" rx="2" />
+                          <path d="M6 15H5a1 1 0 01-1-1V5a1 1 0 011-1h9a1 1 0 011 1v1" />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 )}
               </dl>
@@ -119,8 +150,8 @@ export default function DoneScreen({
                 <span className="done-transfer-label" style={{ fontSize: 11, display: 'block', marginBottom: 6 }}>Verwendungszweck</span>
                 <div className="done-ref-wrap">
                   <span className="done-ref num">{result.payment_reference}</span>
-                  <button className="copy" type="button" onClick={handleCopy} aria-label="Verwendungszweck kopieren">
-                    {copied ? (
+                  <button className="copy" type="button" onClick={() => handleCopy('ref', result.payment_reference)} aria-label="Verwendungszweck kopieren">
+                    {copiedField === 'ref' ? (
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M5 12.5l4.5 4.5L19 7" />
                       </svg>

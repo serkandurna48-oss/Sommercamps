@@ -12,6 +12,11 @@ import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 import SuccessNote from '../state/SuccessNote'
 import PendingNote from '../state/PendingNote'
 import PublishToggle from './PublishToggle'
+import { isAllowedImageUrl } from '../../../lib/imageUrl'
+
+const _URL_FIELDS = ['logo_url', 'hero_image_url', 'trainer_image_url'] as const
+type _UrlField = typeof _URL_FIELDS[number]
+const _URL_ERROR_MSG = 'Bitte eine https-Adresse oder einen Pfad wie /clubs/verein/logo.png eintragen.'
 
 /**
  * Kein Theme-Editor (Auftrag Abschnitt 1) — `org.theme` erscheint hier
@@ -31,9 +36,11 @@ export default function OrganizationConfigForm({
 }) {
   const [submitted, setSubmitted] = useState<Record<string, string> | null>(null)
   const [previousOrg, setPreviousOrg] = useState(org)
+  const [urlErrors, setUrlErrors] = useState<Partial<Record<_UrlField, string>>>({})
   if (org !== previousOrg) {
     setPreviousOrg(org)
     setSubmitted(null)
+    setUrlErrors({})
   }
   const inputValue = (field: string, fallback: string) => submitted?.[field] ?? fallback
   const feedbackId = useId()
@@ -43,6 +50,16 @@ export default function OrganizationConfigForm({
     // React resets uncontrolled fields after a resolved action, including
     // failures. Keep submitted defaults until fresh props arrive.
     setSubmitted(Object.fromEntries([...data].filter((entry): entry is [string, string] => typeof entry[1] === 'string')))
+
+    const invalidFields = _URL_FIELDS.filter(f => {
+      const v = data.get(f)
+      return typeof v === 'string' && !isAllowedImageUrl(v)
+    })
+    if (invalidFields.length > 0) {
+      setUrlErrors(Object.fromEntries(invalidFields.map(f => [f, _URL_ERROR_MSG])) as Partial<Record<_UrlField, string>>)
+      return { error: null, saved: false }
+    }
+    setUrlErrors({})
     return boundAction(previous, data)
   }, { error: null, saved: false })
 
@@ -51,6 +68,15 @@ export default function OrganizationConfigForm({
       <PublishToggle orgSlug={orgSlug} published={org.site_published} brandStrong={brandStrong} brandOn={brandOn} />
 
       <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-8">
+        {Object.values(urlErrors).some(Boolean) && (
+          <p
+            className="cp-confirm-pop cp-body rounded-[var(--cp-r-chip)] border px-3 py-2 motion-reduce:animate-none"
+            style={{ color: 'var(--cp-error)', background: 'var(--cp-error-bg)', borderColor: 'var(--cp-error-line)' }}
+            role="alert"
+          >
+            {_URL_ERROR_MSG}
+          </p>
+        )}
         <section className="flex flex-col gap-4">
           <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
             {de.configPage.section.branding}
@@ -84,8 +110,8 @@ export default function OrganizationConfigForm({
               style={INPUT_STYLE}
             />
           </Field>
-          <Field label={de.configPage.field.logoUrl} htmlFor="logo_url">
-            <input id="logo_url" name="logo_url" type="url" defaultValue={inputValue('logo_url', org.logo_url ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
+          <Field label={de.configPage.field.logoUrl} htmlFor="logo_url" error={urlErrors.logo_url}>
+            <input id="logo_url" name="logo_url" type="text" inputMode="url" defaultValue={inputValue('logo_url', org.logo_url ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
           <Field label={de.configPage.field.primaryColor} htmlFor="primary_color" hint={de.configPage.hint.primaryColor}>
             <div className="flex items-center gap-3">
@@ -155,21 +181,23 @@ export default function OrganizationConfigForm({
           <Field label="Einführungstext" htmlFor="intro_text">
             <textarea id="intro_text" name="intro_text" rows={3} defaultValue={inputValue('intro_text', org.intro_text ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
-          <Field label="Titelbild-URL" htmlFor="hero_image_url" hint="Kein Upload in dieser Version – Bild extern hochladen und die URL hier eintragen.">
+          <Field label="Titelbild-URL" htmlFor="hero_image_url" hint="Kein Upload in dieser Version – Bild extern hochladen und die URL hier eintragen." error={urlErrors.hero_image_url}>
             <input
               id="hero_image_url"
               name="hero_image_url"
-              type="url"
+              type="text"
+              inputMode="url"
               defaultValue={inputValue('hero_image_url', org.hero_image_url ?? '')}
               className={INPUT_CLASS}
               style={INPUT_STYLE}
             />
           </Field>
-          <Field label="Trainer-Bild-URL" htmlFor="trainer_image_url" hint="Kein Upload in dieser Version – Bild extern hochladen und die URL hier eintragen.">
+          <Field label="Trainer-Bild-URL" htmlFor="trainer_image_url" hint="Kein Upload in dieser Version – Bild extern hochladen und die URL hier eintragen." error={urlErrors.trainer_image_url}>
             <input
               id="trainer_image_url"
               name="trainer_image_url"
-              type="url"
+              type="text"
+              inputMode="url"
               defaultValue={inputValue('trainer_image_url', org.trainer_image_url ?? '')}
               className={INPUT_CLASS}
               style={INPUT_STYLE}

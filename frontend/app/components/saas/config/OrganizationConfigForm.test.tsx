@@ -129,6 +129,17 @@ it('keeps the submit button reachable and labelled while a save runs', async () 
 })
 
 
+it('shows error under logo_url field when submitted with invalid URL', async () => {
+  await render()
+  const input = container.querySelector<HTMLInputElement>('[name="logo_url"]')!
+  input.value = 'javascript:alert(1)'
+  await save()
+
+  const errorEl = container.querySelector('#logo_url-error')
+  expect(errorEl).not.toBeNull()
+  expect(errorEl!.textContent).toContain('https-Adresse')
+})
+
 it('never renders billing notes or the billing section, even with owner data', async () => {
   const ownerOrg = { ...org, billing_notes: 'Private contract terms' }
   await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={ownerOrg} brandStrong="#112233" brandOn="#ffffff" />))

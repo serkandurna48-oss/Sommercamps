@@ -432,3 +432,76 @@ def test_owner_can_read_set_and_clear_billing_notes(organization_with_private_no
     assert row["billing_notes"] == notes
     assert writes == [{"billing_notes": notes}]
     assert after.json()["billing_notes"] == notes
+
+
+def test_patch_organization_accepts_relative_logo_url(monkeypatch):
+    """A relative path like /logo.svg is valid — it matches actual project asset paths."""
+    captured = {}
+
+    def _update(slug, data):
+        captured["logo_url"] = data.logo_url
+        return _org_row(slug, logo_url=data.logo_url)
+
+    monkeypatch.setattr(organizations, "update_organization", _update)
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            "/admin/organizations/demo-fc",
+            json={"logo_url": "/logo.svg"},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    assert captured["logo_url"] == "/logo.svg"
+    assert response.json()["logo_url"] == "/logo.svg"
+
+
+def test_patch_organization_accepts_https_logo_url(monkeypatch):
+    monkeypatch.setattr(
+        organizations,
+        "update_organization",
+        lambda slug, data: _org_row(slug, logo_url=data.logo_url),
+    )
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            "/admin/organizations/demo-fc",
+            json={"logo_url": "https://cdn.example.com/logo.png"},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+
+
+def test_patch_organization_rejects_javascript_logo_url():
+    """javascript: scheme must be rejected with 422 including the field name."""
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            "/admin/organizations/demo-fc",
+            json={"logo_url": "javascript:alert(1)"},
+            headers=headers,
+        )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert any("logo_url" in str(e["loc"]) for e in detail)
+
+
+def test_patch_organization_rejects_protocol_relative_logo_url():
+    """//evil.com/x is a protocol-relative URL — mutation probe: if the //
+    check is removed from _check_image_url, this test turns red because
+    //evil.com/x starts with / and would wrongly pass."""
+    headers = _auth_headers()
+
+    with TestClient(app) as client:
+        response = client.patch(
+            "/admin/organizations/demo-fc",
+            json={"logo_url": "//evil.com/x"},
+            headers=headers,
+        )
+
+    assert response.status_code == 422

@@ -138,3 +138,40 @@ it('sec-rise elements have no inline opacity style', () => {
     expect((n.props.style as Record<string, unknown> | undefined)?.opacity).not.toBe(0)
   }
 })
+
+// ── 7. No old CampSummary table ("Preis pro Kind") in form step ──
+it('no "Preis pro Kind" row in form step', () => {
+  const nodes = renderForm()
+  const serialized = JSON.stringify(nodes.map(n => n.props))
+  expect(serialized).not.toContain('Preis pro Kind')
+})
+
+// ── 8. Step heads: no circles (.step class), label "SCHRITT 1 VON 3" present ──
+it('step heads use labels not circles; "SCHRITT 1 VON 3" present', () => {
+  const nodes = renderForm()
+  // No numbered circle: no element whose className is exactly or contains the word "step"
+  const circles = nodes.filter(n => typeof n.props.className === 'string' && /(?:^| )step(?:$| )/.test(n.props.className))
+  expect(circles.length).toBe(0)
+  // Step label present
+  const serialized = JSON.stringify(nodes.map(n => n.props))
+  expect(serialized).toContain('SCHRITT 1 VON 3')
+})
+
+// ── 9. Submit button text includes price (mutation probe: removing price fails this test) ──
+it('submit button text is exactly "Verbindlich anmelden · 149,00 €" for 149€ camp', () => {
+  const nodes = renderForm()
+  const btn = nodes.find(n => n.type === 'button' && n.props.type === 'submit')
+  expect(btn?.props.children).toBe('Verbindlich anmelden · 149,00 €')
+})
+
+// ── 10. Consent cards are labels containing their checkbox ──
+it('consent cards are labels that contain their checkbox', () => {
+  const nodes = renderForm()
+  const consentLabels = nodes.filter(n => n.type === 'label' && typeof n.props.className === 'string' && n.props.className.includes('consent'))
+  expect(consentLabels.length).toBeGreaterThan(0)
+  for (const label of consentLabels) {
+    const inner = walk(label.props.children)
+    const checkbox = inner.find(n => n.type === 'input' && n.props.type === 'checkbox')
+    expect(checkbox, `consent label missing checkbox: ${JSON.stringify(label.props.className)}`).toBeDefined()
+  }
+})

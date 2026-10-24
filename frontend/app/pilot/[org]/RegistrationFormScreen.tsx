@@ -7,7 +7,6 @@ import { submitRegistration } from '../../lib/saasApi'
 import { formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
 import ExtraQuestions from './ExtraQuestions'
 import { getClubAssets } from './clubAssets'
-import CampSummary from './CampSummary'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -217,6 +216,7 @@ export default function RegistrationFormScreen({
   }
 
   const einwilligungenStep = questions.length > 0 ? '4' : '3'
+  const totalSteps = questions.length > 0 ? 4 : 3
 
   return (
     <section className="screen" id="s-form">
@@ -238,8 +238,6 @@ export default function RegistrationFormScreen({
       <div className="d3c-prog" aria-hidden="true">
         <div className="d3c-prog-fill" style={{ width: `${Math.round((doneCount / 4) * 100)}%` }} />
       </div>
-
-      <CampSummary camp={camp} />
 
       <div className="form-layout d3c-layout">
         {/* Left aside — sticky on desktop, hidden on mobile */}
@@ -270,6 +268,14 @@ export default function RegistrationFormScreen({
                 </div>
               )}
               <div className="d3c-aside-price num">{formatPrice(camp.price_cents, camp.currency)}</div>
+              {camp.spots_remaining != null && !camp.is_full && (
+                <span className={`d3c-aside-spots${camp.spots_remaining <= 10 ? ' accent' : ''}`}>
+                  {camp.spots_remaining} Plätze frei
+                </span>
+              )}
+              {camp.is_full && (
+                <span className="d3c-aside-spots">Warteliste</span>
+              )}
             </dl>
           </div>
         </aside>
@@ -305,6 +311,12 @@ export default function RegistrationFormScreen({
                   <dt>Preis</dt>
                   <dd className="num">{formatPrice(camp.price_cents, camp.currency)}</dd>
                 </div>
+                {camp.spots_remaining != null && !camp.is_full && camp.spots_remaining <= 10 && (
+                  <div className="d3c-aside-row">
+                    <dt>Plätze</dt>
+                    <dd className="d3c-mob-spots-accent">{camp.spots_remaining} Plätze frei</dd>
+                  </div>
+                )}
               </dl>
             </div>
           )}
@@ -320,7 +332,7 @@ export default function RegistrationFormScreen({
               <section className="fsec sec-rise" data-section="">
 
                 <div className="fsec-head">
-                  <span className={`step${sectionDone[1] ? ' done' : ''}`}>1</span>
+                  <span className="fsec-step-lbl">{`SCHRITT 1 VON ${totalSteps}`}</span>
                   <h2 className="d3">Angaben zum Kind</h2>
                 </div>
                 <div className="f">
@@ -395,7 +407,7 @@ export default function RegistrationFormScreen({
               <section className="fsec sec-rise" data-section="">
 
                 <div className="fsec-head">
-                  <span className={`step${sectionDone[2] && sectionDone[3] ? ' done' : ''}`}>2</span>
+                  <span className="fsec-step-lbl">{`SCHRITT 2 VON ${totalSteps}`}</span>
                   <h2 className="d3">Eltern &amp; Notfall</h2>
                 </div>
                 <div className="f">
@@ -499,7 +511,7 @@ export default function RegistrationFormScreen({
               <section className="fsec sec-rise" data-section="">
 
                 <div className="fsec-head">
-                  <span className={`step${sectionDone[4] ? ' done' : ''}`}>{einwilligungenStep}</span>
+                  <span className="fsec-step-lbl">{`SCHRITT ${einwilligungenStep} VON ${totalSteps}`}</span>
                   <h2 className="d3">Einwilligungen</h2>
                 </div>
                 <div className="f">
@@ -596,7 +608,7 @@ export default function RegistrationFormScreen({
                     : 'Wird gespeichert …'
                   : camp.is_full
                     ? 'Auf die Warteliste setzen'
-                    : 'Anmeldung absenden'}
+                    : `Verbindlich anmelden · ${formatPrice(camp.price_cents, camp.currency)}`}
               </button>
               <span className="fine">
                 {camp.is_full

@@ -1234,7 +1234,7 @@
   font-weight: 600;
 }
 .cp-public .consent .txt span {
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
   color: var(--ink-2);
 }
@@ -2442,8 +2442,8 @@
   font-size: 14px;
 }
 .cp-public #s-form .consent input[type='checkbox'] {
-  width: 44px;
-  height: 44px;
+  width: 24px;
+  height: 24px;
 }
 
 /* ── M3 Formular: Fortschrittsanzeige als Text ── */
@@ -3219,16 +3219,16 @@
 .m1-ready .d3c-layout [data-section]:nth-child(3) { transition-delay: 160ms; }
 .m1-ready .d3c-layout [data-section]:nth-child(4) { transition-delay: 240ms; }
 
-/* ── D3c: Section-Schritt-Indikator ── */
-.cp-public .step {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; border-radius: 50%;
-  font-size: 13px; font-weight: 700;
-  background: var(--surface); border: 2px solid var(--line); color: var(--ink-2);
-  flex-shrink: 0; transition: background 0.2s, border-color 0.2s, color 0.2s;
+/* ── D3f: Schritt-Label statt Zifferkreis ── */
+.cp-public .fsec-step-lbl {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
-.cp-public .step.done { background: var(--brand); border-color: var(--brand); color: var(--brand-on, #fff); }
-.cp-public .fsec-head { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.cp-public #s-form .fsec-head .d3 { font-size: 24px; font-weight: 600; }
 
 /* ── D3c: Checkmark animation ── */
 @keyframes cp-check-draw { from { stroke-dashoffset: 28; } to { stroke-dashoffset: 0; } }
@@ -3243,3 +3243,36 @@
 /* ── D3c: Field sizing 56px / 16px (overrides prior 50px) ── */
 .cp-public #s-form .field input,
 .cp-public #s-form .field select { height: 56px; font-size: 16px; }
+
+/* ── D3f: Dock sticky in rechter Spalte auf Desktop ── */
+@media (min-width: 1000px) {
+  .cp-public #s-form .d3c-main .dock {
+    position: sticky;
+    bottom: 0;
+  }
+  .cp-public .d3c-layout {
+    max-width: 1200px;
+    margin-inline: auto;
+    width: 100%;
+  }
+  .cp-public #s-form .top {
+    max-width: 1200px;
+    margin-inline: auto;
+  }
+}
+
+/* ── D3f: Plätze-Info in Zusammenfassung ── */
+.cp-public .d3c-aside-spots {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.cp-public .d3c-aside-spots.accent {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pending);
+}
+.cp-public .d3c-mob-spots-accent {
+  color: var(--pending);
+  font-weight: 600;
+}

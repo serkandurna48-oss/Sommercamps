@@ -123,7 +123,7 @@ it('names the waitlist instead of a registration when the camp is full', () => {
 
 it('calls it a registration while places are left', () => {
   const button = render(vi.fn(), false).find((node) => node.type === 'button' && node.props.type === 'submit')
-  expect(button?.props.children).toBe('Anmeldung absenden')
+  expect(String(button?.props.children)).toContain('Verbindlich anmelden')
 })
 
 it('promises no costs for the waitlist and no confirmation mail at all', () => {

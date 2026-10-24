@@ -33,7 +33,7 @@ export default function CampFilter({ camps, filter, filteredCount, onFilterChang
     <div className="campfilter" role="search" aria-label="Camps filtern">
       <div className="campfilter-bar">
         <div className="campfilter-ort">
-          <label className="sr" htmlFor="cf-ort">Ort</label>
+          <label className="t-lab" htmlFor="cf-ort">Ort</label>
           <select
             id="cf-ort"
             className="campfilter-select"

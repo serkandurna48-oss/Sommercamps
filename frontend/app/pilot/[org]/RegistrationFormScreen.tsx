@@ -87,6 +87,18 @@ export default function RegistrationFormScreen({
   useEffect(() => { headingRef.current?.focus() }, [])
   // slot 9: D3c mobile bar toggle
   const [asideOpen, setAsideOpen] = useState(false)
+  const formRef = useRef<HTMLFormElement>(null)
+  const [focusRequest, setFocusRequest] = useState(0)
+  useEffect(() => {
+    if (focusRequest === 0) return
+    // React has attached error descriptions before this post-render effect runs.
+    const invalid = formRef.current?.querySelector<HTMLElement>('input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"], [role="radiogroup"][aria-invalid="true"]')
+    const target = invalid?.matches('[role="radiogroup"]')
+      ? invalid.querySelector<HTMLInputElement>('input[type="radio"]:checked') ?? invalid.querySelector<HTMLInputElement>('input[type="radio"]')
+      : invalid
+    target?.focus({ preventScroll: true })
+    target?.scrollIntoView({ block: 'center', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+  }, [focusRequest])
 
   const assets = getClubAssets(orgSlug)
 
@@ -96,10 +108,8 @@ export default function RegistrationFormScreen({
     setServerFields((prev) => ({ ...prev, [field]: undefined }))
   }
 
-  function focusField(key: FieldKey) {
-    const target = fieldRefs.current[key]
-    target?.querySelector<HTMLInputElement>('input')?.focus()
-    target?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  function focusFirstInvalid() {
+    setFocusRequest((request) => request + 1)
   }
 
   const emailValid = EMAIL_RE.test(form.parentEmail.trim())
@@ -155,8 +165,8 @@ export default function RegistrationFormScreen({
     if (!form.termsAccepted) bad.push('agb')
     if (!form.privacyAccepted) bad.push('privacy')
 
-    if (bad.length > 0) {
-      focusField(bad[0])
+    if (bad.length > 0 || !extraDone) {
+      focusFirstInvalid()
       return
     }
 
@@ -201,7 +211,7 @@ export default function RegistrationFormScreen({
         }
         setServerFields(fields)
         const first = Object.keys(fields)[0] as FieldKey | undefined
-        if (first) focusField(first)
+        if (first) focusFirstInvalid()
         else requestAnimationFrame(() => serverErrorRef.current?.focus())
         return
       }
@@ -217,6 +227,9 @@ export default function RegistrationFormScreen({
 
   const einwilligungenStep = questions.length > 0 ? '4' : '3'
   const totalSteps = questions.length > 0 ? 4 : 3
+  const errorCount = Object.keys(badFields).length + (submitAttempted
+    ? questions.filter((q) => q.required && !(form.extraAnswers[q.key] ?? '').trim()).length
+    : 0)
 
   return (
     <section className="screen" id="s-form">
@@ -325,7 +338,7 @@ export default function RegistrationFormScreen({
 
         {/* Right: form */}
         <div className="form-main d3c-main">
-          <form onSubmit={handleSubmit} noValidate aria-busy={submitting}>
+          <form ref={formRef} onSubmit={handleSubmit} noValidate aria-busy={submitting}>
             <div className="pad form-body">
               <p className="required-hint">Alle mit * markierten Felder sind Pflichtfelder.</p>
 
@@ -337,12 +350,14 @@ export default function RegistrationFormScreen({
                   <h2 className="d3">Angaben zum Kind</h2>
                 </div>
                 <div className="f">
-                  <label className={`field${badFields.childFirstName ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.childFirstName = el }}>
+                  <label htmlFor="child_first_name" className={`field${badFields.childFirstName ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.childFirstName = el }}>
                     <span className="t-lab">Vorname *</span>
                     <input
                       type="text"
+                      id="child_first_name"
                       name="child_first_name"
                       required
+                      aria-required="true"
                       autoComplete="section-child given-name"
                       value={form.childFirstName}
                       onChange={(e) => set('childFirstName', e.target.value)}
@@ -351,12 +366,14 @@ export default function RegistrationFormScreen({
                     />
                     <span className="err">{badFields.childFirstName && <span id="err-child-first-name">{badFields.childFirstName}</span>}</span>
                   </label>
-                  <label className={`field${badFields.childLastName ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.childLastName = el }}>
+                  <label htmlFor="child_last_name" className={`field${badFields.childLastName ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.childLastName = el }}>
                     <span className="t-lab">Nachname *</span>
                     <input
                       type="text"
+                      id="child_last_name"
                       name="child_last_name"
                       required
+                      aria-required="true"
                       autoComplete="section-child family-name"
                       value={form.childLastName}
                       onChange={(e) => set('childLastName', e.target.value)}
@@ -366,12 +383,14 @@ export default function RegistrationFormScreen({
                     <span className="err">{badFields.childLastName && <span id="err-child-last-name">{badFields.childLastName}</span>}</span>
                   </label>
                   <div className="row2">
-                    <label className={`field${badFields.childBirthDate ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.childBirthDate = el }}>
+                    <label htmlFor="child_birth_date" className={`field${badFields.childBirthDate ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.childBirthDate = el }}>
                       <span className="t-lab">Geburtsdatum *</span>
                       <input
                         type="text"
+                        id="child_birth_date"
                         name="child_birth_date"
                         required
+                        aria-required="true"
                         autoComplete="section-child bday"
                         placeholder="TT.MM.JJJJ"
                         inputMode="numeric"
@@ -386,9 +405,10 @@ export default function RegistrationFormScreen({
                       />
                       <span className="err">{badFields.childBirthDate && <span id="err-child-birth-date">{badFields.childBirthDate}</span>}</span>
                     </label>
-                    <label className="field s">
+                    <label htmlFor="jersey_size" className="field s">
                       <span className="t-lab">Trikotgröße</span>
                       <select
+                        id="jersey_size"
                         name="jersey_size"
                         value={form.jerseySize}
                         onChange={(e) => set('jerseySize', e.target.value)}
@@ -412,13 +432,15 @@ export default function RegistrationFormScreen({
                   <h2 className="d3">Eltern &amp; Notfall</h2>
                 </div>
                 <div className="f">
-                  <label className={`field${badFields.parentName ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.parentName = el }}>
+                  <label htmlFor="parent_name" className={`field${badFields.parentName ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.parentName = el }}>
                     <span className="t-lab">Vor- und Nachname *</span>
                     <input
                       type="text"
+                      id="parent_name"
                       name="parent_name"
                       autoComplete="name"
                       required
+                      aria-required="true"
                       value={form.parentName}
                       onChange={(e) => set('parentName', e.target.value)}
                       aria-invalid={!!badFields.parentName}
@@ -426,12 +448,14 @@ export default function RegistrationFormScreen({
                     />
                     <span className="err">{badFields.parentName && <span id="err-parent-name">{badFields.parentName}</span>}</span>
                   </label>
-                  <label className={`field${badFields.parentEmail ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.parentEmail = el }}>
+                  <label htmlFor="parent_email" className={`field${badFields.parentEmail ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.parentEmail = el }}>
                     <span className="t-lab">E-Mail *</span>
                     <input
                       type="email"
+                      id="parent_email"
                       name="parent_email"
                       required
+                      aria-required="true"
                       autoComplete="email"
                       inputMode="email"
                       value={form.parentEmail}
@@ -442,13 +466,15 @@ export default function RegistrationFormScreen({
                     <span className="err">{badFields.parentEmail && <span id="err-parent-email">{badFields.parentEmail}</span>}</span>
                     <span className="hint" id="hint-parent-email">Über diese Adresse erreicht Sie {orgName} bei Rückfragen.</span>
                   </label>
-                  <label className={`field${badFields.parentPhone ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.parentPhone = el }}>
+                  <label htmlFor="parent_phone" className={`field${badFields.parentPhone ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.parentPhone = el }}>
                     <span className="t-lab">Telefon *</span>
                     <input
                       type="tel"
+                      id="parent_phone"
                       name="parent_phone"
                       autoComplete="tel"
                       required
+                      aria-required="true"
                       inputMode="tel"
                       className="num"
                       value={form.parentPhone}
@@ -458,15 +484,17 @@ export default function RegistrationFormScreen({
                     />
                     <span className="err">{badFields.parentPhone && <span id="err-parent-phone">{badFields.parentPhone}</span>}</span>
                   </label>
-                  <label className={`field${badFields.emergencyPhone ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.emergencyPhone = el }}>
+                  <label htmlFor="emergency_phone" className={`field${badFields.emergencyPhone ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.emergencyPhone = el }}>
                     <span className="t-lab">Notfallnummer während des Camps *</span>
                     <input
                       type="tel"
+                      id="emergency_phone"
                       name="emergency_phone"
                       inputMode="tel"
                       placeholder="Nummer, die wir tagsüber erreichen"
                       autoComplete="section-emergency tel"
                       required
+                      aria-required="true"
                       className="num"
                       value={form.emergencyPhone}
                       onChange={(e) => set('emergencyPhone', e.target.value)}
@@ -475,9 +503,10 @@ export default function RegistrationFormScreen({
                     />
                     <span className="err">{badFields.emergencyPhone && <span id="err-emergency-phone">{badFields.emergencyPhone}</span>}</span>
                   </label>
-                  <label className="field">
+                  <label htmlFor="allergies" className="field">
                     <span className="t-lab">Allergien, Medikamente, Unverträglichkeiten</span>
                     <textarea
+                      id="allergies"
                       name="allergies"
                       rows={3}
                       placeholder="Nur was die Betreuer wissen müssen. Leer lassen, wenn nichts vorliegt."
@@ -487,10 +516,11 @@ export default function RegistrationFormScreen({
                     />
                     <span className="hint" id="hint-allergies">Freiwillig. Diese Angaben sehen nur die Betreuerinnen und Betreuer Ihres Kindes.</span>
                   </label>
-                  <label className="field">
+                  <label htmlFor="pickup_authorized" className="field">
                     <span className="t-lab">Wer darf Ihr Kind abholen?</span>
                     <input
                       type="text"
+                      id="pickup_authorized"
                       name="pickup_authorized"
                       placeholder="Namen, getrennt durch Komma"
                       value={form.pickupAuthorized}
@@ -516,11 +546,13 @@ export default function RegistrationFormScreen({
                   <h2 className="d3">Einwilligungen</h2>
                 </div>
                 <div className="f">
-                  <label className={`consent${badFields.agb ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.agb = el }}>
+                  <label htmlFor="terms_accepted" className={`consent${badFields.agb ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.agb = el }}>
                     <input
                       type="checkbox"
+                      id="terms_accepted"
                       checked={form.termsAccepted}
                       required
+                      aria-required="true"
                       onChange={(e) => set('termsAccepted', e.target.checked)}
                       aria-invalid={!!badFields.agb}
                       aria-describedby={badFields.agb ? 'err-agb' : undefined}
@@ -531,11 +563,13 @@ export default function RegistrationFormScreen({
                       {badFields.agb && <span id="err-agb" role="alert" style={{ color: 'var(--error)' }}>{badFields.agb}</span>}
                     </span>
                   </label>
-                  <label className={`consent${badFields.privacy ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.privacy = el }}>
+                  <label htmlFor="privacy_accepted" className={`consent${badFields.privacy ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.privacy = el }}>
                     <input
                       type="checkbox"
+                      id="privacy_accepted"
                       checked={form.privacyAccepted}
                       required
+                      aria-required="true"
                       onChange={(e) => set('privacyAccepted', e.target.checked)}
                       aria-invalid={!!badFields.privacy}
                       aria-describedby={badFields.privacy ? 'err-privacy' : undefined}
@@ -548,8 +582,8 @@ export default function RegistrationFormScreen({
                       {badFields.privacy && <span id="err-privacy" role="alert" style={{ color: 'var(--error)' }}>{badFields.privacy}</span>}
                     </span>
                   </label>
-                  <label className="consent">
-                    <input type="checkbox" checked={form.photoPermission} onChange={(e) => set('photoPermission', e.target.checked)} />
+                  <label htmlFor="photo_permission" className="consent">
+                    <input id="photo_permission" type="checkbox" checked={form.photoPermission} onChange={(e) => set('photoPermission', e.target.checked)} />
                     <span className="txt">
                       <b>Fotos, freiwillig</b>
                       <span>
@@ -572,7 +606,7 @@ export default function RegistrationFormScreen({
             </div>
 
             <div className="dock">
-              {(submitAttempted && Object.keys(badFields).length > 0) && (
+              {(submitAttempted && errorCount > 0) && (
                 <div className="note error" role="alert">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--error)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="9" />
@@ -580,9 +614,9 @@ export default function RegistrationFormScreen({
                     <path d="M12 16.5v.01" />
                   </svg>
                   <span>
-                    {Object.keys(badFields).length === 1
+                    {errorCount === 1
                       ? 'Eine Angabe fehlt noch. Sie ist oben markiert.'
-                      : `${Object.keys(badFields).length} Angaben fehlen noch. Sie sind oben markiert.`}
+                      : `${errorCount} Angaben fehlen noch. Sie sind oben markiert.`}
                   </span>
                 </div>
               )}

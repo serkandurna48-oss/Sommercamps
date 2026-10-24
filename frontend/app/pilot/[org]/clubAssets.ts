@@ -4,17 +4,19 @@ export interface ClubAssets {
   heroImage: string
   galleryImages: readonly string[]
   logoImage?: string
+  heroPosition?: string
 }
 
 const ASSETS: Record<string, ClubAssets> = {
   'ksv-baunatal': {
-    heroImage: '/clubs/ksv/ksv-gruppenfoto.jpg',
+    heroImage: '/clubs/ksv/ksv-1-mannschaft.jpg',
     galleryImages: [
+      '/clubs/ksv/ksv-gruppenfoto.jpg',
       '/clubs/ksv/ksv-kinder-pokal.jpg',
       '/clubs/ksv/ksv-torwart.jpg',
-      '/clubs/ksv/ksv-pokale.jpg',
     ],
     logoImage: '/clubs/ksv/ksv-logo.png',
+    heroPosition: 'center 30%',
   },
 }
 

@@ -194,7 +194,7 @@ export default function ParentFlow({
             </nav>
             {heroImg && (
               <div className="h-trad-shot">
-                <Image id="shotA" src={heroImg} alt="" unoptimized fill priority style={{ objectFit: 'cover', objectPosition: 'center 20%' }} />
+                <Image id="shotA" src={heroImg} alt="" unoptimized fill priority style={{ objectFit: 'cover', objectPosition: clubAssets?.heroPosition ?? 'center 20%' }} />
               </div>
             )}
             <div className="h-trad-in">
@@ -248,7 +248,7 @@ export default function ParentFlow({
               </div>
               <button className="nav-cta" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
             </nav>
-            <div className="bg">{heroImg && <Image id="shotB" src={heroImg} alt="" unoptimized fill priority style={{ objectFit: 'cover' }} />}</div>
+            <div className="bg">{heroImg && <Image id="shotB" src={heroImg} alt="" unoptimized fill priority style={{ objectFit: 'cover', objectPosition: clubAssets?.heroPosition ?? 'center 20%' }} />}</div>
             <div className="veil" />
             <div className="in">
               <div className="in-main">

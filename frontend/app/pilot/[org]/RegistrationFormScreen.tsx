@@ -251,6 +251,7 @@ export default function RegistrationFormScreen({
               className="d3c-aside-photo"
               aria-hidden={true}
               unoptimized
+              style={{ objectPosition: assets.heroPosition ?? 'center 20%' }}
             />
           )}
           <div className="d3c-aside-info">

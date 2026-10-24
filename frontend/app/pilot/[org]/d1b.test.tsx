@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it, vi } from 'vitest'
 import type { CampPublic, OrganizationPublic } from '../../lib/saasApi'
+import { readableTextOn } from '../../lib/readableTextOn'
 import { filterFutureCamps, getTodayBerlin, truncateIntroForHero } from './campUtils'
 import { getClubAssets } from './clubAssets'
 import CampRow from './CampRow'
@@ -35,7 +38,7 @@ const mockCamp: CampPublic = {
 it('getClubAssets returns hero and gallery for ksv-baunatal', () => {
   const assets = getClubAssets('ksv-baunatal')
   expect(assets).not.toBeNull()
-  expect(assets!.heroImage).toBe('/clubs/ksv/ksv-gruppenfoto.jpg')
+  expect(assets!.heroImage).toBe('/clubs/ksv/ksv-1-mannschaft.jpg')
   expect(assets!.galleryImages).toHaveLength(3)
   expect(assets!.galleryImages).not.toContain(assets!.heroImage)
 })
@@ -121,12 +124,63 @@ it('gallery-band shown for ksv-baunatal, hero not duplicated in gallery', () => 
   expect(html).toContain('gallery-band')
   // remaining gallery images (not the hero) are shown
   expect(html).toContain('ksv-torwart.jpg')
-  expect(html).toContain('ksv-pokale.jpg')
+  expect(html).toContain('ksv-gruppenfoto.jpg')
   // ksv-kinder-pokal is the hero — must not also appear inside gallery-band
   const galleryStart = html.indexOf('gallery-band')
   const afterGalleryBand = galleryStart >= 0 ? html.slice(galleryStart) : ''
   const gallerySection = afterGalleryBand.slice(0, afterGalleryBand.indexOf('how-sec'))
   expect(gallerySection).not.toContain('ksv-kinder-pokal')
+})
+
+// ── Hero objectPosition ──
+
+it('clubAssets heroPosition is center 30% for ksv-baunatal', () => {
+  const assets = getClubAssets('ksv-baunatal')
+  expect(assets!.heroPosition).toBe('center 30%')
+})
+
+it('ParentFlow hero uses center 30% objectPosition for ksv-baunatal', () => {
+  const ksvOrg: OrganizationPublic = {
+    ...org, slug: 'ksv-baunatal', hero_image_url: null,
+  }
+  const html = renderToStaticMarkup(<ParentFlow org={ksvOrg} camps={[]} />)
+  expect(html).toContain('center 30%')
+})
+
+it('ParentFlow hero falls back to center 20% when no clubAssets heroPosition', () => {
+  const demoOrg: OrganizationPublic = { ...org, slug: 'demo' }
+  const html = renderToStaticMarkup(<ParentFlow org={demoOrg} camps={[]} />)
+  expect(html).toContain('center 20%')
+})
+
+// ── readableTextOn ──
+
+it('readableTextOn: white text on KSV red (#CC0000)', () => {
+  expect(readableTextOn('#CC0000')).toBe('#ffffff')
+})
+
+it('readableTextOn: dark text on JK gold (#B8912B)', () => {
+  expect(readableTextOn('#B8912B')).toBe('#111111')
+})
+
+it('readableTextOn: dark text on white (#FFFFFF)', () => {
+  expect(readableTextOn('#FFFFFF')).toBe('#111111')
+})
+
+// Mutationsprobe: readableTextOn immer Weiß zurückgeben ⇒ dieser Test muss rot werden
+it('readableTextOn mutation probe: #B8912B must not return #ffffff', () => {
+  expect(readableTextOn('#B8912B')).not.toBe('#ffffff')
+})
+
+// ── Checkbox 20px ──
+
+it('consent checkbox is 20×20 px in publicTheme.css', () => {
+  const css = readFileSync(join(__dirname, 'publicTheme.css'), 'utf-8')
+  const match = css.match(/\.cp-public \.consent input\s*\{([^}]+)\}/)
+  expect(match).not.toBeNull()
+  const rule = match![1]
+  expect(rule).toContain('width: 20px')
+  expect(rule).toContain('height: 20px')
 })
 
 // ── SSR: no inline opacity:0 ──

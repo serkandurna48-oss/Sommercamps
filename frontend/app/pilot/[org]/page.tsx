@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { computeBrandSafe } from '../../lib/brandPipeline'
+import { readableTextOn } from '../../lib/readableTextOn'
 import { fetchCamps, fetchOrganization } from '../../lib/saasApi'
 import { filterFutureCamps } from './campUtils'
 import GrainOverlay from './GrainOverlay'
@@ -75,6 +76,7 @@ export default async function PilotOrgPage({ params }: { params: Promise<{ org: 
           '--brand': brand.brand,
           '--brand-strong': brand.strong,
           '--brand-on': brand.on,
+          '--on-primary': readableTextOn(brand.brand),
         } as React.CSSProperties
       }
     >

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { computeBrandSafe } from '../../lib/brandPipeline'
+import { readableTextOn } from '../../lib/readableTextOn'
 import type { OrganizationPublic } from '../../lib/saasApi'
 import { orgShortCode } from '../../lib/parentFlowFormat'
 import GrainOverlay from './GrainOverlay'
@@ -29,6 +30,7 @@ export default function LegalShell({ org, children }: { org: OrganizationPublic;
           '--brand': brand.brand,
           '--brand-strong': brand.strong,
           '--brand-on': brand.on,
+          '--on-primary': readableTextOn(brand.brand),
         } as React.CSSProperties
       }
     >

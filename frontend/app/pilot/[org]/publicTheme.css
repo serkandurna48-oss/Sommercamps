@@ -1207,8 +1207,8 @@
   padding: 14px;
 }
 .cp-public .consent input {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   margin: 1px 0 0;
   accent-color: var(--brand-strong);
@@ -1269,7 +1269,7 @@
 .cp-public .btn.primary {
   background: var(--brand-strong);
   border-color: var(--brand-strong);
-  color: var(--brand-on);
+  color: var(--on-primary);
 }
 .cp-public .btn.primary:hover {
   filter: brightness(1.08);
@@ -1970,7 +1970,7 @@
 .cp-public .nav-cta-brand {
   padding: 8px 18px;
   background: var(--brand-strong);
-  color: var(--brand-on);
+  color: var(--on-primary);
   border: none;
   border-radius: 9999px;
   font-size: 13px;
@@ -1993,7 +1993,7 @@
   border-radius: 9999px;
   font-size: 15px;
   font-weight: 700;
-  color: var(--brand-on);
+  color: var(--on-primary);
   cursor: pointer;
   transition: transform 0.18s var(--ease);
 }
@@ -2430,8 +2430,8 @@
   font-size: 14px;
 }
 .cp-public #s-form .consent input[type='checkbox'] {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 /* ── M3 Formular: Fortschrittsanzeige als Text ── */
@@ -2642,7 +2642,7 @@
   white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
-  color: var(--brand-on);
+  color: var(--on-primary);
   letter-spacing: .04em;
 }
 @keyframes cp-marquee {
@@ -2697,7 +2697,7 @@
   flex-shrink: 0;
   padding: 8px 18px;
   background: var(--brand-strong);
-  color: var(--brand-on);
+  color: var(--on-primary);
   border-radius: 9999px;
   font-size: 13px;
   font-weight: 600;
@@ -3147,7 +3147,7 @@
 }
 .cp-public .sticky-cta-btn {
   background: var(--brand);
-  color: var(--brand-on);
+  color: var(--on-primary);
   border: none;
   border-radius: 9999px;
   padding: 10px 22px;

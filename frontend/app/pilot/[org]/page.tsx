@@ -6,6 +6,7 @@ import { fetchCamps, fetchOrganization } from '../../lib/saasApi'
 import { filterFutureCamps } from './campUtils'
 import GrainOverlay from './GrainOverlay'
 import ParentFlow from './ParentFlow'
+import PublicLoadError from './PublicLoadError'
 import { publicFontClassName } from './publicFonts'
 import { clubMetadata, getSiteUrl, neutralMetadata } from './socialMetadata'
 import './publicTheme.css'
@@ -51,11 +52,11 @@ export default async function PilotOrgPage({ params }: { params: Promise<{ org: 
     fetchCamps(orgSlug),
   ])
 
-  if (orgOutcome.status === 'rejected') throw orgOutcome.reason
+  if (orgOutcome.status === 'rejected') return <PublicLoadError />
   const org = orgOutcome.value
   if (!org) notFound()
 
-  if (campsOutcome.status === 'rejected') throw campsOutcome.reason
+  if (campsOutcome.status === 'rejected') return <PublicLoadError org={org} />
   const allCamps = campsOutcome.value
   const camps = filterFutureCamps(allCamps)
   const hadPastCamps = allCamps.length > 0 && camps.length === 0

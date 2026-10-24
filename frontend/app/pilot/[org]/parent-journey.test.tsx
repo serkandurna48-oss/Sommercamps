@@ -111,7 +111,7 @@ it('keeps values after a network failure and permits a retry', async () => {
   vi.mocked(submitRegistration).mockRejectedValueOnce(new Error('offline'))
   await fill()
   await submit()
-  expect(host.textContent).toContain('Verbindung zum Server fehlgeschlagen')
+  expect(host.textContent).toContain('Die Verbindung zum Server ist fehlgeschlagen')
   expect(host.querySelector<HTMLInputElement>('input')?.value).toBe('Mia')
   expect(host.querySelector<HTMLButtonElement>('button[type=submit]')?.disabled).toBe(false)
   vi.mocked(submitRegistration).mockResolvedValue({ ok: false, status: 409, detail: 'Bereits angemeldet.' })

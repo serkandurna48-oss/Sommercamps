@@ -11,6 +11,7 @@ import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from './Sta
 import { IconChevronDown } from '../icons'
 import { computeBrandTokens } from '../brandPipeline'
 import { registrationDate } from '../registrationDates'
+import RowOverflow from '../ui/RowOverflow'
 
 export default function ParticipantRow({
   registration,
@@ -20,6 +21,7 @@ export default function ParticipantRow({
   orgSlug,
   campSlug,
   campTitle,
+  campDate,
 }: {
   registration: RegistrationAdmin
   selected: boolean
@@ -28,6 +30,7 @@ export default function ParticipantRow({
   orgSlug: string
   campSlug: string
   campTitle: string
+  campDate?: string
 }) {
   const [open, setOpen] = useState(false)
   const [override, setOverride] = useState<RegistrationAdmin | null>(null)
@@ -41,10 +44,10 @@ export default function ParticipantRow({
   const brand = computeBrandTokens(brandColor)
 
   return (
-    <div className="cp-roster-row border-t" style={{ borderColor: 'var(--cp-line-2)' }}>
-      <div className="flex items-center gap-3 px-5 py-3.5">
+    <div className="cp-roster-row cp-mobile-card cp-participant-card border-t" style={{ borderColor: 'var(--cp-line-2)' }}>
+      <div className="cp-participant-card-top flex items-center gap-3 px-5 py-3.5">
         {/* Checkbox outside the expand trigger — click does not bubble to row */}
-        <label className="inline-flex min-h-[44px] min-w-[44px] shrink-0 cursor-pointer items-center justify-center">
+        <label className="cp-desktop-only inline-flex min-h-[44px] min-w-[44px] shrink-0 cursor-pointer items-center justify-center">
           <span className="sr-only">{effective.child_first_name} {effective.child_last_name} auswählen</span>
           <input
             type="checkbox"
@@ -75,6 +78,7 @@ export default function ParticipantRow({
                 </span>
               )}
             </p>} secondary={<p className="cp-chip min-w-0 truncate" style={{ color: 'var(--cp-muted)' }}>
+              <span className="cp-mobile-only cp-camp-date">{campTitle}{campDate && ` · ${campDate}`}</span>
               {registration.parent_first_name} {registration.parent_last_name}
               <span className="cp-label mt-1 block whitespace-normal">Eingang: <time dateTime={registration.created_at}>{registrationDate(registration.created_at)}</time></span>
             </p>} status={<div className="cp-participant-status">
@@ -90,7 +94,14 @@ export default function ParticipantRow({
             </div>} action={<IconChevronDown
               className={`shrink-0 transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
             />} />
+          <span className="cp-mobile-only cp-mobile-primary">{open ? 'Details schließen' : 'Details anzeigen'}</span>
         </Button>
+        <div className="cp-mobile-only cp-participant-more">
+          <RowOverflow label={`Weitere Aktionen für ${effective.child_first_name} ${effective.child_last_name}`}>
+            <Button type="button" aria-pressed={selected} onClick={onToggleSelect}>{selected ? 'Auswahl aufheben' : 'Für Sammelaktion auswählen'}</Button>
+            <a href={`mailto:${effective.parent_email}`}>Eltern kontaktieren</a>
+          </RowOverflow>
+        </div>
       </div>
 
       <div id={detailId} inert={!open} aria-hidden={!open} className={`cp-collapse cp-collapse-m3 motion-reduce:transition-none ${open ? 'cp-collapse-expanded' : ''}`}>

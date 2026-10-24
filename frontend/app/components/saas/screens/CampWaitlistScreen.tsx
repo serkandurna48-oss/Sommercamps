@@ -51,6 +51,7 @@ export default function CampWaitlistScreen({ orgSlug, campSlug, org, camp, regis
                 orgSlug={orgSlug}
                 campSlug={campSlug}
                 campTitle={camp.title}
+                campDate={formatDateRange(camp.start_date, camp.end_date)}
                 capacity={camp.capacity}
                 registeredCount={registrations.filter(r => r.status === 'registered' || r.status === 'confirmed').length}
                 priceCents={camp.price_cents}

@@ -55,7 +55,7 @@ async function submit() {
 }
 async function renderParticipants(registrations = [child]) {
   await act(() => root.render(<ParticipantList registrations={registrations} orgSlug="club" campSlug="camp"
-    camp={{ slug: 'camp', title: 'Sommercamp', price_cents: 14900 } as unknown as CampAdmin} brandColor="#112233" />))
+    camp={{ slug: 'camp', title: 'Sommercamp', price_cents: 14900, start_date: '2027-07-05', end_date: '2027-07-09' } as unknown as CampAdmin} brandColor="#112233" />))
 }
 async function renderWaitlist(waitlisted = [waiting], registeredCount = 1) {
   await act(() => root.render(
@@ -122,7 +122,7 @@ it('links to the waitlist when the promoted parent contact is unavailable', asyn
 it.each([2, 3])('shows the capacity hint instead of a promote button at occupancy %s', async registeredCount => {
   await renderWaitlist([waiting], registeredCount)
   expect(container.textContent).toContain('Alle Plätze belegt – nach einer Stornierung rückt das nächste Kind automatisch nach.')
-  expect(container.querySelector('button')).toBeNull()
+  expect(container.querySelector('.cp-waitlist-promote button')).toBeNull()
   expect(promoteWaitlistAction).not.toHaveBeenCalled()
 })
 

@@ -1,0 +1,189 @@
+{
+  "columnHeaders": [],
+  "rows": [
+    {
+      "columns": "277px 277px",
+      "slots": [
+        {
+          "slot": "cp-row-main",
+          "bounds": [
+            37,
+            561,
+            566,
+            40
+          ],
+          "text": "Platz 1\n\nJari Lindenfels (2016)"
+        },
+        {
+          "slot": "cp-row-secondary",
+          "bounds": [
+            37,
+            613,
+            566,
+            43
+          ],
+          "text": "Tammo Lindenfels\n\nfamilie17@campspilot.example\n\nAngemeldet am 05.10.2026"
+        },
+        {
+          "slot": "cp-row-status",
+          "bounds": [
+            37,
+            669,
+            277,
+            47
+          ],
+          "text": "Warteliste\n\nwartet seit 19 Tagen"
+        },
+        {
+          "slot": "cp-row-action",
+          "bounds": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "text": ""
+        }
+      ],
+      "actions": []
+    },
+    {
+      "columns": "277px 277px",
+      "slots": [
+        {
+          "slot": "cp-row-main",
+          "bounds": [
+            37,
+            756,
+            566,
+            40
+          ],
+          "text": "Platz 2\n\nMalin Wiesenau (2017)"
+        },
+        {
+          "slot": "cp-row-secondary",
+          "bounds": [
+            37,
+            809,
+            566,
+            43
+          ],
+          "text": "Jule Wiesenau\n\nfamilie18@campspilot.example\n\nAngemeldet am 04.10.2026"
+        },
+        {
+          "slot": "cp-row-status",
+          "bounds": [
+            37,
+            864,
+            277,
+            47
+          ],
+          "text": "Warteliste\n\nwartet seit 20 Tagen"
+        },
+        {
+          "slot": "cp-row-action",
+          "bounds": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "text": ""
+        }
+      ],
+      "actions": []
+    },
+    {
+      "columns": "277px 277px",
+      "slots": [
+        {
+          "slot": "cp-row-main",
+          "bounds": [
+            37,
+            952,
+            566,
+            40
+          ],
+          "text": "Platz 3\n\nLuan Birkenhain (2018)"
+        },
+        {
+          "slot": "cp-row-secondary",
+          "bounds": [
+            37,
+            1004,
+            566,
+            43
+          ],
+          "text": "Tammo Birkenhain\n\nfamilie19@campspilot.example\n\nAngemeldet am 03.10.2026"
+        },
+        {
+          "slot": "cp-row-status",
+          "bounds": [
+            37,
+            1059,
+            277,
+            47
+          ],
+          "text": "Warteliste\n\nwartet seit 21 Tagen"
+        },
+        {
+          "slot": "cp-row-action",
+          "bounds": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "text": ""
+        }
+      ],
+      "actions": []
+    },
+    {
+      "columns": "277px 277px",
+      "slots": [
+        {
+          "slot": "cp-row-main",
+          "bounds": [
+            37,
+            1147,
+            566,
+            40
+          ],
+          "text": "Platz 4\n\nElin Falkental (2019)"
+        },
+        {
+          "slot": "cp-row-secondary",
+          "bounds": [
+            37,
+            1199,
+            566,
+            43
+          ],
+          "text": "Jule Falkental\n\nfamilie20@campspilot.example\n\nAngemeldet am 02.10.2026"
+        },
+        {
+          "slot": "cp-row-status",
+          "bounds": [
+            37,
+            1254,
+            277,
+            47
+          ],
+          "text": "Warteliste\n\nwartet seit 22 Tagen"
+        },
+        {
+          "slot": "cp-row-action",
+          "bounds": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "text": ""
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

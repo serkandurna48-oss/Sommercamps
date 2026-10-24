@@ -71,6 +71,12 @@ class Settings(BaseSettings):
     # See app/routers/signup.py::_get_client_ip for the full extraction logic.
     trusted_proxy_hops: int = Field(default=0, alias="TRUSTED_PROXY_HOPS")
 
+    # Recipient address for pilot-request notifications (marketing page form).
+    # Read from os.environ at request time in app/routers/pilot_request.py so
+    # that monkeypatch.setenv works in tests without clearing the lru_cache.
+    # If not set, POST /public/pilot-request returns 503.
+    platform_contact_email: Optional[str] = Field(default=None, alias="PLATFORM_CONTACT_EMAIL")
+
     # Connection pool sizing (PF1b). maxconn must be at least 2 so the pool
     # can satisfy concurrent requests without immediately exhausting itself.
     # DB_POOL_WAIT_SECONDS: how long get_connection() blocks before raising

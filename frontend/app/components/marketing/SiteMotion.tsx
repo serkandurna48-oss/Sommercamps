@@ -40,26 +40,6 @@ export default function SiteMotion() {
     }
     navState(window.scrollY)
 
-    // ── Formular: ehrlich über seinen Zustand ──────────────────────────
-    const form = document.getElementById('pilotForm')
-    const formNote = document.getElementById('formNote')
-    const onSubmit = (e: SubmitEvent) => {
-      e.preventDefault()
-      if (formNote) {
-        formNote.textContent = ''
-        formNote.append(
-          'Dies ist ein Seitenentwurf — das Formular ist noch nicht angebunden. Aktuelle Pilotvereine: '
-        )
-        const ksv = document.createElement('strong')
-        ksv.textContent = 'KSV Baunatal'
-        formNote.append(ksv, ' und ')
-        const jk = document.createElement('strong')
-        jk.textContent = 'JK Performance Academy'
-        formNote.append(jk, '.')
-      }
-    }
-    form?.addEventListener('submit', onSubmit)
-
     gsap.registerPlugin(ScrollTrigger)
 
     let lenis: Lenis | null = null
@@ -340,7 +320,6 @@ export default function SiteMotion() {
       clearTimeout(bootRemoveTimer)
       clearTimeout(introSafety)
       clearTimeout(revealSafety)
-      form?.removeEventListener('submit', onSubmit)
       anchorCleanups.forEach((fn) => fn())
       document.getElementById('zList')?.classList.remove('z-list--animated')
       ctx.revert()

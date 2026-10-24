@@ -28,6 +28,8 @@
   --line-d: #25302f;
   --line-l: #d9dcd6;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ok: #4fca7a;    /* Erfolgstext: Kontrast ≥ 9,6:1 auf --night */
+  --err: #e06060;   /* Fehlertext:  Kontrast ≥ 5,8:1 auf --night */
 
   margin: 0;
   min-height: 100dvh;
@@ -519,6 +521,34 @@
 .cp-scope .form .btn { height: 52px; }
 .cp-scope .form-note { margin-top: 16px; font-size: 14px; color: var(--fog-3); max-width: 44ch; line-height: 1.55; }
 .cp-scope .form-note strong { color: var(--fog-2); font-weight: 600; }
+
+/* ── Pilotanfrage-Formular (PilotRequestForm) ─────────────── */
+.cp-scope .prf-full { flex: 1 1 100%; }
+.cp-scope .form textarea {
+  width: 100%;
+  background: rgba(234, 238, 236, 0.06);
+  border: 1px solid var(--line-d);
+  padding: 10px 15px;
+  font-size: 16px;
+  color: var(--fog);
+  resize: vertical;
+  min-height: 88px;
+}
+.cp-scope .form textarea::placeholder { color: var(--fog-3); }
+.cp-scope .form textarea:focus { border-color: var(--accent); background: rgba(234, 238, 236, 0.09); outline: none; }
+.cp-scope .prf-err { font-size: 13px; color: var(--err); line-height: 1.45; }
+.cp-scope .prf-err a { color: var(--err); text-decoration: underline; text-underline-offset: 2px; }
+.cp-scope .prf-success { font-size: 17px; color: var(--ok); line-height: 1.5; margin-top: 32px; max-width: 44ch; }
+.cp-scope .prf-opt { font-weight: 400; color: var(--fog-3); }
+.cp-scope .prf-honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
 
 /* ── Fuß ──────────────────────────────────────────────────── */
 .cp-scope .foot { border-top: 1px solid var(--line-d); padding-block: 34px 44px; }

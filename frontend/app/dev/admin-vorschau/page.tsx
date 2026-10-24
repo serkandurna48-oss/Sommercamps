@@ -20,6 +20,9 @@ export default function AdminPreviewIndex() {
               <Link className="underline" href="/dev/admin-vorschau/dashboard?schritt=2">{label}: Schritt 2</Link>
               <Link className="underline" href="/dev/admin-vorschau/dashboard?schritt=3">{label}: Schritt 3</Link>
             </>}
+            {screen === 'einrichtung-4' && (
+              <Link className="underline" href="/dev/admin-vorschau/einrichtung-4?voll=1">{label}: vollständig</Link>
+            )}
           </li>
         ))}
       </ul>

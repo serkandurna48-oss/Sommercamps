@@ -14,14 +14,24 @@ import CampWaitlistScreen from '../../../components/saas/screens/CampWaitlistScr
 import CampTasksScreen from '../../../components/saas/screens/CampTasksScreen'
 import NewRegistrationsScreen from '../../../components/saas/screens/NewRegistrationsScreen'
 import HilfeScreen from '../../../components/saas/screens/HilfeScreen'
-import { getPreviewFixtures, getPreviewFixturesDashboardStep1, getPreviewFixturesDashboardStep3 } from '../fixtures'
+import {
+  getPreviewFixtures,
+  getPreviewFixturesDashboardStep1,
+  getPreviewFixturesDashboardStep3,
+  getPreviewFixturesEinrichtung1,
+  getPreviewFixturesEinrichtung2,
+  getPreviewFixturesEinrichtung3,
+  getPreviewFixturesEinrichtung4Open,
+  getPreviewFixturesEinrichtung4Full,
+} from '../fixtures'
+import EinrichtungScreen from '../../../components/saas/screens/EinrichtungScreen'
 import PreviewProvider from '../PreviewProvider'
 
 export const metadata = { title: 'Admin-Vorschau – CampsPilot', robots: { index: false, follow: false } }
 
 type Props = {
   params: Promise<{ screen: string }>
-  searchParams?: Promise<{ leer?: string | string[]; filter?: string | string[]; sort?: string | string[]; camp?: string | string[]; schritt?: string | string[] }>
+  searchParams?: Promise<{ leer?: string | string[]; filter?: string | string[]; sort?: string | string[]; camp?: string | string[]; schritt?: string | string[]; voll?: string | string[] }>
 }
 
 export default async function AdminPreviewPage({ params, searchParams }: Props) {
@@ -60,6 +70,35 @@ export default async function AdminPreviewPage({ params, searchParams }: Props) 
     case 'aufgaben': content = <OrgTasksScreen {...fixtures} />; break
     case 'konfiguration': content = <OrgConfigScreen {...fixtures} />; break
     case 'hilfe': content = <HilfeScreen orgSlug={fixtures.orgSlug} org={fixtures.org} />; break
+    case 'einrichtung': {
+      const f = schritt === 2 ? getPreviewFixturesEinrichtung2()
+        : schritt === 3 ? getPreviewFixturesEinrichtung3()
+        : schritt === 4 ? getPreviewFixturesEinrichtung4Open()
+        : getPreviewFixturesEinrichtung1()
+      content = <EinrichtungScreen orgSlug={f.orgSlug} org={f.org} camps={f.camps} requestedStep={schritt ?? 1} />
+      break
+    }
+    case 'einrichtung-1': {
+      const f = getPreviewFixturesEinrichtung1()
+      content = <EinrichtungScreen orgSlug={f.orgSlug} org={f.org} camps={f.camps} requestedStep={1} />
+      break
+    }
+    case 'einrichtung-2': {
+      const f = getPreviewFixturesEinrichtung2()
+      content = <EinrichtungScreen orgSlug={f.orgSlug} org={f.org} camps={f.camps} requestedStep={2} />
+      break
+    }
+    case 'einrichtung-3': {
+      const f = getPreviewFixturesEinrichtung3()
+      content = <EinrichtungScreen orgSlug={f.orgSlug} org={f.org} camps={f.camps} requestedStep={3} />
+      break
+    }
+    case 'einrichtung-4': {
+      const useVoll = query?.voll === '1'
+      const f = useVoll ? getPreviewFixturesEinrichtung4Full() : getPreviewFixturesEinrichtung4Open()
+      content = <EinrichtungScreen orgSlug={f.orgSlug} org={f.org} camps={f.camps} requestedStep={4} />
+      break
+    }
     default: notFound()
   }
 

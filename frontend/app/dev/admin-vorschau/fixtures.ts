@@ -104,3 +104,84 @@ export function getPreviewFixturesDashboardStep3(now = new Date()) {
     registrationsByCamp: [[]] as (typeof registrations)[],
   }
 }
+
+/** Einrichtungs-Wizard Schritt 1 (Auftritt) – Verein im Entwurf, ohne Camp, keine Farbe gesetzt. */
+export function getPreviewFixturesEinrichtung1() {
+  return {
+    orgSlug: organization.slug,
+    org: {
+      ...organization,
+      primary_color: null,
+      logo_url: null,
+      contact_email: '',
+      legal_address: null,
+      terms_text: null,
+      site_published: false,
+      review_status: 'draft',
+      camp_count: 0,
+    },
+    camps: [] as typeof camps,
+  }
+}
+
+/** Einrichtungs-Wizard Schritt 2 (Rechtliches) – Farbe gesetzt, Rechtliches fehlt noch. */
+export function getPreviewFixturesEinrichtung2() {
+  return {
+    orgSlug: organization.slug,
+    org: {
+      ...organization,
+      contact_email: '',
+      legal_address: null,
+      terms_text: null,
+      site_published: false,
+      review_status: 'draft',
+      camp_count: 0,
+    },
+    camps: [] as typeof camps,
+  }
+}
+
+/** Einrichtungs-Wizard Schritt 3 (Camp) – Rechtliches gesetzt, noch kein Camp. */
+export function getPreviewFixturesEinrichtung3() {
+  return {
+    orgSlug: organization.slug,
+    org: {
+      ...organization,
+      site_published: false,
+      review_status: 'draft',
+      camp_count: 0,
+    },
+    camps: [] as typeof camps,
+  }
+}
+
+/** Einrichtungs-Wizard Schritt 4 mit offenen Punkten – kein Camp, Farbe gesetzt. */
+export function getPreviewFixturesEinrichtung4Open() {
+  return {
+    orgSlug: organization.slug,
+    org: {
+      ...organization,
+      contact_email: '',
+      legal_address: null,
+      terms_text: null,
+      site_published: false,
+      review_status: 'draft',
+      camp_count: 0,
+    },
+    camps: [] as typeof camps,
+  }
+}
+
+/** Einrichtungs-Wizard Schritt 4 vollständig – alle Angaben gesetzt, bereit zur Einreichung. */
+export function getPreviewFixturesEinrichtung4Full(now = new Date()) {
+  const previewCamps = makeCamps(now)
+  return {
+    orgSlug: organization.slug,
+    org: {
+      ...organization,
+      site_published: false,
+      review_status: 'draft',
+    },
+    camps: [{ ...previewCamps[0], status: 'draft' as const }],
+  }
+}

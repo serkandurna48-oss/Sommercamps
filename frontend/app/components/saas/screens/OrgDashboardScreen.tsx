@@ -13,7 +13,6 @@ import EmptyState from '../state/EmptyState'
 import OnboardingCard from '../state/OnboardingCard'
 import LaunchSuccessCard from '../state/LaunchSuccessCard'
 import SuccessNote from '../state/SuccessNote'
-import { submitReviewAction } from '../state/reviewActions'
 import { orgTabs } from '../navTabs'
 import { de, formatDateRange } from '../../../lib/i18n/de'
 import type { OrganizationScreenProps } from './types'
@@ -72,7 +71,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
 
         {showCard ? (
           <section className="mb-12">
-            <OnboardingCard orgSlug={orgSlug} org={org} camps={camps} brandStrong={brand.brandStrong} brandOn={brand.brandOn} submitAction={submitReviewAction} />
+            <OnboardingCard orgSlug={orgSlug} org={org} camps={camps} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
           </section>
         ) : (
           <section className="mb-12">

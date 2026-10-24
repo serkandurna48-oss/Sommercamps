@@ -107,7 +107,7 @@ describe('daily overview', () => {
     const dom = markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) }))
     expect(dom.textContent).toContain('In 3 Schritten zur Anmeldeseite')
     expect(dom.textContent).not.toContain('Alles erledigt')
-    expect(dom.querySelector('a[href="/pilot/demo/camps/new"]')?.textContent).toBe('Camp anlegen')
+    expect(dom.querySelector('a[href="/pilot/demo/camps/new"]')?.textContent).toBe('+ Camp anlegen')
   })
   it('shows success card after publishing when no tasks remain', async () => {
     vi.mocked(loadOrgAdminData).mockResolvedValue({ token: 'test', org, camps: [camp], registrationsByCamp: [[]] })

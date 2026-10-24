@@ -148,3 +148,59 @@ it('never renders billing notes or the billing section, even with owner data', a
   expect(container.textContent).not.toContain('Konditionen')
   expect(container.textContent).not.toContain('Private contract terms')
 })
+
+async function changeField(selector: string, value: string) {
+  const input = container.querySelector<HTMLInputElement>(selector)!
+  await act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+}
+
+it('updates the shared preview from name, logo, picker and preview theme without saving', async () => {
+  await render()
+  await changeField('#name', 'Neuer Vereinsname')
+  await changeField('#logo_url', '/clubs/demo/logo.png')
+  await changeField('input[type="color"]', '#b8912b')
+  const preview = container.querySelector<HTMLElement>('.brand-preview-tradition')!
+  expect(preview.textContent).toContain('Neuer Vereinsname')
+  expect(preview.querySelector('img')!.getAttribute('src')).toBe('/clubs/demo/logo.png')
+  expect(container.querySelector<HTMLInputElement>('#primary_color')!.value).toBe('#b8912b')
+  expect(preview.querySelector<HTMLElement>('.btn.primary')!.style.color).toBe('rgb(17, 17, 17)')
+  for (const theme of ['akademie', 'kompakt']) {
+    await act(() => {
+      const select = container.querySelector<HTMLSelectElement>('#preview-theme')!
+      select.value = theme
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(container.querySelector(`.brand-preview-${theme}`)).not.toBeNull()
+  }
+  expect(updateOrganizationConfigAction).not.toHaveBeenCalled()
+  expect(new FormData(dataForm()).has('theme')).toBe(false)
+  expect(container.textContent).toContain('Diese Auswahl wird nicht gespeichert')
+})
+
+it('shows the shared hex error and prevents saving an invalid color', async () => {
+  await render()
+  await changeField('#primary_color', 'invalid')
+  await save()
+  expect(container.querySelector('#primary_color-error')!.textContent).toContain('Ungültiger Hex-Code')
+  expect(container.querySelector('#primary_color')!.getAttribute('aria-invalid')).toBe('true')
+  expect(updateOrganizationConfigAction).not.toHaveBeenCalled()
+})
+
+it('keeps brand values after a failed save and refreshes them when saved props arrive', async () => {
+  vi.mocked(updateOrganizationConfigAction).mockResolvedValue({ error: 'Try again', saved: false })
+  await render()
+  await changeField('#name', 'Neuer Vereinsname')
+  await changeField('#logo_url', '/clubs/demo/logo.png')
+  await changeField('#primary_color', '#cc0000')
+  await save()
+  expect(container.querySelector('.brand-preview-tradition')!.textContent).toContain('Neuer Vereinsname')
+  expect(container.querySelector<HTMLInputElement>('#primary_color')!.value).toBe('#cc0000')
+  const updated = { ...org, name: 'Gespeicherter Verein', primary_color: '#123456', theme: 'akademie' }
+  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={updated} brandStrong="#112233" brandOn="#ffffff" />))
+  expect(container.querySelector('.brand-preview-akademie')!.textContent).toContain('Gespeicherter Verein')
+  expect(container.querySelector<HTMLInputElement>('#primary_color')!.value).toBe('#123456')
+})

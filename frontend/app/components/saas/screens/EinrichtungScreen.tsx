@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useActionState, useId, type ChangeEvent } from 'react'
+import { useState, useActionState, useId } from 'react'
 import type { CampAdmin, OrganizationAdmin } from '../../../lib/saasAdminApi'
 import { computeBrandTokens, type BrandTokens } from '../brandPipeline'
 import { computeWizardStep } from '../onboardingSteps'
-import { isAllowedImageUrl } from '../../../lib/imageUrl'
+import BrandPreview from '../brand/BrandPreview'
+import ColorField from '../brand/ColorField'
 import { VORLAGE_TEILNAHMEBEDINGUNGEN } from '../../../lib/vorlagen'
 import { saveAuftrittAction, saveRechtlichesAction } from '../actions/wizardActions'
 import { submitReviewAction } from '../state/reviewActions'
@@ -209,40 +210,6 @@ function ErrorBanner({ id, children }: { id?: string; children: string }) {
 
 // --- Step 1: Auftritt ---
 
-function AuftrittPreview({ name, safeLogoUrl, color }: { name: string; safeLogoUrl: string | null; color: string }) {
-  return (
-    <div
-      className="w-full shrink-0 rounded-[var(--cp-r-card)] border p-4 lg:w-56"
-      style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}
-    >
-      <p className="cp-chip mb-3" style={{ color: 'var(--cp-muted)' }}>{de.einrichtung.previewLabel}</p>
-      <div className="flex items-center gap-2">
-        {safeLogoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={safeLogoUrl} alt="" className="h-8 w-8 rounded object-contain" />
-        ) : (
-          <span
-            className="h-8 w-8 shrink-0 rounded"
-            style={{ background: color || 'var(--cp-line)' }}
-            aria-hidden="true"
-          />
-        )}
-        <span className="cp-subheading" style={{ color: 'var(--cp-ink)', overflowWrap: 'break-word' }}>
-          {name || 'Vereinsname'}
-        </span>
-      </div>
-      <div className="mt-3">
-        <span
-          className="cp-label inline-flex min-h-[36px] items-center rounded-[var(--cp-r-field)] px-4 py-2"
-          style={{ background: color || 'var(--cp-ink)', color: '#fff' }}
-        >
-          {de.einrichtung.previewBtnExample}
-        </span>
-      </div>
-    </div>
-  )
-}
-
 function Step1Auftritt({
   orgSlug,
   org,
@@ -262,22 +229,7 @@ function Step1Auftritt({
   const [name, setName] = useState(org.name)
   const [logoUrl, setLogoUrl] = useState(org.logo_url ?? '')
   const [color, setColor] = useState(org.primary_color ?? '')
-  const [hexError, setHexError] = useState('')
   const feedbackId = useId()
-
-  const HEX_RE = /^#[0-9a-fA-F]{3}$|^#[0-9a-fA-F]{6}$/
-  const colorPickerValue = HEX_RE.test(color) ? color : '#000000'
-
-  function handleColorText(e: ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value
-    setColor(val)
-    setHexError(val && !HEX_RE.test(val) ? 'Ungültiger Hex-Code – z. B. #1c6b45' : '')
-  }
-
-  function handleColorPicker(e: ChangeEvent<HTMLInputElement>) {
-    setColor(e.target.value)
-    setHexError('')
-  }
 
   const [state, formAction, pending] = useActionState<SaveState, FormData>(
     async (prev, formData) => {
@@ -287,8 +239,6 @@ function Step1Auftritt({
     },
     { ok: false },
   )
-
-  const safeLogoUrl = isAllowedImageUrl(logoUrl) ? logoUrl : null
 
   return (
     <>
@@ -313,26 +263,7 @@ function Step1Auftritt({
               className={INPUT_CLASS} style={INPUT_STYLE}
             />
           </Field>
-          <Field label={de.configPage.field.primaryColor} htmlFor="w-primary_color" hint={de.configPage.hint.primaryColor} error={hexError || undefined}>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                aria-label="Farbwähler"
-                value={colorPickerValue}
-                onChange={handleColorPicker}
-                className="h-10 w-10 shrink-0 cursor-pointer rounded-[var(--cp-r-chip)] border p-0.5"
-                style={{ borderColor: 'var(--cp-field-line)', background: 'var(--cp-surface)' }}
-              />
-              <input
-                id="w-primary_color" name="primary_color"
-                value={color} onChange={handleColorText}
-                placeholder="#1c6b45"
-                className={INPUT_CLASS}
-                style={{ ...INPUT_STYLE, maxWidth: '160px' }}
-                aria-invalid={!!hexError || undefined}
-              />
-            </div>
-          </Field>
+          <ColorField id="w-primary_color" value={color} onChange={setColor} />
 
           {!pending && state.error && <ErrorBanner id={feedbackId}>{state.error}</ErrorBanner>}
 
@@ -346,7 +277,7 @@ function Step1Auftritt({
           />
         </form>
 
-        <AuftrittPreview name={name} safeLogoUrl={safeLogoUrl} color={color} />
+        <BrandPreview name={name} logoUrl={logoUrl} color={color} />
       </div>
     </>
   )

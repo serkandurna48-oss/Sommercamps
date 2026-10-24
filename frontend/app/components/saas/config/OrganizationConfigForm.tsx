@@ -12,17 +12,14 @@ import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 import SuccessNote from '../state/SuccessNote'
 import PendingNote from '../state/PendingNote'
 import PublishToggle from './PublishToggle'
+import BrandPreview, { previewTheme } from '../brand/BrandPreview'
+import ColorField, { normalizeHex } from '../brand/ColorField'
 import { isAllowedImageUrl } from '../../../lib/imageUrl'
 
 const _URL_FIELDS = ['logo_url', 'hero_image_url', 'trainer_image_url'] as const
 type _UrlField = typeof _URL_FIELDS[number]
 const _URL_ERROR_MSG = 'Bitte eine https-Adresse oder einen Pfad wie /clubs/verein/logo.png eintragen.'
 
-/**
- * Kein Theme-Editor (Auftrag Abschnitt 1) — `org.theme` erscheint hier
- * absichtlich nicht als Feld, auch nicht read-only, um keinen Eindruck von
- * "das könnte man ändern" zu erzeugen.
- */
 export default function OrganizationConfigForm({
   orgSlug,
   org,
@@ -34,11 +31,19 @@ export default function OrganizationConfigForm({
   brandStrong: string
   brandOn: string
 }) {
+  const [name, setName] = useState(org.name)
+  const [logoUrl, setLogoUrl] = useState(org.logo_url ?? '')
+  const [color, setColor] = useState(org.primary_color ?? '')
+  const [theme, setTheme] = useState(previewTheme(org.theme))
   const [submitted, setSubmitted] = useState<Record<string, string> | null>(null)
   const [previousOrg, setPreviousOrg] = useState(org)
   const [urlErrors, setUrlErrors] = useState<Partial<Record<_UrlField, string>>>({})
   if (org !== previousOrg) {
     setPreviousOrg(org)
+    setName(org.name)
+    setLogoUrl(org.logo_url ?? '')
+    setColor(org.primary_color ?? '')
+    setTheme(previewTheme(org.theme))
     setSubmitted(null)
     setUrlErrors({})
   }
@@ -51,6 +56,11 @@ export default function OrganizationConfigForm({
     // failures. Keep submitted defaults until fresh props arrive.
     setSubmitted(Object.fromEntries([...data].filter((entry): entry is [string, string] => typeof entry[1] === 'string')))
 
+    setName(String(data.get('name') ?? ''))
+    setLogoUrl(String(data.get('logo_url') ?? ''))
+    const submittedColor = String(data.get('primary_color') ?? '')
+    setColor(submittedColor)
+
     const invalidFields = _URL_FIELDS.filter(f => {
       const v = data.get(f)
       return typeof v === 'string' && !isAllowedImageUrl(v)
@@ -60,6 +70,7 @@ export default function OrganizationConfigForm({
       return { error: null, saved: false }
     }
     setUrlErrors({})
+    if (submittedColor && !normalizeHex(submittedColor)) return { error: null, saved: false }
     return boundAction(previous, data)
   }, { error: null, saved: false })
 
@@ -81,9 +92,26 @@ export default function OrganizationConfigForm({
           <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
             {de.configPage.section.branding}
           </h3>
-          <Field label={de.configPage.field.name} htmlFor="name">
-            <input id="name" name="name" required defaultValue={inputValue('name', org.name)} className={INPUT_CLASS} style={INPUT_STYLE} />
-          </Field>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+            <div className="flex min-w-0 flex-1 flex-col gap-4">
+              <Field label={de.configPage.field.name} htmlFor="name">
+                <input id="name" name="name" required value={name} onChange={event => setName(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
+              </Field>
+              <Field label={de.configPage.field.logoUrl} htmlFor="logo_url" error={urlErrors.logo_url}>
+                <input id="logo_url" name="logo_url" type="text" inputMode="url" value={logoUrl} onChange={event => setLogoUrl(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
+              </Field>
+              <ColorField id="primary_color" value={color} onChange={setColor} />
+              <Field label="Theme für die Vorschau" htmlFor="preview-theme" hint="Vergleichen Sie hier die Gestaltung. Diese Auswahl wird nicht gespeichert; Ihre Vereinsseite behält das bisherige Theme.">
+                <select id="preview-theme" value={theme} onChange={event => setTheme(previewTheme(event.target.value))} className={INPUT_CLASS} style={INPUT_STYLE}>
+                  <option value="tradition">Tradition</option>
+                  <option value="akademie">Akademie</option>
+                  <option value="kompakt">Kompakt</option>
+                </select>
+              </Field>
+            </div>
+            <BrandPreview name={name} logoUrl={logoUrl} color={color} theme={theme} />
+          </div>
+
           <Field label={de.configPage.field.legalName} htmlFor="legal_name">
             <input id="legal_name" name="legal_name" defaultValue={inputValue('legal_name', org.legal_name ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
@@ -110,28 +138,7 @@ export default function OrganizationConfigForm({
               style={INPUT_STYLE}
             />
           </Field>
-          <Field label={de.configPage.field.logoUrl} htmlFor="logo_url" error={urlErrors.logo_url}>
-            <input id="logo_url" name="logo_url" type="text" inputMode="url" defaultValue={inputValue('logo_url', org.logo_url ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
-          </Field>
-          <Field label={de.configPage.field.primaryColor} htmlFor="primary_color" hint={de.configPage.hint.primaryColor}>
-            <div className="flex items-center gap-3">
-              <input
-                id="primary_color"
-                name="primary_color"
-                defaultValue={inputValue('primary_color', org.primary_color ?? '')}
-                placeholder="#1c6b45"
-                className={INPUT_CLASS}
-                style={{ ...INPUT_STYLE, maxWidth: '180px' }}
-              />
-              {org.primary_color && (
-                <span
-                  aria-hidden="true"
-                  className="h-9 w-9 shrink-0 rounded-[var(--cp-r-chip)] border"
-                  style={{ background: org.primary_color, borderColor: 'var(--cp-field-line)' }}
-                />
-              )}
-            </div>
-          </Field>
+
         </section>
 
         <section className="flex flex-col gap-4">

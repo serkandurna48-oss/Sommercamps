@@ -7,6 +7,7 @@ import { computeMoneyStats } from '../commandCenterLogic'
 import MatchdayBand from '../shell/MatchdayBand'
 import StatCard from '../data/StatCard'
 import StatGrid from '../ui/StatGrid'
+import { ButtonLink } from '../ui/Button'
 import ParticipantList from '../data/ParticipantList'
 import { campTabs } from '../navTabs'
 import { de, formatDateRange, formatEuro } from '../../../lib/i18n/de'
@@ -40,6 +41,9 @@ export default function CampDetailScreen({ orgSlug, campSlug, org, camp, registr
       />
 
       <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+        <div className="mb-6 flex justify-end">
+          <ButtonLink variant="secondary" href={`/pilot/${orgSlug}/camps/new?von=${encodeURIComponent(campSlug)}`}>Camp duplizieren</ButtonLink>
+        </div>
         <StatGrid>
           <StatCard label="Belegung" value={`${stats.registeredCount}/${camp.capacity}`} />
           <StatCard label="Eingegangen / Offen" value={`${formatEuro(money.collectedCents)} / ${formatEuro(money.openCents)}`} wide />

@@ -4,6 +4,8 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import CampCreateForm, { suggestCampSlug } from './CampCreateForm'
 import { createCampAction } from '../actions/configActions'
+import { prefillCampDuplicate } from './campDuplicate'
+import { getPreviewFixtures } from '../../../dev/admin-vorschau/fixtures'
 
 vi.mock('../actions/configActions', () => ({ createCampAction: vi.fn() }))
 
@@ -78,5 +80,41 @@ it('keeps all input values after an error and resubmits them', async () => {
       expect(container.querySelector<HTMLInputElement>(`[name="${name}"]`)!.value).toBe(value)
       expect(vi.mocked(createCampAction).mock.calls[attempt][2].get(name)).toBe(value)
     }
+  }
+})
+
+it('zeigt die Kopie mit leeren Pflichtterminen und übergibt bearbeitete Angaben', async () => {
+  const source = { ...getPreviewFixtures().camps[0], location: 'Sportplatz', includes: ['Ball', 'Trikot'], registration_start: '2026-01-01T08:00:00Z', currency: 'CHF' }
+  const values = prefillCampDuplicate(source)
+  await act(() => root.render(<CampCreateForm key="copy" orgSlug="review" initialValues={values} brandStrong="#112233" brandOn="#ffffff" />))
+  const input = (name: string) => container.querySelector<HTMLInputElement>(`[name="${name}"]`)!
+  expect(input('title').value).toBe(`${source.title} (Kopie)`)
+  expect(input('slug').value).toBe(values.slug)
+  for (const name of ['start_date', 'end_date']) {
+    expect(input(name).value).toBe('')
+    expect(input(name).required).toBe(true)
+  }
+  for (const name of ['age_min', 'age_max', 'capacity'] as const) expect(input(name).value).toBe(String(source[name]))
+  expect(input('price_euros').value).toBe((source.price_cents / 100).toFixed(2))
+  expect(input('location').value).toBe('Sportplatz')
+  expect(input('includes').value).toBe('Ball\nTrikot')
+  expect(input('currency').value).toBe('CHF')
+  expect(container.querySelector('label[for="price_euros"]')!.textContent).toBe('Preis')
+  expect(container.querySelector('#price_euros-hint')!.textContent).toContain('angegebenen Währung')
+  expect(container.textContent).not.toMatch(/\b(du|dein\w*|dir|dich|prüfe|ergänze|wähle)\b/i)
+  await enter('title', 'Neuer Termin')
+  expect(input('slug').value).toBe('neuer-termin')
+  await enter('start_date', '2027-08-02')
+  await enter('end_date', '2027-08-06')
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await act(async () => container.querySelector('form')!.requestSubmit())
+    const data = vi.mocked(createCampAction).mock.calls[attempt][2]
+    expect(data.get('duplicate')).toBe('1')
+    expect(data.get('start_date')).toBe('2027-08-02')
+    expect(data.get('end_date')).toBe('2027-08-06')
+    expect(data.get('registration_start')).toBe('2026-01-01T08:00:00.000Z')
+    expect(data.get('location')).toBe('Sportplatz')
+    expect(data.get('includes')).toBe('Ball\nTrikot')
+    expect(data.get('currency')).toBe('CHF')
   }
 })

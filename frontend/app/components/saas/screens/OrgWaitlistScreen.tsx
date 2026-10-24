@@ -5,7 +5,7 @@ import WaitlistCard from '../data/WaitlistCard'
 import WaitlistExportBar from '../data/WaitlistExportBar'
 import EmptyState from '../state/EmptyState'
 import { orgTabs } from '../navTabs'
-import { de } from '../../../lib/i18n/de'
+import { de, formatDateRange } from '../../../lib/i18n/de'
 import type { WaitlistExportRow } from '../waitlistExport'
 import type { OrganizationScreenProps } from './types'
 
@@ -62,6 +62,7 @@ export default function OrgWaitlistScreen({ orgSlug, org, camps, registrationsBy
                   orgSlug={orgSlug}
                   campSlug={g.camp.slug}
                   campTitle={g.camp.title}
+                  campDate={formatDateRange(g.camp.start_date, g.camp.end_date)}
                   capacity={g.camp.capacity}
                   registeredCount={g.registeredCount}
                   priceCents={g.camp.price_cents}

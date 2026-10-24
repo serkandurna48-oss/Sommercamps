@@ -549,3 +549,86 @@
   .cp-participant-summary { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 248px 24px; }
   .cp-participant-status { display: grid; grid-template-columns: repeat(2, 116px); }
 }
+
+/* Pitch-side lists: the same rows and actions, with phone-only geometry. */
+.cp-scope {
+  --cp-list-target: 44px;
+  --cp-list-gap: 12px;
+  --cp-list-line: 1px;
+  --cp-list-sticky-top: 0px;
+  --cp-list-sticky-layer: 5;
+  --cp-list-name-weight: 700;
+}
+.cp-scope .cp-mobile-only { display: none; }
+.cp-row-overflow, .cp-overflow-panel, .cp-mobile-actions, .cp-payment-filters { display: contents; }
+.cp-row-action:has(> .cp-mobile-only) { display: none; }
+
+/* Preserve the existing desktop order: reminder, payment, waiver. */
+@media (width >= 640px) {
+  .cp-payment-actions > form { order: 1; }
+  .cp-payment-actions > .cp-row-overflow > .cp-overflow-panel > :last-child { order: 2; }
+}
+
+@media (width < 640px) {
+  .cp-scope .cp-mobile-only { display: block; }
+  .cp-scope .cp-desktop-only { display: none; }
+  .cp-scope .cp-roster, .cp-scope .cp-waitlist {
+    overflow: visible;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+  .cp-scope .cp-mobile-card {
+    min-width: 0;
+    margin-block: var(--cp-list-gap);
+    border: var(--cp-list-line) solid var(--cp-line);
+    border-radius: var(--cp-r-card);
+    background: var(--cp-surface);
+    overflow-wrap: anywhere;
+  }
+  .cp-mobile-card .cp-list-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'main' 'secondary' 'status' 'action';
+    gap: var(--cp-list-gap);
+  }
+  .cp-mobile-card .cp-row-action { display: block; width: 100%; justify-self: stretch; }
+  .cp-mobile-card .cp-participant-summary .cp-row-action { display: none; }
+  .cp-mobile-card .truncate { white-space: normal; overflow: visible; text-overflow: clip; }
+  .cp-mobile-card .cp-row-main .cp-subheading, .cp-child-name { font-weight: var(--cp-list-name-weight); }
+  .cp-camp-date { font-size: inherit; font-weight: normal; color: var(--cp-muted); }
+  .cp-mobile-card .cp-camp-date { margin-block: var(--cp-list-gap); }
+  .cp-participant-card-top { flex-direction: column; align-items: stretch; padding: var(--cp-card-padding); }
+  .cp-scope .cp-participant-trigger { width: 100%; }
+  .cp-scope .cp-mobile-primary {
+    display: flex; align-items: center; justify-content: center;
+    min-height: var(--cp-list-target); width: 100%; margin-top: var(--cp-list-gap);
+    border: var(--cp-list-line) solid var(--cp-field-line); border-radius: var(--cp-r-field);
+    background: var(--cp-surface-2); color: var(--cp-ink);
+  }
+  .cp-scope .cp-mobile-actions, .cp-payment-actions { display: flex; flex-direction: column; gap: var(--cp-list-gap); width: 100%; align-items: stretch; }
+  .cp-mobile-actions form, .cp-mobile-actions form > div, .cp-waitlist-promote,
+  .cp-waitlist-promote form, .cp-waitlist-promote form > div { width: 100%; }
+  .cp-mobile-actions button, .cp-mobile-actions a, .cp-waitlist-promote button,
+  .cp-row-overflow button, .cp-row-overflow a {
+    display: flex; align-items: center; justify-content: center;
+    min-height: var(--cp-list-target); width: 100%; white-space: normal;
+  }
+  .cp-row-overflow { display: block; width: 100%; }
+  .cp-overflow-panel { display: none; }
+  .cp-overflow-panel[data-open='true'] {
+    display: flex; flex-direction: column; gap: var(--cp-list-gap);
+    margin-top: var(--cp-list-gap); padding: var(--cp-list-gap);
+    border: var(--cp-list-line) solid var(--cp-line); border-radius: var(--cp-r-field);
+    background: var(--cp-surface-2);
+  }
+  .cp-overflow-panel > div { width: 100%; }
+  .cp-mobile-filters {
+    display: block; position: sticky; top: var(--cp-list-sticky-top); z-index: var(--cp-list-sticky-layer);
+    padding-block: var(--cp-list-gap); background: var(--cp-paper);
+  }
+  .cp-mobile-filters input, .cp-mobile-filters select, .cp-mobile-filters label { width: 100%; min-width: 0 !important; }
+  .cp-mobile-filter-buttons { flex-wrap: wrap; overflow: visible; }
+  .cp-mobile-filter-buttons button { flex: 1 1 auto; }
+  .cp-today-card { padding: var(--cp-card-padding); }
+  .cp-today-card .cp-mobile-actions { margin-top: var(--cp-list-gap); }
+}

@@ -115,6 +115,7 @@ export default function PaymentSection({
       )}
       {undoMessage && <p role="status" className="mb-5">{undoMessage}</p>}
 
+      <div className="cp-payment-filters cp-mobile-filters">
       <div className="mb-4">
         <label htmlFor={searchId} className="mb-2 block font-medium">Verwendungszweck, Kind oder Eltern suchen</label>
         <input id={searchId} type="search" placeholder="CP-XXXXXXXX" value={search} onChange={event => setSearch(event.target.value)}
@@ -147,6 +148,7 @@ export default function PaymentSection({
           onClick={() => setFilter(f => (f === 'paid' ? 'all' : 'paid'))}
         />
         <FilterButton label={de.paymentsPage.filterAll} count={counts.all} active={filter === 'all'} brandColor={brandColor} onClick={() => setFilter('all')} />
+      </div>
       </div>
 
       <div className="mb-4">

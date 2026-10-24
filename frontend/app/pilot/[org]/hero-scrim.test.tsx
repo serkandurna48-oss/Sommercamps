@@ -60,7 +60,7 @@ describe.each(['tradition', 'akademie', 'kompakt'] as const)('%s photo hero', (t
   })
 
   it('falls back to the configured desktop position when the mobile position is missing', () => {
-    vi.spyOn(assets, 'getClubAssets').mockReturnValue({ heroImage: '/photo.jpg', heroPosition: 'right 40%', galleryImages: [] })
+    vi.spyOn(assets, 'getClubAssets').mockReturnValue({ heroImage: '/photo.jpg', heroPosition: 'right 40%', galleryImages: [], galleryAltTexts: {} })
     const image = renderHero({ theme }).querySelector<HTMLElement>('.hero-image')!
     expect(image.style.getPropertyValue('--hero-position-mobile')).toBe('right 40%')
     expect(image.style.getPropertyValue('--hero-position')).toBe('right 40%')

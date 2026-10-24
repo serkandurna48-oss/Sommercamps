@@ -18,6 +18,7 @@ export default function WaitlistCard({
   orgSlug,
   campSlug,
   campTitle,
+  campDate,
   waitlisted,
   capacity,
   registeredCount,
@@ -30,6 +31,7 @@ export default function WaitlistCard({
   orgSlug: string
   campSlug: string
   campTitle: string
+  campDate?: string
   waitlisted: RegistrationAdmin[]
   capacity: number
   registeredCount: number
@@ -46,7 +48,7 @@ export default function WaitlistCard({
   const childName = next ? `${next.child_first_name} ${next.child_last_name}` : ''
 
   return (
-    <div className="cp-card cp-card-list">
+    <div className="cp-card cp-card-list cp-waitlist">
       <div
         className="flex flex-wrap items-center justify-between gap-4 px-5 py-4"
         style={{ background: 'var(--cp-surface-2)' }}
@@ -61,7 +63,7 @@ export default function WaitlistCard({
             {de.waitlistPage.familiesWaiting(waitlisted.length)}
           </p>
         </div>
-        <div className="flex flex-col items-start gap-1">
+        <div className="cp-waitlist-promote flex flex-col items-start gap-1">
           {next && (registeredCount >= capacity ? (
             <p className="cp-body" style={{ color: 'var(--cp-muted)' }}>{de.waitlistPage.promoteNoCapacity}</p>
           ) : <ActionForm
@@ -75,7 +77,7 @@ export default function WaitlistCard({
             requireConfirm={<>
               <p className="cp-subheading">Platz an {childName} für {campTitle} vergeben?</p>
               <p>Preis: {formatEuro(priceCents, currency)}</p>
-              <p>Eltern werden nicht automatisch benachrichtigt. Bitte informiere die Eltern nach der Platzvergabe.</p>
+              <p>Eltern werden nicht automatisch benachrichtigt. Bitte informieren Sie die Eltern nach der Platzvergabe.</p>
             </>}
           />)}
           {next && registeredCount < capacity && <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
@@ -85,7 +87,8 @@ export default function WaitlistCard({
       </div>
       <div>
         {waitlisted.map((r, i) => (
-          <WaitlistRow key={r.id} registration={r} position={i + 1} />
+          <WaitlistRow key={r.id} registration={r} position={i + 1} campTitle={campTitle} campDate={campDate}
+            campHref={`/pilot/${orgSlug}/camps/${campSlug}`} />
         ))}
       </div>
     </div>

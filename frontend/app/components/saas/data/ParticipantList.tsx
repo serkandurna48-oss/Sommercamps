@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Button, { ButtonLink } from '../ui/Button'
-import { de, formatDate, formatDateTime, registrationStatusLabel, paymentStatusLabel } from '../../../lib/i18n/de'
+import { de, formatDate, formatDateTime, formatDateRange, registrationStatusLabel, paymentStatusLabel } from '../../../lib/i18n/de'
 import { type ExportColumn } from '../../../lib/exportCsv'
 import type { CampAdmin, RegistrationAdmin, RegistrationQuestion } from '../../../lib/saasAdminApi'
 import { countByFilter, filterRegistrations, isActiveRegistration, type ParticipantFilter } from '../commandCenterLogic'
@@ -93,7 +93,7 @@ export default function ParticipantList({
       />
       <ParentEmailCopy registrations={registrations} />
 
-      <div className="mb-4 flex flex-col gap-2 xl:flex-row xl:items-center">
+      <div className="cp-mobile-filters mb-4 flex flex-col gap-2 xl:flex-row xl:items-center">
         <label className="cp-label flex flex-col gap-1">
           Sortierung
           <select aria-label="Sortierung" value={sort} onChange={e => setSort(e.target.value as ParticipantSort)} className="min-h-[44px] rounded-[var(--cp-r-field)] border px-3 text-base" style={{ borderColor: 'var(--cp-field-line)' }}>
@@ -110,7 +110,7 @@ export default function ParticipantList({
           className="cp-subheading min-h-[44px] w-full rounded-[var(--cp-r-field)] border px-4 xl:flex-1"
           style={{ borderColor: 'var(--cp-field-line)', fontSize: '16px', minWidth: '220px' }}
         />
-        <div className="flex gap-2 overflow-x-auto p-1">
+        <div className="cp-mobile-filter-buttons flex gap-2 overflow-x-auto p-1">
           <FilterButton
             label={de.command.filterPaymentOpen}
             count={counts['payment-open']}
@@ -156,6 +156,7 @@ export default function ParticipantList({
               orgSlug={orgSlug}
               campSlug={campSlug}
               campTitle={camp.title}
+              campDate={formatDateRange(camp.start_date, camp.end_date)}
             />
           ))}
         </div>

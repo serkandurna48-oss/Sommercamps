@@ -1,0 +1,503 @@
+{
+  "columnHeaders": [],
+  "rows": [
+    {
+      "columns": "275.5px 275.5px",
+      "slots": [
+        {
+          "slot": "cp-row-main",
+          "bounds": [
+            40,
+            866,
+            563,
+            66
+          ],
+          "text": "CP-PV000004\nKopieren\n\nNele Wiesenau · Technikcamp Herbst"
+        },
+        {
+          "slot": "cp-row-secondary",
+          "bounds": [
+            40,
+            944,
+            563,
+            16
+          ],
+          "text": "Jule Wiesenau · familie4@campspilot.example"
+        },
+        {
+          "slot": "cp-row-status",
+          "bounds": [
+            40,
+            972,
+            276,
+            54
+          ],
+          "text": "189,00 €\nZahlung offen"
+        },
+        {
+          "slot": "cp-row-action",
+          "bounds": [
+            328,
+            972,
+            276,
+            148
+          ],
+          "text": "Erinnerung kopieren\nIBAN in den Vereinseinstellungen fehlt\nAls bezahlt markieren\nErlassen"
+        }
+      ],
+      "actions": [
+        {
+          "text": "Als bezahlt markieren",
+          "bounds": [
+            328,
+            1024,
+            203,
+            44
+          ]
+        },
+        {
+          "text": "Erinnerung kopieren",
+          "bounds": [
+            328,
+            972,
+            193,
+            44
+          ]
+        },
+        {
+          "text": "Erlassen",
+          "bounds": [
+            328,
+            1076,
+            107,
+            44
+          ]
+        },
+        {
+          "text": "Kopieren",
+          "bounds": [
+            186,
+            866,
+            109,
+            44
+          ]
+        }
+      ]
+    },
+    {
+      "columns": "275.5px 275.5px",
+      "slots": [
+        {
+          "slot": "cp-row-main",
+          "bounds": [
+            40,
+            1161,
+            563,
+            66
+          ],
+          "text": "CP-PV000007\nKopieren\n\nTamo Morgenried · Technikcamp Herbst"
+        },
+        {
+          "slot": "cp-row-secondary",
+          "bounds": [
+            40,
+            1239,
+            563,
+            16
+          ],
+          "text": "Tammo Morgenried · familie7@campspilot.example"
+        },
+        {
+          "slot": "cp-row-status",
+          "bounds": [
+            40,
+            1268,
+            276,
+            54
+          ],
+          "text": "189,00 €\nZahlung offen"
+        },
+        {
+          "slot": "cp-row-action",
+          "bounds": [
+            328,
+            1268,
+            276,
+            148
+          ],
+          "text": "Erinnerung kopieren\nIBAN in den Vereinseinstellungen fehlt\nAls bezahlt markieren\nErlassen"
+        }
+      ],
+      "actions": [
+        {
+          "text": "Als bezahlt markieren",
+          "bounds": [
+            328,
+            1320,
+            203,
+            44
+          ]
+        },
+        {
+          "text": "Erinnerung kopieren",
+          "bounds": [
+            328,
+            1268,
+            193,
+            44
+          ]
+        },
+        {
+          "text": "Erlassen",
+          "bounds": [
+            328,
+            1372,
+            107,
+            44
+          ]
+        },
+        {
+          "text": "Kopieren",
+          "bounds": [
+            186,
+            1161,
+            109,
+            44
+          ]
+        }
+      ]
+    },
+    {
+      "columns": "275.5px 275.5px",
+      "slots": [
+        {
+          "slot": "cp-row-main",
+          "bounds": [
+            40,
+            1457,
+            563,
+            66
+          ],
+          "text": "CP-PV000010\nKopieren\n\nSvea Lindenfels · Technikcamp Herbst"
+        },
+        {
+          "slot": "cp-row-secondary",
+          "bounds": [
+            40,
+            1535,
+            563,
+            16
+          ],
+          "text": "Jule Lindenfels · familie10@campspilot.example"
+        },
+        {
+          "slot": "cp-row-status",
+          "bounds": [
+            40,
+            1563,
+            276,
+            54
+          ],
+          "text": "189,00 €\nZahlung offen"
+        },
+        {
+          "slot": "cp-row-action",
+          "bounds": [
+            328,
+            1563,
+            276,
+            148
+          ],
+          "text": "Erinnerung kopieren\nIBAN in den Vereinseinstellungen fehlt\nAls bezahlt markieren\nErlassen"
+        }
+      ],
+      "actions": [
+        {
+          "text": "Als bezahlt markieren",
+          "bounds": [
+            328,
+            1615,
+            203,
+            44
+          ]
+        },
+        {
+          "text": "Erinnerung kopieren",
+          "bounds": [
+            328,
+            1563,
+            193,
+            44
+          ]
+        },
+        {
+          "text": "Erlassen",
+          "bounds": [
+            328,
+            1667,
+            107,
+            44
+          ]
+        },
+        {
+          "text": "Kopieren",
+          "bounds": [
+            186,
+            1457,
+            109,
+            44
+          ]
+        }
+      ]
+    },
+    {
+      "columns": "275.5px 275.5px",
+      "slots": [
+        {
+          "slot": "cp-row-main",
+          "bounds": [
+            40,
+            1752,
+            563,
+            66
+          ],
+          "text": "CP-PV000013\nKopieren\n\nLevi Falkental · Technikcamp Herbst"
+        },
+        {
+          "slot": "cp-row-secondary",
+          "bounds": [
+            40,
+            1830,
+            563,
+            16
+          ],
+          "text": "Tammo Falkental · familie13@campspilot.example"
+        },
+        {
+          "slot": "cp-row-status",
+          "bounds": [
+            40,
+            1859,
+            276,
+            54
+          ],
+          "text": "189,00 €\nZahlung offen"
+        },
+        {
+          "slot": "cp-row-action",
+          "bounds": [
+            328,
+            1859,
+            276,
+            148
+          ],
+          "text": "Erinnerung kopieren\nIBAN in den Vereinseinstellungen fehlt\nAls bezahlt markieren\nErlassen"
+        }
+      ],
+      "actions": [
+        {
+          "text": "Als bezahlt markieren",
+          "bounds": [
+            328,
+            1911,
+            203,
+            44
+          ]
+        },
+        {
+          "text": "Erinnerung kopieren",
+          "bounds": [
+            328,
+            1859,
+            193,
+            44
+          ]
+        },
+        {
+          "text": "Erlassen",
+          "bounds": [
+            328,
+            1963,
+            107,
+            44
+          ]
+        },
+        {
+          "text": "Kopieren",
+          "bounds": [
+            186,
+            1752,
+            109,
+            44
+          ]
+        }
+      ]
+    },
+    {
+      "columns": "275.5px 275.5px",
+      "slots": [
+        {
+          "slot": "cp-row-main",
+          "bounds": [
+            40,
+            2048,
+            563,
+            66
+          ],
+          "text": "CP-PV000022\nKopieren\n\nNola Wolkenfeld · Wintercamp Ballgefühl"
+        },
+        {
+          "slot": "cp-row-secondary",
+          "bounds": [
+            40,
+            2126,
+            563,
+            16
+          ],
+          "text": "Jule Wolkenfeld · familie22@campspilot.example"
+        },
+        {
+          "slot": "cp-row-status",
+          "bounds": [
+            40,
+            2154,
+            276,
+            54
+          ],
+          "text": "149,00 €\nZahlung offen"
+        },
+        {
+          "slot": "cp-row-action",
+          "bounds": [
+            328,
+            2154,
+            276,
+            148
+          ],
+          "text": "Erinnerung kopieren\nIBAN in den Vereinseinstellungen fehlt\nAls bezahlt markieren\nErlassen"
+        }
+      ],
+      "actions": [
+        {
+          "text": "Als bezahlt markieren",
+          "bounds": [
+            328,
+            2206,
+            203,
+            44
+          ]
+        },
+        {
+          "text": "Erinnerung kopieren",
+          "bounds": [
+            328,
+            2154,
+            193,
+            44
+          ]
+        },
+        {
+          "text": "Erlassen",
+          "bounds": [
+            328,
+            2258,
+            107,
+            44
+          ]
+        },
+        {
+          "text": "Kopieren",
+          "bounds": [
+            186,
+            2048,
+            109,
+            44
+          ]
+        }
+      ]
+    },
+    {
+      "columns": "275.5px 275.5px",
+      "slots": [
+        {
+          "slot": "cp-row-main",
+          "bounds": [
+            40,
+            2343,
+            563,
+            66
+          ],
+          "text": "CP-PV000025\nKopieren\n\nLenn Wiesenau · Wintercamp Ballgefühl"
+        },
+        {
+          "slot": "cp-row-secondary",
+          "bounds": [
+            40,
+            2421,
+            563,
+            16
+          ],
+          "text": "Tammo Wiesenau · familie25@campspilot.example"
+        },
+        {
+          "slot": "cp-row-status",
+          "bounds": [
+            40,
+            2450,
+            276,
+            54
+          ],
+          "text": "149,00 €\nZahlung offen"
+        },
+        {
+          "slot": "cp-row-action",
+          "bounds": [
+            328,
+            2450,
+            276,
+            148
+          ],
+          "text": "Erinnerung kopieren\nIBAN in den Vereinseinstellungen fehlt\nAls bezahlt markieren\nErlassen"
+        }
+      ],
+      "actions": [
+        {
+          "text": "Als bezahlt markieren",
+          "bounds": [
+            328,
+            2502,
+            203,
+            44
+          ]
+        },
+        {
+          "text": "Erinnerung kopieren",
+          "bounds": [
+            328,
+            2450,
+            193,
+            44
+          ]
+        },
+        {
+          "text": "Erlassen",
+          "bounds": [
+            328,
+            2554,
+            107,
+            44
+          ]
+        },
+        {
+          "text": "Kopieren",
+          "bounds": [
+            186,
+            2343,
+            109,
+            44
+          ]
+        }
+      ]
+    }
+  ]
+}

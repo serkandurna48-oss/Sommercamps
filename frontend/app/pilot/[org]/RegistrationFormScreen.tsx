@@ -8,6 +8,7 @@ import { formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/par
 import ExtraQuestions from './ExtraQuestions'
 import { getClubAssets } from './clubAssets'
 import { submitErrorMessage } from './submitError'
+import { parentDetailsOnly, type ParentDetails } from './siblingRegistration'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -66,6 +67,10 @@ export default function RegistrationFormScreen({
   questions = [],
   onBack,
   onSubmitted,
+  parentPrefill,
+  onPrefillConsumed,
+  siblingCamps = [],
+  onCampChange,
 }: {
   orgSlug: string
   orgName: string
@@ -76,11 +81,15 @@ export default function RegistrationFormScreen({
   camp: CampPublic
   questions?: RegistrationQuestion[]
   onBack: () => void
-  onSubmitted: (result: RegistrationCreated, childFirstName: string, parentEmail: string) => void
+  onSubmitted: (result: RegistrationCreated, childFirstName: string, parentEmail: string, parentDetails: ParentDetails) => void
+  parentPrefill?: ParentDetails | null
+  onPrefillConsumed?: () => void
+  siblingCamps?: CampPublic[]
+  onCampChange?: (slug: string) => void
 }) {
   // Hook order (slots 0–8): do not reorder — RegistrationFormScreen.test.tsx
   // mocks React hooks by a shared counter. New hooks go to the end only.
-  const [form, setForm] = useState<FormState>(EMPTY)
+  const [form, setForm] = useState<FormState>({ ...EMPTY, ...(parentPrefill ? parentDetailsOnly(parentPrefill) : {}) })
   const [submitAttempted, setSubmitAttempted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
@@ -108,6 +117,10 @@ export default function RegistrationFormScreen({
   useEffect(() => {
     if (serverError && Object.keys(serverFields).length === 0) serverErrorRef.current?.focus()
   }, [serverError, serverFields])
+  const [wasPrefilled] = useState(Boolean(parentPrefill))
+  useEffect(() => {
+    if (parentPrefill) onPrefillConsumed?.()
+  }, [parentPrefill, onPrefillConsumed])
 
   const assets = getClubAssets(orgSlug)
 
@@ -158,7 +171,9 @@ export default function RegistrationFormScreen({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    onPrefillConsumed?.()
     if (inFlight.current) return
+    if (camp.registration_open === false) return
     setSubmitAttempted(true)
     setServerError(null)
     setErrorStatus(null)
@@ -226,7 +241,7 @@ export default function RegistrationFormScreen({
         else requestAnimationFrame(() => serverErrorRef.current?.focus())
         return
       }
-      onSubmitted(outcome.data, form.childFirstName.trim() || 'Ihr Kind', form.parentEmail.trim())
+      onSubmitted(outcome.data, form.childFirstName.trim() || 'Ihr Kind', form.parentEmail.trim(), parentDetailsOnly(form))
     } catch {
       setErrorStatus(0)
       setServerError(submitErrorMessage(0))
@@ -353,6 +368,29 @@ export default function RegistrationFormScreen({
             <div className="pad form-body">
               <p className="required-hint">Alle mit * markierten Felder sind Pflichtfelder.</p>
 
+              {siblingCamps.length > 1 && onCampChange && (
+                <section className="fsec">
+                  <label htmlFor="sibling_camp" className="field s">
+                    <span className="t-lab">Camp für das weitere Kind</span>
+                    <select id="sibling_camp" name="sibling_camp" value={camp.slug} disabled={submitting} onChange={(event) => {
+                      setForm({ ...EMPTY, ...parentDetailsOnly(form) })
+                      setSubmitAttempted(false)
+                      setServerError(null)
+                      setErrorStatus(null)
+                      setServerFields({})
+                      onCampChange(event.target.value)
+                    }}>
+                      {siblingCamps.map((option) => (
+                        <option key={option.slug} value={option.slug} disabled={!option.registration_open}>
+                          {option.title} · {formatCampDateRange(option.start_date, option.end_date)}
+                          {!option.registration_open ? ' · Anmeldung geschlossen' : option.is_full ? ' · Warteliste' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </section>
+              )}
+
               {/* Section 1: Kind */}
               <section className="fsec sec-rise" data-section="">
 
@@ -442,6 +480,7 @@ export default function RegistrationFormScreen({
                   <span className="fsec-step-lbl">{`SCHRITT 2 VON ${totalSteps}`}</span>
                   <h2 className="d3">Eltern &amp; Notfall</h2>
                 </div>
+                {wasPrefilled && <p className="note quiet">Ihre Angaben aus der letzten Anmeldung – bitte prüfen.</p>}
                 <div className="f">
                   <label htmlFor="parent_name" className={`field${badFields.parentName ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.parentName = el }}>
                     <span className="t-lab">Vor- und Nachname *</span>
@@ -645,7 +684,7 @@ export default function RegistrationFormScreen({
                 <a className="btn primary btn-pill" href={errorStatus === 409 && contactEmail ? `mailto:${contactEmail}` : `/pilot/${orgSlug}`}>
                   {errorStatus === 409 && contactEmail ? 'Kontakt aufnehmen' : 'Alle Camps ansehen'}
                 </a>
-              ) : <button className={`btn primary btn-pill${submitting ? ' done' : ''}`} type="submit" disabled={submitting}>
+              ) : <button className={`btn primary btn-pill${submitting ? ' done' : ''}`} type="submit" disabled={submitting || camp.registration_open === false}>
                 {submitting
                   ? camp.is_full
                     ? 'Wird eingetragen …'

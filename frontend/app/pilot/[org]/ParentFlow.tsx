@@ -26,6 +26,7 @@ import CampSummary from './CampSummary'
 import PublicState from './PublicState'
 import RegistrationUnavailable from './RegistrationUnavailable'
 import RetryButton from './RetryButton'
+import type { ParentDetails } from './siblingRegistration'
 
 type ScreenName = 'org' | 'camp' | 'form' | 'done' | 'wait'
 
@@ -40,6 +41,7 @@ interface DoneState {
   result: RegistrationCreated
   childName: string
   parentEmail: string
+  parentDetails: ParentDetails
 }
 
 export default function ParentFlow({
@@ -65,6 +67,8 @@ export default function ParentFlow({
   )
   const orgContainerRef = useRef<HTMLElement>(null)
   useParentFlowMotion(org.theme, orgContainerRef)
+  const [parentPrefill, setParentPrefill] = useState<ParentDetails | null>(null)
+  const [siblingMode, setSiblingMode] = useState(false)
 
   const selectedCamp = useMemo(() => camps.find((c) => c.slug === selectedSlug) ?? null, [camps, selectedSlug])
   const shortCode = orgShortCode(org.name)
@@ -122,6 +126,8 @@ export default function ParentFlow({
     setScreen('org')
     setSelectedSlug(null)
     setDone(null)
+    setParentPrefill(null)
+    setSiblingMode(false)
     window.scrollTo(0, 0)
   }
 
@@ -157,12 +163,18 @@ export default function ParentFlow({
         hasBankDetails={Boolean(org.iban)}
         camp={selectedCamp}
         questions={org.registration_questions ?? []}
+        parentPrefill={parentPrefill}
+        onPrefillConsumed={() => setParentPrefill(null)}
+        siblingCamps={siblingMode ? camps : []}
+        onCampChange={setSelectedSlug}
         onBack={() => {
+          setParentPrefill(null)
+          setSiblingMode(false)
           setScreen(selectedCamp.is_full ? 'wait' : 'camp')
           window.scrollTo(0, 0)
         }}
-        onSubmitted={(result, childName, parentEmail) => {
-          setDone({ result, childName, parentEmail })
+        onSubmitted={(result, childName, parentEmail, parentDetails) => {
+          setDone({ result, childName, parentEmail, parentDetails })
           setScreen('done')
           window.scrollTo(0, 0)
         }}
@@ -179,6 +191,12 @@ export default function ParentFlow({
         childName={done.childName}
         parentEmail={done.parentEmail}
         onBackToOrg={backToOrg}
+        onRegisterSibling={() => {
+          setParentPrefill(done.parentDetails)
+          setDone(null)
+          setSiblingMode(true)
+          goForm()
+        }}
       />
     )
   }

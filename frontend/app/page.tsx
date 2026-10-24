@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import type { Metadata } from 'next'
-import { Fragment } from 'react'
+import { cache, Fragment } from 'react'
+import { pageMetadata } from './lib/seo'
 import MediaSlideshow from './components/MediaSlideshow'
 import { type CampConfig, fetchCampConfig } from './lib/campConfig'
 import {
@@ -57,14 +58,14 @@ import SiteFooter from './sections/SiteFooter'
  */
 const SECTIONS_OUTSIDE_MAIN: SectionId[] = ['faq']
 
-async function loadConfig(): Promise<CampConfig | null> {
+const loadConfig = cache(async (): Promise<CampConfig | null> => {
   try {
     return await fetchCampConfig()
   } catch (e) {
     console.error('GET /config failed:', e)
     return null
   }
-}
+})
 
 /**
  * Baut die Variablen für die Templates. Altersgrenzen kommen ausschließlich aus
@@ -110,17 +111,12 @@ export async function generateMetadata(): Promise<Metadata> {
   const title = fill(SITE_CONTENT.metaTitle, vars)
   const description = fill(SITE_CONTENT.metaDescription, vars)
 
-  // Kein metadataBase gesetzt (Domain für JK noch nicht final) — deshalb bewusst kein
-  // og:image mit relativer URL, das würde Next zu einer localhost-Warnung im Build führen.
+  const metadata = pageMetadata('/', title, description, CLUB_CONFIG.logoSrc)
   return {
-    title,
-    description,
+    ...metadata,
     openGraph: {
-      title,
-      description,
+      ...metadata.openGraph,
       siteName: CLUB_CONFIG.name,
-      locale: 'de_DE',
-      type: 'website',
     },
   }
 }

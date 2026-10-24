@@ -52,7 +52,7 @@ it.each(['tradition', 'akademie', 'kompakt'] as const)('zeigt beide sekundären 
   expect(button.className).toBe('btn btn-pill')
   expect(link.textContent).toBe('Per WhatsApp teilen')
   expect(link.className).toBe('btn btn-pill')
-  expect(link.href).toBe(`https://wa.me/?text=${encodeURIComponent(`Ich habe mein Kind für ${camp.title} angemeldet: ${window.location.origin}/pilot/testverein`)}`)
+  expect(link.href).toBe(`https://wa.me/?text=${encodeURIComponent(`Ich habe mein Kind für ${camp.title} angemeldet: ${window.location.origin}/pilot/testverein?camp=${encodeURIComponent(camp.slug)}`)}`)
   expect(link.target).toBe('_blank')
   expect(link.rel).toBe('noopener noreferrer')
   expect(link.href).not.toMatch(/test-token|Muster|eva|filter|anmeldung/)

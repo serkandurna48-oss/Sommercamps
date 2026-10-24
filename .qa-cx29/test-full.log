@@ -1,0 +1,17 @@
+START=2026-10-24T22:42:39.578Z
+COMMAND=C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js run test --prefix frontend
+
+> frontend@0.1.0 test
+> vitest run --configLoader native
+
+
+ RUN  v5.0.1 C:/Users/serka/Desktop/Projekte/wt/CX29/frontend
+
+
+ Test Files  90 passed (90)
+      Tests  933 passed (933)
+   Start at  00:42:41
+   Duration  71.55s (tests 46%, import 27%, transform 15%, worker 8%, environment 4%)
+
+
+EXIT_CODE=0

@@ -1,5 +1,8 @@
 import { Oswald, Work_Sans } from 'next/font/google'
 import StagingBanner from '../components/saas/StagingBanner'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { robots: { index: false } }
 
 // Scoped to /pilot only — the legacy KSV/JK site keeps its own Geist fonts
 // (app/layout.tsx). Oswald (condensed, scoreboard/kit-numbering register)

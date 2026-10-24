@@ -1,4 +1,3 @@
-import { readdirSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('next/headers', () => ({ headers: vi.fn() }))
@@ -64,28 +63,19 @@ describe('Sitemap und Robots', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('erlaubt öffentliche Seiten und sperrt alle tatsächlichen Admin-Pfade', async () => {
+  it('sperrt Pilot, Plattform und API für Crawler', async () => {
     const result = await robots()
     expect(result.sitemap).toBe('https://camps.example/sitemap.xml')
     expect(result.rules).toEqual({ userAgent: '*', allow: '/', disallow: [
-      '/platform', '/pilot/*/anmeldungen', '/pilot/*/aufgaben', '/pilot/*/camps',
-      '/pilot/*/dashboard', '/pilot/*/einrichtung', '/pilot/*/export', '/pilot/*/hilfe',
-      '/pilot/*/konfiguration', '/pilot/*/warteliste', '/pilot/*/zahlungen',
-      '/pilot/*/login', '/dev', '/api',
+      '/pilot/', '/platform/', '/api/', '/admin', '/dev/',
     ] })
-    const rules = result.rules as { disallow: string[] }
-    const adminRoutes = readdirSync('app/pilot/[org]/(org-admin)', { withFileTypes: true })
-      .filter(entry => entry.isDirectory()).map(entry => `/pilot/*/${entry.name}`)
-    expect(rules.disallow).toEqual(expect.arrayContaining(adminRoutes))
-    expect(rules.disallow).not.toContain('/pilot')
-    expect(rules.disallow).not.toContain('/campspilot')
   })
 
   it.each([
-    [{ host: 'localhost:3000' }, 'http://localhost:3000'],
-    [{ host: 'verein.example' }, 'https://verein.example'],
-    [{ host: 'internal:3000', 'x-forwarded-host': 'public.example, proxy.example', 'x-forwarded-proto': 'https, http' }, 'https://public.example'],
-  ])('verwendet den CX1-Host-Fallback durchgängig (%j)', async (requestHeaders, origin) => {
+    [{ host: 'localhost:3000' }, 'https://campspilot.de'],
+    [{ host: 'verein.example' }, 'https://campspilot.de'],
+    [{ host: 'internal:3000', 'x-forwarded-host': 'public.example, proxy.example', 'x-forwarded-proto': 'https, http' }, 'https://campspilot.de'],
+  ])('verwendet unabhängig vom Request-Host die feste Fallback-Domain (%j)', async (requestHeaders, origin) => {
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', '')
     vi.mocked(headers).mockResolvedValue(new Headers(requestHeaders as Record<string, string>) as Awaited<ReturnType<typeof headers>>)
     expect(await sitemap()).toEqual([{ url: `${origin}/campspilot` }])

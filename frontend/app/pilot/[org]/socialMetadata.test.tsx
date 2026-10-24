@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { OrganizationPublic } from '../../lib/saasApi'
+import type { CampPublic, OrganizationPublic } from '../../lib/saasApi'
 
 vi.mock('next/headers', () => ({ headers: vi.fn() }))
 vi.mock('../../lib/saasApi', () => ({ fetchOrganization: vi.fn(), fetchCamps: vi.fn() }))
@@ -8,7 +8,7 @@ vi.mock('./ParentFlow', () => ({ default: () => null }))
 vi.mock('./publicFonts', () => ({ publicFontClassName: () => '' }))
 
 import { headers } from 'next/headers'
-import { fetchOrganization } from '../../lib/saasApi'
+import { fetchCamps, fetchOrganization } from '../../lib/saasApi'
 import { generateMetadata } from './page'
 
 const org: OrganizationPublic = {
@@ -34,7 +34,7 @@ describe('Öffentliche Vereinsmetadaten', () => {
     vi.mocked(fetchOrganization).mockResolvedValue({ ...org, intro_text: `${completeWords} Nachwuchstrainingslager mit viel Bewegung` })
     const result = await metadata()
     expect(result.description).toBe(`${completeWords}…`)
-    expect(result.description!.length).toBeLessThanOrEqual(160)
+    expect(result.description!.length).toBeLessThanOrEqual(155)
     expect(result.description).toMatch(/…$/)
   })
 
@@ -54,14 +54,14 @@ describe('Öffentliche Vereinsmetadaten', () => {
     vi.mocked(fetchOrganization).mockResolvedValue({ ...org, intro_text: intro })
     expect((await metadata()).description).toBe(intro)
     vi.mocked(fetchOrganization).mockResolvedValue({ ...org, intro_text: `${intro} und mehr` })
-    expect((await metadata()).description).toBe(`${intro}…`)
+    expect((await metadata()).description).toBe(`${'Camp '.repeat(30).trimEnd()}…`)
   })
 
   it('setzt Titel, Open Graph und Twitter einschließlich absolutem Hero-Bild', async () => {
     expect(await metadata()).toMatchObject({
-      title: 'Camps 2027 – Testverein',
-      openGraph: { title: 'Camps 2027 – Testverein', description: 'Anmeldung zu den Fußballcamps von Testverein', type: 'website', locale: 'de_DE', siteName: 'CampsPilot', images: [{ url: 'https://camps.example/verein/hero.jpg' }] },
-      twitter: { card: 'summary_large_image', title: 'Camps 2027 – Testverein', images: [{ url: 'https://camps.example/verein/hero.jpg' }] },
+      title: 'Fußballcamps – Testverein | Anmeldung',
+      openGraph: { title: 'Fußballcamps – Testverein | Anmeldung', description: 'Anmeldung zu den Fußballcamps von Testverein', type: 'website', locale: 'de_DE', siteName: 'CampsPilot', images: [{ url: 'https://camps.example/verein/hero.jpg' }] },
+      twitter: { card: 'summary_large_image', title: 'Fußballcamps – Testverein | Anmeldung', images: [{ url: 'https://camps.example/verein/hero.jpg' }] },
     })
     expect(headers).not.toHaveBeenCalled()
   })
@@ -81,15 +81,15 @@ describe('Öffentliche Vereinsmetadaten', () => {
     expect((await metadata()).openGraph).toMatchObject({ images: [{ url: 'https://camps.example/pilot/testverein/opengraph-image', width: 1200, height: 630 }] })
   })
 
-  it('verwendet ohne konfigurierte Site-URL den Request-Host', async () => {
+  it('verwendet ohne konfigurierte Site-URL campspilot.de', async () => {
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', '')
-    expect((await metadata()).openGraph).toMatchObject({ images: [{ url: 'https://verein.example/verein/hero.jpg' }] })
+    expect((await metadata()).openGraph).toMatchObject({ images: [{ url: 'https://campspilot.de/verein/hero.jpg' }] })
   })
 
-  it('berücksichtigt den öffentlichen Host und das Protokoll hinter einem Proxy', async () => {
+  it('ignoriert fremde Host-Header beim Fallback', async () => {
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', '')
     vi.mocked(headers).mockResolvedValue(new Headers({ host: 'internal:3000', 'x-forwarded-host': 'public.example', 'x-forwarded-proto': 'https' }) as Awaited<ReturnType<typeof headers>>)
-    expect((await metadata()).openGraph).toMatchObject({ images: [{ url: 'https://public.example/verein/hero.jpg' }] })
+    expect((await metadata()).openGraph).toMatchObject({ images: [{ url: 'https://campspilot.de/verein/hero.jpg' }] })
   })
 
   it('liefert bei einem unbekannten Verein einen neutralen Titel ohne Fehler', async () => {
@@ -102,4 +102,43 @@ describe('Öffentliche Vereinsmetadaten', () => {
     vi.mocked(fetchOrganization).mockRejectedValue(new Error('API unavailable'))
     await expect(metadata()).resolves.toMatchObject({ title: 'CampsPilot' })
   })
+})
+
+it('bevorzugt das Vereinslogo für den geteilten Vereinslink', async () => {
+  vi.mocked(fetchOrganization).mockResolvedValue({ ...org, logo_url: '/verein/logo.png' })
+  expect(await metadata()).toMatchObject({
+    alternates: { canonical: 'https://camps.example/pilot/testverein' },
+    openGraph: { images: [{ url: 'https://camps.example/verein/logo.png' }] },
+  })
+})
+
+it('liefert zum Camp-Link Titel, Beschreibung und Camp-Bild aus denselben öffentlichen Daten', async () => {
+  vi.mocked(fetchCamps).mockResolvedValue([{
+    slug: 'sommer-2027', title: 'Sommercamp 2027',
+    description: 'Fußball, Bewegung und gemeinsame Erlebnisse.', image_url: '/camps/sommer.jpg',
+  } as CampPublic])
+  const result = await generateMetadata({
+    params: Promise.resolve({ org: org.slug }), searchParams: Promise.resolve({ camp: 'sommer-2027' }),
+  })
+  expect(result).toMatchObject({
+    title: 'Sommercamp 2027 – Testverein | Anmeldung',
+    description: 'Fußball, Bewegung und gemeinsame Erlebnisse.',
+    alternates: { canonical: 'https://camps.example/pilot/testverein?camp=sommer-2027' },
+    openGraph: { images: [{ url: 'https://camps.example/camps/sommer.jpg' }] },
+  })
+})
+
+it('verwendet ohne Camp-Text und -Bild einen neutralen Satz und das Vereinslogo', async () => {
+  vi.mocked(fetchOrganization).mockResolvedValue({ ...org, logo_url: 'https://bilder.example/logo.png' })
+  vi.mocked(fetchCamps).mockResolvedValue([{ slug: 'sommer', title: 'Sommercamp' } as CampPublic])
+  expect(await generateMetadata({
+    params: Promise.resolve({ org: org.slug }), searchParams: Promise.resolve({ camp: 'sommer' }),
+  })).toMatchObject({
+    description: 'Informationen und Anmeldung zu Sommercamp von Testverein.',
+    openGraph: { images: [{ url: 'https://bilder.example/logo.png' }] },
+  })
+})
+
+it('indexiert öffentliche Club- und Camp-Seiten unabhängig vom Admin-Layout', async () => {
+  expect((await metadata()).robots).toEqual({ index: true, follow: true })
 })

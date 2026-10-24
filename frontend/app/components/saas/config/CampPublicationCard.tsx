@@ -30,7 +30,7 @@ export default function CampPublicationCard({ orgSlug, org, camp, pending, brand
   const [copyResult, setCopyResult] = useState<'copied' | 'error' | null>(null)
   const preview = useAdminPreview()
   const orgSettings = preview ? '/dev/admin-vorschau/konfiguration' : `/pilot/${orgSlug}/konfiguration`
-  const registrationLink = preview ? '/dev/admin-vorschau' : `/pilot/${orgSlug}`
+  const registrationLink = preview ? '/dev/admin-vorschau' : `/pilot/${encodeURIComponent(orgSlug)}?camp=${encodeURIComponent(camp.slug)}`
   const reachable = org.site_published && camp.status === 'published'
   const checks = [
     { label: 'Kontakt-E-Mail', ready: !!org.contact_email?.trim(), href: `${orgSettings}#contact_email` },

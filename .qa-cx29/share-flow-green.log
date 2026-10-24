@@ -1,0 +1,8 @@
+START=2026-10-24T22:40:40.871Z PID=49280
+COMMAND=C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js run test --prefix frontend -- app/pilot/[org]/siblingRegistration.test.tsx app/pilot/[org]/DoneScreen.actions.test.tsx app/components/saas/config/CampPublicationCard.test.tsx
+
+> frontend@0.1.0 test
+> vitest run --configLoader native app/pilot/[org]/siblingRegistration.test.tsx app/pilot/[org]/DoneScreen.actions.test.tsx app/components/saas/config/CampPublicationCard.test.tsx
+
+
+EXIT_CODE=0

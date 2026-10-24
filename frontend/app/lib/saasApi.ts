@@ -54,6 +54,8 @@ export interface OrganizationPublic {
 export interface CampPublic {
   slug: string
   title: string
+  description?: string | null
+  image_url?: string | null
   start_date: string
   end_date: string
   registration_start: string | null

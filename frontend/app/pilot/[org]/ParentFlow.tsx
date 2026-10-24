@@ -23,6 +23,9 @@ import { useParentFlowMotion } from './motion'
 import { publicUI } from '../../lib/i18n/de'
 import PublicFooter from './PublicFooter'
 import CampSummary from './CampSummary'
+import PublicState from './PublicState'
+import RegistrationUnavailable from './RegistrationUnavailable'
+import RetryButton from './RetryButton'
 
 type ScreenName = 'org' | 'camp' | 'form' | 'done' | 'wait'
 
@@ -130,11 +133,25 @@ export default function ParentFlow({
     }
   }
 
+  if (selectedSlug && !selectedCamp && screen !== 'org') {
+    return <PublicState org={org} title="Camp nicht gefunden"
+      message="Dieses Camp ist nicht mehr verfügbar."
+      instruction="Bitte wählen Sie einen anderen Termin aus der Camp-Übersicht.">
+      <button type="button" className="btn primary btn-pill" onClick={backToOrg}>Alle Camps ansehen</button>
+    </PublicState>
+  }
+
+  if (selectedCamp && !selectedCamp.registration_open && screen !== 'org' && screen !== 'done' && screen !== 'form') {
+    return <RegistrationUnavailable org={org} camp={selectedCamp} onBack={backToOrg} />
+  }
+
   if (screen === 'form' && selectedCamp) {
     return (
       <RegistrationFormScreen
         orgSlug={org.slug}
         orgName={org.name}
+        orgLogoUrl={org.logo_url}
+        contactEmail={org.contact_email}
         hasBankDetails={Boolean(org.iban)}
         camp={selectedCamp}
         questions={org.registration_questions ?? []}
@@ -435,22 +452,18 @@ export default function ParentFlow({
         <div className="camps">
           {camps.length === 0 ? (
             <div className="no-future-camps">
-              <p className="muted" style={{ padding: '24px 0' }}>
-                {hadPastCamps ? 'Neue Termine folgen in Kürze.' : 'Aktuell sind keine Camps veröffentlicht.'}
-              </p>
-              {hadPastCamps && (
-                <a
-                  href={`mailto:${org.contact_email}`}
-                  className="btn btn-pill primary"
-                  style={{ display: 'inline-flex', marginTop: 4, marginBottom: 24 }}
-                >
-                  Kontakt aufnehmen
-                </a>
-              )}
+              <PublicState inline org={org} title="Aktuell keine Camps"
+                message={hadPastCamps ? 'Aktuell sind keine weiteren Camp-Termine veröffentlicht.' : 'Aktuell sind keine Camps veröffentlicht.'}
+                instruction={org.contact_email ? 'Bitte wenden Sie sich bei Fragen zu Terminen an den Verein.' : 'Bitte sehen Sie zu einem späteren Zeitpunkt erneut nach.'}>
+                {org.contact_email
+                  ? <a href={`mailto:${org.contact_email}`} className="btn primary btn-pill">Kontakt aufnehmen</a>
+                  : <RetryButton />}
+              </PublicState>
             </div>
           ) : filteredCamps.length === 0 ? (
             <div className="campfilter-empty">
               <p className="muted">Kein Camp passt zu Ihrer Filterauswahl.</p>
+              <p>Bitte setzen Sie die Filter zurück, um alle Camps anzusehen.</p>
               <button
                 type="button"
                 className="btn"
@@ -554,7 +567,7 @@ export default function ParentFlow({
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }} data-rise>
           <h2 className="d3">Fragen zum Camp?</h2>
           <p style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--ink-2)' }}>
-            Schreiben Sie dem Camp-Team. Wir antworten in der Regel am selben Tag.
+            Schreiben Sie dem Camp-Team, wenn Sie Fragen zum Camp haben.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 14 }}>
             <span className="muted">{contactName}</span>
@@ -601,6 +614,8 @@ export function CampScreen({
   useParentFlowMotion(org.theme, containerRef)
   const headingRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => { headingRef.current?.focus() }, [])
+  if (!camp.registration_open) return <RegistrationUnavailable org={org} camp={camp} onBack={onBack} />
+
   const startDay = parseInt(camp.start_date.slice(8, 10))
   const startMonth = new Date(camp.start_date + 'T12:00:00').toLocaleString('de-DE', { month: 'long' })
 
@@ -733,6 +748,8 @@ function WaitScreen({
   const headingRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => { headingRef.current?.focus() }, [])
 
+  if (!camp.registration_open) return <RegistrationUnavailable org={org} camp={camp} onBack={onBack} />
+
   return (
     <section className="screen" id="s-wait" ref={containerRef}>
       <div className="top">
@@ -742,19 +759,20 @@ function WaitScreen({
           </svg>
         </button>
         <div className="who">
+          {org.logo_url && <Image src={org.logo_url} alt={org.name} width={48} height={48} unoptimized />}
           <b>{org.name}</b>
           <span>{camp.title}</span>
         </div>
       </div>
       <div className="pad sec" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <span className="chip info" style={{ alignSelf: 'flex-start' }}>
+        <span className="chip public-availability" style={{ alignSelf: 'flex-start' }}>
           Ausgebucht
         </span>
         <h1 ref={headingRef} tabIndex={-1} className="d1" data-split style={{ fontSize: 'clamp(27px,6vw,44px)' }}>
           Alle {camp.capacity} Plätze sind vergeben
         </h1>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--ink-2)', maxWidth: '42ch' }}>
-          Sie können Ihr Kind auf die Warteliste setzen. Wird ein Platz frei und rückt Ihr Kind nach, informiert Sie {org.name} persönlich.
+          Sie können Ihr Kind über das Formular auf die Warteliste setzen.
         </p>
         <div className="cap">
           <div className="bar full">
@@ -770,7 +788,7 @@ function WaitScreen({
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
           <h2 className="d3">So läuft die Warteliste</h2>
           <p style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--ink-2)' }}>
-            Sie füllen das Anmeldeformular aus. Auf der Warteliste entstehen noch keine Kosten. Wird ein Platz frei, meldet sich {org.name} direkt bei Ihnen.
+            Auf der Warteliste entstehen noch keine Kosten.
           </p>
           <button className="btn primary" type="button" onClick={onJoinWaitlist} disabled={!camp.registration_open}>
             Auf die Warteliste setzen

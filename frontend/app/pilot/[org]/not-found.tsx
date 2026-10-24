@@ -1,16 +1,18 @@
+import PublicState from './PublicState'
+import RetryButton from './RetryButton'
+import { publicFontClassName } from './publicFonts'
+import './publicTheme.css'
+
 export default function OrgNotFound() {
   return (
-    <main className="min-h-screen bg-[#F0F2ED] px-6 py-16">
-      <div className="mx-auto max-w-md">
-        <p className="text-sm text-[#5B6158]">CampsPilot</p>
-        <h1 className="mt-3 text-3xl font-semibold text-[#14181A] [font-family:var(--font-pilot-display)]">
-          Diese Organisation gibt es hier nicht
-        </h1>
-        <p className="mt-4 text-[15px] leading-relaxed text-[#5B6158]">
-          Der Link, dem Sie gefolgt sind, verweist auf keine hinterlegte Organisation. Bitte
-          prüfen Sie den Link, oder fragen Sie bei der Person nach, die ihn Ihnen geschickt hat.
-        </p>
-      </div>
+    <main className={`cp-public public-state-page ${publicFontClassName('kompakt')}`} data-theme="kompakt">
+      <PublicState
+        title="Vereinsseite nicht verfügbar"
+        message="Unter diesem Link ist kein veröffentlichter Verein erreichbar."
+        instruction="Bitte prüfen Sie den Vereinslink und versuchen Sie es erneut."
+      >
+        <RetryButton />
+      </PublicState>
     </main>
   )
 }

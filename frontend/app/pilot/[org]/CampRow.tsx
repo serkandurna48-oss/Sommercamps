@@ -49,7 +49,7 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
           <span>{formatCampDateRange(camp.start_date, camp.end_date)}</span>
         </span>
         <span className="tags">
-          {camp.is_full && <span className="chip info">Ausgebucht</span>}
+          {camp.is_full && <span className="chip public-availability">Ausgebucht</span>}
           <span className="tag">{camp.age_min}–{camp.age_max} Jahre</span>
           {!camp.is_full && camp.spots_remaining <= 10 && (
             <span className="chip" style={{ color: 'var(--brand-strong)', background: 'transparent', border: '1px solid var(--brand)' }}>
@@ -77,7 +77,7 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
         </span>
         <span className="c-foot">
           <span className="c-price num">{formatPrice(camp.price_cents, camp.currency)}</span>
-          <span className="c-go">{camp.is_full ? 'Auf die Warteliste' : 'Platz sichern'}</span>
+          <span className="c-go">{!camp.registration_open ? 'Anmeldung ansehen' : camp.is_full ? 'Auf die Warteliste' : 'Platz sichern'}</span>
         </span>
       </span>
     </button>

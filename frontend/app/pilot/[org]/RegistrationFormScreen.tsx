@@ -7,6 +7,7 @@ import { submitRegistration } from '../../lib/saasApi'
 import { formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
 import ExtraQuestions from './ExtraQuestions'
 import { getClubAssets } from './clubAssets'
+import { submitErrorMessage } from './submitError'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -58,6 +59,8 @@ type FieldKey =
 export default function RegistrationFormScreen({
   orgSlug,
   orgName,
+  orgLogoUrl,
+  contactEmail,
   hasBankDetails,
   camp,
   questions = [],
@@ -66,6 +69,8 @@ export default function RegistrationFormScreen({
 }: {
   orgSlug: string
   orgName: string
+  orgLogoUrl?: string | null
+  contactEmail?: string | null
   /** Only promise bank details when the organization has supplied an IBAN. */
   hasBankDetails: boolean
   camp: CampPublic
@@ -87,6 +92,10 @@ export default function RegistrationFormScreen({
   useEffect(() => { headingRef.current?.focus() }, [])
   // slot 9: D3c mobile bar toggle
   const [asideOpen, setAsideOpen] = useState(false)
+  const [errorStatus, setErrorStatus] = useState<number | null>(null)
+  useEffect(() => {
+    if (serverError && Object.keys(serverFields).length === 0) serverErrorRef.current?.focus()
+  }, [serverError, serverFields])
 
   const assets = getClubAssets(orgSlug)
 
@@ -142,6 +151,7 @@ export default function RegistrationFormScreen({
     if (inFlight.current) return
     setSubmitAttempted(true)
     setServerError(null)
+    setErrorStatus(null)
     setServerFields({})
 
     const bad: FieldKey[] = []
@@ -188,7 +198,8 @@ export default function RegistrationFormScreen({
         extra_answers: Object.keys(form.extraAnswers).length > 0 ? form.extraAnswers : undefined,
       })
       if (!outcome.ok) {
-        setServerError(outcome.detail)
+        setErrorStatus(outcome.status)
+        setServerError(submitErrorMessage(outcome.status))
         const mapping = {
           child_first_name: 'childFirstName', child_last_name: 'childLastName', child_birth_date: 'childBirthDate',
           parent_first_name: 'parentName', parent_last_name: 'parentName', parent_email: 'parentEmail',
@@ -202,13 +213,12 @@ export default function RegistrationFormScreen({
         setServerFields(fields)
         const first = Object.keys(fields)[0] as FieldKey | undefined
         if (first) focusField(first)
-        else requestAnimationFrame(() => serverErrorRef.current?.focus())
         return
       }
       onSubmitted(outcome.data, form.childFirstName.trim() || 'Ihr Kind', form.parentEmail.trim())
     } catch {
-      setServerError('Die Anmeldung konnte nicht gespeichert werden — Verbindung zum Server fehlgeschlagen. Versuchen Sie es gleich noch mal.')
-      requestAnimationFrame(() => serverErrorRef.current?.focus())
+      setErrorStatus(0)
+      setServerError(submitErrorMessage(0))
     } finally {
       inFlight.current = false
       setSubmitting(false)
@@ -587,12 +597,8 @@ export default function RegistrationFormScreen({
                 </div>
               )}
               {serverError && (
-                <div className="note error" role="alert" tabIndex={-1} ref={serverErrorRef}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--error)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M12 7.5v5.5" />
-                    <path d="M12 16.5v.01" />
-                  </svg>
+                <div className="note public-submit-error" role="alert" tabIndex={-1} ref={serverErrorRef}>
+                  {orgLogoUrl && <Image src={orgLogoUrl} alt={orgName} width={48} height={48} unoptimized />}
                   <span>{serverError}</span>
                 </div>
               )}
@@ -600,15 +606,21 @@ export default function RegistrationFormScreen({
                 <span style={{ fontSize: 14, color: 'var(--ink-2)' }}>{camp.title}, 1 Kind</span>
                 <span className="sum num">{formatPrice(camp.price_cents, camp.currency)}</span>
               </div>
-              <button className={`btn primary btn-pill${submitting ? ' done' : ''}`} type="submit" disabled={submitting}>
+              {serverError && (errorStatus === 409 || errorStatus === 404) ? (
+                <a className="btn primary btn-pill" href={errorStatus === 409 && contactEmail ? `mailto:${contactEmail}` : `/pilot/${orgSlug}`}>
+                  {errorStatus === 409 && contactEmail ? 'Kontakt aufnehmen' : 'Alle Camps ansehen'}
+                </a>
+              ) : <button className={`btn primary btn-pill${submitting ? ' done' : ''}`} type="submit" disabled={submitting}>
                 {submitting
                   ? camp.is_full
                     ? 'Wird eingetragen …'
                     : 'Wird gespeichert …'
+                  : serverError
+                    ? 'Erneut versuchen'
                   : camp.is_full
                     ? 'Auf die Warteliste setzen'
                     : `Verbindlich anmelden · ${formatPrice(camp.price_cents, camp.currency)}`}
-              </button>
+              </button>}
               <span className="fine">
                 {camp.is_full
                   ? 'Auf der Warteliste entstehen noch keine Kosten.'

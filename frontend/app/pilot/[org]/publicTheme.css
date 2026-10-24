@@ -11,6 +11,15 @@
  */
 
 .cp-public {
+  --state-space: 24px;
+  --state-gap: 16px;
+  --state-width: 72ch;
+  --state-heading-width: 20ch;
+  --state-min-height: 100svh;
+  --state-line-width: 1px;
+  --state-focus-width: 2px;
+  --state-focus-offset: 4px;
+  --state-logo-size: 48px;
   --ok: #1c6b45;
   --ok-bg: #e3efe8;
   --ok-line: #a9cdbb;
@@ -34,6 +43,47 @@
   -webkit-font-smoothing: antialiased;
   padding-bottom: 84px;
   overflow-x: hidden;
+}
+
+/* Shared public error and empty states use the active club's tokens. */
+.cp-public.public-state-page {
+  box-sizing: border-box;
+  min-height: var(--state-min-height);
+  padding: var(--state-space);
+  display: grid;
+  align-content: center;
+}
+.cp-public .public-state {
+  display: flex;
+  flex-direction: column;
+  gap: var(--state-gap);
+  padding: var(--state-space);
+  width: 100%;
+  max-width: var(--state-width);
+  margin-inline: auto;
+  background: var(--surface);
+  border: var(--state-line-width) solid var(--line);
+  border-radius: var(--r-card);
+}
+.cp-public .public-state .d2 { max-width: var(--state-heading-width); overflow-wrap: anywhere; hyphens: auto; }
+.cp-public .public-state p { color: var(--ink-2); }
+.cp-public .public-state-brand { display: flex; align-items: center; gap: var(--state-gap); color: var(--brand-strong, var(--ink)); }
+.cp-public .public-state-brand img { width: var(--state-logo-size); height: var(--state-logo-size); object-fit: contain; }
+.cp-public .public-state-action .btn.primary { width: fit-content; max-width: 100%; background: var(--brand-strong, var(--ink)); color: var(--brand-on, var(--paper)); }
+.cp-public .public-state :focus-visible { outline: var(--state-focus-width) solid var(--brand-strong, var(--ink)); outline-offset: var(--state-focus-offset); }
+.cp-public .note.public-submit-error { background: var(--surface); color: var(--ink); border: var(--state-line-width) solid var(--brand-strong, var(--line)); }
+.cp-public .public-submit-error:focus { outline: var(--state-focus-width) solid var(--brand-strong, var(--ink)); outline-offset: var(--state-focus-offset); }
+.cp-public .public-submit-error img { width: var(--state-logo-size); height: var(--state-logo-size); object-fit: contain; }
+.cp-public .no-future-camps { grid-column: 1 / -1; }
+.cp-public .app > .public-state { margin-block: var(--state-space); }
+.cp-public:has(.app > .public-state) { box-sizing: border-box; min-height: var(--state-min-height); padding: var(--state-space); }
+.cp-public .chip.public-availability { color: var(--ink); background: var(--surface); border-color: var(--brand-strong); }
+.cp-public #s-form .dock .btn.primary,
+.cp-public #s-wait .btn.primary { color: var(--brand-on, var(--on-primary)); }
+.cp-public .app:has(> .public-state) {
+  min-height: calc(var(--state-min-height) - var(--state-space) * 2);
+  display: grid;
+  align-content: center;
 }
 
 /* ── Thema 1 · Tradition ── */

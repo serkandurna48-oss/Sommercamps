@@ -30,6 +30,17 @@
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --ok: #4fca7a;    /* Erfolgstext: Kontrast ≥ 9,6:1 auf --night */
   --err: #e06060;   /* Fehlertext:  Kontrast ≥ 5,8:1 auf --night */
+  --faq-width: 720px;
+  --faq-gap: 44px;
+  --faq-padding: 22px;
+  --faq-border: 1px;
+  --faq-question-size: clamp(18px, 2vw, 23px);
+  --faq-question-weight: 600;
+  --faq-answer-gap: 14px;
+  --faq-answer-width: 62ch;
+  --faq-answer-size: 17px;
+  --price-button-bg: var(--ink);
+  --price-button-text: var(--paper);
 
   margin: 0;
   min-height: 100dvh;
@@ -492,6 +503,20 @@
 .cp-scope .metric { background: var(--night); padding: 30px 24px 32px; display: flex; flex-direction: column; gap: 9px; }
 .cp-scope .metric .v { font-size: clamp(30px, 3.9vw, 50px); font-weight: 700; font-stretch: 110%; letter-spacing: -0.035em; line-height: 1; }
 .cp-scope .metric .c { font-size: 15px; line-height: 1.5; color: var(--fog-2); }
+
+/* Price and native FAQ disclosures reuse the section and motion styles. */
+.cp-scope .btn.price-cta {
+  background: var(--price-button-bg);
+  border-color: var(--price-button-bg);
+  color: var(--price-button-text);
+}
+.cp-scope .btn.price-cta::after { background: var(--price-button-text); }
+.cp-scope .btn.price-cta:hover { color: var(--price-button-bg); }
+.cp-scope .faq-list { max-width: var(--faq-width); margin-top: var(--faq-gap); }
+.cp-scope .faq-item { padding-block: var(--faq-padding); border-top: var(--faq-border) solid var(--line-d); }
+.cp-scope .faq-item:last-child { border-bottom: var(--faq-border) solid var(--line-d); }
+.cp-scope .faq-item summary { cursor: pointer; font-size: var(--faq-question-size); font-weight: var(--faq-question-weight); }
+.cp-scope .faq-item p { margin-top: var(--faq-answer-gap); max-width: var(--faq-answer-width); font-size: var(--faq-answer-size); color: var(--fog-2); }
 
 /* ── Abschluss ────────────────────────────────────────────── */
 .cp-scope .close { position: relative; min-height: 88svh; display: flex; align-items: center; overflow: hidden; }

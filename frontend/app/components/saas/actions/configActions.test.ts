@@ -42,6 +42,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(getAdminToken).mockResolvedValue('tok-123')
   vi.mocked(updateOrganizationAdmin).mockResolvedValue(undefined)
+  vi.mocked(createCampAdmin).mockResolvedValue({ slug: 'sommer' } as CampAdmin)
 })
 
 const CAMP_FIELDS = { slug: 'sommer', title: 'Sommer', start_date: '2027-07-05', end_date: '2027-07-09', age_min: '6', age_max: '12', capacity: '20', price_euros: '149.50' }
@@ -50,12 +51,62 @@ it('always creates a draft even when an obsolete immediate-publication field is 
   await createCampAction('demo', { error: null }, makeFormData({ ...CAMP_FIELDS, publish_now: 'on' }))
   expect(createCampAdmin).toHaveBeenCalledWith('demo', 'tok-123', expect.objectContaining({ slug: 'sommer', status: 'draft', price_cents: 14950 }))
   expect(redirect).toHaveBeenCalledWith('/pilot/demo/camps/sommer/konfiguration?created=1')
+  expect(updateCampAdmin).not.toHaveBeenCalled()
+})
+
+const COPY_FIELDS = {
+  ...CAMP_FIELDS, duplicate: '1', status: 'published', currency: 'CHF',
+  registration_start: '2027-01-01T09:00:00+01:00', registration_end: '',
+  location: 'Sportplatz', care_info: 'Ab 8 Uhr', meals_info: 'Mittagessen', includes: 'Ball\nTrikot',
+}
+
+it('legt die Kopie als Entwurf an, ergänzt die weiteren Felder und öffnet die neue Konfiguration', async () => {
+  vi.mocked(createCampAdmin).mockResolvedValueOnce({ slug: 'neue-kopie' } as CampAdmin)
+  await createCampAction('demo', { error: null }, makeFormData(COPY_FIELDS))
+  expect(createCampAdmin).toHaveBeenCalledExactlyOnceWith('demo', 'tok-123', {
+    slug: 'sommer', title: 'Sommer', start_date: '2027-07-05', end_date: '2027-07-09',
+    age_min: 6, age_max: 12, capacity: 20, price_cents: 14950, status: 'draft',
+  })
+  expect(updateCampAdmin).toHaveBeenCalledExactlyOnceWith('demo', 'neue-kopie', 'tok-123', {
+    currency: 'CHF', registration_start: '2027-01-01T08:00:00.000Z', registration_end: null,
+    location: 'Sportplatz', care_info: 'Ab 8 Uhr', meals_info: 'Mittagessen', includes: ['Ball', 'Trikot'], status: 'draft',
+  })
+  expect(vi.mocked(createCampAdmin).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(updateCampAdmin).mock.invocationCallOrder[0])
+  expect(updateOrganizationAdmin).not.toHaveBeenCalled()
+  expect(redirect).toHaveBeenCalledWith('/pilot/demo/camps/neue-kopie/konfiguration?duplicate=1')
+})
+
+it.each(['start_date', 'end_date'])('speichert die Kopie nicht ohne %s', async field => {
+  const result = await createCampAction('demo', { error: null }, makeFormData({ ...COPY_FIELDS, [field]: '' }))
+  expect(result.error).toBe('Bitte alle Pflichtfelder ausfüllen.')
+  expect(createCampAdmin).not.toHaveBeenCalled()
+  expect(updateCampAdmin).not.toHaveBeenCalled()
+})
+
+it('erkennt ungültige Anmeldezeiten vor dem Anlegen', async () => {
+  expect((await createCampAction('demo', { error: null }, makeFormData({ ...COPY_FIELDS, registration_start: 'ungültig' }))).error).toContain('Anmeldezeiten')
+  expect(createCampAdmin).not.toHaveBeenCalled()
+})
+
+it('ergänzt bei einem Adresskonflikt kein bestehendes Camp', async () => {
+  vi.mocked(createCampAdmin).mockRejectedValueOnce(new SlugConflictError('sommer'))
+  const result = await createCampAction('demo', { error: null }, makeFormData(COPY_FIELDS))
+  expect(result.error).toContain('wählen Sie')
+  expect(updateCampAdmin).not.toHaveBeenCalled()
+  expect(redirect).not.toHaveBeenCalled()
+})
+
+it('führt bei fehlgeschlagenem PATCH zum bestehenden Entwurf mit Warnhinweis', async () => {
+  vi.mocked(updateCampAdmin).mockRejectedValueOnce(new Error('PATCH fehlgeschlagen'))
+  await createCampAction('demo', { error: null }, makeFormData(COPY_FIELDS))
+  expect(createCampAdmin).toHaveBeenCalledOnce()
+  expect(redirect).toHaveBeenCalledWith('/pilot/demo/camps/sommer/konfiguration?duplicate=incomplete')
 })
 
 it('describes address conflicts without technical slug wording and does not redirect', async () => {
   vi.mocked(createCampAdmin).mockRejectedValueOnce(new SlugConflictError('sommer'))
   const state = await createCampAction('demo', { error: null }, makeFormData(CAMP_FIELDS))
-  expect(state.error).toBe('Die Web-Adresse „sommer“ ist bereits vergeben – wähle eine andere.')
+  expect(state.error).toBe('Die Web-Adresse „sommer“ ist bereits vergeben – wählen Sie eine andere.')
   expect(redirect).not.toHaveBeenCalled()
 })
 
@@ -72,6 +123,12 @@ it('returns the persisted camp for the publication card', async () => {
   vi.mocked(updateCampAdmin).mockResolvedValueOnce(persisted)
   const state = await updateCampConfigAction('demo', 'sommer', { error: null, saved: false }, makeFormData({ ...CAMP_FIELDS, status: 'published', location: 'Sportplatz' }))
   expect(state).toEqual({ error: null, saved: true, status: 'published', camp: persisted })
+})
+
+it('kann nach einer unvollständigen Kopie auch die Währung korrigieren', async () => {
+  vi.mocked(updateCampAdmin).mockResolvedValueOnce({ slug: 'sommer', currency: 'CHF', status: 'draft' } as CampAdmin)
+  await updateCampConfigAction('demo', 'sommer', { error: null, saved: false }, makeFormData({ ...CAMP_FIELDS, currency: 'CHF', status: 'draft' }))
+  expect(updateCampAdmin).toHaveBeenCalledWith('demo', 'sommer', 'tok-123', expect.objectContaining({ currency: 'CHF' }))
 })
 
 it('passes trainer_image_url and trainer_text to updateOrganizationAdmin', async () => {

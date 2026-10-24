@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { CAMP_STATUSES } from '../../../lib/i18n/de'
 import { parseZonedDateTime } from '../../../lib/dateTimeInput'
-import { createCampAdmin, SlugConflictError, updateCampAdmin, updateOrganizationAdmin, type CampAdmin } from '../../../lib/saasAdminApi'
+import { createCampAdmin, SlugConflictError, updateCampAdmin, updateOrganizationAdmin, type CampAdmin, type CampConfigUpdate } from '../../../lib/saasAdminApi'
 
 export interface ConfigActionState {
   error: string | null
@@ -178,6 +178,7 @@ export async function updateCampConfigAction(
       age_max: ageMax,
       capacity,
       price_cents: Math.round(priceEuros * 100),
+      ...(str(formData, 'currency') ? { currency: str(formData, 'currency') } : {}),
       location: optionalStr(formData, 'location'),
       care_info: optionalStr(formData, 'care_info'),
       meals_info: optionalStr(formData, 'meals_info'),
@@ -230,8 +231,31 @@ export async function createCampAction(
     return { error: 'Zahlenfelder bitte ohne Sonderzeichen eingeben.' }
   }
 
+  const duplicate = str(formData, 'duplicate') === '1'
+  let details: CampConfigUpdate | undefined
+  if (duplicate) {
+    try {
+      const currency = str(formData, 'currency')
+      if (!currency || !/^[A-Z]{3}$/.test(currency)) return { error: 'Bitte eine gültige Währung eingeben.' }
+      const includes = (str(formData, 'includes') ?? '').split('\n').map(line => line.trim()).filter(Boolean)
+      details = {
+        currency,
+        registration_start: parseZonedDateTime(formData.get('registration_start')),
+        registration_end: parseZonedDateTime(formData.get('registration_end')),
+        location: optionalStr(formData, 'location'),
+        care_info: optionalStr(formData, 'care_info'),
+        meals_info: optionalStr(formData, 'meals_info'),
+        includes: includes.length || str(formData, 'includes_null') !== '1' ? includes : null,
+        status: 'draft',
+      }
+    } catch {
+      return { error: 'Bitte prüfen Sie die Anmeldezeiten.' }
+    }
+  }
+
+  let createdCamp: CampAdmin
   try {
-    await createCampAdmin(orgSlug, token, {
+    createdCamp = await createCampAdmin(orgSlug, token, {
       slug,
       title,
       start_date: startDate,
@@ -244,11 +268,21 @@ export async function createCampAction(
     })
   } catch (err) {
     if (err instanceof SlugConflictError) {
-      return { error: `Die Web-Adresse „${slug}“ ist bereits vergeben – wähle eine andere.` }
+      return { error: `Die Web-Adresse „${slug}“ ist bereits vergeben – wählen Sie eine andere.` }
     }
     return { error: 'Camp konnte nicht angelegt werden – Angaben prüfen und erneut versuchen.' }
   }
 
+  let copyIncomplete = false
+  if (details) {
+    try {
+      await updateCampAdmin(orgSlug, createdCamp.slug, token, details)
+    } catch {
+      // The draft already exists. Open it instead of inviting another POST.
+      copyIncomplete = true
+    }
+  }
   revalidatePath(`/pilot/${orgSlug}`, 'layout')
-  redirect(`/pilot/${orgSlug}/camps/${slug}/konfiguration?created=1`)
+  const result = duplicate ? `duplicate=${copyIncomplete ? 'incomplete' : '1'}` : 'created=1'
+  redirect(`/pilot/${orgSlug}/camps/${createdCamp.slug}/konfiguration?${result}`)
 }

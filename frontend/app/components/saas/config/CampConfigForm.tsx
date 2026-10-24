@@ -82,6 +82,9 @@ export default function CampConfigForm({
         <Field label={de.configPage.field.location} htmlFor="location">
           <input id="location" name="location" defaultValue={inputValue('location', camp.location ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
+        <Field label="Währung" htmlFor="currency">
+          <input id="currency" name="currency" required pattern="[A-Z]{3}" defaultValue={inputValue('currency', camp.currency)} className={INPUT_CLASS} style={INPUT_STYLE} />
+        </Field>
       </section>
 
       <section className="cp-card flex flex-col gap-4">
@@ -127,7 +130,7 @@ export default function CampConfigForm({
           <Field label={de.configPage.field.capacity} htmlFor="capacity" suffix="Plätze" hint="Zum Beispiel 24 Plätze.">
             <input id="capacity" name="capacity" type="number" inputMode="numeric" min={1} required defaultValue={inputValue('capacity', camp.capacity)} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
-          <Field label={de.configPage.field.price} htmlFor="price_euros" suffix="€" hint="Zum Beispiel 189,00 €.">
+          <Field label="Preis" htmlFor="price_euros" hint="In der angegebenen Währung, zum Beispiel 189,00.">
             <PriceInput
               id="price_euros"
               name="price_euros"

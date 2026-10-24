@@ -5,10 +5,11 @@ import OrgAdminLayout, { generateMetadata } from '../pilot/[org]/(org-admin)/lay
 import PlatformLayout from '../platform/(console)/layout'
 import OrgSwitcher from '../components/saas/shell/OrgSwitcher'
 import { getAdminToken } from './adminSession'
-import { fetchMe, fetchOrganizationAdmin, type OrganizationAdmin } from './saasAdminApi'
+import { fetchMe, fetchOrganizationAdmin, fetchOrganizationsAdmin, type OrganizationAdmin } from './saasAdminApi'
+import { reviewOrg } from '../platform/reviewFixtures'
 
 vi.mock('./adminSession', () => ({ getAdminToken: vi.fn() }))
-vi.mock('./saasAdminApi', () => ({ fetchMe: vi.fn(), fetchOrganizationAdmin: vi.fn() }))
+vi.mock('./saasAdminApi', () => ({ fetchMe: vi.fn(), fetchOrganizationAdmin: vi.fn(), fetchOrganizationsAdmin: vi.fn() }))
 vi.mock('../components/saas/fonts', () => ({ archivo: { variable: 'test-font' } }))
 vi.mock('../components/saas/GrainOverlay', () => ({ default: () => null }))
 vi.mock('../platform/logoutAction', () => ({ platformLogoutAction: vi.fn() }))
@@ -18,6 +19,7 @@ vi.mock('next/link', () => ({ default: ({ children, ...props }: { children: Reac
 beforeEach(() => {
   vi.resetAllMocks()
   vi.mocked(getAdminToken).mockResolvedValue('local-test-token')
+  vi.mocked(fetchOrganizationsAdmin).mockResolvedValue([])
   vi.mocked(fetchOrganizationAdmin).mockResolvedValue({
     slug: 'club-a', name: 'Unpublished club', logo_url: null,
   } as OrganizationAdmin)
@@ -44,13 +46,16 @@ describe('admin navigation and role context', () => {
 
   it('redirects the platform console for a club admin', async () => {
     await expect(PlatformLayout({ children: null })).rejects.toThrow('redirect:/pilot/club-a/dashboard')
+    expect(fetchOrganizationsAdmin).not.toHaveBeenCalled()
   })
 
   it('lets the owner return from any organization to its platform detail', async () => {
     vi.mocked(fetchMe).mockResolvedValue({ user_id: 'owner', email: null, is_platform_owner: true, admin_organization_slugs: [] })
     const html = renderToStaticMarkup(await orgLayout('club-b'))
     expect(html).toContain('href="/platform/club-b"')
-    await expect(PlatformLayout({ children: null })).resolves.toBeDefined()
+    vi.mocked(fetchOrganizationsAdmin).mockResolvedValue([reviewOrg, { ...reviewOrg, review_status: 'approved' }])
+    const consoleHtml = renderToStaticMarkup(await PlatformLayout({ children: null }))
+    expect(consoleHtml).toContain('Freigaben: 1 warten auf Freigabe')
   })
 
   it('redirects a missing or invalid session to login', async () => {

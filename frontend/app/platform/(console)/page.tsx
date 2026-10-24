@@ -1,22 +1,32 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getValidAccessToken } from '../../lib/supabaseServer'
-import { fetchOrganizationsAdmin, fetchPlatformStats } from '../../lib/saasAdminApi'
+import { fetchCampsAdmin, fetchOrganizationsAdmin, fetchPlatformStats, type OrganizationAdmin } from '../../lib/saasAdminApi'
+import { submittedOrganizations } from '../reviewChecklist'
 import OrganizationList from './OrganizationList'
 import StatsOverview from './StatsOverview'
 import SubmittedOrgsSection from './SubmittedOrgsSection'
+
+async function loadReviewData(organizations: OrganizationAdmin[], token: string) {
+  const submitted = submittedOrganizations(organizations)
+  const campsByOrg = Object.fromEntries(await Promise.all(submitted.map(async org => [
+    org.slug, await fetchCampsAdmin(org.slug, token),
+  ])))
+  // Serialize one server timestamp so the first client render matches the HTML.
+  return { submitted, campsByOrg, loadedAt: Date.now() }
+}
 
 export default async function PlatformPage() {
   const token = await getValidAccessToken()
   if (!token) redirect('/platform/login')
 
   const [organizations, stats] = await Promise.all([fetchOrganizationsAdmin(token), fetchPlatformStats(token)])
-  const submitted = organizations.filter(o => o.review_status === 'submitted')
+  const { submitted, campsByOrg, loadedAt } = await loadReviewData(organizations, token)
 
   return (
     <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
       <StatsOverview stats={stats} />
-      <SubmittedOrgsSection orgs={submitted} />
+      <SubmittedOrgsSection orgs={submitted} campsByOrg={campsByOrg} loadedAt={loadedAt} />
 
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>

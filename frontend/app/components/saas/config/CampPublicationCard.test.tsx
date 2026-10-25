@@ -67,6 +67,6 @@ it('copies the real public registration page and reports clipboard errors', asyn
   await act(async () => copy.click())
   expect(container.querySelector('[role="alert"]')!.textContent).toContain('Kopieren nicht möglich')
   expect(container.querySelector('[role="alert"]')!.textContent).toContain('Bitte öffnen Sie die Elternseite')
-  expect(container.querySelector('a[href="/pilot/review"]')?.textContent).toBe('Elternseite öffnen')
+  expect(container.querySelector('a[href^="/pilot/review?camp="]')?.textContent).toBe('Elternseite öffnen')
   expect(container.textContent).not.toContain('Anmeldelink kopiert.')
 })

@@ -563,6 +563,14 @@
 .cp-scope .price-features li + li { margin-top: var(--price-copy-gap); }
 .cp-scope .price-card .btn { margin-top: auto; padding-inline: var(--price-copy-gap); }
 .cp-scope .price-tax { font-weight: 600; }
+.cp-scope .price-inquiry { text-align: center; color: var(--ink-2); }
+.cp-scope .start-actions { display: flex; flex-wrap: wrap; gap: var(--price-copy-gap); margin-top: var(--price-gap); }
+.cp-scope .pricing-intro { padding-top: var(--anchor-offset); }
+.cp-scope .start-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--price-gap); margin-top: var(--price-grid-gap); padding: 0; list-style: none; }
+.cp-scope .start-steps p { color: var(--ink-2); }
+@media (max-width: 1023px) {
+  .cp-scope .start-steps { grid-template-columns: 1fr; }
+}
 .cp-scope .price-note { margin-top: var(--price-copy-gap); }
 .cp-scope .foot-links { flex-wrap: wrap; }
 @media (max-width: 1023px) {

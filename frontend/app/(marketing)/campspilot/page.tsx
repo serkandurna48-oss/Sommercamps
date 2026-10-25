@@ -7,7 +7,9 @@ import SiteMotion from '../../components/marketing/SiteMotion'
 import { CP_IMAGES } from './images'
 import PilotRequestForm from './PilotRequestForm'
 import { marketingMetadata } from './seoMetadata'
-import { faq, pakete, paketAnfrageHref, preise } from '../preise/pakete'
+import { faq, preise, registrierungHref } from '../preise/pakete'
+import PricingPackages from '../../components/marketing/PricingPackages'
+import StartSteps from '../../components/marketing/StartSteps'
 
 export async function generateMetadata() {
   return marketingMetadata(
@@ -39,7 +41,7 @@ export default function CampsPilotPage() {
             <a href="#preis">{preise.navigation}</a>
             <a href="#pilot">Pilot</a>
           </div>
-          <Link href="/campspilot/registrieren" className="btn sm">Verein kostenlos anlegen</Link>
+          <Link href={registrierungHref} className="btn sm fill">Verein registrieren</Link>
         </div>
       </nav>
 
@@ -66,8 +68,8 @@ export default function CampsPilotPage() {
             <h1 className="d1" id="heroTitle">Jedes Camp beginnt mit einem Zettel.</h1>
             <p className="lead" data-rise="">Und endet in fünf Systemen, die nicht miteinander reden. CampsPilot ist das eine, das übrig bleibt.</p>
             <div className="hero-cta" data-rise="">
-              <a className="btn fill" href="#pilot">Pilotplatz anfragen</a>
-              <a className="btn ghost" href="#ordnung">Wie es funktioniert</a>
+              <Link className="btn fill" href={registrierungHref}>Verein registrieren</Link>
+              <a className="btn ghost" href="#pilot">Unverbindlich anfragen</a>
             </div>
             <div className="scroll-hint" data-rise=""><i />Weiterscrollen</div>
           </div>
@@ -239,8 +241,9 @@ export default function CampsPilotPage() {
             </li>
           </ul>
           <p className="lead fs-brand" data-rise="" style={{ color: 'var(--fog-2)' }}>Ihr Logo, Ihre Farben – die Gastvereine sehen Ihre Marke.</p>
-          <div data-rise="" style={{ marginTop: '32px' }}>
-            <a className="btn fill" href="#pilot">Pilotplatz anfragen</a>
+          <div className="start-actions" data-rise="">
+            <Link className="btn fill" href={registrierungHref}>Verein registrieren</Link>
+            <a className="btn ghost" href="#pilot">Unverbindlich anfragen</a>
           </div>
         </div>
       </section>
@@ -252,26 +255,12 @@ export default function CampsPilotPage() {
             <h2 className="d2" id="preis-heading">{preise.titel}</h2>
             <p className="lead">{preise.einleitung}</p>
           </div>
-          <div className="price-grid">
-            {pakete.map((paket) => (
-              <article className="price-card" key={paket.name} aria-label={paket.name}>
-                <h3 className="d3">{paket.name}</h3>
-                <p className="price-target">{paket.zielgruppe}</p>
-                <p className="price-amount"><strong className="num">{paket.preis} {preise.waehrung}</strong> <span>{preise.zeitraum}</span></p>
-                <p className="price-scope">{paket.umfang}</p>
-                <ul className="price-features">
-                  {paket.features.map((feature) => <li key={feature}>{feature}</li>)}
-                </ul>
-                <a className="btn price-cta" href={paketAnfrageHref(paket.name)}>
-                  {preise.anfrage}<span className="sr"> – {paket.name}</span>
-                </a>
-              </article>
-            ))}
-          </div>
-          <p className="price-tax">{preise.steuerhinweis}</p>
-          {preise.entwurf && <p className="price-note"><small>{preise.saisonhinweis}</small></p>}
+          <PricingPackages />
+          <p className="price-note"><Link href="/preise">Zur Preisübersicht</Link></p>
         </div>
       </section>
+
+      <StartSteps />
 
       <section id="fragen" aria-labelledby="fragen-heading">
         <div className="wrap sec">
@@ -306,17 +295,18 @@ export default function CampsPilotPage() {
         <div className="close-veil" />
         <div className="wrap close-in">
           <div className="sec-head wide">
-            <p className="label" data-rise="">Pilot</p>
-            <h2 className="d2" data-split="">Zwei Vereine sind drauf. Es ist Platz für wenige mehr.</h2>
+            <p className="label" data-rise="">Ihr Start</p>
+            <h2 className="d2" data-split="">Bereit für Ihr nächstes Camp?</h2>
             <p className="lead" style={{ color: 'var(--fog-2)' }} data-rise="">{preise.pilotEinleitung}</p>
           </div>
-          <PilotRequestForm />
+          <div className="start-actions">
+            <Link href={registrierungHref} className="btn fill">Verein registrieren</Link>
+            <a href="#anfrage" className="btn ghost">Unverbindlich anfragen</a>
+          </div>
+          <div id="anfrage"><PilotRequestForm /></div>
           <p className="form-note" id="formNote">
             Aktuelle Pilotvereine: <strong>KSV Baunatal</strong> und <strong>JK Performance Academy</strong>.
           </p>
-          <div style={{ marginTop: '28px' }}>
-            <Link href="/campspilot/registrieren" className="btn fill">Verein kostenlos anlegen</Link>
-          </div>
           <p className="form-note">Bereits registriert? <Link href="/campspilot/anmelden" className="underline">Anmelden</Link></p>
         </div>
       </section>

@@ -194,7 +194,7 @@ describe('CX2 – Preis und Fragen', () => {
   })
 
   it('verlinkt jedes Paket mit seinem Namen zum vorhandenen Anfrageformular', () => {
-    const buttons = Array.from(wrapper.querySelectorAll<HTMLAnchorElement>('#preis a.btn'))
+    const buttons = Array.from(wrapper.querySelectorAll<HTMLAnchorElement>('#preis a.price-inquiry'))
     expect(buttons).toHaveLength(3)
     for (const [index, button] of buttons.entries()) {
       const url = new URL(button.getAttribute('href')!, 'https://campspilot.example')
@@ -329,7 +329,7 @@ describe('fs – Fußballschulen-Abschnitt', () => {
   it('Knopf verweist auf #pilot', () => {
     const btn = sectionEl?.querySelector('a[href="#pilot"]')
     expect(btn).not.toBeNull()
-    expect(btn?.textContent?.trim()).toBe('Pilotplatz anfragen')
+    expect(btn?.textContent?.trim()).toBe('Unverbindlich anfragen')
   })
 
   it('enthält kein „Online-Zahlung"', () => {

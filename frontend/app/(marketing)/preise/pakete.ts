@@ -7,6 +7,14 @@ const features = [
   'Persönlicher Support',
 ] as const
 
+export const registrierungHref = '/campspilot/registrieren'
+
+export const startSchritte = [
+  { titel: 'Verein registrieren', text: 'Legen Sie Ihr Konto an und bestätigen Sie Ihre E-Mail-Adresse.' },
+  { titel: 'Wir prüfen und schalten frei', text: 'Reichen Sie Ihren Verein im Konto zur Freigabe ein. Wir prüfen Ihre Angaben manuell und schalten Ihren Verein nach erfolgreicher Prüfung frei.' },
+  { titel: 'Camp anlegen und Anmeldelink teilen', text: 'Legen Sie Ihr Camp an, veröffentlichen Sie es und teilen Sie den Anmeldelink mit den Eltern.' },
+] as const
+
 export const pakete = [
   { name: 'Start', preis: 199, zielgruppe: 'Für Vereine mit einem Camp in der Saison.', umfang: '1 Camp pro Saison', features },
   { name: 'Verein', preis: 490, zielgruppe: 'Für Vereine mit mehreren Feriencamps.', umfang: 'Bis 5 Camps', features },
@@ -28,7 +36,7 @@ export const preise = {
   paketParameter: 'paket',
   nachricht: 'Ich interessiere mich für das Paket „{paket}“. Bitte senden Sie mir weitere Informationen.',
   faqTitel: 'Häufige Fragen',
-  pilotEinleitung: 'CampsPilot ist im Pilotbetrieb. Erzählen Sie uns von Ihren Camps und Standorten. Gemeinsam klären wir, wie Ihr Verein oder Ihre Fußballschule starten kann.',
+  pilotEinleitung: 'Registrieren Sie Ihren Verein direkt. Nach der E-Mail-Bestätigung reichen Sie ihn im Konto zur manuellen Prüfung ein. Wenn Sie vorher Fragen haben, können Sie uns unverbindlich anfragen.',
 } as const
 
 export const faq = [
@@ -37,7 +45,7 @@ export const faq = [
   { frage: 'Können wir unser Vereinslogo und unsere Farben nutzen?', antwort: 'Ja. Ihre Anmeldeseite nutzt Ihr Vereinslogo und Ihre Vereinsfarbe.' },
   { frage: 'Wo liegen die Daten (Deutschland/EU)?', antwort: 'Die Anmeldedaten speichern wir in einer Datenbank mit EU-Hosting. Details zur Verarbeitung finden Sie in der Datenschutzerklärung der jeweiligen Anmeldeseite.' },
   { frage: 'Können wir jederzeit kündigen?', antwort: 'Sprechen Sie uns an. Laufzeit und Kündigungsbedingungen klären wir mit Ihnen vor dem Start.' },
-  { frage: 'Wie läuft der Start ab?', antwort: 'Sie senden uns eine unverbindliche Anfrage. Gemeinsam klären wir Ihren Bedarf und die Einrichtung Ihres Vereins.' },
+  { frage: 'Wie läuft der Start ab?', antwort: '1) Verein registrieren: Konto anlegen und E-Mail bestätigen; 2) zur Freigabe einreichen: Wir prüfen Ihre Angaben manuell und schalten Ihren Verein nach erfolgreicher Prüfung frei; 3) Camp anlegen, veröffentlichen und den Anmeldelink mit den Eltern teilen.' },
 ] as const
 
 export function paketAnfrageHref(name: string): string {

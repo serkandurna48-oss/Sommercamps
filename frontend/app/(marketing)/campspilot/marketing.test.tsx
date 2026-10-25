@@ -25,7 +25,7 @@ it('führt neue Vereine zur Registrierung und bestehende Vereine direkt zur Anme
   const { default: CampsPilotPage } = await import('./page')
   const dom = document.createElement('div')
   dom.innerHTML = renderToStaticMarkup(createElement(CampsPilotPage))
-  expect(dom.querySelector('a[href="/campspilot/registrieren"]')?.textContent).toContain('Verein kostenlos anlegen')
+  expect(dom.querySelector('a[href="/campspilot/registrieren"]')?.textContent).toContain('Verein registrieren')
   expect(dom.querySelector('a[href="/campspilot/anmelden"]')?.textContent).toBe('Anmelden')
   expect(dom.querySelector('.close-in a[href="/campspilot/anmelden"]')?.textContent).toBe('Anmelden')
   expect(dom.querySelector('.nav-in a[href="/campspilot/anmelden"]')).toBeNull()

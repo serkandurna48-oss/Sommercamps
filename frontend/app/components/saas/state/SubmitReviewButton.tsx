@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { de } from '../../../lib/i18n/de'
 import Button from '../ui/Button'
+import ReviewPending from './ReviewPending'
 
 type SubmitAction = (orgSlug: string, avvVersion: string) => Promise<{ ok: boolean; error?: string }>
 const AVV_VERSION = '2026-10'
@@ -27,21 +28,22 @@ export default function SubmitReviewButton({
   async function handleSubmit() {
     if (!avvChecked) return
     setPhase('submitting')
-    const result = await submitAction(orgSlug, AVV_VERSION)
-    if (result.ok) {
-      setPhase('submitted')
-    } else {
+    try {
+      const result = await submitAction(orgSlug, AVV_VERSION)
+      if (result.ok) {
+        setPhase('submitted')
+      } else {
+        setPhase('error')
+        setErrorMsg(result.error ?? de.onboarding.reviewError)
+      }
+    } catch {
       setPhase('error')
-      setErrorMsg(result.error ?? 'Unbekannter Fehler.')
+      setErrorMsg(de.onboarding.reviewError)
     }
   }
 
   if (phase === 'submitted') {
-    return (
-      <p role="status" className="cp-body mt-3" style={{ color: 'var(--cp-ok, #2d7a3a)' }}>
-        {de.onboarding.reviewPendingBanner}
-      </p>
-    )
+    return <ReviewPending orgSlug={orgSlug} />
   }
 
   return (

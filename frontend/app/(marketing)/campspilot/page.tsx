@@ -317,6 +317,7 @@ export default function CampsPilotPage() {
           <div style={{ marginTop: '28px' }}>
             <Link href="/campspilot/registrieren" className="btn fill">Verein kostenlos anlegen</Link>
           </div>
+          <p className="form-note">Bereits registriert? <Link href="/campspilot/anmelden" className="underline">Anmelden</Link></p>
         </div>
       </section>
 

@@ -21,7 +21,7 @@ export async function loginAction(orgSlug: string, _prev: LoginState, formData: 
   const email = String(formData.get('email') ?? '').trim()
   const password = String(formData.get('password') ?? '')
   if (!email || !password) {
-    return { error: 'Bitte E-Mail und Passwort eingeben.' }
+    return { error: 'Bitte geben Sie Ihre E-Mail-Adresse und Ihr Passwort ein.' }
   }
 
   let accessToken: string
@@ -31,13 +31,13 @@ export async function loginAction(orgSlug: string, _prev: LoginState, formData: 
     const supabase = getSupabaseServerClient()
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error || !data.session) {
-      return { error: 'Anmeldung fehlgeschlagen. E-Mail/Passwort prüfen und erneut versuchen.' }
+      return { error: 'Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre E-Mail-Adresse und Ihr Passwort sowie die Bestätigung Ihrer E-Mail-Adresse. Versuchen Sie es anschließend erneut.' }
     }
     accessToken = data.session.access_token
     expiresIn = data.session.expires_in
     refreshToken = data.session.refresh_token
   } catch {
-    return { error: 'Anmeldung derzeit nicht möglich — Supabase Auth ist nicht konfiguriert.' }
+    return { error: 'Die Anmeldung ist gerade nicht möglich. Bitte versuchen Sie es später erneut.' }
   }
 
   const store = await cookies()
@@ -50,5 +50,6 @@ export async function loginAction(orgSlug: string, _prev: LoginState, formData: 
   store.set(ADMIN_TOKEN_COOKIE, accessToken, { ...cookieBase, maxAge: expiresIn })
   store.set(REFRESH_TOKEN_COOKIE, refreshToken, { ...cookieBase, maxAge: 30 * 24 * 60 * 60 })
 
-  redirect(`/pilot/${orgSlug}/dashboard`)
+  // The platform layout resolves the authenticated user's own club when no slug is known.
+  redirect(orgSlug ? `/pilot/${orgSlug}/dashboard` : '/platform')
 }

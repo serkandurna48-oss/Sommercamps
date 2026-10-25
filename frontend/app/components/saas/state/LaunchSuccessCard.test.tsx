@@ -28,6 +28,7 @@ async function render() {
 it('shows success label, copy-link button and parent-site link', async () => {
   await render()
   expect(container.textContent).toContain('Ihre Anmeldeseite ist live.')
+  expect(container.textContent).toContain('teilen Sie ihn mit den Eltern')
   expect(container.textContent).toContain('Anmeldelink kopieren')
   expect(container.textContent).toContain('Elternseite ansehen')
   const parentLink = container.querySelector<HTMLAnchorElement>('a[href="/pilot/demo"]')
@@ -53,5 +54,7 @@ it('shows an error message when clipboard access is denied', async () => {
   const copyBtn = [...container.querySelectorAll('button')].find(b => b.textContent === 'Anmeldelink kopieren')!
   await act(async () => copyBtn.click())
   expect(container.querySelector('[role="alert"]')?.textContent).toContain('Kopieren nicht möglich')
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain('Bitte öffnen Sie die Elternseite')
+  expect(container.querySelector('a')?.getAttribute('href')).toBe('/pilot/demo')
   expect(container.textContent).not.toContain('Anmeldelink kopiert.')
 })

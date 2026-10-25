@@ -13,6 +13,7 @@ import { de } from '../../../lib/i18n/de'
 import MatchdayBand from '../shell/MatchdayBand'
 import CampCreateForm from '../config/CampCreateForm'
 import SubmitReviewButton from '../state/SubmitReviewButton'
+import ReviewPending from '../state/ReviewPending'
 import Button, { ButtonLink } from '../ui/Button'
 import Field from '../ui/Field'
 import Link from '../preview/AdminLink'
@@ -617,7 +618,7 @@ function Step4Pruefen({
         </ul>
       </section>
 
-      <div className="mb-6">
+      {org.site_published ? <div className="mb-6">
         <ButtonLink
           href={`/pilot/${orgSlug}`}
           variant="secondary"
@@ -626,12 +627,10 @@ function Step4Pruefen({
         >
           {de.einrichtung.previewLink}
         </ButtonLink>
-      </div>
+      </div> : <p className="cp-body mb-6">{de.einrichtung.unpublishedHint}</p>}
 
       {reviewStatus === 'submitted' && (
-        <p role="status" className="cp-body mb-6" style={{ color: 'var(--cp-ok)' }}>
-          {de.einrichtung.pendingBanner}
-        </p>
+        <ReviewPending orgSlug={orgSlug} />
       )}
 
       {reviewStatus === 'approved' && (
@@ -639,6 +638,16 @@ function Step4Pruefen({
           <p className="cp-body mb-3" style={{ color: 'var(--cp-ok)' }}>
             {de.einrichtung.approvedBanner}
           </p>
+          <div className="mb-3 flex flex-wrap gap-3">
+            {!org.site_published && <ButtonLink href={`/pilot/${orgSlug}/konfiguration#publication`} variant="primary" brandStrong={brand.brandStrong} brandOn={brand.brandOn}>
+              {de.einrichtung.publishSite}
+            </ButtonLink>}
+            {camps.filter(camp => camp.status !== 'published').slice(0, 1).map(camp => (
+              <ButtonLink key={camp.slug} href={`/pilot/${orgSlug}/camps/${camp.slug}/konfiguration`} variant="secondary">
+                {de.einrichtung.publishCamp}
+              </ButtonLink>
+            ))}
+          </div>
           <ButtonLink
             href={`/pilot/${orgSlug}/dashboard`}
             variant="primary"

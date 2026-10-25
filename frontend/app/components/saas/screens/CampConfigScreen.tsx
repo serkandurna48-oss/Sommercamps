@@ -7,6 +7,7 @@ import { de, formatDateRange } from '../../../lib/i18n/de'
 import SuccessNote from '../state/SuccessNote'
 import type { CampScreenProps } from './types'
 import { DUPLICATE_SUCCESS } from '../config/campDuplicate'
+import { ButtonLink } from '../ui/Button'
 
 export default function CampConfigScreen({ orgSlug, campSlug, org, camp, created = false, duplicate }: Omit<CampScreenProps, 'registrations'> & { created?: boolean; duplicate?: '1' | 'incomplete' }) {
   if (!camp) return <EmptyCampScreen orgSlug={orgSlug} org={org} />
@@ -37,6 +38,14 @@ export default function CampConfigScreen({ orgSlug, campSlug, org, camp, created
         {duplicate === 'incomplete' && <p role="alert" className="cp-body mb-6" style={{ color: 'var(--cp-error)' }}>Der Entwurf wurde angelegt, aber die weiteren Angaben konnten nicht übernommen werden. Bitte ergänzen Sie Ort, Betreuung, Verpflegung, Leistungen, Währung und Anmeldezeitraum vor der Veröffentlichung.</p>}
         {created && !duplicate && <div className="mb-6"><SuccessNote>Camp angelegt – ergänzen Sie jetzt Ort und Ablauf</SuccessNote></div>}
         <CampConfigForm orgSlug={orgSlug} org={{ site_published: org.site_published, contact_email: org.contact_email, iban: org.iban, terms_text: org.terms_text }} camp={camp} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+        {org.review_status && org.review_status !== 'approved' && (
+          <div className="mt-6 flex flex-col items-start gap-3">
+            <p className="cp-body">{de.einrichtung.continueSetupHint}</p>
+            <ButtonLink href={`/pilot/${orgSlug}/einrichtung?schritt=4`} variant="secondary">
+              {de.einrichtung.continueSetup}
+            </ButtonLink>
+          </div>
+        )}
       </main>
     </>
   )

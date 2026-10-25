@@ -3,6 +3,7 @@ import { ButtonLink } from '../ui/Button'
 import { computeOnboardingSteps } from '../onboardingSteps'
 import { de } from '../../../lib/i18n/de'
 import type { OrganizationAdmin, CampAdmin } from '../../../lib/saasAdminApi'
+import ReviewPending from './ReviewPending'
 
 export default function OnboardingCard({ orgSlug, org, camps, brandStrong, brandOn }: {
   orgSlug: string
@@ -21,6 +22,18 @@ export default function OnboardingCard({ orgSlug, org, camps, brandStrong, brand
   const reviewStatus = org.review_status ?? 'approved'
   const needsReview = reviewStatus === 'draft' || reviewStatus === 'rejected'
   const reviewNote = needsReview && org.review_note ? org.review_note : null
+  const nextPublicationHref = !org.site_published
+    ? `/pilot/${orgSlug}/konfiguration#publication`
+    : `/pilot/${orgSlug}/camps/${camps.find(camp => camp.status !== 'published')?.slug ?? camps[0]?.slug}/konfiguration`
+
+  if (reviewStatus === 'submitted') {
+    return (
+      <div className="cp-card" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
+        <h3 className="cp-heading mb-4">{de.onboarding.reviewPendingTitle}</h3>
+        <ReviewPending orgSlug={orgSlug} />
+      </div>
+    )
+  }
 
   return (
     <div className="cp-card" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
@@ -54,7 +67,7 @@ export default function OnboardingCard({ orgSlug, org, camps, brandStrong, brand
             </p>
           )}
           {activeStep === 3 && (
-            <ButtonLink href={wizardHref4} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
+            <ButtonLink href={needsReview ? wizardHref4 : nextPublicationHref} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
               {needsReview ? de.onboarding.step3ActionSubmit : de.onboarding.step3Action}
             </ButtonLink>
           )}

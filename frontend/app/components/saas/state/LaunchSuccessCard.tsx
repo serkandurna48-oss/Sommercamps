@@ -27,6 +27,7 @@ export default function LaunchSuccessCard({ orgSlug, brandStrong, brandOn }: {
   return (
     <div className="cp-card" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
       <SuccessNote>{de.onboarding.liveLabel}</SuccessNote>
+      <p className="cp-body mt-2">{de.onboarding.liveShareHint}</p>
       <p className="cp-body mt-2 break-all" style={{ color: 'var(--cp-ink-2)' }}>/pilot/{orgSlug}</p>
       <div className="mt-4 flex flex-wrap gap-3">
         <Button type="button" variant="primary" brandStrong={brandStrong} brandOn={brandOn} onClick={copyLink}>
@@ -36,8 +37,8 @@ export default function LaunchSuccessCard({ orgSlug, brandStrong, brandOn }: {
           {de.onboarding.liveOpen}
         </ButtonLink>
       </div>
-      {copyResult === 'copied' && <p role="status" className="cp-body mt-2">Anmeldelink kopiert.</p>}
-      {copyResult === 'error' && <p role="alert" className="cp-body mt-2">Kopieren nicht möglich – bitte die URL aus dem Browser kopieren.</p>}
+      {copyResult === 'copied' && <p role="status" className="cp-body mt-2">{de.onboarding.liveCopied}</p>}
+      {copyResult === 'error' && <p role="alert" className="cp-body mt-2">{de.onboarding.liveCopyError}</p>}
     </div>
   )
 }

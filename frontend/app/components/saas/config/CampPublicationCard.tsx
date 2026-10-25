@@ -60,7 +60,7 @@ export default function CampPublicationCard({ orgSlug, org, camp, pending, brand
           <a href="#registration_start" className="inline-flex min-h-[44px] items-center underline">Anmeldezeitraum bearbeiten</a>
         </div>
       </dl>
-      <p className="cp-body">Prüfe deine gespeicherten Angaben vor der Veröffentlichung. Mit „Camp veröffentlichen“ speicherst du auch deine Änderungen.</p>
+      <p className="cp-body">Prüfen Sie Ihre gespeicherten Angaben vor der Veröffentlichung. Mit „Camp veröffentlichen“ speichern Sie auch Ihre Änderungen.</p>
       <ul className="cp-body">
         {checks.map(check => (
           <li key={check.label} className="flex min-h-[44px] flex-wrap items-center gap-x-2 py-2">
@@ -91,7 +91,7 @@ export default function CampPublicationCard({ orgSlug, org, camp, pending, brand
           <a href={registrationLink} className="inline-flex min-h-[44px] items-center break-all underline">Elternseite öffnen</a>
           <Button type="button" onClick={copyLink}>Anmeldelink kopieren</Button>
           {copyResult === 'copied' && <p role="status">Anmeldelink kopiert.</p>}
-          {copyResult === 'error' && <p role="alert">Kopieren nicht möglich. Öffne die Elternseite und kopiere die Adresse aus deinem Browser.</p>}
+          {copyResult === 'error' && <p role="alert">Kopieren nicht möglich. Bitte öffnen Sie die Elternseite und kopieren Sie dort die Adresse aus Ihrem Browser.</p>}
         </div>
       )}
     </section>

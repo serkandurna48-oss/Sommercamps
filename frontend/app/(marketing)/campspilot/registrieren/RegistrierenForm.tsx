@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 
 const SAAS_URL = () => process.env.NEXT_PUBLIC_SAAS_API_URL ?? 'http://localhost:8000'
@@ -19,7 +19,7 @@ interface SuccessState {
 }
 
 function serverError(status: number): string {
-  if (status === 409) return 'Eine Registrierung mit dieser E-Mail-Adresse ist bereits vorhanden. Bitte melden Sie sich an oder setzen Sie Ihr Passwort zurück.'
+  if (status === 409) return 'Eine Registrierung mit dieser E-Mail-Adresse ist bereits vorhanden. Bitte melden Sie sich über „Zur Anmeldung“ an.'
   if (status === 422) return 'Dieser Vereinsname ist nicht verfügbar oder Ihre Angaben sind ungültig. Bitte prüfen Sie Ihre Eingaben.'
   if (status === 429) return 'Zu viele Registrierungsversuche. Bitte warten Sie eine Stunde und versuchen Sie es erneut.'
   if (status === 503) return 'Registrierung momentan nicht möglich. Bitte versuchen Sie es später erneut.'
@@ -35,7 +35,12 @@ export default function RegistrierenForm() {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState<SuccessState | null>(null)
   const [resendCooldown, setResendCooldown] = useState(0)
+  const [resendFeedback, setResendFeedback] = useState<{ error: boolean; message: string } | null>(null)
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => () => {
+    if (cooldownRef.current) clearInterval(cooldownRef.current)
+  }, [])
 
   function startCooldown() {
     setResendCooldown(60)
@@ -89,14 +94,18 @@ export default function RegistrierenForm() {
   async function handleResend() {
     if (resendCooldown > 0 || !success) return
     startCooldown()
+    setResendFeedback(null)
     try {
-      await fetch(`${SAAS_URL()}/public/signup/resend`, {
+      const res = await fetch(`${SAAS_URL()}/public/signup/resend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: success.email }),
       })
+      setResendFeedback(res.ok
+        ? { error: false, message: 'Erneuter Versand angefragt. Bitte prüfen Sie Ihren Posteingang und Spam-Ordner.' }
+        : { error: true, message: res.status === 429 ? 'Zu viele Versuche. Bitte warten Sie eine Stunde und versuchen Sie es erneut.' : 'Der erneute Versand konnte nicht angefragt werden. Bitte versuchen Sie es später erneut.' })
     } catch {
-      // best-effort: cooldown still applies
+      setResendFeedback({ error: true, message: 'Die Verbindung ist fehlgeschlagen. Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.' })
     }
   }
 
@@ -123,6 +132,8 @@ export default function RegistrierenForm() {
           </p>
         )}
         <p style={{ color: 'var(--fog-3)', fontSize: 15 }}>Der Bestätigungslink ist 24 Stunden gültig.</p>
+        <p>Bitte öffnen Sie den Link in Ihrer E-Mail. Prüfen Sie auch Ihren Spam-Ordner. Kehren Sie danach hierher zurück und klicken Sie auf „Zur Anmeldung“. Speichern Sie die Anmeldeseite als Lesezeichen, damit Sie Ihren Verein später wieder öffnen können.</p>
+        {resendFeedback && <p role={resendFeedback.error ? 'alert' : 'status'}>{resendFeedback.message}</p>}
         <div className="reg-resend-row">
           <button
             type="button"
@@ -146,11 +157,11 @@ export default function RegistrierenForm() {
       <div className="reg-head">
         <p className="label">Kostenlos registrieren</p>
         <h1 className="d2" style={{ marginTop: 12 }}>Verein anlegen.</h1>
-        <p style={{ color: 'var(--fog-2)', fontSize: 17 }}>Wir richten Ihren Verein ein – Sie starten heute noch.</p>
+        <p style={{ color: 'var(--fog-2)', fontSize: 17 }}>Bestätigen Sie Ihre E-Mail-Adresse und richten Sie Ihren Verein ein. Nach dem Einreichen prüfen wir Ihre Angaben, meist innerhalb eines Werktags. Anschließend können Sie Ihre Anmeldeseite veröffentlichen.</p>
       </div>
 
       {serverErr && (
-        <div className="reg-banner error" role="alert">{serverErr}</div>
+        <div className="reg-banner error" role="alert">{serverErr} <Link href="/campspilot/anmelden">Zur Anmeldung</Link></div>
       )}
 
       <div className="reg-field">
@@ -248,8 +259,8 @@ export default function RegistrierenForm() {
 
       <p style={{ color: 'var(--fog-3)', fontSize: 14 }}>
         Bereits registriert?{' '}
-        <Link href="/campspilot" style={{ color: 'var(--fog-2)', textDecoration: 'underline' }}>
-          Zurück zur Übersicht
+        <Link href="/campspilot/anmelden" style={{ color: 'var(--fog-2)', textDecoration: 'underline' }}>
+          Zur Anmeldung
         </Link>
       </p>
     </form>

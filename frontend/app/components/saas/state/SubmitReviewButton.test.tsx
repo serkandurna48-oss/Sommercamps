@@ -88,12 +88,24 @@ describe('SubmitReviewButton', () => {
     await act(async () => {})
     const status = container.querySelector('[role="status"]')
     expect(status?.textContent).toContain('prüfen')
+    expect(status?.textContent).toContain('meist innerhalb eines Werktags')
+    expect(container.querySelector('a[href="/pilot/demo/einrichtung?schritt=4"]')?.textContent?.trim()).toBe('Freigabestatus aktualisieren')
     expect(container.querySelector('[role="dialog"]')).toBeNull()
   })
 
   it('Ablehnungsgrund wird bei rejected angezeigt', async () => {
     await renderBtn(vi.fn(), 'Logo fehlt.')
     expect(container.textContent).toContain('Logo fehlt.')
+  })
+
+  it('Verbindungsfehler beim Einreichen lässt den Verein erneut versuchen', async () => {
+    await renderBtn(vi.fn().mockRejectedValue(new Error('Failed to fetch')))
+    await clickText('Zur Freigabe einreichen')
+    await act(() => getAvvCheckbox().click())
+    await clickText('Jetzt einreichen')
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe('Die Angaben konnten nicht eingereicht werden. Bitte versuchen Sie es erneut.')
+    await clickText('Zur Freigabe einreichen')
+    expect(container.querySelector('[role="dialog"]')).not.toBeNull()
   })
 
   it('Abbrechen schließt Dialog ohne API-Aufruf', async () => {

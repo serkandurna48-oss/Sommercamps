@@ -22,6 +22,7 @@ afterEach(async () => {
   container.remove()
   vi.restoreAllMocks()
   vi.clearAllMocks()
+  vi.unstubAllGlobals()
 })
 
 it('explains the consequence and cancels withdrawal when confirmation is declined', async () => {
@@ -49,4 +50,28 @@ it('publishes a draft without a withdrawal confirmation', async () => {
   await act(async () => container.querySelector('button')!.click())
   expect(window.confirm).not.toHaveBeenCalled()
   expect(setOrganizationPublishedAction).toHaveBeenCalledWith('review', true, { error: null }, expect.any(FormData))
+})
+
+it('Veröffentlichte Vereinsseite: Camp-Prüfung, Elternlink und Kopierbestätigung', async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  vi.stubGlobal('navigator', { clipboard: { writeText } })
+  await act(() => root.render(<PublishToggle orgSlug="testverein" published />))
+  expect(container.textContent).toContain('Auf der Elternseite erscheinen nur veröffentlichte Camps.')
+  expect(container.querySelector('a[href="/pilot/testverein/dashboard"]')?.textContent).toBe('Weiter zur Camp-Übersicht')
+  expect(container.querySelector('a[href="/pilot/testverein"]')?.textContent).toBe('Elternseite ansehen')
+  const copy = [...container.querySelectorAll('button')].find(b => b.textContent === 'Anmeldelink kopieren')!
+  await act(async () => copy.click())
+  expect(writeText).toHaveBeenCalledWith(new URL('/pilot/testverein', window.location.origin).href)
+  expect(container.querySelector('[role="status"]')?.textContent).toBe('Anmeldelink kopiert.')
+  writeText.mockRejectedValueOnce(new Error('denied'))
+  await act(async () => copy.click())
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain('Bitte öffnen Sie die Elternseite')
+  expect(container.querySelector('[role="status"]')).toBeNull()
+})
+
+it('Entwurf: erklärt den nächsten Schritt ohne technische 404-Meldung und ohne teilbaren Elternlink', async () => {
+  await act(() => root.render(<PublishToggle orgSlug="testverein" published={false} />))
+  expect(container.textContent).toContain('Veröffentlichen Sie die Seite nach der Freigabe.')
+  expect(container.textContent).not.toContain('nicht gefunden')
+  expect(container.querySelector('a[href="/pilot/testverein"]')).toBeNull()
 })

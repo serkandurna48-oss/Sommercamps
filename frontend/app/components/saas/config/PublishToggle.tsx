@@ -3,7 +3,9 @@
 import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
 
 import { useActionState, useId } from 'react'
-import Button from '../ui/Button'
+import Button, { ButtonLink } from '../ui/Button'
+import ParentLinkActions from '../state/ParentLinkActions'
+import { de } from '../../../lib/i18n/de'
 import { setOrganizationPublishedAction, type PublishActionState } from '../actions/configActions'
 
 /** Publication is separate from saving organization details. Withdrawal
@@ -52,7 +54,7 @@ export default function PublishToggle({
         <p id={hintId} className="cp-chip mt-0.5" style={{ color: 'var(--cp-muted)' }}>
           {published
             ? 'Die Vereinsseite ist für Eltern erreichbar.'
-            : 'Nur du siehst diesen Verein – die öffentliche Seite antwortet mit „nicht gefunden“, bis du veröffentlichst.'}
+            : 'Ihre Vereinsseite ist noch nicht für Eltern sichtbar. Veröffentlichen Sie die Seite nach der Freigabe.'}
         </p>
         {state.error && (
           <p className="cp-chip mt-1" style={{ color: 'var(--cp-error)' }} id={feedbackId} role="alert">
@@ -74,6 +76,11 @@ export default function PublishToggle({
           {pending ? 'Wird gespeichert …' : published ? 'Vereinsseite zurückziehen' : 'Vereinsseite veröffentlichen'}
         </Button>
       </form>
+      {published && !pending && <div className="flex w-full flex-col items-start gap-3">
+        <p className="cp-body">{de.onboarding.publicationHint}</p>
+        <ButtonLink href={`/pilot/${orgSlug}/dashboard`} variant="secondary">{de.onboarding.publicationNext}</ButtonLink>
+        <ParentLinkActions orgSlug={orgSlug} />
+      </div>}
     </div>
   )
 }

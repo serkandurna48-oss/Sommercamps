@@ -21,6 +21,16 @@ import { createElement } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { pakete, faq } from '../preise/pakete'
 
+it('führt neue Vereine zur Registrierung und bestehende Vereine direkt zur Anmeldung', async () => {
+  const { default: CampsPilotPage } = await import('./page')
+  const dom = document.createElement('div')
+  dom.innerHTML = renderToStaticMarkup(createElement(CampsPilotPage))
+  expect(dom.querySelector('a[href="/campspilot/registrieren"]')?.textContent).toContain('Verein kostenlos anlegen')
+  expect(dom.querySelector('a[href="/campspilot/anmelden"]')?.textContent).toBe('Anmelden')
+  expect(dom.querySelector('.close-in a[href="/campspilot/anmelden"]')?.textContent).toBe('Anmelden')
+  expect(dom.querySelector('.nav-in a[href="/campspilot/anmelden"]')).toBeNull()
+})
+
 // ── Tracking-Variable für m2pin ───────────────────────────────────────────────
 const pinCreatedConfigs: unknown[] = []
 

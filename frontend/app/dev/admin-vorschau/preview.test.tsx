@@ -194,7 +194,7 @@ it('shows onboarding card steps 2 and 3 for the dashboard preview variants', asy
   }))
   expect(step3).toContain('In 3 Schritten zur Anmeldeseite')
   expect(step3).toContain('Seite und Camp veröffentlichen')
-  expect(step3).toContain('href="/dev/admin-vorschau/einrichtung-4"')
+  expect(step3).toContain('href="/dev/admin-vorschau/konfiguration#publication"')
   expect(step3).not.toMatch(/href="\/(pilot|platform)\//)
 })
 

@@ -124,7 +124,7 @@ it('gallery-band shown for ksv-baunatal, hero not duplicated in gallery', () => 
   expect(html).toContain('gallery-band')
   // remaining gallery images (not the hero) are shown
   expect(html).toContain('ksv-torwart.jpg')
-  expect(html).toContain('ksv-gruppenfoto.jpg')
+  expect(html).toContain('ksv-kinder-2027.jpg')
   // ksv-kinder-pokal is the hero — must not also appear inside gallery-band
   const galleryStart = html.indexOf('gallery-band')
   const afterGalleryBand = galleryStart >= 0 ? html.slice(galleryStart) : ''

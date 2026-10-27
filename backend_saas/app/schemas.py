@@ -15,7 +15,7 @@ from datetime import date, datetime
 from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StrictBool, computed_field, field_validator, model_validator
 
 from .utils import is_registration_open
 from .payment_reference import payment_reference as build_payment_reference
@@ -174,6 +174,7 @@ class RegistrationCreate(BaseModel):
 
     medical_notes: Optional[str] = None
     allergies: Optional[str] = None
+    health_data_consent: StrictBool = False
 
     # Eltern-Flow-Auftrag Abschnitt 6.3. Beides Freitext, kein Sonderfeld —
     # siehe Migration 20260922143506 für die Begründung.
@@ -221,6 +222,12 @@ class RegistrationCreate(BaseModel):
         if not value:
             raise ValueError("privacy_accepted must be true")
         return value
+
+    @model_validator(mode="after")
+    def _health_requires_explicit_consent(self):
+        if (self.allergies or self.medical_notes) and self.health_data_consent is not True:
+            raise ValueError("health_data_consent must be true for health data")
+        return self
 
 
 class RegistrationCreated(BaseModel):

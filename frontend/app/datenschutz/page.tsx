@@ -93,7 +93,7 @@ export default function DatenschutzPage() {
               Rechtsgrundlage ist Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;b DSGVO
               (Vertragsanbahnung bzw. Erfüllung eines Vertrages) sowie, soweit gesundheitsbezogene
               Daten (Allergien) angegeben werden, Art.&nbsp;9 Abs.&nbsp;2 lit.&nbsp;a DSGVO
-              (ausdrückliche Einwilligung durch Angabe im Formular).
+              (ausdrückliche Einwilligung erforderlich).
             </p>
           </section>
 
@@ -120,19 +120,19 @@ export default function DatenschutzPage() {
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-3">6. Speicherdauer</h2>
             <p>
-              Kontaktdaten und Campanmeldungen werden für die Anmeldung, Durchführung,
-              Zahlungsabwicklung und notwendige Nachbearbeitung benötigt. Nach Abschluss dieser
-              Zwecke wird geprüft, welche Angaben gelöscht werden können. Gesundheits- und
-              Notfallhinweise werden nur für Vorbereitung und sichere Durchführung benötigt;
-              sie sind nach Campende vorrangig zur Löschung zu prüfen.
+              Für freiwillige Gesundheits- und Notfallinformationen gilt nach der KSV-Betreiberregel
+              eine Löschfrist von 30 Tagen nach Campende. Für allgemeine Anmelde- und
+              Kontaktdaten gilt eine Löschfrist von 12 Monaten nach Campende. Die Löschung
+              wird derzeit manuell geprüft und veranlasst.
+              Rechtlich erforderliche Daten und offene Zahlungsfälle werden gesondert geprüft.
             </p>
             <p className="mt-3">
               Steuerlich relevante Buchungsbelege werden im Rahmen der gesetzlichen Pflichten
               aufbewahrt (für Buchungsbelege grundsätzlich acht Jahre nach § 147 AO).
               Es findet derzeit keine automatische zeitgesteuerte Löschung statt; die erforderliche
               Löschung wird durch den verantwortlichen Verein manuell veranlasst.
-              Anfragen auf frühere Löschung werden individuell geprüft. Backups werden nach
-              den jeweiligen Sicherungs- und Überschreibzyklen des Dienstleisters entfernt.
+              Anfragen auf frühere Löschung werden individuell geprüft. Für Backups gilt die
+              nachzuweisende Providerrotation; eine konkrete Löschfrist ist derzeit nicht belegt.
             </p>
           </section>
 

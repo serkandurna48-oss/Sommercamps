@@ -91,6 +91,7 @@ export interface RegistrationCreateInput {
   emergency_contact_phone?: string | null
   medical_notes?: string | null
   allergies?: string | null
+  health_data_consent?: boolean
   pickup_authorized?: string | null
   photo_permission: boolean
   terms_accepted: boolean

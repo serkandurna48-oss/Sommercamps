@@ -23,6 +23,7 @@ interface FormState {
   parentPhone: string
   emergencyPhone: string
   allergies: string
+  healthDataConsent: boolean
   pickupAuthorized: string
   termsAccepted: boolean
   privacyAccepted: boolean
@@ -40,6 +41,7 @@ const EMPTY: FormState = {
   parentPhone: '',
   emergencyPhone: '',
   allergies: '',
+  healthDataConsent: false,
   pickupAuthorized: '',
   termsAccepted: false,
   privacyAccepted: false,
@@ -57,6 +59,7 @@ type FieldKey =
   | 'emergencyPhone'
   | 'agb'
   | 'privacy'
+  | 'healthDataConsent'
 
 // One source for blur feedback, progress and submit validation.
 function validateForm(form: FormState): Partial<Record<FieldKey, string>> {
@@ -72,6 +75,7 @@ function validateForm(form: FormState): Partial<Record<FieldKey, string>> {
   else if (!PHONE_RE.test(form.emergencyPhone.trim())) bad.emergencyPhone = 'Bitte verwenden Sie nur Ziffern, Leerzeichen und ein + am Anfang.'
   if (!form.termsAccepted) bad.agb = 'Bitte akzeptieren Sie die Teilnahmebedingungen.'
   if (!form.privacyAccepted) bad.privacy = 'Bitte stimmen Sie der Datenschutzerklärung zu.'
+  if (form.allergies.trim() && !form.healthDataConsent) bad.healthDataConsent = 'Bitte stimmen Sie der Verarbeitung der Gesundheitsangaben ausdrücklich zu oder entfernen Sie diese Angaben.'
   return bad
 }
 
@@ -227,7 +231,7 @@ export default function RegistrationFormScreen({
       1: !validation.childFirstName && !validation.childLastName && !validation.childBirthDate,
       2: !validation.parentName && !validation.parentEmail && !validation.parentPhone,
       3: !validation.emergencyPhone,
-      4: form.termsAccepted && form.privacyAccepted && extraDone,
+      4: form.termsAccepted && form.privacyAccepted && !validation.healthDataConsent && extraDone,
     }),
     [form, validation, extraDone],
   )
@@ -277,6 +281,7 @@ export default function RegistrationFormScreen({
         jersey_size: form.jerseySize || null,
         emergency_contact_phone: form.emergencyPhone.trim(),
         allergies: form.allergies.trim() || null,
+        health_data_consent: form.allergies.trim() ? form.healthDataConsent : false,
         pickup_authorized: form.pickupAuthorized.trim() || null,
         terms_accepted: form.termsAccepted,
         privacy_accepted: form.privacyAccepted,
@@ -290,6 +295,7 @@ export default function RegistrationFormScreen({
           child_first_name: 'childFirstName', child_last_name: 'childLastName', child_birth_date: 'childBirthDate',
           parent_first_name: 'parentName', parent_last_name: 'parentName', parent_email: 'parentEmail',
           parent_phone: 'parentPhone', emergency_contact_phone: 'emergencyPhone', terms_accepted: 'agb', privacy_accepted: 'privacy',
+          health_data_consent: 'healthDataConsent',
         } as const
         const fields: Partial<Record<FieldKey, string>> = {}
         for (const [apiField, field] of Object.entries(mapping)) {
@@ -651,6 +657,24 @@ export default function RegistrationFormScreen({
                     />
                     <span className="hint" id="hint-allergies">Freiwillig. Diese Angaben sehen nur die Betreuerinnen und Betreuer Ihres Kindes.</span>
                   </label>
+                  {form.allergies.trim() && (
+                    <label htmlFor="health_data_consent" className={`consent${badFields.healthDataConsent ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.healthDataConsent = el }}>
+                      <input
+                        type="checkbox"
+                        id="health_data_consent"
+                        checked={form.healthDataConsent}
+                        onChange={(e) => set('healthDataConsent', e.target.checked)}
+                        onBlur={() => touch('healthDataConsent')}
+                        aria-invalid={!!badFields.healthDataConsent}
+                        aria-describedby={badFields.healthDataConsent ? 'err-health-consent' : undefined}
+                      />
+                      <span className="txt">
+                        <b>Gesundheitsangaben – ausdrückliche Einwilligung *</b>
+                        <span>Ich willige ausdrücklich ein, dass {orgName} die von mir freiwillig angegebenen Allergien, Medikamente und medizinischen Hinweise meines Kindes zur sicheren Vorbereitung und Durchführung des Camps verarbeitet. {orgSlug === 'ksv-baunatal' && 'Beim KSV werden diese Angaben 30 Tage nach Campende zur manuellen Löschung geprüft. '}Ich kann die Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen; ohne diese Angaben ist die Anmeldung weiterhin möglich.</span>
+                        {badFields.healthDataConsent && <span id="err-health-consent" role="alert" style={{ color: 'var(--error)' }}>{badFields.healthDataConsent}</span>}
+                      </span>
+                    </label>
+                  )}
                   <label htmlFor="pickup_authorized" className="field">
                     <span className="t-lab">Wer darf Ihr Kind abholen?</span>
                     <input

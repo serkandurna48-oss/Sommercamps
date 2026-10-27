@@ -167,7 +167,7 @@ it('liefert aussagekräftige Galerie- und Trainer-Alts und leere Alts für dekor
     host.innerHTML = renderToStaticMarkup(<ParentFlow org={{ ...org, theme }} camps={[camp]} />)
     const gallery = [...host.querySelectorAll<HTMLImageElement>('.gallery-band img')]
     expect(gallery.map(img => img.alt)).toEqual([
-      'Gruppenfoto beim KSV Baunatal', 'Kinder mit Pokal beim KSV Baunatal', 'Torwart beim KSV Baunatal',
+      'Kinder der Fußballschule KSV Baunatal auf dem Trainingsgelände', 'Kinder mit Pokal beim KSV Baunatal', 'Torwart beim KSV Baunatal',
     ])
     expect(host.querySelector<HTMLImageElement>('.trainer-img')?.alt).toBe('Trainerteam von Testverein')
     for (const img of host.querySelectorAll('img')) expect(img.hasAttribute('alt')).toBe(true)

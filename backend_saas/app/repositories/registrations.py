@@ -236,7 +236,7 @@ _INSERT_REGISTRATION = """
         parent_first_name, parent_last_name, parent_email, parent_phone,
         child_first_name, child_last_name, child_birth_date,
         emergency_contact_name, emergency_contact_phone,
-        medical_notes, allergies, jersey_size, pickup_authorized,
+        medical_notes, allergies, health_data_consent, jersey_size, pickup_authorized,
         photo_permission, terms_accepted, privacy_accepted,
         extra_answers
     ) values (
@@ -244,7 +244,7 @@ _INSERT_REGISTRATION = """
         %s, %s, %s, %s,
         %s, %s, %s,
         %s, %s,
-        %s, %s, %s, %s,
+        %s, %s, %s, %s, %s,
         %s, %s, %s,
         %s
     )
@@ -631,6 +631,7 @@ def create_registration(
                 data.emergency_contact_phone,
                 data.medical_notes,
                 data.allergies,
+                data.health_data_consent,
                 data.jersey_size,
                 data.pickup_authorized,
                 data.photo_permission,

@@ -120,6 +120,39 @@ it('submits both consent flags as true when both checkboxes are accepted', async
   expect(onSubmitted).toHaveBeenCalledOnce()
 })
 
+it('requires separate health consent for allergies and sends the consent flag', async () => {
+  const onSubmitted = vi.fn()
+  let nodes = render(onSubmitted)
+  fillRequiredFields(nodes)
+  change(checkbox(nodes, 'Teilnahmebedingungen'), true)
+  change(checkbox(nodes, 'Datenschutz'), true)
+  change(nodes.find(node => node.props.id === 'allergies')!, 'Synthetic allergy')
+  nodes = render(onSubmitted)
+  await submit(nodes)
+  expect(submitRegistration).not.toHaveBeenCalled()
+  expect(render(onSubmitted).some(node => node.props.id === 'err-health-consent')).toBe(true)
+  nodes = render(onSubmitted)
+  change(checkbox(nodes, 'Gesundheitsangaben – ausdrückliche Einwilligung *'), true)
+  nodes = render(onSubmitted)
+  await submit(nodes)
+  expect(submitRegistration).toHaveBeenCalledWith('testverein', 'sommer', expect.objectContaining({
+    allergies: 'Synthetic allergy', health_data_consent: true,
+  }))
+})
+
+it('allows registration without health fields or health consent', async () => {
+  let nodes = render()
+  fillRequiredFields(nodes)
+  change(checkbox(nodes, 'Teilnahmebedingungen'), true)
+  change(checkbox(nodes, 'Datenschutz'), true)
+  nodes = render()
+  expect(nodes.some(node => node.props.id === 'health_data_consent')).toBe(false)
+  await submit(nodes)
+  expect(submitRegistration).toHaveBeenCalledWith('testverein', 'sommer', expect.objectContaining({
+    allergies: null, health_data_consent: false,
+  }))
+})
+
 it('names the waitlist instead of a registration when the camp is full', () => {
   const button = render(vi.fn(), true).find((node) => node.type === 'button' && node.props.type === 'submit')
   expect(button?.props.children).toBe('Auf die Warteliste setzen')

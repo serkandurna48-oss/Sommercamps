@@ -83,7 +83,7 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
               Die Daten werden ausschließlich zur Abwicklung der Camp-Anmeldung verwendet:
               Bestätigung, Organisation vor Ort, Kommunikation mit den Eltern. Rechtsgrundlage ist
               Art. 6 Abs. 1 lit. b DSGVO (Vertragsanbahnung); für Allergien/medizinische Hinweise
-              Art. 9 Abs. 2 lit. a DSGVO (ausdrückliche Einwilligung durch die Angabe im Formular).
+              Art. 9 Abs. 2 lit. a DSGVO (separate ausdrückliche Einwilligung im Formular).
             </p>
           </section>
 
@@ -97,18 +97,17 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
 
           <section id="ds-5">
             <h2>5. Speicherdauer und Löschung</h2>
-            <p>
-              Anmelde-, Kontakt- und Organisationsdaten werden so lange benötigt, wie die Anmeldung,
-              die Durchführung der gebuchten Fußballschule, die Zahlungsabwicklung und berechtigte
-              Rückfragen noch nicht abgeschlossen sind. Danach prüft der verantwortliche Verein,
-              welche Daten nicht mehr erforderlich sind, und veranlasst deren Löschung.
-            </p>
-            <p>
-              Freiwillige Angaben zu Allergien, Medikamenten und Notfällen dienen ausschließlich der
-              sicheren Vorbereitung und Durchführung. Nach Abschluss der Veranstaltung wird ihre
-              weitere Erforderlichkeit vorrangig geprüft. Eine längere Speicherung kommt nur bei einem
-              konkreten, dokumentierten rechtlichen Grund in Betracht.
-            </p>
+            {orgSlug === 'ksv-baunatal' ? <>
+              <p>Für allgemeine Anmelde- und Kontaktdaten gilt eine Löschfrist von 12 Monaten nach
+                Campende. Die Löschung wird derzeit manuell geprüft und veranlasst. Rechtlich erforderliche Daten, insbesondere Buchungsbelege und
+                Daten für offene Zahlungsfälle, bleiben für die jeweilige Pflicht getrennt erhalten.</p>
+              <p>Für freiwillige Gesundheits- und Notfallinformationen (Allergien, medizinische Hinweise)
+                gilt eine Löschfrist von 30 Tagen nach Campende. Die Löschung wird derzeit manuell
+                geprüft und veranlasst. Eine längere Speicherung
+                setzt einen konkreten, dokumentierten rechtlichen Grund voraus.</p>
+            </> : <p>Der verantwortliche Verein prüft nach Campende, welche Anmeldedaten noch für
+              Zahlungsabwicklung, rechtliche Pflichten oder berechtigte Rückfragen erforderlich sind,
+              und veranlasst die Löschung nicht mehr erforderlicher Angaben manuell.</p>}
             <p>
               Buchungsbelege, die gesetzlichen Aufbewahrungspflichten unterliegen, werden getrennt von
               reinen Betreuungsdaten nach den jeweils einschlägigen gesetzlichen Fristen aufbewahrt.
@@ -118,8 +117,8 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
             <p>
               Derzeit erfolgt keine automatische zeitgesteuerte Löschung der Anmeldungen. Der Verein
               prüft Löschanfragen daher individuell und veranlasst erforderliche Löschungen manuell.
-              Technische Sicherungskopien werden nach den jeweiligen Aufbewahrungs- und
-              Überschreibzyklen des eingesetzten Dienstleisters entfernt.
+              Für technische Sicherungskopien gilt die nachzuweisende Rotation des jeweiligen
+              Dienstleisters; eine konkrete Löschfrist für Backups ist derzeit nicht belegt.
             </p>
           </section>
 

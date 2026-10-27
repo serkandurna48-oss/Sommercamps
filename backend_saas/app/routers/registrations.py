@@ -125,13 +125,14 @@ def create_registration(
             camp_slug,
         )
         raise HTTPException(status_code=404, detail="Camp not found") from exc
-    except Exception:
+    except Exception as exc:
         # Never leak a raw psycopg2/PostgreSQL exception (which could
         # include constraint/column names) to the client.
-        logger.exception(
-            "Registration failed with an unexpected error (organization_slug=%s, camp_slug=%s)",
+        logger.error(
+            "Registration failed with an unexpected error (organization_slug=%s, camp_slug=%s, error_type=%s)",
             tenant.slug,
             camp_slug,
+            type(exc).__name__,
         )
         raise HTTPException(status_code=500, detail="Registration could not be processed") from None
 

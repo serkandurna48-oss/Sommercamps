@@ -89,6 +89,39 @@ def _post(client: TestClient, payload: dict, org_slug: str = ORG_SLUG, camp_slug
     )
 
 
+@pytest.mark.parametrize("field", ["allergies", "medical_notes"])
+def test_health_data_requires_explicit_consent_even_when_general_privacy_accepted(monkeypatch, field):
+    _patch_org(monkeypatch)
+    monkeypatch.setattr(registrations_repo, "get_registration_target", lambda tenant, slug: _target())
+    create = pytest.MonkeyPatch()
+    try:
+        called = []
+        create.setattr(registrations_repo, "create_registration", lambda *args: called.append(args))
+        with TestClient(app) as client:
+            for consent in (None, False, "true"):
+                payload = _valid_payload(**{field: "synthetic test note"})
+                if consent is not None:
+                    payload["health_data_consent"] = consent
+                assert _post(client, payload).status_code == 422
+        assert called == []
+    finally:
+        create.undo()
+
+
+def test_health_consent_positive_and_legacy_without_health(monkeypatch):
+    _patch_org(monkeypatch)
+    monkeypatch.setattr(registrations_repo, "get_registration_target", lambda tenant, slug: _target())
+    seen = []
+    def create(tenant, camp, data):
+        seen.append(data)
+        return _fake_created_row()
+    monkeypatch.setattr(registrations_repo, "create_registration", create)
+    with TestClient(app) as client:
+        assert _post(client, _valid_payload(allergies="synthetic", health_data_consent=True)).status_code == 201
+        assert _post(client, _valid_payload()).status_code == 201
+    assert [data.health_data_consent for data in seen] == [True, False]
+
+
 # --------------------------------------------------------------------------
 # Happy path
 # --------------------------------------------------------------------------

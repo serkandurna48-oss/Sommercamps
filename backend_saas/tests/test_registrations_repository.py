@@ -36,6 +36,7 @@ def _target(organization_id, **overrides) -> RegistrationTarget:
         id=uuid4(),
         organization_id=organization_id,
         slug="summer-1",
+        title="Summer Camp Week 1",
         start_date=date(2027, 7, 5),
         end_date=date(2027, 7, 9),
         registration_start=None,

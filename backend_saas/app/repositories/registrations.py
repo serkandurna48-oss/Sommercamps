@@ -177,6 +177,7 @@ class RegistrationTarget:
     id: UUID
     organization_id: UUID
     slug: str
+    title: str
     start_date: date
     end_date: date
     registration_start: Optional[datetime]
@@ -185,7 +186,6 @@ class RegistrationTarget:
     age_max: int
     capacity: int
     status: str
-    title: str = ""
 
 
 _TARGET_FIELDS = """
@@ -330,11 +330,13 @@ _ADMIN_REGISTRATION_FIELDS = """
 """
 
 _LIST_REGISTRATIONS_FOR_CAMP = f"""
-    select {_ADMIN_REGISTRATION_FIELDS}
-    from camp_registrations
-    where organization_id = %s
-      and camp_id = %s
-    order by created_at asc, id asc
+    select c.title as camp_title,
+        {', '.join('r.' + f.strip() for f in _ADMIN_REGISTRATION_FIELDS.strip().split(',') if f.strip())}
+    from camp_registrations r
+    join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
+    where r.organization_id = %s
+      and r.camp_id = %s
+    order by r.created_at asc, r.id asc
 """
 
 

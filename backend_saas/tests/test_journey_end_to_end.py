@@ -224,10 +224,9 @@ def _run_journey(cursor, identities, fake: FakeProvider) -> None:
             json=child_payload("Kind1"),
         ).json()
         assert r1["status"] == "registered"
-        expected_ref_prefix = f"CP-{r1['registration_token'][:8].upper()}"
-        # KV1: payment_reference enthält jetzt auch den Kindnamen (child_first/last_name).
-        assert r1["payment_reference"].startswith(expected_ref_prefix)
-        assert "Kind1" in r1["payment_reference"]
+        expected_ref = f"Sommerreise 2027 CP-{r1['registration_token'][:8].upper()}"
+        assert r1["payment_reference"] == expected_ref
+        assert "Kind1" not in expected_ref
 
         # Bestätigungsmail im FakeProvider: kein Kind- oder Elternname im Betreff
         parent_mails = [m for m in fake.sent if m.to_email == "eva@example.com"]
@@ -236,6 +235,35 @@ def _run_journey(cursor, identities, fake: FakeProvider) -> None:
         assert "Kind1" not in subject1, "Kind-Name darf nicht im Betreff stehen"
         assert "Eva" not in subject1, "Elternname darf nicht im Betreff stehen"
         assert "Anmeldebestätigung" in subject1
+        assert expected_ref in parent_mails[0].html_content
+        assert "Kind1" not in parent_mails[0].html_content
+
+        # Same family, different camp: each response, mail and admin row keeps its own title.
+        req(
+            "POST", f"/admin/organizations/{slug}/camps", 201,
+            json={
+                "slug": "winter", "title": "Winterreise 2027",
+                "start_date": "2027-01-04", "end_date": "2027-01-07",
+                "age_min": 6, "age_max": 12, "capacity": 2, "price_cents": 14900,
+            },
+        )
+        req("PATCH", f"/admin/organizations/{slug}/camps/winter", 200,
+            json={"status": "published"})
+        winter = req(
+            "POST", f"{public}/camps/winter/registrations", 201, None,
+            json=child_payload("Kind1"),
+        ).json()
+        winter_ref = f"Winterreise 2027 CP-{winter['registration_token'][:8].upper()}"
+        assert winter["payment_reference"] == winter_ref
+        assert winter_ref != expected_ref
+        winter_mail = next(m for m in fake.sent if m.to_email == "eva@example.com" and winter_ref in m.html_content)
+        assert "Kind1" not in winter_mail.subject + winter_mail.html_content
+        assert "Eva" not in winter_mail.subject + winter_mail.html_content
+        summer_admin = req("GET", f"/admin/organizations/{slug}/camps/sommer/registrations").json()
+        winter_admin = req("GET", f"/admin/organizations/{slug}/camps/winter/registrations").json()
+        assert [r["payment_reference"] for r in summer_admin] == [expected_ref]
+        assert [r["payment_reference"] for r in winter_admin] == [winter_ref]
+        assert all("camp_title" not in r for r in summer_admin + winter_admin)
 
         # ── Schritt 5: Kind 2 → registered (Camp jetzt voll) ────────────────
         r2 = req(
@@ -257,12 +285,13 @@ def _run_journey(cursor, identities, fake: FakeProvider) -> None:
 
         # ── Schritt 7: Admin markiert Kind 1 als bezahlt ────────────────────
         tok1 = r1["registration_token"]
-        req(
+        payment_update = req(
             "PATCH",
             f"/admin/organizations/{slug}/camps/sommer/registrations/{tok1}/payment-status",
             200,
             json={"payment_status": "paid"},
-        )
+        ).json()
+        assert payment_update["payment_reference"] == expected_ref
         regs = req("GET", f"/admin/organizations/{slug}/camps/sommer/registrations").json()
         paid_reg = next(r for r in regs if r["registration_token"] == tok1)
         assert paid_reg["payment_status"] == "paid"

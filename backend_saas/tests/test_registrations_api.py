@@ -42,6 +42,7 @@ def _target(organization_id=None, **overrides) -> RegistrationTarget:
         id=uuid4(),
         organization_id=organization_id or uuid4(),
         slug=CAMP_SLUG,
+        title="Summer Camp Week 1",
         start_date=date(2027, 7, 5),
         end_date=date(2027, 7, 9),
         registration_start=None,
@@ -120,9 +121,8 @@ def test_response_contains_only_token_status_payment_status(monkeypatch):
     assert set(body.keys()) == {"registration_token", "status", "payment_status", "payment_reference"}
     assert body["status"] == "registered"
     assert body["payment_status"] == "open"
-    # deterministisch aus dem Token abgeleitet (Eltern-Flow-Auftrag Abschnitt
-    # 6.4) — Bestätigungsseite und -mail können ihn unabhängig nachrechnen.
-    assert body["payment_reference"] == f"CP-{body['registration_token'][:8].upper()}"
+    # Deterministic from selected camp title and token; the mail uses the same reference.
+    assert body["payment_reference"] == f"Summer Camp Week 1 CP-{body['registration_token'][:8].upper()}"
 
 
 def test_response_contains_no_internal_ids(monkeypatch):

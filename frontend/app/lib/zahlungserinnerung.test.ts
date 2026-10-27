@@ -46,6 +46,28 @@ describe('Zahlungserinnerung', () => {
     expect(buildOpenPaymentList([changed])).toBe(`Alex Beispiel – Mia Muster – Sommercamp – 149,00 € – ${reference}`)
   })
 
+  it('keeps each camp reference in its own reminder and open-payment list', () => {
+    const winter: ReminderEntry = {
+      ...entry,
+      camp: { ...entry.camp, slug: 'winter', title: 'Winter-Fußballschule 2027' },
+      registration: { ...entry.registration, child_first_name: 'Lena', payment_reference: 'Winter-Fußballschule 2027 CP-12345678' },
+    }
+    const easter: ReminderEntry = {
+      ...entry,
+      camp: { ...entry.camp, slug: 'ostern', title: 'Oster-Fußballschule 2027' },
+      registration: { ...entry.registration, child_first_name: 'Ben', payment_reference: 'Oster-Fußballschule 2027 CP-87654321' },
+    }
+    for (const [current, other] of [[winter, easter], [easter, winter]] as const) {
+      const text = buildPaymentReminder(current, org)!
+      expect(text).toContain(`Verwendungszweck: ${current.registration.payment_reference}`)
+      expect(text).not.toContain(other.registration.payment_reference)
+      expect(text).toContain(current.camp.title)
+    }
+    const list = buildOpenPaymentList([winter, easter])
+    expect(list).toContain('Lena Muster – Winter-Fußballschule 2027 – 149,00 € – Winter-Fußballschule 2027 CP-12345678')
+    expect(list).toContain('Ben Muster – Oster-Fußballschule 2027 – 149,00 € – Oster-Fußballschule 2027 CP-87654321')
+  })
+
   it('formats large amounts in German', () => {
     expect(buildPaymentReminder({ ...entry, camp: { ...entry.camp, price_cents: 123456 } }, org)).toContain('Betrag: 1.234,56 €')
   })

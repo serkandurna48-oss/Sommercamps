@@ -363,6 +363,7 @@ def test_registration_rejected_for_draft_org(monkeypatch):
         id=uuid4(),
         organization_id=org_id,
         slug="sommer-1",
+        title="Summer Camp Week 1",
         start_date=date(2027, 7, 5),
         end_date=date(2027, 7, 9),
         registration_start=None,

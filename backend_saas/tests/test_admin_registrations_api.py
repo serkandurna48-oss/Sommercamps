@@ -1,13 +1,18 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from contextlib import contextmanager
+from datetime import date, datetime, timezone
 from uuid import UUID, uuid4
 
+import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
+from app import db
 from app.main import app
 from app.admin_schemas import RegistrationAdminOut
 from app.schemas import RegistrationCreated
+from app.notifications.templates import build_registration_mail
 from app.repositories import platform_roles
 from app.registration_lifecycle import InvalidStatusTransitionError
 from app.repositories import camps as camps_repo
@@ -118,7 +123,10 @@ def test_list_registrations_success(monkeypatch):
     monkeypatch.setattr(
         registrations_repo,
         "list_registrations_for_camp",
-        lambda org_id, camp_id: [_registration_row(status="registered"), _registration_row(status="waitlist")],
+        lambda org_id, camp_id: [
+            _registration_row(status="registered", camp_title=camp["title"]),
+            _registration_row(status="waitlist", camp_title=camp["title"]),
+        ],
     )
     headers = _auth_headers()
 
@@ -132,20 +140,100 @@ def test_list_registrations_success(monkeypatch):
     # PII fields are present for the admin view (unlike the public API)
     assert body[0]["parent_email"] == "max@example.com"
     for registration in body:
-        assert registration["payment_reference"] == RegistrationCreated.model_validate(registration).payment_reference
+        assert registration["payment_reference"] == RegistrationCreated.model_validate(
+            {**registration, "camp_title": camp["title"]}
+        ).payment_reference
 
 
 def test_admin_payment_reference_matches_parent_schema_without_db_field():
-    row = _registration_row(registration_token=UUID("1a2b3c4d-1234-5678-abcd-123456789abc"))
+    row = _registration_row(
+        registration_token=UUID("1a2b3c4d-1234-5678-abcd-123456789abc"),
+        camp_title="Winter-Fußballschule 2027",
+    )
     assert "payment_reference" not in row
     admin = RegistrationAdminOut.model_validate(row)
     parent = RegistrationCreated.model_validate(row)
-    # KV1: payment_reference enthält jetzt auch den Kindnamen (child_first_name + child_last_name).
-    # _registration_row enthält child_first_name="Lena" und child_last_name="Mustermann".
     assert admin.model_dump(mode="json")["payment_reference"] == parent.payment_reference
-    assert parent.payment_reference.startswith("CP-1A2B3C4D")
-    assert "Lena" in parent.payment_reference
-    assert "Mustermann" in parent.payment_reference
+    assert parent.payment_reference == "Winter-Fußballschule 2027 CP-1A2B3C4D"
+    assert "Lena" not in parent.payment_reference
+    assert "Mustermann" not in parent.payment_reference
+    assert "camp_title" not in admin.model_dump(mode="json")
+
+
+def test_reference_response_requires_camp_title():
+    with pytest.raises(ValidationError):
+        RegistrationCreated.model_validate(_registration_row())
+    with pytest.raises(ValidationError):
+        RegistrationAdminOut.model_validate(_registration_row())
+
+
+def test_camp_registration_query_joins_title_with_tenant_scope(monkeypatch):
+    organization_id, camp_id = uuid4(), uuid4()
+    calls = []
+
+    class Cursor:
+        def execute(self, query, params):
+            calls.append((query, params))
+
+        def fetchall(self):
+            return []
+
+    @contextmanager
+    def cursor():
+        yield Cursor()
+
+    monkeypatch.setattr(db, "get_cursor", cursor)
+    assert registrations_repo.list_registrations_for_camp(organization_id, camp_id) == []
+    [(query, params)] = calls
+    assert "c.title as camp_title" in query
+    assert "c.id = r.camp_id and c.organization_id = r.organization_id" in query
+    assert "r.organization_id = %s" in query and "r.camp_id = %s" in query
+    assert params == (organization_id, camp_id)
+
+
+def test_two_camps_keep_parent_admin_and_mail_references_separate(monkeypatch):
+    org = _org_row()
+    camps = {
+        "winter": {**_camp_row(org["id"], slug="winter"), "title": "Winter-Fußballschule 2027"},
+        "ostern": {**_camp_row(org["id"], slug="ostern"), "title": "Oster-Fußballschule 2027"},
+    }
+    registrations = {
+        slug: _registration_row(
+            registration_token=UUID(token), child_first_name=child,
+            camp_title=camp["title"],
+        )
+        for slug, camp, token, child in (
+            ("winter", camps["winter"], "12345678-1234-4000-8000-000000000001", "Lena"),
+            ("ostern", camps["ostern"], "87654321-1234-4000-8000-000000000002", "Ben"),
+        )
+    }
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org if slug == org["slug"] else None)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camps.get(slug) if org_id == org["id"] else None)
+
+    def list_for_camp(org_id, camp_id):
+        assert org_id == org["id"]
+        return [registrations[slug] for slug, camp in camps.items() if camp["id"] == camp_id]
+
+    monkeypatch.setattr(registrations_repo, "list_registrations_for_camp", list_for_camp)
+    with TestClient(app) as client:
+        for slug, camp in camps.items():
+            response = client.get(f"/admin/organizations/{org['slug']}/camps/{slug}/registrations", headers=_auth_headers())
+            assert response.status_code == 200
+            [admin] = response.json()
+            row = registrations[slug]
+            expected = f"{camp['title']} CP-{str(row['registration_token'])[:8].upper()}"
+            assert admin["payment_reference"] == RegistrationCreated.model_validate(row).payment_reference == expected
+            assert "camp_title" not in admin
+            mail = build_registration_mail(
+                status="registered", org_name=org["name"], org_email=org["contact_email"],
+                org_phone=None, camp_title=camp["title"],
+                camp_start=date(2027, 1, 4), camp_end=date(2027, 1, 7),
+                parent_email=row["parent_email"], payment_reference=expected, iban=None,
+            )
+            assert expected in mail.html_content
+            assert row["child_first_name"] not in mail.html_content
+            assert row["child_last_name"] not in mail.html_content
+        assert client.get("/admin/organizations/other-org/camps/winter/registrations", headers=_auth_headers()).status_code == 404
 
 
 def test_reopen_paid_payment_is_audited(monkeypatch):
@@ -425,6 +513,7 @@ def test_update_payment_status_success(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["payment_status"] == "paid"
+    assert response.json()["payment_reference"] == f"{camp['title']} CP-{str(registration_token)[:8].upper()}"
     assert captured["camp_id"] == camp["id"]
     assert captured["reg_token"] == registration_token
 
@@ -543,6 +632,8 @@ def test_update_registration_details_success(monkeypatch):
     assert response.status_code == 200
     assert response.json()["child_first_name"] == "Lea"
     assert response.json()["allergies"] == "Nüsse"
+    assert response.json()["payment_reference"] == f"{camp['title']} CP-{str(registration_token)[:8].upper()}"
+    assert "Lea" not in response.json()["payment_reference"]
     assert captured["camp_id"] == camp["id"]
     assert captured["reg_token"] == registration_token
     assert captured["child_first_name"] == "Lea"

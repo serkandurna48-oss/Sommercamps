@@ -543,7 +543,7 @@ def update_registration_payment_status(
         target_id=str(registration_token),
         metadata={"payment_status": data.payment_status},
     )
-    return RegistrationAdminOut.model_validate(row)
+    return RegistrationAdminOut.model_validate({**row, "camp_title": camp["title"]})
 
 
 @router.patch(
@@ -591,7 +591,7 @@ def update_registration_details(
         target_id=str(registration_token),
         metadata=None,
     )
-    return RegistrationAdminOut.model_validate(row)
+    return RegistrationAdminOut.model_validate({**row, "camp_title": camp["title"]})
 
 
 # --- CEO-console-only endpoints (feat/platform-foundation) ---------------

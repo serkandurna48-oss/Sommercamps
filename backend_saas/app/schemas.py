@@ -239,7 +239,7 @@ class RegistrationCreated(BaseModel):
     # Legacy response fields stay excluded; the bank reference uses no name.
     child_first_name: str = Field(default='', exclude=True)
     child_last_name: str = Field(default='', exclude=True)
-    camp_title: str = Field(default='', exclude=True)
+    camp_title: str = Field(exclude=True)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

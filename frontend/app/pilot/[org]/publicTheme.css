@@ -1855,6 +1855,16 @@
 .cp-public .h-trad-shot img {
   animation: cp-hero-ken-burns var(--hero-motion-duration) ease-out;
 }
+@keyframes cp-hero-ksv-ken-burns {
+  from { scale: calc(var(--hero-desktop-scale) * 1.08); }
+  to { scale: var(--hero-desktop-scale); }
+}
+@media (min-width: 900px) {
+  .cp-public .h-trad.hero-zoom-desktop .h-trad-shot img {
+    scale: var(--hero-desktop-scale);
+    animation: cp-hero-ksv-ken-burns var(--hero-motion-duration) ease-out;
+  }
+}
 .cp-public .h-akad .bg img {
   animation: cp-hero-ken-burns var(--hero-motion-duration) ease-out;
 }
@@ -2722,6 +2732,14 @@
   flex-wrap: wrap;
   gap: 10px;
 }
+.cp-public .h-trad .hero-btns {
+  align-items: flex-start;
+  margin-top: 4px;
+}
+.cp-public .h-trad .hero-btns button {
+  min-height: 48px;
+  max-width: 100%;
+}
 
 /* ── M7 Legal pages — nav, reading column, typography ── */
 .cp-public .legal-nav {
@@ -3137,6 +3155,54 @@
   padding-bottom: 4px;
 }
 .cp-public .gallery-band::-webkit-scrollbar { display: none; }
+.cp-public .sponsor-section {
+  padding-block: 56px;
+}
+.cp-public .sponsor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 16px;
+}
+.cp-public .sponsor-intro,
+.cp-public .sponsor-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+}
+.cp-public .sponsor-intro p,
+.cp-public .sponsor-entry p {
+  max-width: 65ch;
+  color: var(--ink-2);
+  line-height: 1.65;
+}
+.cp-public .sponsor-contact,
+.cp-public .sponsor-entry a {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 24px;
+  border-radius: 9999px;
+  background: var(--brand-strong);
+  color: var(--brand-on);
+  font-weight: 700;
+  text-decoration: none;
+}
+.cp-public .sponsor-image,
+.cp-public .sponsor-logo {
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+@media (min-width: 900px) {
+  .cp-public .sponsor-intro {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cp-public .sponsor-contact { flex-shrink: 0; }
+}
 .cp-public .gallery-img-wrap {
   position: relative;
   flex: 0 0 78vw;

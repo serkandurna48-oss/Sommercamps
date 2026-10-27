@@ -185,16 +185,16 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
   navCtaShort: 'Anmelden',
   navCtaLong: 'Jetzt anmelden',
 
-  heroBadge: 'Sommercamps 2026 · {clubName}',
+  heroBadge: 'Feriencamps · {clubName}',
   heroHeadlineLines: [
-    { text: '{subtitle} 2026' },
-    { text: 'beim {clubName}', accent: true },
+    { text: '{subtitle}' },
+    { text: '{clubName}', accent: true },
   ],
   heroSubline: '4 Tage professionelles Training, Spaß und Entwicklung[[ für Kinder von {ageRange} Jahren]].',
   heroPrimaryCtaLabel: 'Jetzt Platz sichern',
   heroSecondaryCtaLabel: 'Termine ansehen',
   heroFacts: [
-    { value: '3', label: 'Camp-Termine 2026' },
+    { value: '3', label: 'Camp-Termine' },
     { value: '4 Tage', label: 'je Camp' },
     { value: '{ageRangeSpaced}', label: 'Jahre' },
     { value: '{campPrice}', label: 'Campbeitrag' },
@@ -228,7 +228,7 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
   compactProcessSteps: [],
 
   campDatesEyebrow: 'Wann findet es statt',
-  campDatesHeading: 'Termine 2026',
+  campDatesHeading: 'Termine',
   campDatesMetaParts: ['4 Tage', '10:00–15:00 Uhr', 'Kinder {ageRange} Jahre'],
 
   membershipHeading: '',
@@ -269,8 +269,8 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
   footerPrivacyPurpose: 'der Camp-Anmeldung',
   footerCopyrightName: '{clubName} e.V.',
 
-  metaTitle: '{subtitle} Sommercamp 2026 – {clubName}',
-  metaDescription: 'Melde dein Kind jetzt für das Sommercamp 2026 der {subtitle} {clubName} an. 4 Tage professionelles Training[[ für Kinder von {ageRange} Jahren]].',
+  metaTitle: '{subtitle} {clubName} – Camps und Termine',
+  metaDescription: 'Entdecke die Termine der {subtitle} {clubName}: 4 Tage Training, Spaß und Entwicklung[[ für Kinder von {ageRange} Jahren]].',
 }
 
 export const SECTION_ORDER: SectionId[] =

@@ -129,7 +129,7 @@ it.each(['tradition', 'kompakt'] as const)('%s hero rendert hero-label, Headline
   const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme }} camps={[mockCamp]} />)
   expect(html).toContain('hero-label')
   expect(html).toContain('Unser Fußballsommer')
-  expect(html).toContain('Camps ansehen')
+  expect(html).toContain(theme === 'tradition' ? 'Termine ansehen' : 'Camps ansehen')
   expect(html).toContain('Jetzt anmelden')
 })
 

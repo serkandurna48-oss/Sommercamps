@@ -241,6 +241,7 @@ export default function ParentFlow({
   const heroImageStyle = {
     '--hero-position': heroPosition,
     '--hero-position-mobile': clubAssets?.heroPositionMobile ?? heroPosition,
+    '--hero-desktop-scale': clubAssets?.heroDesktopScale ?? 1,
   } as CSSProperties
   const heroCopyClass = `in-main${heroImg ? ' hero-scrim' : ''}`
 
@@ -265,7 +266,7 @@ export default function ParentFlow({
         const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
         const totalSeats = camps.reduce((s, c) => s + c.capacity, 0)
         return (
-          <header className={`hero h-trad${heroImg ? ' hero-photo' : ''}`} lang="de">
+          <header className={`hero h-trad${heroImg ? ' hero-photo' : ''}${clubAssets?.heroDesktopScale ? ' hero-zoom-desktop' : ''}`} lang="de">
             <nav className="h-trad-nav" aria-label="Seitennavigation">
               <div className="nav-left">
                 <span className="nav-logo-trad">
@@ -288,8 +289,8 @@ export default function ParentFlow({
                 <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
                 <p className="intro">{heroIntro}</p>
                 <div className="hero-btns">
-                  <button className="h-btn-line" type="button" onClick={scrollToCamps}>Camps ansehen</button>
                   <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+                  <button className="h-btn-line" type="button" onClick={scrollToCamps}>Termine ansehen</button>
                 </div>
               </div>
               {camps.length > 0 && (
@@ -523,6 +524,43 @@ export default function ParentFlow({
           )}
         </div>
       </div>
+
+      {clubAssets?.sponsor && (
+        <section className="pad sec sponsor-section" aria-labelledby="sponsor-heading" data-section>
+          <div className="sec-head">
+            <div>
+              <span className="sec-label">Sponsor / Anzeige</span>
+              <h2 className="d2" id="sponsor-heading">{clubAssets.sponsor.heading}</h2>
+            </div>
+          </div>
+          <div className="sponsor-grid">
+            <div className="sponsor-intro card">
+              <p>{clubAssets.sponsor.intro}</p>
+              {org.contact_email && (
+                <a className="sponsor-contact" href={`mailto:${org.contact_email}?subject=${encodeURIComponent(`Partnerschaft ${org.name}`)}`}>
+                  Kontakt zum Verein
+                </a>
+              )}
+            </div>
+            {clubAssets.sponsor.entries.map(entry => {
+              const href = entry.linkHref && (entry.linkHref.startsWith('/') && !entry.linkHref.startsWith('//') || /^https:\/\//i.test(entry.linkHref))
+                ? entry.linkHref : null
+              const logoSrc = entry.logoSrc?.startsWith('/') && !entry.logoSrc.startsWith('//') ? entry.logoSrc : null
+              const imageSrc = entry.imageSrc?.startsWith('/') && !entry.imageSrc.startsWith('//') ? entry.imageSrc : null
+              return (
+                <article className="sponsor-entry card" key={entry.name}>
+                  <span className="sec-label">Sponsor / Anzeige</span>
+                  {logoSrc && <Image src={logoSrc} alt={entry.logoAlt || entry.name} width={180} height={96} unoptimized className="sponsor-logo" />}
+                  {imageSrc && <Image src={imageSrc} alt={entry.imageAlt || entry.name} width={180} height={96} unoptimized className="sponsor-image" />}
+                  <h3 className="d3">{entry.name}</h3>
+                  {entry.text && <p>{entry.text}</p>}
+                  {href && entry.linkLabel && <a href={href} rel={href.startsWith('https://') ? 'noopener noreferrer' : undefined}>{entry.linkLabel}</a>}
+                </article>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── Über uns ── */}
       {org.intro_text?.trim() && (

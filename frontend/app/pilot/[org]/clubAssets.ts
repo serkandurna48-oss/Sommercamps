@@ -7,6 +7,22 @@ export interface ClubAssets {
   logoImage?: string
   heroPosition?: string
   heroPositionMobile?: string
+  /** Optional desktop-only zoom. Mobile keeps its original crop and scale. */
+  heroDesktopScale?: number
+  sponsor?: {
+    heading: string
+    intro: string
+    entries: readonly {
+      name: string
+      text?: string
+      logoSrc?: string
+      logoAlt?: string
+      imageSrc?: string
+      imageAlt?: string
+      linkHref?: string
+      linkLabel?: string
+    }[]
+  }
 }
 
 const ASSETS: Record<string, ClubAssets> = {
@@ -25,6 +41,13 @@ const ASSETS: Record<string, ClubAssets> = {
     logoImage: '/clubs/ksv/ksv-logo.png',
     heroPosition: 'center 30%',
     heroPositionMobile: 'center 15%',
+    heroDesktopScale: 1.08,
+    sponsor: {
+      heading: 'Sponsoren & Partner',
+      intro: 'Sie möchten die Fußballschule KSV Baunatal unterstützen? Sprechen Sie mit uns über Möglichkeiten einer Partnerschaft.',
+      // Add confirmed partners here; an empty list makes no company claims.
+      entries: [],
+    },
   },
 }
 

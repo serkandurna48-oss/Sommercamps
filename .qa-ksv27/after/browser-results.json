@@ -1,0 +1,128 @@
+[
+  {
+    "width": 390,
+    "errors": [],
+    "geometry": {
+      "documentWidth": 390,
+      "viewportWidth": 390,
+      "heroButtons": [
+        {
+          "text": "Jetzt anmelden",
+          "x": 24,
+          "y": 673.75,
+          "width": 145.0625,
+          "height": 48
+        },
+        {
+          "text": "Termine ansehen",
+          "x": 179.0625,
+          "y": 673.75,
+          "width": 159.046875,
+          "height": 49.25
+        }
+      ],
+      "heroImage": "50% 15%",
+      "heroScale": "none",
+      "sponsorCount": 1
+    }
+  },
+  {
+    "width": 1440,
+    "errors": [],
+    "geometry": {
+      "documentWidth": 1440,
+      "viewportWidth": 1440,
+      "heroButtons": [
+        {
+          "text": "Jetzt anmelden",
+          "x": 100.796875,
+          "y": 640.15625,
+          "width": 145.0625,
+          "height": 48
+        },
+        {
+          "text": "Termine ansehen",
+          "x": 255.859375,
+          "y": 640.15625,
+          "width": 159.046875,
+          "height": 49.25
+        }
+      ],
+      "heroImage": "50% 30%",
+      "heroScale": "1.08",
+      "sponsorCount": 1
+    }
+  },
+  {
+    "variant": "ksv",
+    "width": 390,
+    "overview": {
+      "sponsor": 1,
+      "ksvCopy": true,
+      "width": 390
+    },
+    "campDetails": true,
+    "registrationStart": true,
+    "errors": []
+  },
+  {
+    "variant": "ksv",
+    "width": 1440,
+    "overview": {
+      "sponsor": 1,
+      "ksvCopy": true,
+      "width": 1440
+    },
+    "campDetails": true,
+    "registrationStart": true,
+    "errors": []
+  },
+  {
+    "variant": "jk",
+    "width": 390,
+    "overview": {
+      "sponsor": 0,
+      "ksvCopy": false,
+      "width": 390
+    },
+    "campDetails": true,
+    "registrationStart": true,
+    "errors": []
+  },
+  {
+    "variant": "jk",
+    "width": 1440,
+    "overview": {
+      "sponsor": 0,
+      "ksvCopy": false,
+      "width": 1440
+    },
+    "campDetails": true,
+    "registrationStart": true,
+    "errors": []
+  },
+  {
+    "variant": "neutral",
+    "width": 390,
+    "overview": {
+      "sponsor": 0,
+      "ksvCopy": false,
+      "width": 390
+    },
+    "campDetails": true,
+    "registrationStart": true,
+    "errors": []
+  },
+  {
+    "variant": "neutral",
+    "width": 1440,
+    "overview": {
+      "sponsor": 0,
+      "ksvCopy": false,
+      "width": 1440
+    },
+    "campDetails": true,
+    "registrationStart": true,
+    "errors": []
+  }
+]

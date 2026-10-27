@@ -31,6 +31,6 @@ def test_counts_are_tenant_scoped_read_only_and_idempotent():
     assert counts(cursor, org, today) == (2, 5)
     assert counts(cursor, org, today) == (2, 5)
     for sql, params in cursor.calls:
-        assert params == (org, org, today)
+        assert params == (str(org), str(org), today)
         assert "r.organization_id = %s" in sql and "c.organization_id = %s" in sql
         assert "delete" not in sql.lower() and "update" not in sql.lower()

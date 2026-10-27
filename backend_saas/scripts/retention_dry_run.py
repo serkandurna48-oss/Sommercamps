@@ -56,7 +56,7 @@ def _loopback(host: str) -> bool:
 
 
 def counts(cursor, organization_id: UUID, as_of: date) -> tuple[int, int]:
-    scoped = (organization_id, organization_id, as_of)
+    scoped = (str(organization_id), str(organization_id), as_of)
     cursor.execute(HEALTH_COUNT_SQL, scoped)
     health = cursor.fetchone()[0]
     cursor.execute(GENERAL_COUNT_SQL, scoped)
@@ -72,7 +72,8 @@ def main() -> int:
     args = parser.parse_args()
     if not local_dsn(args.dsn):
         parser.error("Only an explicit loopback PostgreSQL host is accepted")
-    with psycopg2.connect(args.dsn, connect_timeout=3) as connection:
+    # Override libpq PGHOSTADDR and PGHOST environment fallbacks with a fixed loopback address.
+    with psycopg2.connect(args.dsn, host="127.0.0.1", hostaddr="127.0.0.1", connect_timeout=3) as connection:
         connection.set_session(readonly=True, autocommit=False)
         with connection.cursor() as cursor:
             cursor.execute("set local statement_timeout = '5s'")

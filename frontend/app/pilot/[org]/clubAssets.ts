@@ -31,12 +31,12 @@ const ASSETS: Record<string, ClubAssets> = {
   'ksv-baunatal': {
     heroImage: '/clubs/ksv/ksv-1-mannschaft.jpg',
     galleryImages: [
-      '/clubs/ksv/ksv-gruppenfoto.jpg',
+      '/clubs/ksv/ksv-kinder-2027.jpg',
       '/clubs/ksv/ksv-kinder-pokal.jpg',
       '/clubs/ksv/ksv-torwart.jpg',
     ],
     galleryAltTexts: {
-      '/clubs/ksv/ksv-gruppenfoto.jpg': 'Gruppenfoto beim KSV Baunatal',
+      '/clubs/ksv/ksv-kinder-2027.jpg': 'Kinder der Fußballschule KSV Baunatal auf dem Trainingsgelände',
       '/clubs/ksv/ksv-kinder-pokal.jpg': 'Kinder mit Pokal beim KSV Baunatal',
       '/clubs/ksv/ksv-torwart.jpg': 'Torwart beim KSV Baunatal',
     },

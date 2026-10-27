@@ -26,6 +26,7 @@ export default function ExportBar<T>({
   onReset,
   onPrint,
   printEnabled = true,
+  printLabel = 'PDF / Drucken',
 }: {
   rows: T[]
   columns: ExportColumn<T>[]
@@ -36,6 +37,7 @@ export default function ExportBar<T>({
   onReset?: () => void
   onPrint?: () => void
   printEnabled?: boolean
+  printLabel?: string
 }) {
   const preview = useAdminPreview()
   const [open, setOpen] = useState(false)
@@ -143,7 +145,7 @@ export default function ExportBar<T>({
             }}
             className="mt-1 w-full gap-2.5"
           >
-            <IconPrinter /> PDF / Drucken
+            <IconPrinter /> {printLabel}
           </Button>}
         </div>
       )}

@@ -436,6 +436,90 @@
   .cp-daylist-check-col { width: 40px; }
 }
 
+/* Participant print configuration shares the admin palette. Paper stays neutral. */
+.cp-participant-print {
+  --cp-print-width: 1360px;
+  --cp-print-sidebar: 288px;
+  --cp-print-gap: 24px;
+  --cp-print-space: 16px;
+  --cp-print-small-gap: 8px;
+  --cp-print-control: 44px;
+  --cp-print-checkbox: 18px;
+  --cp-print-title: 22px;
+  --cp-print-text: 14px;
+  --cp-print-paper: #fff;
+  --cp-print-ink: #171c19;
+  --cp-print-rule: #777;
+  --cp-print-paper-pad: 24px;
+  --cp-print-row-number: 36px;
+  --cp-print-check-width: 60px;
+  --cp-print-table-min: 640px;
+  --cp-print-page-text: 10pt;
+  --cp-print-page-title: 18pt;
+  --cp-print-page-padding: 2mm;
+  --cp-print-page-number: 9mm;
+  --cp-print-page-check: 14mm;
+  width: min(var(--cp-print-width), calc(100% - var(--cp-print-gap)));
+  padding: 0;
+  background: var(--cp-paper);
+  color: var(--cp-ink);
+  border-radius: var(--cp-r-card);
+}
+.cp-print-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cp-print-space);
+  padding: var(--cp-print-space) var(--cp-print-gap);
+  background: var(--cp-surface);
+  border-bottom: 1px solid var(--cp-line);
+}
+.cp-print-toolbar h1 { font-size: var(--cp-print-title); font-weight: 700; }
+.cp-print-toolbar p, .cp-print-settings p, .cp-print-status { font-size: var(--cp-print-text); color: var(--cp-ink-2); }
+.cp-print-actions { display: flex; flex-wrap: wrap; gap: var(--cp-print-small-gap); }
+.cp-print-workspace { display: grid; grid-template-columns: var(--cp-print-sidebar) minmax(0, 1fr); gap: var(--cp-print-gap); padding: var(--cp-print-gap); }
+.cp-print-settings { min-width: 0; display: flex; flex-direction: column; gap: var(--cp-print-space); }
+.cp-print-fieldset { min-width: 0; }
+.cp-print-fieldset legend { font-weight: 700; margin-bottom: var(--cp-print-small-gap); }
+.cp-print-field-group { margin-top: var(--cp-print-space); }
+.cp-print-group-title { font-weight: 700; }
+.cp-print-choice { display: flex; align-items: center; gap: var(--cp-print-small-gap); min-height: var(--cp-print-control); overflow-wrap: anywhere; cursor: pointer; }
+.cp-print-choice input { width: var(--cp-print-checkbox); height: var(--cp-print-checkbox); flex-shrink: 0; accent-color: var(--cp-ink); }
+.cp-print-date { display: grid; gap: var(--cp-print-small-gap); }
+.cp-print-date input { min-width: 0; min-height: var(--cp-print-control); padding: var(--cp-print-small-gap); border: 1px solid var(--cp-field-line); border-radius: var(--cp-r-field); background: var(--cp-surface); }
+.cp-print-output { min-width: 0; }
+.cp-print-status { margin-bottom: var(--cp-print-small-gap); }
+.cp-print-sheet { padding: var(--cp-print-paper-pad); margin-bottom: var(--cp-print-space); background: var(--cp-print-paper); color: var(--cp-print-ink); border: 1px solid var(--cp-line); }
+.cp-print-sheet .cp-daylist-heading { overflow-wrap: anywhere; }
+.cp-print-sheet h2 { font-size: var(--cp-print-title); font-weight: 700; }
+.cp-print-org { font-weight: 700; }
+.cp-participant-print table { min-width: var(--cp-print-table-min); }
+.cp-participant-print th, .cp-participant-print td { border-color: var(--cp-print-rule); }
+.cp-participant-print .cp-print-row-number { width: var(--cp-print-row-number); text-align: center; overflow-wrap: normal; white-space: nowrap; }
+.cp-participant-print .cp-daylist-check-col { width: var(--cp-print-check-width); text-align: center; overflow-wrap: normal; }
+@media (max-width: 800px) {
+  .cp-print-workspace { grid-template-columns: minmax(0, 1fr); padding: var(--cp-print-space); }
+  .cp-print-toolbar { padding: var(--cp-print-space); }
+  .cp-print-field-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--cp-print-small-gap); }
+  .cp-print-group-title { grid-column: 1 / -1; }
+  .cp-print-sheet { padding: var(--cp-print-space); }
+}
+@media print {
+  .cp-participant-print { width: 100%; background: var(--cp-print-paper); color: var(--cp-print-ink); border-radius: 0; font: var(--cp-print-page-text) Arial, sans-serif; }
+  .cp-print-workspace { display: block; padding: 0; }
+  .cp-print-sheet { margin: 0; padding: 0; border: 0; }
+  .cp-print-sheet + .cp-print-sheet { break-before: page; }
+  .cp-print-sheet h2 { font-size: var(--cp-print-page-title); }
+  .cp-participant-print table { min-width: 0; }
+  .cp-participant-print th, .cp-participant-print td { padding: var(--cp-print-page-padding); }
+  .cp-participant-print .cp-print-row-number { width: var(--cp-print-page-number); }
+  .cp-participant-print .cp-daylist-check-col { width: var(--cp-print-page-check); }
+}
+
 /* ----------------------------------------------------------------------
  * Filmkorn (Design-Reifung nach dem zweiten Praxistest) — derselbe
  * Materialgedanke wie im Eltern-Flow (siehe pilot/[org]/publicTheme.css

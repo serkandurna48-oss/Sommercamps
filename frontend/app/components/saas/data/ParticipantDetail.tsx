@@ -4,7 +4,7 @@ import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewConte
 
 import { useActionState, useEffect, useId, useState } from 'react'
 import { de, paymentStatusLabel } from '../../../lib/i18n/de'
-import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
+import type { RegistrationAdmin, RegistrationQuestion } from '../../../lib/saasAdminApi'
 import { cancelRegistrationAction, updateRegistrationDetailsAction } from '../actions/waitlistActions'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import { hasMissingEmergencyContact, hasNotes, isOpenPayment } from '../commandCenterLogic'
@@ -31,6 +31,7 @@ export default function ParticipantDetail({
   orgSlug,
   campSlug,
   campTitle,
+  questions = [],
   brandStrong,
   brandOn,
   onDetailsSaved,
@@ -39,6 +40,7 @@ export default function ParticipantDetail({
   orgSlug: string
   campSlug: string
   campTitle: string
+  questions?: RegistrationQuestion[]
   brandStrong: string
   brandOn: string
   onDetailsSaved?: (registration: RegistrationAdmin) => void
@@ -179,6 +181,18 @@ export default function ParticipantDetail({
           </dl>
         )}
       </div>
+
+      {questions.length > 0 && (
+        <section className="md:col-span-2" aria-label="Zusatzantworten">
+          <h3 className="cp-label mb-2" style={{ color: 'var(--cp-muted)' }}>Zusatzantworten</h3>
+          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {questions.map(question => <div key={question.key}>
+              <dt className="cp-chip" style={{ color: 'var(--cp-muted)' }}>{question.label}</dt>
+              <dd className="cp-body">{registration.extra_answers?.[question.key] || '–'}</dd>
+            </div>)}
+          </dl>
+        </section>
+      )}
 
       <div>
         <p className="cp-label mb-2" style={{ color: 'var(--cp-muted)' }}>

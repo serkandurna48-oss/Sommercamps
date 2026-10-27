@@ -71,6 +71,22 @@ it('renders the expand trigger with a transparent border (no double-border in th
   expect(trigger.style.border).toBe('1px solid transparent')
 })
 
+it('shows configured position and origin answers in participant detail', async () => {
+  const questions = [
+    { key: 'position', label: 'Position', type: 'choice' as const, options: ['Feldspieler', 'Torwart'], other_label: null, required: true },
+    { key: 'verein', label: 'Herkunftsverein', type: 'choice' as const, options: ['KSV Baunatal', 'Kein Verein'], other_label: 'Anderer Verein', required: false },
+  ]
+  await act(() => root.render(<ParticipantRow registration={{ ...registration, extra_answers: { position: 'Torwart', verein: 'FC Teststadt' } }}
+    selected={false} onToggleSelect={() => {}} brandColor="#112233" orgSlug="review-club" campSlug="review-camp"
+    campTitle="Review Camp" questions={questions} />))
+  await act(() => container.querySelector<HTMLButtonElement>('button[aria-expanded]')!.click())
+  const section = container.querySelector('section[aria-label="Zusatzantworten"]')!
+  expect(section.textContent).toContain('Position')
+  expect(section.textContent).toContain('Torwart')
+  expect(section.textContent).toContain('Herkunftsverein')
+  expect(section.textContent).toContain('FC Teststadt')
+})
+
 describe('participant correction workflow', () => {
   it('allows a second edit after a successful save without reloading', async () => {
     await render()

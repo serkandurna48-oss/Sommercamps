@@ -12,6 +12,7 @@ import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 import SuccessNote from '../state/SuccessNote'
 import PendingNote from '../state/PendingNote'
 import PublishToggle from './PublishToggle'
+import RegistrationQuestionsBuilder from './RegistrationQuestionsBuilder'
 import BrandPreview, { previewTheme } from '../brand/BrandPreview'
 import ColorField, { normalizeHex } from '../brand/ColorField'
 import { isAllowedImageUrl } from '../../../lib/imageUrl'
@@ -92,8 +93,8 @@ export default function OrganizationConfigForm({
           <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
             {de.configPage.section.branding}
           </h3>
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-            <div className="flex min-w-0 flex-1 flex-col gap-4">
+          <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_14rem] lg:items-start">
+            <div className="flex min-w-0 flex-col gap-4">
               <Field label={de.configPage.field.name} htmlFor="name">
                 <input id="name" name="name" required value={name} onChange={event => setName(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
               </Field>
@@ -258,29 +259,7 @@ export default function OrganizationConfigForm({
           </Field>
         </section>
 
-        <section className="flex flex-col gap-4">
-          <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
-            Zusatzfragen bei der Anmeldung
-          </h3>
-          <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
-            Bis zu 5 Fragen. Eltern beantworten diese zusätzlich beim Anmeldeformular. Leer lassen für keine Zusatzfragen.
-          </p>
-          <Field
-            label="Fragen (JSON)"
-            htmlFor="registration_questions"
-            hint='Jede Frage als Objekt: { "key": "position", "label": "Position", "type": "choice", "options": ["Feldspieler", "Torwart"], "other_label": null, "required": true }'
-          >
-            <textarea
-              id="registration_questions"
-              name="registration_questions"
-              rows={6}
-              defaultValue={inputValue('registration_questions', JSON.stringify(org.registration_questions ?? [], null, 2))}
-              className={INPUT_CLASS}
-              style={INPUT_STYLE}
-              placeholder="[]"
-            />
-          </Field>
-        </section>
+        <RegistrationQuestionsBuilder value={org.registration_questions} theme={org.theme} orgSlug={orgSlug} disabled={pending} />
 
         {pending && <PendingNote>{de.configPage.saving}</PendingNote>}
         {!pending && state.error && (

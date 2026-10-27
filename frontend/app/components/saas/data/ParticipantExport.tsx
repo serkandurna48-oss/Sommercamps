@@ -9,6 +9,7 @@ import { DAY_LIST_COLUMNS, dayListRows, exportFilterText } from '../dayListExpor
 import ExportBar from '../ui/ExportBar'
 import DayListPrint from './DayListPrint'
 import ParticipantListPrint from './ParticipantListPrint'
+import { DEFAULT_PRINT_FIELDS } from '../participantPrint'
 
 export default function ParticipantExport({ registrations, camp, orgSlug, orgName, filter, search, allColumns, questions, onReset }: {
   registrations: RegistrationAdmin[]
@@ -23,6 +24,7 @@ export default function ParticipantExport({ registrations, camp, orgSlug, orgNam
 }) {
   const [purpose, setPurpose] = useState('daylist')
   const [printing, setPrinting] = useState<null | 'daylist' | 'participants'>(null)
+  const [printFields, setPrintFields] = useState(DEFAULT_PRINT_FIELDS)
   const purposeId = useId()
   const filtered = filterRegistrations(registrations, filter, search)
   const rows = purpose === 'daylist' ? dayListRows(registrations, filter, search) : filtered
@@ -34,11 +36,15 @@ export default function ParticipantExport({ registrations, camp, orgSlug, orgNam
     { header: 'Preis (EUR)', value: () => (camp.price_cents / 100).toFixed(2).replace('.', ',') },
     { header: 'Zahlungsstatus', value: r => paymentStatusLabel[r.payment_status] ?? r.payment_status },
   ]
+  const participantColumns: ExportColumn<RegistrationAdmin>[] = [
+    ...allColumns,
+    ...(questions ?? []).map(question => ({ header: question.label, value: (row: RegistrationAdmin) => row.extra_answers?.[question.key] ?? '' })),
+  ]
 
   return <>
     <ExportBar
       rows={rows}
-      columns={purpose === 'daylist' ? DAY_LIST_COLUMNS : purpose === 'payments' ? paymentColumns : allColumns}
+      columns={purpose === 'daylist' ? DAY_LIST_COLUMNS : purpose === 'payments' ? paymentColumns : participantColumns}
       csvFilename={`${camp.slug}-${purpose}.csv`}
       xlsxHref={xlsxHrefWithFilter(`/pilot/${orgSlug}/camps/${camp.slug}/export?view=${purpose}`, rows.map(r => r.registration_token), registrations.length)}
       summary={<>
@@ -46,19 +52,21 @@ export default function ParticipantExport({ registrations, camp, orgSlug, orgNam
         {(filter !== 'all' || search.trim()) && <p>{filterText}</p>}
       </>}
       configuration={<>
-        <label htmlFor={purposeId} className="mb-1 block">Was möchtest du exportieren?</label>
+        <label htmlFor={purposeId} className="mb-1 block">Was möchten Sie exportieren?</label>
         <select id={purposeId} value={purpose} onChange={e => setPurpose(e.target.value)} className="min-h-[44px] w-full rounded border px-2 text-base">
           <option value="daylist">Camp-Tagesliste</option>
           <option value="payments">Zahlungsübersicht</option>
           <option value="participants">Alle Anmeldungen</option>
         </select>
-        <p className="mt-2 text-sm">{purpose === 'daylist' ? 'Angemeldet und bestätigt · alphabetisch nach Nachname, Vorname.' : 'Aktuelle Suche und Filter gelten auch hier.'} Deine Checkbox-Auswahl hat keinen Einfluss auf den Export.</p>
+        <p className="mt-2 text-sm">{purpose === 'daylist' ? 'Angemeldet und bestätigt · alphabetisch nach Nachname, Vorname.' : 'Aktuelle Suche und Filter gelten auch hier.'} Die Auswahl einzelner Anmeldungen in der Liste hat keinen Einfluss auf den Export.</p>
+        {purpose !== 'payments' && <p className="mt-2 text-sm">Für den Browserdruck oder das Speichern als PDF können Sie die sichtbaren Spalten im nächsten Schritt auswählen.</p>}
       </>}
       onReset={onReset}
       onPrint={() => setPrinting(purpose === 'daylist' ? 'daylist' : 'participants')}
       printEnabled={purpose !== 'payments'}
+      printLabel="Drucken / Als PDF speichern"
     />
-    {printing === 'daylist' && <DayListPrint camp={camp} rows={rows} filterText={filterText} orgName={orgName} questions={questions} onClose={() => setPrinting(null)} />}
-    {printing === 'participants' && <ParticipantListPrint camp={camp} rows={filtered} filterText={filterText} orgName={orgName} questions={questions} onClose={() => setPrinting(null)} />}
+    {printing === 'daylist' && <DayListPrint camp={camp} rows={rows} filterText={filterText} orgName={orgName} questions={questions} selectedFields={printFields.daylist} onFieldsChange={daylist => setPrintFields(previous => ({ ...previous, daylist }))} onClose={() => setPrinting(null)} />}
+    {printing === 'participants' && <ParticipantListPrint camp={camp} rows={filtered} filterText={filterText} orgName={orgName} questions={questions} selectedFields={printFields.participants} onFieldsChange={participants => setPrintFields(previous => ({ ...previous, participants }))} onClose={() => setPrinting(null)} />}
   </>
 }

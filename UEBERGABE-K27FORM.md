@@ -1,0 +1,33 @@
+STATUS: fertig zur Prüfung
+
+# K27FORM – lokaler Integrationskandidat, 27.10.2026
+
+**Basis/Branch:** `feat/k27form`, HEAD `8b0cc542d6b5c081e9533fb220e7bb41cd2ce4de`. Die beschriebenen Änderungen liegen uncommittet in diesem Worktree. Getesteter Code hat bis zum Orchestrator-Commit daher noch keinen eigenen SHA. Kein `git add`, Commit, Push, Deployment, Kundenzugriff oder echter Datenvorgang.
+
+## Umsetzung
+
+- Die Frontend-Produkt- und Testpatches aus CPFB1 `65e6fac8b24dbe551fd2937799a3c97b41bcb8a5` und CPEX1 `c59e7bc1ce008146d06b23819ec78a7714e14199` wurden von der gemeinsamen Basis gezielt mit `git apply` übernommen. Kein zweiter Builder, PDF-Renderer oder Exportdienst. Die zugehörigen alten `.qa-*`-Artefakte und Übergaben wurden nicht kopiert.
+- Der vorhandene Builder editiert bis zu fünf Fragen per Formular, zeigt die Elternvorschau und schützt unlesbare Altkonfiguration vor unbeabsichtigtem PATCH. Für `ksv-baunatal` ist bei leerer Konfiguration eine bewusst anzuwendende Vorlage vorhanden: Position (Feldspieler/Torwart, Pflicht) und Herkunftsverein (KSV Baunatal/Kein Verein/Anderer Verein mit Freitext, optional). Andere Organisationen erhalten sie nicht automatisch. [Vorlagendaten](C:/Users/serka/Desktop/Projekte/wt/K27FORM/frontend/app/components/saas/config/registrationQuestionTemplates.ts), [Builder](C:/Users/serka/Desktop/Projekte/wt/K27FORM/frontend/app/components/saas/config/RegistrationQuestionsBuilder.tsx).
+- Konfigurierte Antworten erscheinen im [Teilnehmerdetail](C:/Users/serka/Desktop/Projekte/wt/K27FORM/frontend/app/components/saas/data/ParticipantDetail.tsx), in der Teilnehmer-CSV und als auswählbare Druckspalten. Kontakt-, Gesundheits- und Zusatzantworten sind in der Druckansicht standardmäßig abgewählt. Der bestehende XLSX-Endpunkt und Zahlungs-/Tageslisten-CSV bleiben erhalten. Der Browserdialog heißt nun „Drucken / Als PDF speichern“; die Ausgabe ist A4 und teilt breite Spaltenauswahlen in Tabellenabschnitte mit Zeilennummer. [Export](C:/Users/serka/Desktop/Projekte/wt/K27FORM/frontend/app/components/saas/data/ParticipantExport.tsx), [Druckdialog](C:/Users/serka/Desktop/Projekte/wt/K27FORM/frontend/app/components/saas/data/ParticipantPrintDialog.tsx).
+- Der 34-px-Befund im Vereinskonfigurationslayout ist gezielt behoben: Vereinsname und Logo-URL messen bei 1440 px jetzt je 344 px; bei 390 px je 358 px. Die Camp-Konfiguration wurde nach Browsermessung unangetastet gelassen. [Layout](C:/Users/serka/Desktop/Projekte/wt/K27FORM/frontend/app/components/saas/config/OrganizationConfigForm.tsx), [Messwerte](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/browser-results.json).
+
+## Tatsächlich gelaufen
+
+| Prüfung | Ergebnis | Beleg |
+| --- | --- | --- |
+| `npm.cmd run test --prefix frontend` | 105 Dateien, 1172 Tests bestanden, Exit 0 | [Testlog](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/tests-final.log) |
+| Gezielter Vorlage→Elternformular→Antwort→CSV/Druckspalten-Test nach letzter Testergänzung | 1/1 bestanden, Exit 0 | [Test](C:/Users/serka/Desktop/Projekte/wt/K27FORM/frontend/app/components/saas/config/RegistrationQuestionFlow.test.tsx), [Log](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/flow-final.log) |
+| `npx.cmd --no-install tsc --noEmit -p frontend` und `npm.cmd run lint --prefix frontend` | beide Exit 0 | [Typecheck](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/tsc-final.log), [Lint](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/lint-final.log) |
+| Lokaler Next/Chromium-Browserlauf mit synthetischer Admin-Vorschau, 390/1440 px | Exit 0; Builder bedient, kein horizontaler Überlauf, Druckdialog geöffnet | [Browserlog](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/browser-final.log), [Builder 390](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/builder-panel-390.png), [Builder 1440](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/builder-panel-1440.png), [Druck 390](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/print-dialog-390.png), [Druck 1440](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/print-dialog-1440.png) |
+| Browserdruck A4 | Standard 1 Seite, vollständige Spaltenwahl 3 A4-Seiten / 3 Tabellenabschnitte | [Standard-PDF](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/participants-a4.pdf), [Stress-PDF](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/stress-a4.pdf), [PDF-Metadaten](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/pdf-check.log) |
+| `git diff --check` | Exit 0 | lokaler Abschlusslauf; Git warnte nur über die nicht lesbare globale Ignore-Datei außerhalb des Worktrees |
+
+Der Browserlauf nutzte ausschließlich die lokale `dev/admin-vorschau` mit erfundenen Daten und ohne Save. Ein erster Browserlauf mit `127.0.0.1` scheiterte an der bestehenden Next-Dev-Origin-Sperre; der erfolgreiche Lauf nutzte den vom Dev-Server ausgewiesenen Standard-Origin `localhost`. Keine Zugriffssperre oder Next-Konfiguration wurde verändert. Die Vorheraufnahme des 34-px-Felds liegt [hier](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/before-builder-1440.png).
+
+## Offene Prüfungen und Gates
+
+BLOCKER: extern - Beide lokalen Produktionsbuilds enden mit Exit 1 beim Abruf der bereits eingebundenen Google Fonts (unter anderem Archivo und Work Sans). [KSV-Buildlog](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/build-ksv.log), [JK-Buildlog](C:/Users/serka/Desktop/Projekte/wt/K27FORM/.qa-k27form/build-jk.log). Build-Freigabe erst nach Wiederholung mit regulär verfügbarem Font-Zugang beziehungsweise freigegebener Font-Bereitstellung.
+
+- Kein authentifizierter API-/DB-Save, keine echte Anmeldung, kein XLSX-End-to-End-Download und kein Deployment ausgeführt. Die Frontend-Tests nutzen synthetische Fixtures; die Backend-Verträge `registration_questions`/`extra_answers` wurden im vorhandenen Code geprüft. Die separate Review-Session muss den späteren Commit-SHA und den lokalen Integrationsfluss unabhängig prüfen. Reviewpfad: diese Übergabe, der Diff des späteren Orchestrator-Commits sowie die verlinkten Tests und Screenshots. Kein GitHub- oder Staging-Link, weil nichts gepusht oder veröffentlicht wurde.
+- Das bestehende `backend_saas/scripts/ksv_zusatzfragen.py` hat noch `verein.required=true` und keine Option „Kein Verein“. K27DATA verantwortet die Konfigurationsdaten für neue KSV-Entwürfe; vor Zusammenführung ist dieser Wert gegen die hier getestete optionale UI-Vorlage abzugleichen. Bestehende beantwortete Konfigurationen wurden nicht rückwirkend verändert.
+- Kein Mutationstest behauptet oder gezählt; daher kein Mutationslog. Neue Pakete und Migrationen: keine.

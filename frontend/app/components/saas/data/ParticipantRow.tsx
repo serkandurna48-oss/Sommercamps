@@ -4,7 +4,7 @@ import Button from '../ui/Button'
 import ListRow from '../ui/ListRow'
 import { useId, useState } from 'react'
 import { paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
-import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
+import type { RegistrationAdmin, RegistrationQuestion } from '../../../lib/saasAdminApi'
 import { birthYear, hasNotes } from '../commandCenterLogic'
 import ParticipantDetail from './ParticipantDetail'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from './StatusChip'
@@ -22,6 +22,7 @@ export default function ParticipantRow({
   campSlug,
   campTitle,
   campDate,
+  questions,
 }: {
   registration: RegistrationAdmin
   selected: boolean
@@ -31,6 +32,7 @@ export default function ParticipantRow({
   campSlug: string
   campTitle: string
   campDate?: string
+  questions?: RegistrationQuestion[]
 }) {
   const [open, setOpen] = useState(false)
   const [override, setOverride] = useState<RegistrationAdmin | null>(null)
@@ -115,6 +117,7 @@ export default function ParticipantRow({
               orgSlug={orgSlug}
               campSlug={campSlug}
               campTitle={campTitle}
+              questions={questions}
               brandStrong={brand.brandStrong}
               brandOn={brand.brandOn}
               onDetailsSaved={setOverride}

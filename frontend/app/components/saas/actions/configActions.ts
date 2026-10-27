@@ -1,5 +1,6 @@
 'use server'
 
+import { readRegistrationQuestions } from '../config/registrationQuestions'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
@@ -48,22 +49,11 @@ export async function updateOrganizationConfigAction(
     return { error: 'Vereinsname und Kontakt-E-Mail dürfen nicht leer sein.', saved: false }
   }
 
-  // Parse registration_questions: empty / whitespace-only → [] (no questions)
-  let registrationQuestions: unknown[] | undefined
+  // Keep PATCH omission distinct from explicitly clearing the list.
   const questionsRaw = str(formData, 'registration_questions')
-  if (questionsRaw !== undefined && questionsRaw.trim() !== '' && questionsRaw.trim() !== '[]') {
-    try {
-      const parsed = JSON.parse(questionsRaw)
-      if (!Array.isArray(parsed)) {
-        return { error: 'Zusatzfragen: Bitte ein JSON-Array eingeben, z. B. [{ "key": "...", ... }].', saved: false }
-      }
-      registrationQuestions = parsed
-    } catch {
-      return { error: 'Zusatzfragen: Ungültiges JSON. Bitte prüfen und korrigieren.', saved: false }
-    }
-  } else if (questionsRaw !== undefined) {
-    registrationQuestions = []
-  }
+  const parsed = questionsRaw === undefined ? undefined : readRegistrationQuestions(questionsRaw)
+  if (parsed?.error) return { error: parsed.error, saved: false }
+  const registrationQuestions = parsed?.questions
 
   try {
     await updateOrganizationAdmin(orgSlug, token, {
@@ -82,7 +72,7 @@ export async function updateOrganizationConfigAction(
       trainer_image_url: optionalStr(formData, 'trainer_image_url'),
       trainer_text: optionalStr(formData, 'trainer_text'),
       terms_text: optionalStr(formData, 'terms_text'),
-      ...(registrationQuestions !== undefined && { registration_questions: registrationQuestions as import('../../../lib/saasAdminApi').RegistrationQuestion[] }),
+      ...(registrationQuestions != null && { registration_questions: registrationQuestions }),
     })
   } catch {
     return { error: 'Konnte nicht gespeichert werden – Angaben prüfen und erneut versuchen.', saved: false }

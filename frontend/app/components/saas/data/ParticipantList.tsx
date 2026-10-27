@@ -157,6 +157,7 @@ export default function ParticipantList({
               campSlug={campSlug}
               campTitle={camp.title}
               campDate={formatDateRange(camp.start_date, camp.end_date)}
+              questions={questions}
             />
           ))}
         </div>

@@ -158,6 +158,24 @@ async function changeField(selector: string, value: string) {
   })
 }
 
+it('retains edited extra fields after a failed save and sends them again on retry', async () => {
+  const question = { key: 'hinweis', label: 'Hinweis', type: 'text' as const, options: null, other_label: null, required: true }
+  const configured = { ...org, registration_questions: [question] }
+  vi.mocked(updateOrganizationConfigAction).mockResolvedValueOnce({ error: 'Erneut versuchen', saved: false })
+  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={configured} brandStrong="#112233" brandOn="#ffffff" />))
+  await changeField('[id$="-label"]', 'Zusätzlicher Hinweis')
+  await save()
+  expect(container.querySelector<HTMLInputElement>('[id$="-label"]')!.value).toBe('Zusätzlicher Hinweis')
+  const submitted = vi.mocked(updateOrganizationConfigAction).mock.calls[0][2]
+  expect(JSON.parse(String(submitted.get('registration_questions')))).toEqual([{ ...question, label: 'Zusätzlicher Hinweis' }])
+  expect([...submitted.keys()].some(key => key.startsWith('extra-'))).toBe(false)
+  await save()
+  expect(vi.mocked(updateOrganizationConfigAction).mock.calls[1][2].get('registration_questions')).toBe(submitted.get('registration_questions'))
+  const fresh = { ...configured, registration_questions: [{ ...question, label: 'Gespeicherter Hinweis' }] }
+  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={fresh} brandStrong="#112233" brandOn="#ffffff" />))
+  expect(container.querySelector<HTMLInputElement>('[id$="-label"]')!.value).toBe('Gespeicherter Hinweis')
+})
+
 it('updates the shared preview from name, logo, picker and preview theme without saving', async () => {
   await render()
   await changeField('#name', 'Neuer Vereinsname')

@@ -3,6 +3,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import RegistrationQuestionsBuilder from './RegistrationQuestionsBuilder'
+import { registrationQuestionTemplate } from './registrationQuestionTemplates'
 
 let container: HTMLDivElement
 let root: Root
@@ -58,6 +59,24 @@ it('offers the KSV template only to the named organization and keeps it editable
   expect(container.textContent).toContain('Anderer Verein')
   await change(editor('label'), 'Spielposition')
   expect(payload()[0].label).toBe('Spielposition')
+})
+
+it.each(['constructor', 'toString', '__proto__'])(
+  'does not offer or apply an inherited template for %s', async orgSlug => {
+    expect(registrationQuestionTemplate(orgSlug)).toBeNull()
+    await render([], false, orgSlug)
+    expect(container.textContent).not.toContain('Vorlage übernehmen')
+    expect(payload()).toEqual([])
+  },
+)
+
+it('returns an independent KSV template copy for each application', () => {
+  const first = registrationQuestionTemplate('ksv-baunatal')!
+  first[0].label = 'Geändert'
+  first[0].options!.push('Weitere Position')
+  const second = registrationQuestionTemplate('ksv-baunatal')!
+  expect(second[0].label).toBe('Position')
+  expect(second[0].options).toEqual(['Feldspieler', 'Torwart'])
 })
 
 it('adds and edits text/choice fields, required state, options and free-text alternative', async () => {

@@ -29,6 +29,8 @@ export default function RegistrationQuestionsBuilder({ value, theme, orgSlug, di
     setNotice('')
   }
   const validation = readRegistrationQuestions(questions)
+  const template = orgSlug && Object.prototype.hasOwnProperty.call(REGISTRATION_QUESTION_TEMPLATES, orgSlug)
+    ? REGISTRATION_QUESTION_TEMPLATES[orgSlug] : null
   const update = (index: number, patch: Partial<RegistrationQuestion>) => {
     setQuestions(current => current.map((question, i) => i === index ? { ...question, ...patch } : question))
   }
@@ -53,10 +55,10 @@ export default function RegistrationQuestionsBuilder({ value, theme, orgSlug, di
         <>
           <input type="hidden" name="registration_questions" value={JSON.stringify(questions)} />
           {questions.length === 0 && <p className="cp-body" style={{ color: 'var(--cp-muted)' }}>Noch keine Zusatzfelder eingerichtet.</p>}
-          {questions.length === 0 && orgSlug && REGISTRATION_QUESTION_TEMPLATES[orgSlug] && (
+          {questions.length === 0 && template && (
             <div className="flex flex-wrap items-end gap-3">
-              <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>Vorlage: {REGISTRATION_QUESTION_TEMPLATES[orgSlug].label}. Sie können danach alle Felder anpassen.</p>
-              <Button type="button" onClick={() => { setQuestions(registrationQuestionTemplate(orgSlug) ?? []); setNotice('Vorlage übernommen. Bitte vor dem Speichern prüfen.') }}>Vorlage übernehmen</Button>
+              <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>Vorlage: {template.label}. Sie können danach alle Felder anpassen.</p>
+              <Button type="button" onClick={() => { setQuestions(registrationQuestionTemplate(orgSlug!) ?? []); setNotice('Vorlage übernommen. Bitte vor dem Speichern prüfen.') }}>Vorlage übernehmen</Button>
             </div>
           )}
           {questions.map((question, index) => {

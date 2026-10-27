@@ -244,6 +244,16 @@ describe('participant list print dialog', () => {
     expect(document.querySelector('dialog table')?.textContent).toContain('FC Teststadt')
   })
 
+  it('exports a linebreak-shifted extra answer as text in participant CSV', async () => {
+    const question: RegistrationQuestion = { key: 'verein', label: 'Herkunftsverein', type: 'text', options: null, other_label: null, required: false }
+    await render([{ ...registration, extra_answers: { verein: 'Herkunftsverein\r\n=1+1' } }], '', [question])
+    await click('Exportieren')
+    const select = container.querySelector('select')!
+    await act(() => { select.value = 'participants'; select.dispatchEvent(new Event('change', { bubbles: true })) })
+    await click('Als CSV')
+    expect(downloadCsv).toHaveBeenCalledWith('sommer-participants.csv', 'Kind;Herkunftsverein\r\nLena;"Herkunftsverein\r\n\'=1+1"')
+  })
+
   it('prints only filtered active daily rows and includes tenant identity', async () => {
     await render([registration, { ...registration, status: 'waitlist', child_first_name: 'Wartelistenkind' }, { ...registration, status: 'cancelled', child_first_name: 'Stornokind' }], 'Lena')
     await click('Exportieren')

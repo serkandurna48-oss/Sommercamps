@@ -14,10 +14,14 @@ export interface ExportColumn<T> {
 
 function csvCell(raw: string | number | null | undefined): string {
   const value = raw === null || raw === undefined ? '' : String(raw)
-  if (/[";\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`
+  // Guard every physical line: some spreadsheet importers treat an embedded newline as a new row.
+  const safe = value.split(/(\r\n|[\r\n\u0085\u2028\u2029])/).map((part, index) =>
+    index % 2 === 0 && /^[\p{White_Space}\p{Cf}\p{Cc}]*[=+\-@]/u.test(part) ? `'${part}` : part,
+  ).join('')
+  if (/[";\r\n\u0085\u2028\u2029]/.test(safe)) {
+    return `"${safe.replace(/"/g, '""')}"`
   }
-  return value
+  return safe
 }
 
 export function toCsv<T>(rows: T[], columns: ExportColumn<T>[]): string {

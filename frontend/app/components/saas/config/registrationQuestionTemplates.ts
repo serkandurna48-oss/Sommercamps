@@ -12,6 +12,7 @@ export const REGISTRATION_QUESTION_TEMPLATES: Record<string, { label: string; qu
 }
 
 export function registrationQuestionTemplate(orgSlug: string): RegistrationQuestion[] | null {
+  if (!Object.prototype.hasOwnProperty.call(REGISTRATION_QUESTION_TEMPLATES, orgSlug)) return null
   const template = REGISTRATION_QUESTION_TEMPLATES[orgSlug]
   return template ? template.questions.map(question => ({ ...question, options: question.options ? [...question.options] : null })) : null
 }

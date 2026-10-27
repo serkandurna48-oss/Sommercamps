@@ -21,6 +21,7 @@ from uuid import UUID
 
 from .. import db
 from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES
+from ..payment_reference import payment_reference as build_payment_reference
 from .mail import get_provider
 from .templates import build_provider_mail, build_registration_mail
 
@@ -35,7 +36,6 @@ _FETCH_CONTEXT = """
         o.contact_email                   AS org_email,
         o.contact_phone                   AS org_phone,
         o.iban,
-        o.registration_questions,
         c.title                           AS camp_title,
         c.price_cents,
         c.currency
@@ -129,16 +129,12 @@ def _do_send(
     parent_last_name: str,
     child_first_name: str,
     child_last_name: str,
-    extra_answers: Optional[dict] = None,
 ) -> None:
     ctx = _fetch_mail_context(organization_id, camp_id)
     if ctx is None:
         raise RuntimeError(f"org/camp context not found (org={organization_id}, camp={camp_id})")
 
-    # KV1: include child name in payment reference (max 140 chars, SEPA).
-    prefix = f"CP-{str(registration_token)[:8].upper()}"
-    child_name = f"{child_first_name} {child_last_name}".strip()
-    payment_reference = (f"{prefix} {child_name}" if child_name else prefix)[:140]
+    payment_reference = build_payment_reference(ctx["camp_title"], registration_token)
 
     msg = build_registration_mail(
         status=status,
@@ -154,8 +150,6 @@ def _do_send(
         iban=ctx.get("iban"),
         price_cents=ctx.get("price_cents"),
         currency=ctx.get("currency"),
-        extra_answers=extra_answers,
-        registration_questions=ctx.get("registration_questions") or [],
     )
     msg.sender_name = f"{ctx['org_name']} über CampsPilot"
     provider = get_provider()
@@ -194,7 +188,7 @@ def _send_provider_notification(
                 f"occupancy data not found for provider mail "
                 f"(org={organization_id}, camp={camp_id})"
             )
-        payment_reference = f"CP-{str(registration_token)[:8].upper()}"
+        payment_reference = build_payment_reference(ctx["camp_title"], registration_token)
         msg = build_provider_mail(
             status=status,
             camp_title=ctx["camp_title"],
@@ -231,7 +225,6 @@ def send_registration_notification(
     parent_last_name: str,
     child_first_name: str,
     child_last_name: str,
-    extra_answers: Optional[dict] = None,
     notify_provider: bool = True,
 ) -> None:
     """Best-effort notification after registration creation. Never raises.
@@ -251,7 +244,6 @@ def send_registration_notification(
             parent_last_name=parent_last_name,
             child_first_name=child_first_name,
             child_last_name=child_last_name,
-            extra_answers=extra_answers,
         )
     except Exception as exc:
         logger.warning(

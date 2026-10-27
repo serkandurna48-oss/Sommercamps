@@ -18,6 +18,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator, model_validator
 
 from .utils import is_registration_open
+from .payment_reference import payment_reference as build_payment_reference
 
 _QUESTION_KEY_RE = _re.compile(r'^[a-z][a-z0-9_]{0,29}$')
 
@@ -235,27 +236,15 @@ class RegistrationCreated(BaseModel):
     status: str
     payment_status: str
 
-    # KV1: Kindname fließt in den SEPA-Verwendungszweck ein. Aus der DB
-    # zurückgegeben (returning ... child_first_name, child_last_name) aber
-    # nie an den Client serialisiert — exclude=True sorgt dafür. Kein PII
-    # in der Anmeldebestätigung an Dritte. RegistrationAdminOut deklariert
-    # seine eigenen child_first_name/child_last_name OHNE exclude, was
-    # diese Felder in der Admin-Antwort wieder sichtbar macht (Pydantic v2
-    # child model field declarations override the parent's).
+    # Legacy response fields stay excluded; the bank reference uses no name.
     child_first_name: str = Field(default='', exclude=True)
     child_last_name: str = Field(default='', exclude=True)
+    camp_title: str = Field(default='', exclude=True)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def payment_reference(self) -> str:
         """
-        Verwendungszweck für die Überweisungs-Zahlungsart (Eltern-Flow-
-        Auftrag Abschnitt 6.4). Deterministisch aus registration_token und
-        Kindname abgeleitet (KV1) — Bestätigungsseite und -mail berechnen
-        exakt denselben Wert, können also nie auseinanderlaufen.
-        SEPA-Verwendungszweck: CP-XXXXXXXX + Kindname, max. 140 Zeichen.
+        Camp title plus stable CP reference, shared with the mail path.
         """
-        prefix = f"CP-{str(self.registration_token)[:8].upper()}"
-        name = f"{self.child_first_name} {self.child_last_name}".strip()
-        ref = f"{prefix} {name}" if name else prefix
-        return ref[:140]
+        return build_payment_reference(self.camp_title, self.registration_token)

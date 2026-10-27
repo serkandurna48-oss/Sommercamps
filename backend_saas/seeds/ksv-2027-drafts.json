@@ -1,0 +1,12 @@
+{
+  "organization_slug": "ksv-baunatal",
+  "status": "offline-review-only",
+  "date_semantics": "ISO calendar dates, inclusive, no UTC conversion",
+  "drafts": [
+    {"slug": "ksv-winter-fussballschule-2027", "title": "Winter-Fußballschule 2027", "start_date": "2027-01-04", "end_date": "2027-01-07", "capacity": 70, "status": "draft", "price_cents": null, "age_min": null, "age_max": null, "registration_start": null, "registration_end": null},
+    {"slug": "ksv-oster-fussballschule-2027", "title": "Oster-Fußballschule 2027", "start_date": "2027-03-22", "end_date": "2027-03-25", "capacity": 70, "status": "draft", "price_cents": null, "age_min": null, "age_max": null, "registration_start": null, "registration_end": null},
+    {"slug": "ksv-sommer-1-fussballschule-2027", "title": "1. Sommer-Fußballschule 2027", "start_date": "2027-06-28", "end_date": "2027-07-01", "capacity": 70, "status": "draft", "price_cents": null, "age_min": null, "age_max": null, "registration_start": null, "registration_end": null},
+    {"slug": "ksv-sommer-2-fussballschule-2027", "title": "2. Sommer-Fußballschule 2027", "start_date": "2027-08-02", "end_date": "2027-08-05", "capacity": 70, "status": "draft", "price_cents": null, "age_min": null, "age_max": null, "registration_start": null, "registration_end": null},
+    {"slug": "ksv-herbst-fussballschule-2027", "title": "Herbst-Fußballschule 2027", "start_date": "2027-10-04", "end_date": "2027-10-07", "capacity": 70, "status": "draft", "price_cents": null, "age_min": null, "age_max": null, "registration_start": null, "registration_end": null}
+  ]
+}

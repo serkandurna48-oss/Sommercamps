@@ -274,13 +274,16 @@ class TestExtraAnswersValidation:
             response = _post(client, _valid_payload())
         assert response.status_code == 201
 
-    def test_payment_reference_contains_child_name(self, monkeypatch):
-        """Verwendungszweck enthält Kindname und CP-Referenz, ≤ 140 Zeichen."""
+    def test_payment_reference_excludes_child_name(self, monkeypatch):
+        """The selected camp and CP reference identify payment without child names."""
         monkeypatch.setattr(
             organizations, "get_organization_by_slug",
             lambda slug: _org_row(slug, registration_questions=[]),
         )
-        monkeypatch.setattr(registrations_repo, "get_registration_target", lambda t, s: _target())
+        monkeypatch.setattr(
+            registrations_repo, "get_registration_target",
+            lambda t, s: _target(title="Winter-Fußballschule 2027"),
+        )
         monkeypatch.setattr(
             registrations_repo, "create_registration",
             lambda tenant, camp, data: _fake_row(
@@ -295,9 +298,9 @@ class TestExtraAnswersValidation:
         assert response.status_code == 201
         body = response.json()
         ref = body["payment_reference"]
-        assert ref.startswith("CP-")
-        assert "Lena" in ref
-        assert "Muster" in ref
+        assert ref == f"Winter-Fußballschule 2027 CP-{body['registration_token'][:8].upper()}"
+        assert "Lena" not in ref
+        assert "Muster" not in ref
         assert len(ref) <= 140
 
     def test_payment_reference_excludes_child_name_fields_from_response(self, monkeypatch):

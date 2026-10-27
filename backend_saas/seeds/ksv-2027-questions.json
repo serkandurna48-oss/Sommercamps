@@ -1,0 +1,7 @@
+{
+  "organization_slug": "ksv-baunatal",
+  "registration_questions": [
+    {"key": "position", "label": "Position", "type": "choice", "options": ["Feldspieler", "Torwart"], "other_label": null, "required": true},
+    {"key": "verein", "label": "Verein", "type": "choice", "options": ["KSV Baunatal", "Kein Verein"], "other_label": "Anderer Verein", "required": true}
+  ]
+}

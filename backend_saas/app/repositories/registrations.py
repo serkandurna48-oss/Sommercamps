@@ -185,10 +185,11 @@ class RegistrationTarget:
     age_max: int
     capacity: int
     status: str
+    title: str = ""
 
 
 _TARGET_FIELDS = """
-    id, organization_id, slug, start_date, end_date,
+    id, organization_id, slug, title, start_date, end_date,
     registration_start, registration_end, age_min, age_max, capacity, status
 """
 

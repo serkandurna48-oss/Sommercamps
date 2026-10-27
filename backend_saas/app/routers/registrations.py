@@ -154,6 +154,5 @@ def create_registration(
         parent_last_name=data.parent_last_name,
         child_first_name=data.child_first_name,
         child_last_name=data.child_last_name,
-        extra_answers=dict(data.extra_answers),
     )
-    return RegistrationCreated.model_validate(row)
+    return RegistrationCreated.model_validate({**row, "camp_title": camp.title})

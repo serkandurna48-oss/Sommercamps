@@ -44,7 +44,7 @@ class _RealMockProvider:
 _ORG_ID = uuid4()
 _CAMP_ID = uuid4()
 _TOKEN = uuid4()
-_EXPECTED_PAYMENT_REF = f"CP-{str(_TOKEN)[:8].upper()}"
+_EXPECTED_PAYMENT_REF = f"Sommercamp 2027 CP-{str(_TOKEN)[:8].upper()}"
 
 _UNSET = object()
 
@@ -437,9 +437,7 @@ class _CapturingTransport(httpx.BaseTransport):
 
 
 def test_no_names_in_mail_subject_html_or_brevo_payload(monkeypatch, fake_provider):
-    """Parent names must not appear in subject, HTML, or Brevo HTTP payload.
-    KV1: child name DOES appear in payment_reference (SEPA Verwendungszweck) by design —
-    only parent names (first + last) must be absent from the Brevo API payload."""
+    """Parent and child names must not appear in Brevo payloads."""
     CHILD_FIRST = "Yxqtkindrst"
     CHILD_LAST = "Vwrtuvwxyz"
     PARENT_FIRST = "Xqrtelterntl"
@@ -468,12 +466,9 @@ def test_no_names_in_mail_subject_html_or_brevo_payload(monkeypatch, fake_provid
     assert len(transport.requests) == 2  # parent mail + provider mail
     for req in transport.requests:
         payload_str = req.content.decode()
-        # Parent names must never appear in the Brevo payload.
-        for name in (PARENT_FIRST, PARENT_LAST):
-            assert name not in payload_str, f"Parent name '{name}' must not appear in Brevo payload"
-        # Child name appears intentionally in payment_reference (SEPA Verwendungszweck, KV1).
-        # Only the mail subject must not contain the child name.
-    # Subject check: no child name in subject (only in body/payment_reference)
+        for name in (PARENT_FIRST, PARENT_LAST, CHILD_FIRST, CHILD_LAST):
+            assert name not in payload_str
+    # Subject check remains explicit in addition to the full payload assertion.
     subject_requests = [r for r in transport.requests if r.content]
     for req in subject_requests:
         import json as _json

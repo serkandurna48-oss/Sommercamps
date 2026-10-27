@@ -43,7 +43,7 @@ export default function DatenschutzPage() {
 
       <main className="max-w-2xl mx-auto px-6 py-12">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Datenschutzerklärung</h1>
-        <p className="text-gray-500 text-sm mb-10">Stand: Mai 2026</p>
+        <p className="text-gray-500 text-sm mb-10">Stand: Oktober 2026</p>
 
         <div className="prose prose-gray max-w-none space-y-8 text-sm leading-relaxed text-gray-700">
 
@@ -81,8 +81,8 @@ export default function DatenschutzPage() {
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-3">3. Zweck und Rechtsgrundlage der Verarbeitung</h2>
             <p>
-              Die erhobenen Daten werden ausschließlich zur Abwicklung der Anmeldung für das Sommercamp
-              der Fußballschule KSV Baunatal verwendet. Dies umfasst:
+              Die erhobenen Daten werden zur Abwicklung der Anmeldung für die jeweilige
+              Fußballschule des KSV Baunatal verwendet. Dies umfasst:
             </p>
             <ul className="list-disc list-inside mt-3 space-y-1">
               <li>Bestätigung und Verwaltung der Anmeldung</li>
@@ -107,19 +107,32 @@ export default function DatenschutzPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">5. Weitergabe an Dritte</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">5. Empfänger und Dienstleister</h2>
             <p>
-              Deine Daten werden nicht an Dritte weitergegeben, verkauft oder für Werbezwecke genutzt.
-              Eine Weitergabe erfolgt nur, wenn wir gesetzlich dazu verpflichtet sind.
+              Die Daten werden nicht verkauft oder für Werbung an Dritte weitergegeben.
+              Für den Betrieb der Website, die Datenbank und technische E-Mails nutzen wir
+              Dienstleister, insbesondere Vercel (Website), Supabase (Datenbank) und Brevo
+              (Bestätigungs-E-Mails). Die Weitergabe erfolgt nur, soweit sie für den jeweiligen
+              Dienst erforderlich ist. Eine Weitergabe kann außerdem gesetzlich vorgeschrieben sein.
             </p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-3">6. Speicherdauer</h2>
             <p>
-              Die Daten werden nach Abschluss des Sommercamps und Ablauf etwaiger gesetzlicher
-              Aufbewahrungsfristen gelöscht, spätestens jedoch 12 Monate nach dem jeweiligen
-              Camptermin. Auf Wunsch löschen wir deine Daten früher — einfach eine E-Mail an uns.
+              Kontaktdaten und Campanmeldungen werden für die Anmeldung, Durchführung,
+              Zahlungsabwicklung und notwendige Nachbearbeitung benötigt. Nach Abschluss dieser
+              Zwecke wird geprüft, welche Angaben gelöscht werden können. Gesundheits- und
+              Notfallhinweise werden nur für Vorbereitung und sichere Durchführung benötigt;
+              sie sind nach Campende vorrangig zur Löschung zu prüfen.
+            </p>
+            <p className="mt-3">
+              Steuerlich relevante Buchungsbelege werden im Rahmen der gesetzlichen Pflichten
+              aufbewahrt (für Buchungsbelege grundsätzlich acht Jahre nach § 147 AO).
+              Es findet derzeit keine automatische zeitgesteuerte Löschung statt; die erforderliche
+              Löschung wird durch den verantwortlichen Verein manuell veranlasst.
+              Anfragen auf frühere Löschung werden individuell geprüft. Backups werden nach
+              den jeweiligen Sicherungs- und Überschreibzyklen des Dienstleisters entfernt.
             </p>
           </section>
 
@@ -147,10 +160,12 @@ export default function DatenschutzPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">8. Cookies und Tracking</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">8. Cookies und technische Analyse</h2>
             <p>
-              Diese Website verwendet keine Cookies zu Tracking- oder Werbezwecken.
-              Es werden keine Analyse- oder Marketing-Tools eingesetzt.
+              Die Website verwendet keine Werbenetzwerke oder Tracking-Cookies für
+              personalisierte Werbung. Im eingesetzten Frontend sind Vercel Web Analytics
+              und Speed Insights für aggregierte Reichweiten- und Leistungswerte eingebunden.
+              Für die Administration können notwendige Sitzungscookies verwendet werden.
             </p>
           </section>
 

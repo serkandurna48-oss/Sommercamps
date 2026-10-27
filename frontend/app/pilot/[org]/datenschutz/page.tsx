@@ -42,10 +42,9 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
         </nav>
 
         <p className="legal-notice">
-          Diese Seite beschreibt, welche Daten das Anmeldeformular tatsächlich abfragt und wie sie
-          technisch verarbeitet werden. Sie ersetzt keine rechtliche Prüfung — bevor echte Anmeldungen
-          über diese Seite laufen, sollte {entityName} den Text von einer sachkundigen Stelle
-          gegenprüfen lassen (insbesondere Speicherdauer, siehe Abschnitt 5).
+          Die hier beschriebenen Daten werden ausschließlich zur Organisation der jeweiligen
+          Fußballschule verarbeitet. Bei Fragen zur Speicherung oder einer Löschanfrage erreichen
+          Sie den verantwortlichen Verein unter <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>.
         </p>
 
         <div className="legal-body">
@@ -97,11 +96,30 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
           </section>
 
           <section id="ds-5">
-            <h2>5. Speicherdauer</h2>
-            <p className="legal-notice">
-              Für diesen Verein ist noch keine Löschfrist festgelegt — das System löscht Anmeldedaten
-              aktuell nicht automatisch. {entityName} muss vor echtem Einsatz festlegen, wie lange
-              Daten nach Camp-Ende aufbewahrt werden, und diesen Abschnitt entsprechend ergänzen.
+            <h2>5. Speicherdauer und Löschung</h2>
+            <p>
+              Anmelde-, Kontakt- und Organisationsdaten werden so lange benötigt, wie die Anmeldung,
+              die Durchführung der gebuchten Fußballschule, die Zahlungsabwicklung und berechtigte
+              Rückfragen noch nicht abgeschlossen sind. Danach prüft der verantwortliche Verein,
+              welche Daten nicht mehr erforderlich sind, und veranlasst deren Löschung.
+            </p>
+            <p>
+              Freiwillige Angaben zu Allergien, Medikamenten und Notfällen dienen ausschließlich der
+              sicheren Vorbereitung und Durchführung. Nach Abschluss der Veranstaltung wird ihre
+              weitere Erforderlichkeit vorrangig geprüft. Eine längere Speicherung kommt nur bei einem
+              konkreten, dokumentierten rechtlichen Grund in Betracht.
+            </p>
+            <p>
+              Buchungsbelege, die gesetzlichen Aufbewahrungspflichten unterliegen, werden getrennt von
+              reinen Betreuungsdaten nach den jeweils einschlägigen gesetzlichen Fristen aufbewahrt.
+              Steuerlich relevante Buchungsbelege sind grundsätzlich acht Jahre aufzubewahren
+              (§ 147 AO); für andere Unterlagen können andere Fristen gelten.
+            </p>
+            <p>
+              Derzeit erfolgt keine automatische zeitgesteuerte Löschung der Anmeldungen. Der Verein
+              prüft Löschanfragen daher individuell und veranlasst erforderliche Löschungen manuell.
+              Technische Sicherungskopien werden nach den jeweiligen Aufbewahrungs- und
+              Überschreibzyklen des eingesetzten Dienstleisters entfernt.
             </p>
           </section>
 
@@ -135,8 +153,15 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
           </section>
 
           <section id="ds-8">
-            <h2>8. Cookies und Tracking</h2>
-            <p>Diese Seite verwendet keine Tracking- oder Marketing-Cookies.</p>
+            <h2>8. Cookies, Reichweitenmessung und technische Analyse</h2>
+            <p>
+              Für die Administration kann ein technisch notwendiges Sitzungscookie eingesetzt werden.
+              Es sind Vercel Web Analytics und Vercel Speed Insights zur aggregierten Auswertung von
+              Seitenaufrufen und technischen Leistungswerten eingebunden. Nach Angaben von Vercel
+              werden dabei keine werblichen Drittanbieter-Cookies gesetzt oder
+              personenbezogene Nutzerprofile über verschiedene Websites erstellt.
+              Google- oder Meta-Werbenetzwerke sind auf dieser Anmeldeseite nicht integriert.
+            </p>
           </section>
         </div>
       </main>

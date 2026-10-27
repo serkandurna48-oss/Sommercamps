@@ -105,6 +105,7 @@ def test_get_registration_target_is_scoped_by_organization_id_and_slug(monkeypat
         "id": uuid4(),
         "organization_id": tenant.organization_id,
         "slug": "summer-1",
+        "title": "Summer 1",
         "start_date": date(2027, 7, 5),
         "end_date": date(2027, 7, 9),
         "registration_start": None,

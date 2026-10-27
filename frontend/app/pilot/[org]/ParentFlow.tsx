@@ -266,7 +266,7 @@ export default function ParentFlow({
         const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
         const totalSeats = camps.reduce((s, c) => s + c.capacity, 0)
         return (
-          <header className={`hero h-trad${heroImg ? ' hero-photo' : ''}${clubAssets?.heroDesktopScale ? ' hero-zoom-desktop' : ''}`} lang="de">
+          <header className={`hero h-trad${heroImg ? ' hero-photo' : ''}${clubAssets?.heroDesktopScale ? ' hero-zoom-desktop' : ''}${clubAssets?.heroCtaEmphasis ? ' hero-cta-emphasis' : ''}`} lang="de">
             <nav className="h-trad-nav" aria-label="Seitennavigation">
               <div className="nav-left">
                 <span className="nav-logo-trad">
@@ -289,8 +289,17 @@ export default function ParentFlow({
                 <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
                 <p className="intro">{heroIntro}</p>
                 <div className="hero-btns">
-                  <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
-                  <button className="h-btn-line" type="button" onClick={scrollToCamps}>Termine ansehen</button>
+                  {clubAssets?.heroCtaEmphasis ? (
+                    <>
+                      <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+                      <button className="h-btn-line" type="button" onClick={scrollToCamps}>Termine ansehen</button>
+                    </>
+                  ) : (
+                    <>
+                      <button className="h-btn-line" type="button" onClick={scrollToCamps}>Camps ansehen</button>
+                      <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+                    </>
+                  )}
                 </div>
               </div>
               {camps.length > 0 && (

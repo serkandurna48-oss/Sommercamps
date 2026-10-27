@@ -2732,11 +2732,11 @@
   flex-wrap: wrap;
   gap: 10px;
 }
-.cp-public .h-trad .hero-btns {
+.cp-public .h-trad.hero-cta-emphasis .hero-btns {
   align-items: flex-start;
   margin-top: 4px;
 }
-.cp-public .h-trad .hero-btns button {
+.cp-public .h-trad.hero-cta-emphasis .hero-btns button {
   min-height: 48px;
   max-width: 100%;
 }

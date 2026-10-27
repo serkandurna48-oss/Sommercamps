@@ -9,6 +9,8 @@ export interface ClubAssets {
   heroPositionMobile?: string
   /** Optional desktop-only zoom. Mobile keeps its original crop and scale. */
   heroDesktopScale?: number
+  /** Show the club's primary registration CTA before the dates CTA. */
+  heroCtaEmphasis?: boolean
   sponsor?: {
     heading: string
     intro: string
@@ -42,6 +44,7 @@ const ASSETS: Record<string, ClubAssets> = {
     heroPosition: 'center 30%',
     heroPositionMobile: 'center 15%',
     heroDesktopScale: 1.08,
+    heroCtaEmphasis: true,
     sponsor: {
       heading: 'Sponsoren & Partner',
       intro: 'Sie möchten die Fußballschule KSV Baunatal unterstützen? Sprechen Sie mit uns über Möglichkeiten einer Partnerschaft.',

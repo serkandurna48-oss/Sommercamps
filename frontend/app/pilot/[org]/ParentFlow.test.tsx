@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it, vi } from 'vitest'
 import type { CampPublic, OrganizationPublic } from '../../lib/saasApi'
@@ -125,12 +126,34 @@ it('CampScreen rendert Camp-Titel, Preis und CTA', () => {
 })
 
 // ── M4: tradition und kompakt Hero-Struktur ──
-it.each(['tradition', 'kompakt'] as const)('%s hero rendert hero-label, Headline und beide Buttons', theme => {
+it.each(['tradition', 'kompakt'] as const)('%s hero behält die bisherigen CTAs', theme => {
   const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme }} camps={[mockCamp]} />)
   expect(html).toContain('hero-label')
   expect(html).toContain('Unser Fußballsommer')
-  expect(html).toContain(theme === 'tradition' ? 'Termine ansehen' : 'Camps ansehen')
-  expect(html).toContain('Jetzt anmelden')
+  expect(html).toMatch(/class="hero-btns"><button class="h-btn-line"[^>]*>Camps ansehen<\/button><button class="h-btn-brand"[^>]*>Jetzt anmelden<\/button>/)
+  expect(html).not.toContain('Termine ansehen')
+  expect(html).not.toContain('hero-cta-emphasis')
+})
+
+it('KSV tradition zeigt nur dort die hervorgehobene Anmeldung vor den Terminen', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, slug: 'ksv-baunatal' }} camps={[mockCamp]} />)
+  expect(html).toContain('hero-cta-emphasis')
+  expect(html).toMatch(/class="hero-btns"><button class="h-btn-brand"[^>]*>Jetzt anmelden<\/button><button class="h-btn-line"[^>]*>Termine ansehen<\/button>/)
+})
+
+it('JK akademie behält Beschriftung, Reihenfolge und Hero-Klasse', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, slug: 'jk-performance', theme: 'akademie' }} camps={[mockCamp]} />)
+  expect(html).toMatch(/class="hero-btns"><button class="h-btn-glass"[^>]*>Camps ansehen<\/button><button class="h-btn-solid"[^>]*>Jetzt anmelden<\/button>/)
+  expect(html).not.toContain('Termine ansehen')
+  expect(html).not.toContain('hero-cta-emphasis')
+})
+
+it('CTA-Abstand und Tap-Fläche sind nur für die KSV-Hero-Klasse definiert', () => {
+  const css = readFileSync(new URL('./publicTheme.css', import.meta.url), 'utf8')
+  expect(css).toMatch(/\.h-trad\.hero-cta-emphasis \.hero-btns\s*\{[^}]*align-items: flex-start;[^}]*margin-top: 4px;/)
+  expect(css).toMatch(/\.h-trad\.hero-cta-emphasis \.hero-btns button\s*\{[^}]*min-height: 48px;[^}]*max-width: 100%;/)
+  expect(css).not.toMatch(/\.h-trad \.hero-btns\s*\{[^}]*margin-top:/)
+  expect(css).not.toMatch(/\.h-trad \.hero-btns button\s*\{[^}]*min-height:/)
 })
 
 it('tradition hero rendert Foto wenn hero_image_url gesetzt', () => {

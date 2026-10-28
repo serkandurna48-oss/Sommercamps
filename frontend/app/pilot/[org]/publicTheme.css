@@ -3828,39 +3828,8 @@
   .cp-public[data-org='ksv-baunatal'] #s-form .row2 .opt-tag { display: block; margin-left: 0; }
 }
 .cp-public[data-org='ksv-baunatal'] #s-camp .camp-hd-intro { font-weight: 600; color: var(--ink); }
-/* KSV mobile: photograph and copy have separate zones; no copy over the children. */
+/* KSV mobile (Serkan 28.10. 14:44): Text bleibt ueber dem Foto, Gesichter oben frei (siehe Hero-Block unten). */
 @media (max-width: 599px) {
-  .cp-public[data-org='ksv-baunatal'] .hero.h-akad {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    height: auto;
-    background: #191b1d;
-  }
-  .cp-public[data-org='ksv-baunatal'] .h-akad .bg {
-    position: relative;
-    inset: auto;
-    width: 100%;
-    height: clamp(265px, 72vw, 355px);
-    flex: none;
-    order: 1;
-  }
-  .cp-public[data-org='ksv-baunatal'] .h-akad .bg::after,
-  .cp-public[data-org='ksv-baunatal'] .h-akad .hero-scrim::before { display: none; }
-  .cp-public[data-org='ksv-baunatal'] .h-akad .bg .hero-image {
-    object-fit: cover;
-    object-position: center 34% !important;
-    filter: brightness(1) !important;
-  }
-  .cp-public[data-org='ksv-baunatal'] .h-akad > .in {
-    position: relative;
-    z-index: 1;
-    order: 2;
-    min-height: 0;
-    padding: 26px 20px 32px;
-    gap: 22px;
-  }
-  .cp-public[data-org='ksv-baunatal'] .h-akad .in-main { padding: 0; }
   .cp-public[data-org='ksv-baunatal'] .h-akad .hero-btns button {
     width: auto;
     min-height: 44px;
@@ -3872,22 +3841,93 @@
   .cp-public[data-org='ksv-baunatal'] .camps .c-body { gap: 10px; }
 }
 
-/* KSV Hero 28.10. 14:30 (Serkan): heller hinter der Schrift; Bild naeher an Kinder und Rami, Betreuer rechts raus. */
+/* KSV Hero 28.10. (mit Serkan Schritt fuer Schritt abgestimmt, 14:30-14:56):
+   heller hinter der Schrift; Desktop zeigt nur den Ausschnitt Kinder + Rami (ksv-hero-desktop.jpg),
+   Handy nur den markierten Ausschnitt (ksv-hero-mobile.jpg) mit Text ueber den Jungs,
+   'Camp auswaehlen' oben rechts im Logo-Abstand, Zahlenzeile schmal und mittig.
+   Beide Ausschnitte stammen aus ksv-1-mannschaft.jpg. Das img bleibt fuer Alt/Prioritaet im DOM. */
 .cp-public[data-org='ksv-baunatal'] .h-akad { --hero-scrim-opacity: .38; }
 .cp-public[data-org='ksv-baunatal'] .h-akad .bg { overflow: hidden; }
-.cp-public[data-org='ksv-baunatal'] .h-akad .bg img {
-  scale: 1.32;
-  transform-origin: 50% 58%;
-  translate: 15% 0;
-  animation: none;
-}
+.cp-public[data-org='ksv-baunatal'] .h-akad .bg img { animation: none; }
 .cp-public[data-org='ksv-baunatal'] .h-akad :is(h1, .intro, .hero-label) {
   text-shadow: 0 1px 2px rgb(0 0 0 / .55), 0 2px 18px rgb(0 0 0 / .45);
 }
+@media (min-width: 600px) {
+  .cp-public[data-org='ksv-baunatal'] .hero.h-akad,
+  .cp-public[data-org='ksv-baunatal'] .hero.h-akad .in { min-height: min(100svh, 860px); }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .bg { background: url('/clubs/ksv/ksv-hero-desktop.jpg') center 20% / cover no-repeat; }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .bg img { opacity: 0; }
+}
 @media (max-width: 599px) {
-  .cp-public[data-org='ksv-baunatal'] .h-akad .bg img {
-    scale: 1.5;
-    transform-origin: 51% 66%;
-    translate: 0 4%;
+  .cp-public[data-org='ksv-baunatal'] .hero.h-akad {
+    --ksv-photo-h: calc(100vw * 1.393);
+    --ksv-copy-top: calc(var(--ksv-photo-h) - 250px);
+    min-height: 0;
+    height: auto;
+    position: relative;
+    background: var(--paper);
   }
+  .cp-public[data-org='ksv-baunatal'] .hero.h-akad .in {
+    min-height: 0;
+    padding: var(--ksv-copy-top) 20px 28px;
+  }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .bg {
+    bottom: auto;
+    height: var(--ksv-photo-h);
+    background: url('/clubs/ksv/ksv-hero-mobile.jpg') center / cover no-repeat;
+  }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .bg img { opacity: 0; }
+  /* Unterer Fotorand weich in den Seitenhintergrund, damit Text und Zahlenzeile ruhig stehen */
+  .cp-public[data-org='ksv-baunatal'] .h-akad .bg::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 45%;
+    background: linear-gradient(to bottom, transparent, rgb(0 0 0 / .55) 70%, var(--paper));
+  }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .hero-scrim::before { display: none; }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .hero-btns {
+    position: absolute;
+    top: calc(18px - var(--ksv-copy-top));
+    right: 0;
+    z-index: 5;
+    margin: 0;
+  }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .hero-btns button {
+    width: auto;
+    min-height: 44px;
+    padding: 10px 18px;
+    font-size: 14px;
+    box-shadow: 0 4px 14px rgb(0 0 0 / .25);
+  }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .hero-stats {
+    align-self: center;
+    margin-top: 6px;
+    padding: 8px 18px;
+    gap: 22px;
+    border-radius: 14px;
+  }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .hero-stats .hstat b { font-size: 20px; line-height: 1.1; }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .hero-stats .hstat span { font-size: 11px; }
+}
+
+/* Tablet hochkant: Ausschnitt Kinder + Rami oben komplett frei, Text darunter auf dunklem Grund. */
+@media (min-width: 600px) and (max-width: 899px) {
+  .cp-public[data-org='ksv-baunatal'] .hero.h-akad {
+    --ksv-photo-h: calc(100vw / 1.539);
+    min-height: 0;
+    height: auto;
+    background: var(--paper);
+  }
+  .cp-public[data-org='ksv-baunatal'] .hero.h-akad .in {
+    min-height: 0;
+    padding: calc(var(--ksv-photo-h) + 28px) 32px 40px;
+  }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .bg {
+    bottom: auto;
+    height: var(--ksv-photo-h);
+    background-position: center top;
+  }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .hero-scrim::before { display: none; }
+  .cp-public[data-org='ksv-baunatal'] .h-akad :is(h1, .intro, .hero-label) { text-shadow: none; }
 }

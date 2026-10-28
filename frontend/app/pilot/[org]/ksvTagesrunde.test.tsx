@@ -89,6 +89,23 @@ it('KSV-Formular: Trikotgröße, Allergien und Abholung tragen "freiwillig", Pfl
   expect(o).toContain('Freiwillig. Diese Angaben')
 })
 
+it('KSV-Hero: abgestimmte Bildausschnitte existieren und werden nur für KSV genutzt', () => {
+  const css = readFileSync(new URL('./publicTheme.css', import.meta.url), 'utf8')
+  const block = css.slice(css.indexOf('KSV Hero 28.10.'))
+  for (const file of ['ksv-hero-desktop.jpg', 'ksv-hero-mobile.jpg']) {
+    expect(block).toContain(`/clubs/ksv/${file}`)
+    expect(readFileSync(new URL(`../../../public/clubs/ksv/${file}`, import.meta.url)).length).toBeGreaterThan(50_000)
+    const usage = css.slice(0, css.indexOf('KSV Hero 28.10.'))
+    expect(usage).not.toContain(file)
+  }
+  expect(block).toMatch(/--hero-scrim-opacity: \.38/)
+  expect(block).toMatch(/\.hero-btns \{[^}]*top: calc\(18px - var\(--ksv-copy-top\)\)[^}]*right: 0/)
+  for (const rule of block.split('}').filter(r => r.includes('{'))) {
+    if (rule.trim().startsWith('@media')) continue
+    expect(rule).toContain("[data-org='ksv-baunatal']")
+  }
+})
+
 it('KSV-CSS: ein Rotton für Kartenaktionen und Datumblock ausgeblendet, nur KSV-gescoped', () => {
   const css = readFileSync(new URL('./publicTheme.css', import.meta.url), 'utf8')
   const block = css.slice(css.indexOf('KSV Tagesrunde 28.10.'))

@@ -3871,3 +3871,23 @@
   .cp-public[data-org='ksv-baunatal'] .camps .camp { padding: 16px; }
   .cp-public[data-org='ksv-baunatal'] .camps .c-body { gap: 10px; }
 }
+
+/* KSV Hero 28.10. 14:30 (Serkan): heller hinter der Schrift; Bild naeher an Kinder und Rami, Betreuer rechts raus. */
+.cp-public[data-org='ksv-baunatal'] .h-akad { --hero-scrim-opacity: .38; }
+.cp-public[data-org='ksv-baunatal'] .h-akad .bg { overflow: hidden; }
+.cp-public[data-org='ksv-baunatal'] .h-akad .bg img {
+  scale: 1.32;
+  transform-origin: 50% 58%;
+  translate: 15% 0;
+  animation: none;
+}
+.cp-public[data-org='ksv-baunatal'] .h-akad :is(h1, .intro, .hero-label) {
+  text-shadow: 0 1px 2px rgb(0 0 0 / .55), 0 2px 18px rgb(0 0 0 / .45);
+}
+@media (max-width: 599px) {
+  .cp-public[data-org='ksv-baunatal'] .h-akad .bg img {
+    scale: 1.5;
+    transform-origin: 51% 66%;
+    translate: 0 4%;
+  }
+}

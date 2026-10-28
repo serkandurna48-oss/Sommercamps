@@ -177,10 +177,11 @@ it('liefert aussagekräftige Galerie- und Trainer-Alts und leere Alts für dekor
   expect(host.querySelector<HTMLImageElement>('.d3c-aside-photo')?.alt).toBe('')
 })
 
-it('nimmt die versteckte CTA aus der Tastaturreihenfolge und fokussiert die Camp-Auswahl', async () => {
-  await mount(<ParentFlow org={org} camps={[camp, { ...camp, slug: 'zweites' }]} />)
-  expect(host.querySelector('.sticky-cta')?.hasAttribute('inert')).toBe(true)
-  await act(async () => host.querySelector<HTMLButtonElement>('.h-btn-line')!.click())
+it.each(['ksv-baunatal', 'neutral'])('%s fokussiert die Camp-Auswahl ohne versteckte Tastaturziele', async slug => {
+  await mount(<ParentFlow org={{ ...org, slug }} camps={[camp, { ...camp, slug: 'zweites' }]} />)
+  if (slug === 'ksv-baunatal') expect(host.querySelector('.sticky-cta')).toBeNull()
+  else expect(host.querySelector('.sticky-cta')?.hasAttribute('inert')).toBe(true)
+  await act(async () => host.querySelector<HTMLButtonElement>('.hero-btns button')!.click())
   expect(document.activeElement?.id).toBe('s-camps')
   expect(HTMLElement.prototype.scrollIntoView).toHaveBeenLastCalledWith({ behavior: 'instant' })
   expect(host.querySelectorAll('[role="button"]')).toHaveLength(0)

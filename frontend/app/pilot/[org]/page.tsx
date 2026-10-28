@@ -79,6 +79,7 @@ export default async function PilotOrgPage({ params, searchParams }: PageProps) 
     <div
       className={`cp-public ${publicFontClassName(org.theme)}`}
       data-theme={org.theme}
+      data-org={org.slug}
       style={
         {
           '--brand': brand.brand,

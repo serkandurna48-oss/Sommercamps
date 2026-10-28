@@ -693,6 +693,7 @@ export default function RegistrationFormScreen({
               <ExtraQuestions
                 key={camp.slug}
                 questions={questions}
+                stepLabel={orgSlug === 'ksv-baunatal' ? 'SCHRITT 3 VON 4' : undefined}
                 answers={form.extraAnswers}
                 submitAttempted={submitAttempted}
                 onChange={(key, value) => setForm((prev) => ({ ...prev, extraAnswers: { ...prev.extraAnswers, [key]: value } }))}

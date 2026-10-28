@@ -50,9 +50,10 @@ function render(
   answers: Record<string, string> = {},
   submitAttempted = false,
   onChange = vi.fn(),
+  stepLabel?: string,
 ) {
   hooks.cursor = 0
-  return walk(ExtraQuestions({ questions, answers, submitAttempted, onChange }))
+  return walk(ExtraQuestions({ questions, answers, submitAttempted, onChange, stepLabel }))
 }
 
 function change(node: ElementNode, value: string | boolean) {
@@ -99,10 +100,20 @@ describe('ExtraQuestions', () => {
     expect(result).toBeNull()
   })
 
-  it('renders a section heading when questions are provided', () => {
+  it('retains the neutral section label by default', () => {
     const nodes = render([CHOICE_QUESTION])
+    const labels = nodes.filter(n => n.type === 'span' && n.props.className === 'sec-label')
+    expect(labels).toHaveLength(1)
+    expect(labels[0].props.children).toBe('Weitere Angaben')
+  })
+
+  it('renders the KSV third of four form steps when specified', () => {
+    const nodes = render([CHOICE_QUESTION], {}, false, vi.fn(), 'SCHRITT 3 VON 4')
     const headings = nodes.filter(n => n.type === 'h2')
     expect(headings.some(h => String(h.props.children).includes('Fußball'))).toBe(true)
+    const stepLabels = nodes.filter(n => n.type === 'span' && n.props.className === 'fsec-step-lbl')
+    expect(stepLabels).toHaveLength(1)
+    expect(stepLabels[0].props.children).toBe('SCHRITT 3 VON 4')
   })
 
   describe('text question', () => {

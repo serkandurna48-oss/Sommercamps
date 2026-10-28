@@ -8,15 +8,16 @@ interface ExtraQuestionsProps {
   answers: Record<string, string>
   submitAttempted: boolean
   onChange: (key: string, value: string) => void
+  stepLabel?: string
 }
 
-export default function ExtraQuestions({ questions, answers, submitAttempted, onChange }: ExtraQuestionsProps) {
+export default function ExtraQuestions({ questions, answers, submitAttempted, onChange, stepLabel }: ExtraQuestionsProps) {
   if (!questions.length) return null
 
   return (
     <section className="fsec">
       <div className="fsec-head">
-        <span className="sec-label">Weitere Angaben</span>
+        <span className={stepLabel ? "fsec-step-lbl" : "sec-label"}>{stepLabel ?? "Weitere Angaben"}</span>
         <h2 className="d3">Angaben zum Fußball</h2>
       </div>
       <div className="f">

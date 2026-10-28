@@ -58,6 +58,7 @@ export default function ParentFlow({
   initialCampSlug?: string
 }) {
   const router = useRouter()
+  const isKsv = org.slug === 'ksv-baunatal'
   const [screen, setScreen] = useState<ScreenName>(() => initialCampSlug
     ? (camps.find(camp => camp.slug === initialCampSlug)?.is_full ? 'wait' : 'camp')
     : 'org')
@@ -276,7 +277,7 @@ export default function ParentFlow({
                 </span>
                 <span className="nav-name-trad">{org.name}</span>
               </div>
-              <button className="nav-cta-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+              {!isKsv && <button className="nav-cta-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>}
             </nav>
             {heroImg && (
               <div className="h-trad-shot">
@@ -289,7 +290,9 @@ export default function ParentFlow({
                 <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
                 <p className="intro">{heroIntro}</p>
                 <div className="hero-btns">
-                  {clubAssets?.heroCtaEmphasis ? (
+                  {isKsv ? (
+                    <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Camp auswählen</button>
+                  ) : clubAssets?.heroCtaEmphasis ? (
                     <>
                       <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
                       <button className="h-btn-line" type="button" onClick={scrollToCamps}>Termine ansehen</button>
@@ -341,7 +344,7 @@ export default function ParentFlow({
                 </span>
                 <span className="nav-name">{org.name}</span>
               </div>
-              <button className="nav-cta" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+              {!isKsv && <button className="nav-cta" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>}
             </nav>
             <div className="bg">{heroImg && <Image id="shotB" className="hero-image" src={heroImg} alt="" unoptimized fill priority style={heroImageStyle} />}</div>
             {!heroImg && <div className="veil" />}
@@ -351,8 +354,10 @@ export default function ParentFlow({
                 <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
                 <p className="intro">{heroIntro}</p>
                 <div className="hero-btns">
+                  {isKsv ? <button className="h-btn-solid" type="button" onClick={scrollToCamps}>Camp auswählen</button> : <>
                   <button className="h-btn-glass" type="button" onClick={scrollToCamps}>Camps ansehen</button>
                   <button className="h-btn-solid" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+                  </>}
                 </div>
               </div>
               {camps.length > 0 && (
@@ -394,7 +399,7 @@ export default function ParentFlow({
                 </span>
                 <span className="nav-name-trad">{org.name}</span>
               </div>
-              <button className="nav-cta-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+              {!isKsv && <button className="nav-cta-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>}
             </nav>
             {heroImg && (
               <div className="h-trad-shot">
@@ -407,8 +412,14 @@ export default function ParentFlow({
                 <h1 className="d1" data-split data-scale={headlineScale(heading)}>{heading}</h1>
                 <p className="intro">{heroIntro}</p>
                 <div className="hero-btns">
-                  <button className="h-btn-line" type="button" onClick={scrollToCamps}>Camps ansehen</button>
-                  <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+                  {isKsv ? (
+                    <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Camp auswählen</button>
+                  ) : (
+                    <>
+                      <button className="h-btn-line" type="button" onClick={scrollToCamps}>Camps ansehen</button>
+                      <button className="h-btn-brand" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>
+                    </>
+                  )}
                 </div>
               </div>
               {camps.length > 0 && (
@@ -674,7 +685,7 @@ export default function ParentFlow({
       <PublicFooter org={org} />
 
       {/* ── Mobile Sticky CTA ── */}
-      <div className={`sticky-cta${showStickyCta ? ' sticky-cta-on' : ''}`} aria-hidden={!showStickyCta} inert={!showStickyCta}>
+      {!isKsv && <div className={`sticky-cta${showStickyCta ? ' sticky-cta-on' : ''}`} aria-hidden={!showStickyCta} inert={!showStickyCta}>
         <div className="sticky-cta-in">
           {nextCamp && (
             <span className="sticky-cta-date">{formatCampDateRange(nextCamp.start_date, nextCamp.end_date)}</span>
@@ -683,7 +694,7 @@ export default function ParentFlow({
             Jetzt anmelden
           </button>
         </div>
-      </div>
+      </div>}
 
     </section>
   )

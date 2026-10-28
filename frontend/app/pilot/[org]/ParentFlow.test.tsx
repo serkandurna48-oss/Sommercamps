@@ -135,10 +135,13 @@ it.each(['tradition', 'kompakt'] as const)('%s hero behält die bisherigen CTAs'
   expect(html).not.toContain('hero-cta-emphasis')
 })
 
-it('KSV tradition zeigt nur dort die hervorgehobene Anmeldung vor den Terminen', () => {
-  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, slug: 'ksv-baunatal' }} camps={[mockCamp]} />)
-  expect(html).toContain('hero-cta-emphasis')
-  expect(html).toMatch(/class="hero-btns"><button class="h-btn-brand"[^>]*>Jetzt anmelden<\/button><button class="h-btn-line"[^>]*>Termine ansehen<\/button>/)
+it.each(['tradition', 'akademie', 'kompakt'] as const)('KSV %s offers one hero action', theme => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, slug: 'ksv-baunatal', theme }} camps={[mockCamp]} />)
+  const hero = html.slice(html.indexOf('<header'), html.indexOf('</header>'))
+  expect(hero.match(/<button/g)).toHaveLength(1)
+  expect(hero).toContain('Camp auswählen')
+  expect(hero).not.toContain('Jetzt anmelden')
+  expect(html).toContain('/clubs/ksv/ksv-kinder-2027.jpg')
 })
 
 it('JK akademie behält Beschriftung, Reihenfolge und Hero-Klasse', () => {

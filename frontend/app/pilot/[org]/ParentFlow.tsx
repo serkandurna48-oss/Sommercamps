@@ -154,8 +154,18 @@ export default function ParentFlow({
 
   function goForm() {
     setScreen('form')
-    window.scrollTo(0, 0)
   }
+
+  // Scroll only after React has mounted the registration screen. The earlier
+  // immediate scroll ran while the long camp detail page was still mounted.
+  useEffect(() => {
+    if (screen !== 'form') return
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+      document.getElementById('s-form')?.scrollIntoView({ block: 'start', behavior: 'instant' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [screen])
 
   function backToOrg() {
     const url = new URL(window.location.href)

@@ -3828,3 +3828,46 @@
   .cp-public[data-org='ksv-baunatal'] #s-form .row2 .opt-tag { display: block; margin-left: 0; }
 }
 .cp-public[data-org='ksv-baunatal'] #s-camp .camp-hd-intro { font-weight: 600; color: var(--ink); }
+/* KSV mobile: photograph and copy have separate zones; no copy over the children. */
+@media (max-width: 599px) {
+  .cp-public[data-org='ksv-baunatal'] .hero.h-akad {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: auto;
+    background: #191b1d;
+  }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .bg {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: clamp(265px, 72vw, 355px);
+    flex: none;
+    order: 1;
+  }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .bg::after,
+  .cp-public[data-org='ksv-baunatal'] .h-akad .hero-scrim::before { display: none; }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .bg .hero-image {
+    object-fit: cover;
+    object-position: center 34% !important;
+    filter: brightness(1) !important;
+  }
+  .cp-public[data-org='ksv-baunatal'] .h-akad > .in {
+    position: relative;
+    z-index: 1;
+    order: 2;
+    min-height: 0;
+    padding: 26px 20px 32px;
+    gap: 22px;
+  }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .in-main { padding: 0; }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .hero-btns button {
+    width: auto;
+    min-height: 44px;
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+  .cp-public[data-org='ksv-baunatal'] .h-akad .hero-stats { margin-top: 4px; }
+  .cp-public[data-org='ksv-baunatal'] .camps .camp { padding: 16px; }
+  .cp-public[data-org='ksv-baunatal'] .camps .c-body { gap: 10px; }
+}

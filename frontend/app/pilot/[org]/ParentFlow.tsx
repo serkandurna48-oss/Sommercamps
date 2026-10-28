@@ -59,6 +59,30 @@ export default function ParentFlow({
 }) {
   const router = useRouter()
   const isKsv = org.slug === 'ksv-baunatal'
+  // KSV-Start zeigt den Preis statt der Platzsumme (Serkan 28.10.).
+  const minPriceCents = camps.length > 0 ? Math.min(...camps.map(c => c.price_cents)) : 0
+  const samePrice = camps.every(c => c.price_cents === minPriceCents)
+  const priceStat = `${samePrice ? '' : 'ab '}${minPriceCents % 100 === 0
+    ? `${minPriceCents / 100} €`
+    : formatPrice(minPriceCents, camps[0]?.currency ?? 'EUR')}`
+  // "So einfach geht's": bei KSV vor den Camps, sonst wie bisher unten (Serkan 28.10.).
+  const howSection = (
+    <div className={`pad how-sec${isKsv ? ' how-sec-top' : ''}`}>
+      <div>
+        <span className="sec-label">In 3 Schritten</span>
+        <h2 className="d2" data-split>{publicUI.howItWorks.heading}</h2>
+      </div>
+      <div className="how-steps">
+        {publicUI.howItWorks.steps.map((step) => (
+          <div key={step.num} className="how-step" data-rise>
+            <span className="how-num">{step.num}</span>
+            <h3 className="d3">{step.title}</h3>
+            <p>{step.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
   const [screen, setScreen] = useState<ScreenName>(() => initialCampSlug
     ? (camps.find(camp => camp.slug === initialCampSlug)?.is_full ? 'wait' : 'camp')
     : 'org')
@@ -318,8 +342,13 @@ export default function ParentFlow({
                     </div>
                   )}
                   <div className="hstat-w">
-                    <b className="num" data-count={totalSeats}>{totalSeats}</b>
-                    <span>Plätze gesamt</span>
+                    {isKsv ? <>
+                      <b className="num">{priceStat}</b>
+                      <span>pro Camp</span>
+                    </> : <>
+                      <b className="num" data-count={totalSeats}>{totalSeats}</b>
+                      <span>Plätze gesamt</span>
+                    </>}
                   </div>
                 </div>
               )}
@@ -373,8 +402,13 @@ export default function ParentFlow({
                     </div>
                   )}
                   <div className="hstat">
-                    <b className="num" data-count={totalSeats}>{totalSeats}</b>
-                    <span>Plätze gesamt</span>
+                    {isKsv ? <>
+                      <b className="num">{priceStat}</b>
+                      <span>pro Camp</span>
+                    </> : <>
+                      <b className="num" data-count={totalSeats}>{totalSeats}</b>
+                      <span>Plätze gesamt</span>
+                    </>}
                   </div>
                 </div>
               )}
@@ -435,8 +469,13 @@ export default function ParentFlow({
                     </div>
                   )}
                   <div className="hstat-w hstat-w-dark">
-                    <b className="num" data-count={totalSeats}>{totalSeats}</b>
-                    <span>Plätze gesamt</span>
+                    {isKsv ? <>
+                      <b className="num">{priceStat}</b>
+                      <span>pro Camp</span>
+                    </> : <>
+                      <b className="num" data-count={totalSeats}>{totalSeats}</b>
+                      <span>Plätze gesamt</span>
+                    </>}
                   </div>
                 </div>
               )}
@@ -445,7 +484,8 @@ export default function ParentFlow({
         )
       })()}
 
-      {camps.length > 0 && (() => {
+      {/* KSV: kein Laufband (Serkan 28.10.: Ort und Termin stehen schon in den Campkarten). */}
+      {camps.length > 0 && !isKsv && (() => {
         const marqueeText = camps
           .map(c => [c.location, formatCampDateRange(c.start_date, c.end_date)].filter(Boolean).join(' · '))
           .filter(Boolean)
@@ -498,6 +538,8 @@ export default function ParentFlow({
         </svg>
         <span>Die Anmeldung dauert etwa vier Minuten. Sie brauchen kein Benutzerkonto.</span>
       </div>
+
+      {isKsv && howSection}
 
       {/* ── Camps ── */}
       <div className="pad sec" id="s-camps" tabIndex={-1}>
@@ -635,21 +677,7 @@ export default function ParentFlow({
         </div>
       )}
 
-      <div className="pad how-sec">
-        <div>
-          <span className="sec-label">In 3 Schritten</span>
-          <h2 className="d2" data-split>{publicUI.howItWorks.heading}</h2>
-        </div>
-        <div className="how-steps">
-          {publicUI.howItWorks.steps.map((step) => (
-            <div key={step.num} className="how-step" data-rise>
-              <span className="how-num">{step.num}</span>
-              <h3 className="d3">{step.title}</h3>
-              <p>{step.body}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      {!isKsv && howSection}
 
       <div className="pad faq-sec">
         <div>
@@ -713,6 +741,7 @@ export function CampScreen({
 }) {
   const pct = camp.capacity > 0 ? Math.round((camp.registered_count / camp.capacity) * 100) : 0
   const tight = !camp.is_full && camp.spots_remaining <= 3
+  const isKsv = org.slug === 'ksv-baunatal'
   const containerRef = useRef<HTMLElement>(null)
   useParentFlowMotion(org.theme, containerRef)
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -736,20 +765,25 @@ export function CampScreen({
       <div className="camp-hd pad">
         <div className="camp-hd-in">
           <div className="camp-hd-main">
-            <span className="sec-label">
-              {[camp.location, formatCampDateRange(camp.start_date, camp.end_date)].filter(Boolean).join(' · ')}
-            </span>
+            {/* KSV: Kopf nur Titel, Termin, Alter; der Ort steht einmal in der Tabelle (Serkan 28.10.). */}
+            {!isKsv && (
+              <span className="sec-label">
+                {[camp.location, formatCampDateRange(camp.start_date, camp.end_date)].filter(Boolean).join(' · ')}
+              </span>
+            )}
             <h1 ref={headingRef} tabIndex={-1} className="d1" data-split data-scale={headlineScale(camp.title)} lang="de">
               {camp.title}
             </h1>
             <p className="camp-hd-intro">
-              {camp.age_min}–{camp.age_max} Jahre
+              {isKsv && <>{formatCampDateRange(camp.start_date, camp.end_date)} · </>}{camp.age_min}–{camp.age_max} Jahre
             </p>
           </div>
-          <div className="camp-date-block">
-            <b className="camp-date-num num">{startDay}</b>
-            <span className="camp-date-month">{startMonth}</span>
-          </div>
+          {!isKsv && (
+            <div className="camp-date-block">
+              <b className="camp-date-num num">{startDay}</b>
+              <span className="camp-date-month">{startMonth}</span>
+            </div>
+          )}
         </div>
         <div className="camp-hd-meta">
           <div className="tags">

@@ -542,7 +542,7 @@ export default function RegistrationFormScreen({
                       {ageHint && <span className="hint" id="hint-child-age" role="status">{ageHint}</span>}
                     </label>
                     <label htmlFor="jersey_size" className="field s">
-                      <span className="t-lab">Trikotgröße</span>
+                      <span className="t-lab">Trikotgröße{orgSlug === 'ksv-baunatal' && <span className="opt-tag"> freiwillig</span>}</span>
                       <select
                         id="jersey_size"
                         name="jersey_size"
@@ -645,7 +645,7 @@ export default function RegistrationFormScreen({
                     <span className="err">{badFields.emergencyPhone && <span id="err-emergency-phone">{badFields.emergencyPhone}</span>}</span>
                   </label>
                   <label htmlFor="allergies" className="field">
-                    <span className="t-lab">Allergien, Medikamente, Unverträglichkeiten</span>
+                    <span className="t-lab">Allergien, Medikamente, Unverträglichkeiten{orgSlug === 'ksv-baunatal' && <span className="opt-tag"> freiwillig</span>}</span>
                     <textarea
                       id="allergies"
                       name="allergies"
@@ -655,7 +655,7 @@ export default function RegistrationFormScreen({
                       onChange={(e) => set('allergies', e.target.value)}
                       aria-describedby="hint-allergies"
                     />
-                    <span className="hint" id="hint-allergies">Freiwillig. Diese Angaben sehen nur die Betreuerinnen und Betreuer Ihres Kindes.</span>
+                    <span className="hint" id="hint-allergies">{orgSlug === 'ksv-baunatal' ? '' : 'Freiwillig. '}Diese Angaben sehen nur die Betreuerinnen und Betreuer Ihres Kindes.</span>
                   </label>
                   {form.allergies.trim() && (
                     <label htmlFor="health_data_consent" className={`consent${badFields.healthDataConsent ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.healthDataConsent = el }}>
@@ -676,7 +676,7 @@ export default function RegistrationFormScreen({
                     </label>
                   )}
                   <label htmlFor="pickup_authorized" className="field">
-                    <span className="t-lab">Wer darf Ihr Kind abholen?</span>
+                    <span className="t-lab">Wer darf Ihr Kind abholen?{orgSlug === 'ksv-baunatal' && <span className="opt-tag"> freiwillig</span>}</span>
                     <input
                       type="text"
                       id="pickup_authorized"

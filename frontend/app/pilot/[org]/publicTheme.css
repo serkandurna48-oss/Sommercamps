@@ -3790,3 +3790,41 @@
     transform: none !important;
   }
 }
+
+/* KSV Tagesrunde 28.10. (mit Serkan abgestimmt): ein Rotton fuer alle Aktionen, Datum einmal pro Karte,
+   "freiwillig" an optionalen Feldern, "So einfach geht's" vor den Camps. Nur KSV. */
+.cp-public[data-org='ksv-baunatal'] .camp:not(.full) .c-go {
+  color: var(--brand-on);
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
+  font-weight: 700;
+}
+.cp-public[data-org='ksv-baunatal'] .camp .c-date { display: none; }
+.cp-public[data-org='ksv-baunatal'] #s-form .opt-tag {
+  margin-left: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.cp-public[data-org='ksv-baunatal'] .how-sec-top { padding-block: 40px 8px; }
+.cp-public[data-org='ksv-baunatal'] .how-sec-top .d2 { margin-bottom: 20px; }
+@media (max-width: 599px) {
+  .cp-public[data-org='ksv-baunatal'] .how-sec-top { padding-block: 32px 0; }
+  /* Kompakt auf dem Handy: Zahl links, Text rechts, damit die Camps schnell folgen. */
+  .cp-public[data-org='ksv-baunatal'] .how-sec-top .how-steps { gap: 16px; }
+  .cp-public[data-org='ksv-baunatal'] .how-sec-top .how-step {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 4px;
+    padding: 0;
+    min-height: 0;
+  }
+  .cp-public[data-org='ksv-baunatal'] .how-sec-top .how-num { grid-row: 1 / span 2; font-size: 28px; }
+  .cp-public[data-org='ksv-baunatal'] .how-sec-top .how-step .d3 { font-size: 17px; margin: 0; }
+  .cp-public[data-org='ksv-baunatal'] .how-sec-top .how-step p { margin: 0; }
+  /* "Trikotgröße freiwillig" bricht in der schmalen Spalte um: beide Labels gleich hoch, Felder bleiben auf einer Linie. */
+  .cp-public[data-org='ksv-baunatal'] #s-form .row2 .t-lab { display: block; min-height: calc(2 * 1.5em); }
+  .cp-public[data-org='ksv-baunatal'] #s-form .row2 .opt-tag { display: block; margin-left: 0; }
+}
+.cp-public[data-org='ksv-baunatal'] #s-camp .camp-hd-intro { font-weight: 600; color: var(--ink); }

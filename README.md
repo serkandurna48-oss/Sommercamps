@@ -1,8 +1,8 @@
 # CampsPilot
 
-Online-Anmeldesystem für Fußball-Feriencamps. Aktuell Single-Tenant für **KSV Baunatal**
-(produktiv), im Umbau Richtung Multi-Tenant-fähiger Plattform für weitere Vereine —
-**JK Performance Academy** ist als zweiter Kunde in Vorbereitung (Draft-Status).
+> **Aktueller technischer Stand (28.10.2026):** [CampsPilot SaaS – Betriebs- und Releasezustand](docs/architecture/current-state-2026-10-28.md). Die nachfolgenden Abschnitte dokumentieren teilweise das ältere Legacy-System und dürfen NICHT als Beschreibung der heutigen SaaS-Produktionsarchitektur verwendet werden. Neue Mitarbeitende lesen zuerst den aktuellen Stand.
+
+Online-Anmeldesystem für Fußball-Feriencamps mit einem **produktiven Multi-Tenant-SaaS-Pfad** (`backend_saas/` + `/pilot/[org]`) und separat bestehenden Legacy-Auftritten (`backend/`). **KSV Baunatal** ist im SaaS öffentlich live; **JK Performance Academy** ist dort noch nicht öffentlich freigeschaltet. Details: [aktueller Betriebsstand](docs/architecture/current-state-2026-10-28.md).
 
 Details zu Architektur, Konventionen und Sicherheitspflichten: siehe [`CLAUDE.md`](./CLAUDE.md).
 
@@ -77,9 +77,7 @@ npm run build            # einmal mit NEXT_PUBLIC_ACTIVE_CLUB=ksv, einmal mit =j
 python -m py_compile main.py camp_config.py
 ```
 
-Es gibt aktuell **keine automatisierten Tests** (weder Frontend noch Backend) und **keine
-CI-Pipeline** — beides ist als offener Punkt in [`TODO.md`](./TODO.md) (T09) erfasst. Prüfungen
-laufen bis dahin manuell.
+**Aktueller Stand:** Frontend-Vitest und Backend-SaaS-Pytest sind vorhanden. Der ältere Workflow `.github/workflows/ci.yml` prüft vor allem das Legacy-System. Der neue Workflow `.github/workflows/ci-saas.yml` ergänzt Frontend-Regressionstests und SaaS-API-/DB-Integrationstests auf Pull Requests mit einer isolierten, kurzlebigen PostgreSQL-CI-Instanz, ohne Produktionsdaten. Lokale DB-Integrationstests benötigen weiterhin einen expliziten Wegwerf-Postgres-Port (`REVIEW_POSTGRES_PORT`). Die aktuellen Release- und QA-Regeln stehen in `docs/architecture/current-state-2026-10-28.md`.
 
 ## Weiterführende Dokumentation
 

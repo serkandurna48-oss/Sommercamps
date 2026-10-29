@@ -5,6 +5,29 @@ Staging von der Marketingseite bis „erste Anmeldung verwaltet und exportiert�
 kommt – einmal mit Bildschirmaufnahme belegt – und danach dieselbe Version
 kontrolliert in Production geht.
 
+## Nachtrag 29.10.2026, 13 Uhr – was seit der Tabelle unten erledigt ist
+
+Alles gemergt nach `demo/jan`, CI grün (Backend, Frontend, Browser-E2E). Noch **nicht** auf Staging
+von Hand geprüft und **nicht** in Production.
+
+| # | Lücke aus der Tabelle | Stand | PR |
+|---|---|---|---|
+| 1 | Bestätigungslink ohne `redirect_to` | erledigt | #41 |
+| 2 | Kein „Passwort vergessen“ | erledigt | #42 |
+| 2 | Kein Einladungsablauf | erledigt: Owner lädt per E-Mail ein, Link zum Passwort-Festlegen | #47 |
+| 4 | Kein Spam-Schutz Elternanmeldung | erledigt, greift erst mit `TRUSTED_CLIENT_IP_HEADER` (08, A.3) | #46 |
+| 4 | Kein Browser-E2E | erledigt: Eltern-Ablauf + kompletter Selbststart inkl. Einladung | #44, #45 |
+| 5 | Fehlgeschlagene Mail unsichtbar | erledigt: sichtbar + „Mail erneut senden“ | #42 |
+| 6 | Keine Mail bei Storno/Nachrücken, kein Audit | erledigt | #42 |
+| – | CI nie gelaufen | erledigt, läuft auf jedem PR | #40 |
+
+**Bewusst offen (blockiert v1 nicht):** automatischer Mail-Retry (manuelles Neusenden reicht),
+Bounce-Tracking, Audit für Camp-Anlage und Export, Eltern-Selbststorno, Stripe, Löschfristen.
+**Kosmetisch:** Vereinsadmin-Liste im Owner-Bereich zeigt Konto-IDs statt E-Mail-Adressen.
+
+**Offen bei Serkan:** Dashboard-Einstellungen (08, Teil A), Uptime-Alarm, dann Abnahme-Durchlauf
+auf Staging (08, Teil B). Erst danach Production-Release.
+
 Legende: **Getestet** = automatisierte Tests + im Code geprüft.
 **Live belegt** = in Production von echten Nutzern verwendet (nicht geprüft = nicht behauptet).
 

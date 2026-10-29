@@ -13,6 +13,14 @@ FakeProvider: only when NOTIFICATION_PROVIDER is explicitly "fake".
 Missing or unknown value:
   local/test (APP_ENV in "local"/"test"): logs warning, skips send silently.
   production: logs error, raises — causes email_error to be recorded.
+
+Non-production recipient guard (CTO 29.10.2026):
+  Whenever APP_ENV is not exactly "production", the Brevo provider is wrapped
+  in RecipientGuardProvider. Only recipients listed in
+  NOTIFICATION_ALLOWED_RECIPIENTS (comma-separated; full addresses or
+  "@domain" entries) are delivered. Everything else is blocked and raises, so
+  email_error is recorded and no real parent or club inbox gets staging mail.
+  Empty/unset allowlist outside production = block every recipient.
 """
 
 from __future__ import annotations
@@ -121,6 +129,38 @@ class BrevoProvider:
         resp.raise_for_status()
 
 
+class RecipientGuardProvider:
+    """Outside production: deliver only to explicitly allowed test recipients."""
+
+    def __init__(self, inner: MailProvider, allowed: list[str], app_env: str) -> None:
+        self._inner = inner
+        self._allowed = [entry.strip().lower() for entry in allowed if entry.strip()]
+        self._app_env = app_env
+        self.delivers = getattr(inner, "delivers", True)
+
+    def is_allowed(self, email: str) -> bool:
+        address = (email or "").strip().lower()
+        if "@" not in address:
+            return False
+        domain = "@" + address.rsplit("@", 1)[1]
+        return any(entry == address or (entry.startswith("@") and entry == domain) for entry in self._allowed)
+
+    def send(self, message: MailMessage) -> None:
+        if not self.is_allowed(message.to_email):
+            # No address in the log: recipients may be real parents (PII).
+            logger.warning(
+                "Mail blocked by non-production recipient guard (APP_ENV=%s)", self._app_env
+            )
+            raise RuntimeError(
+                "Blocked outside production: recipient not in NOTIFICATION_ALLOWED_RECIPIENTS"
+            )
+        self._inner.send(message)
+
+
+def _allowed_recipients() -> list[str]:
+    return (os.getenv("NOTIFICATION_ALLOWED_RECIPIENTS") or "").split(",")
+
+
 _provider: Optional[MailProvider] = None
 
 
@@ -153,11 +193,15 @@ def _app_env() -> str:
 def _build_provider() -> MailProvider:
     value = (os.getenv("NOTIFICATION_PROVIDER") or "").lower()
     if value == "brevo":
-        return BrevoProvider(
+        brevo = BrevoProvider(
             api_key=os.getenv("BREVO_API_KEY", ""),
             from_email=os.getenv("NOTIFICATION_FROM_EMAIL", "noreply@campspilot.app"),
             from_name=os.getenv("NOTIFICATION_FROM_NAME", "CampsPilot"),
         )
+        app_env = _app_env()
+        if app_env != "production":
+            return RecipientGuardProvider(brevo, _allowed_recipients(), app_env)
+        return brevo
     if value == "fake":
         return FakeProvider()
     app_env = _app_env()

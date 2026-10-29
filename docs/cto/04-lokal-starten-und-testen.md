@@ -36,6 +36,18 @@ Erwartung (Stand `775345d` + CTO-Branch, 29.10.):
 Ohne Postgres schlagen die Import-Tests absichtlich fehl (`test_import_ksv.py`).
 Das ist gewollt: kein „grün durch Überspringen“.
 
+## Browser-Test der Elternanmeldung (E2E)
+
+```bash
+scripts/dev/test-saas.sh --backend   # startet nebenbei nichts; Postgres muss auf 55443 laufen
+scripts/e2e/run-e2e.sh               # Seed → API :8113 → next build/start :3113 → Playwright
+```
+
+Legt eine frische DB `e2e_campspilot` an (Verein `e2e-verein`, Camp mit 1 Platz),
+meldet im echten Browser ein Kind an (Platz) und ein zweites (Warteliste), prüft
+Pflichtfelder und danach die Datenbank. Läuft in der CI als Job `saas-e2e`.
+Erstmalig: `cd frontend && npx playwright install chromium`.
+
 ## Lokaler Elternflow im Browser (ohne Login)
 
 ```powershell

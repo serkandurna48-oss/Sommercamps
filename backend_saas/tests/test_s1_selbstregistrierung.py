@@ -510,6 +510,7 @@ def test_approve_sets_review_status_approved_and_site_published_true(monkeypatch
     assert body["site_published"] is True
     assert len(sent_emails) == 1
     assert sent_emails[0]["decision"] == "approve"
+    assert sent_emails[0]["org_slug"] == "neuer-verein"
 
 
 # ---------------------------------------------------------------------------
@@ -679,7 +680,13 @@ def test_signup_sends_confirmation_email_with_link(monkeypatch):
     )
     monkeypatch.setattr(organizations_repo, "get_organization_by_slug", lambda slug: None)
     monkeypatch.setattr(organizations_repo, "create_signup_organization", lambda **kw: created_org)
-    monkeypatch.setattr(supabase_auth, "generate_confirmation_link", lambda email: fake_link)
+    link_calls = []
+
+    def generate_link(email, **kwargs):
+        link_calls.append(kwargs)
+        return fake_link
+
+    monkeypatch.setattr(supabase_auth, "generate_confirmation_link", generate_link)
 
     fake_provider = FakeProvider()
     reset_provider_for_testing(fake_provider)
@@ -694,6 +701,8 @@ def test_signup_sends_confirmation_email_with_link(monkeypatch):
         assert "Bitte bestätigen" in msg.subject
         assert fake_link in msg.html_content
         assert "24 Stunden" in msg.html_content
+        assert link_calls == [{"org_slug": "testverein-fc"}]
+        assert '/pilot/testverein-fc/login"' in msg.html_content
     finally:
         reset_provider_for_testing(None)
 
@@ -711,7 +720,7 @@ def test_signup_mail_failure_returns_201_with_sent_false(monkeypatch):
     monkeypatch.setattr(organizations_repo, "create_signup_organization", lambda **kw: created_org)
     monkeypatch.setattr(
         supabase_auth, "generate_confirmation_link",
-        lambda email: (_ for _ in ()).throw(SupabaseAuthError("service unavailable")),
+        lambda email, **kwargs: (_ for _ in ()).throw(SupabaseAuthError("service unavailable")),
     )
 
     with TestClient(app) as client:

@@ -233,7 +233,9 @@ def delete_user(user_id: str) -> None:
         _logger.exception("Auth user cleanup failed (user_id=%s): HTTP error", user_id)
 
 
-def generate_confirmation_link(email: str) -> str:
+def generate_confirmation_link(
+    email: str, *, org_slug: str | None = None, redirect_to: str | None = None,
+) -> str:
     """Generates a signup confirmation link via the Supabase Admin API.
     Uses POST /auth/v1/admin/generate_link with type='signup'.
 
@@ -244,8 +246,16 @@ def generate_confirmation_link(email: str) -> str:
     unconfirmed user). If Supabase changes the field name this function raises
     SupabaseAuthError with a clear message.
 
+    Redirects to the organization's login (platform login for resends without
+    a slug). Explicit overrides must use the configured frontend origin.
     Raises SupabaseAuthError on any failure."""
     settings = get_settings()
+    try:
+        target = settings.validate_frontend_redirect(
+            settings.login_url(org_slug) if redirect_to is None else redirect_to
+        )
+    except ValueError as exc:
+        raise SupabaseAuthError("Invalid confirmation redirect target") from exc
     if not settings.supabase_service_role_key:
         raise SupabaseAuthError("SUPABASE_SERVICE_ROLE_KEY not configured")
 
@@ -257,6 +267,7 @@ def generate_confirmation_link(email: str) -> str:
                 "apikey": settings.supabase_service_role_key,
             },
             json={"type": "signup", "email": email},
+            params={"redirect_to": target},
             timeout=10.0,
         )
     except httpx.HTTPError as exc:

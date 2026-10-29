@@ -40,6 +40,15 @@ logging.basicConfig(level=settings.log_level)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     db.init_pool()
     logger.info("%s started (env=%s)", settings.app_name, settings.app_env)
+    if settings.app_env.strip().lower() not in ("local", "test", "development") and (
+        "localhost" in settings.frontend_base_url or "127.0.0.1" in settings.frontend_base_url
+    ):
+        # Mail links and signup redirects would point to a developer machine.
+        logger.error(
+            "FRONTEND_BASE_URL is %s in env=%s - set it to the deployed frontend origin",
+            settings.frontend_base_url,
+            settings.app_env,
+        )
     try:
         yield
     finally:

@@ -48,7 +48,7 @@ it.each([202, 429, 503, 0])('Verlorene Bestätigungsmail: Neuversand aus dem Log
     expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/public\/signup\/resend$/), expect.objectContaining({ method: 'POST', body: JSON.stringify({ email: 'verein@example.test' }) }))
     expect(host.textContent).toContain(status === 202 ? 'Erneuter Versand angefragt.' : status === 429 ? 'Bitte warten Sie eine Stunde' : status === 0 ? 'Bitte prüfen Sie Ihre Internetverbindung' : 'Der erneute Versand konnte nicht angefragt werden.')
     expect(host.querySelector('button[type="submit"]')?.textContent).toBe('Anmelden')
-    expect(host.querySelector('a')?.getAttribute('href')).toBe('/campspilot')
+    expect([...host.querySelectorAll('a')].find(a => a.textContent === 'Zurück zu CampsPilot')?.getAttribute('href')).toBe('/campspilot')
   } finally {
     await act(() => root.unmount())
     host.remove()
@@ -59,8 +59,9 @@ it('Login bietet Bestätigungshinweis und Rückweg zur Marketingseite', () => {
   const dom = document.createElement('div')
   dom.innerHTML = renderToStaticMarkup(<LoginForm orgSlug="testverein" />)
   expect(dom.textContent).toContain('Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse')
-  expect(dom.querySelector('a')?.textContent).toBe('Zurück zu CampsPilot')
-  expect(dom.querySelector('a')?.getAttribute('href')).toBe('/campspilot')
+  const back = [...dom.querySelectorAll('a')].find(a => a.textContent === 'Zurück zu CampsPilot')
+  expect(back?.getAttribute('href')).toBe('/campspilot')
+  expect([...dom.querySelectorAll('a')].find(a => a.textContent === 'Passwort vergessen?')?.getAttribute('href')).toBe('/pilot/testverein/passwort-vergessen')
 })
 
 it('Allgemeine Anmeldung ohne bekannte Vereinsadresse führt über die bestehende Rollenprüfung zum eigenen Verein', async () => {

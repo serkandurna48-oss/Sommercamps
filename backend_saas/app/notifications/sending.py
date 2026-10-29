@@ -20,6 +20,7 @@ from typing import Optional
 from uuid import UUID
 
 from .. import db
+from ..config import get_settings
 from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES
 from ..payment_reference import payment_reference as build_payment_reference
 from .mail import get_provider
@@ -274,6 +275,7 @@ def send_review_decision_email(
     org_name: str,
     decision: str,
     note: Optional[str],
+    org_slug: str | None = None,
 ) -> None:
     """Sends a review decision (approve/reject) notification to the
     organization's contact email. Best-effort: never raises — a mail failure
@@ -281,18 +283,22 @@ def send_review_decision_email(
     provider as registration notifications (FakeProvider in tests)."""
     from html import escape
 
+    login_link = escape(get_settings().login_url(org_slug))
+    login_html = '<p>Ihr dauerhafter Login: <a href="' + login_link + '">' + login_link + '</a></p>'
     if decision == "approve":
         subject = "Ihr Verein wurde freigeschaltet - CampsPilot"
         body = (
             "<p>Sehr geehrte Damen und Herren,</p>"
             "<p>Ihr Antrag auf Freischaltung des Vereins <strong>"
             + escape(org_name)
-            + "</strong> wurde genehmigt. Ihr Verein ist nun fuer Eltern erreichbar.</p>"
-            "<p>Bitte melden Sie sich an, um Ihre Camps einzurichten und zu veroeffentlichen.</p>"
-            "<p>Mit freundlichen Gruessen,<br>das CampsPilot-Team</p>"
+            + "</strong> wurde genehmigt. Ihr Verein ist freigeschaltet.</p>"
+            "<p>Ihr nächster Schritt: Camp prüfen und veröffentlichen, "
+            "dann den Anmeldelink an Eltern teilen.</p>"
+            + login_html
+            + "<p>Mit freundlichen Grüßen<br>Ihr CampsPilot-Team</p>"
         )
     else:
-        note_html = "<p><strong>Begruendung:</strong> " + escape(note or "") + "</p>" if note else ""
+        note_html = "<p><strong>Begründung:</strong> " + escape(note or "") + "</p>" if note else ""
         subject = "Ihr Antrag wurde abgelehnt - CampsPilot"
         body = (
             "<p>Sehr geehrte Damen und Herren,</p>"
@@ -300,8 +306,9 @@ def send_review_decision_email(
             + escape(org_name)
             + "</strong> wurde leider abgelehnt.</p>"
             + note_html
-            + "<p>Bitte korrigieren Sie die angegebenen Maengel und reichen Sie den Antrag erneut ein.</p>"
-            "<p>Mit freundlichen Gruessen,<br>das CampsPilot-Team</p>"
+            + "<p>Bitte korrigieren Sie die genannten Punkte und reichen Sie den Antrag erneut zur Prüfung ein.</p>"
+            + login_html
+            + "<p>Mit freundlichen Grüßen<br>Ihr CampsPilot-Team</p>"
         )
 
     from .mail import MailMessage
@@ -312,10 +319,8 @@ def send_review_decision_email(
         provider.send(msg)
     except Exception as exc:
         logger.warning(
-            "send_review_decision_email failed (org=%s, decision=%s): %s",
-            org_name,
-            decision,
-            exc,
+            "send_review_decision_email failed (error_type=%s)",
+            type(exc).__name__,
         )
 
 
@@ -324,12 +329,13 @@ def send_signup_confirmation_email(
     to_email: str,
     org_name: str,
     confirmation_link: str,
+    org_slug: str | None = None,
 ) -> bool:
     """Sends the signup confirmation email after self-registration.
 
     Subject: "Bitte bestätigen Sie Ihre Registrierung"
-    Language: German, formal (gesiezt). Includes org name, confirmation link,
-    and a note that the link is valid for 24 hours.
+    Language: German, formal (gesiezt). Includes confirmation, next steps,
+    and a permanent login link.
 
     Returns True if the provider accepted the message without raising,
     False otherwise. Never raises — best-effort send."""
@@ -339,16 +345,21 @@ def send_signup_confirmation_email(
 
     e_org_name = escape(org_name)
     e_link = escape(confirmation_link)
+    login_link = escape(get_settings().login_url(org_slug))
     subject = "Bitte bestätigen Sie Ihre Registrierung"
     body = (
         "<p>Sehr geehrte Damen und Herren,</p>"
-        "<p>vielen Dank für Ihre Registrierung bei CampsPilot. "
-        "Bitte bestätigen Sie Ihre E-Mail-Adresse für den Verein <strong>"
+        "<p>Sie haben Ihren Verein <strong>"
         + e_org_name
-        + "</strong>, indem Sie auf den folgenden Link klicken:</p>"
-        '<p><a href="' + e_link + '">E-Mail-Adresse bestätigen</a></p>'
+        + "</strong> bei CampsPilot registriert. So geht es weiter:</p>"
+        "<ol>"
+        '<li><a href="' + e_link + '">E-Mail bestätigen</a></li>'
+        "<li>Verein einrichten und erstes Camp anlegen.</li>"
+        "<li>Zur Prüfung einreichen – wir prüfen Ihre Angaben und schalten Ihren Verein frei.</li>"
+        "</ol>"
         "<p>Dieser Link ist 24 Stunden gültig.</p>"
-        "<p>Mit freundlichen Grüßen,<br>das CampsPilot-Team</p>"
+        '<p>Ihr dauerhafter Login: <a href="' + login_link + '">' + login_link + '</a></p>'
+        "<p>Mit freundlichen Grüßen<br>Ihr CampsPilot-Team</p>"
     )
     msg = MailMessage(to_email=to_email, subject=subject, html_content=body)
     try:
@@ -358,9 +369,9 @@ def send_signup_confirmation_email(
     except Exception as exc:
         # No address in the log (PII); the org name is enough to find the case.
         logger.warning(
-            "send_signup_confirmation_email failed (org=%s): %s",
+            "send_signup_confirmation_email failed (org=%s, error_type=%s)",
             org_name,
-            exc,
+            type(exc).__name__,
         )
         return False
 

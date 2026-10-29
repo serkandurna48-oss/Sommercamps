@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 from functools import lru_cache
 from typing import Optional
+from urllib.parse import urlsplit
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -43,6 +44,55 @@ class Settings(BaseSettings):
     # Render service, different env var namespace). Empty by default: no
     # frontend is wired up yet (see README.md "CORS").
     cors_origins_extra: str = Field(default="", alias="CORS_ORIGINS_EXTRA")
+
+    # Trusted frontend origin for mail links and Supabase Auth redirects.
+    frontend_base_url: str = Field(default="http://localhost:3000", alias="FRONTEND_BASE_URL")
+
+    @field_validator("frontend_base_url")
+    @classmethod
+    def _frontend_origin(cls, value: str) -> str:
+        parts = urlsplit(value)
+        if (
+            any(char.isspace() or ord(char) < 32 for char in value)
+            or "\\" in value
+            or parts.scheme not in ("http", "https")
+            or not parts.hostname
+            or parts.username is not None
+            or parts.password is not None
+            or parts.path not in ("", "/")
+            or parts.query
+            or parts.fragment
+            or (parts.scheme == "http" and parts.hostname not in ("localhost", "127.0.0.1", "::1"))
+        ):
+            raise ValueError("FRONTEND_BASE_URL must be an HTTPS origin (HTTP only on loopback)")
+        parts.port  # Reject malformed ports at startup.
+        return value.rstrip("/")
+
+    def login_url(self, org_slug: str | None = None) -> str:
+        if org_slug is None:
+            return f"{self.frontend_base_url}/platform/login"
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", org_slug):
+            raise ValueError("Invalid organization slug for login URL")
+        return f"{self.frontend_base_url}/pilot/{org_slug}/login"
+
+    def validate_frontend_redirect(self, target: str) -> str:
+        """Require the exact frontend origin; never trust a caller's host."""
+        base = urlsplit(self.frontend_base_url)
+        parts = urlsplit(target)
+        default_ports = {"http": 80, "https": 443}
+        target_port = parts.port if parts.port is not None else default_ports.get(parts.scheme)
+        base_port = base.port if base.port is not None else default_ports.get(base.scheme)
+        if (
+            any(char.isspace() or ord(char) < 32 for char in target)
+            or "\\" in target
+            or parts.username is not None
+            or parts.password is not None
+            or parts.query
+            or parts.fragment
+            or (parts.scheme, parts.hostname, target_port) != (base.scheme, base.hostname, base_port)
+        ):
+            raise ValueError("Confirmation redirect must use the frontend origin")
+        return target
 
     # Platform accounts (see app/supabase_auth.py). Replaces the previous
     # single-password ADMIN_PASSWORD/JWT_SECRET scheme (feat/platform-

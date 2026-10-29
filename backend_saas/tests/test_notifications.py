@@ -1069,3 +1069,84 @@ def test_first_send_notifies_provider_once(monkeypatch):
         parent_first_name="A", parent_last_name="B", child_first_name="C", child_last_name="D",
     )
     assert calls["provider"] == 1
+
+
+@pytest.fixture
+def frontend_settings(monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setenv("FRONTEND_BASE_URL", "https://frontend.example")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+def test_signup_mail_contains_login_and_ordered_next_steps(fake_provider, frontend_settings):
+    assert sending.send_signup_confirmation_email(
+        to_email="club@example.com", org_name="Testverein", org_slug="testverein",
+        confirmation_link="https://auth.example/verify?token=fake&type=signup",
+    )
+    body = fake_provider.sent[0].html_content
+    assert "Sie haben Ihren Verein" in body
+    assert "<strong>Testverein</strong>" in body
+    assert '<a href="https://auth.example/verify?token=fake&amp;type=signup">E-Mail bestätigen</a>' in body
+    assert '<a href="https://frontend.example/pilot/testverein/login">' in body
+    assert "Ihr dauerhafter Login" in body
+    steps = ["E-Mail bestätigen", "Verein einrichten und erstes Camp anlegen", "Zur Prüfung einreichen"]
+    assert body.index("<ol>") < body.index(steps[0]) < body.index(steps[1]) < body.index(steps[2]) < body.index("</ol>")
+    assert body.count("<li>") == 3
+    assert "wir prüfen Ihre Angaben und schalten Ihren Verein frei" in body
+
+
+def test_signup_resend_mail_contains_permanent_platform_login(fake_provider, frontend_settings):
+    sending.send_signup_confirmation_email(
+        to_email="club@example.com", org_name="CampsPilot",
+        confirmation_link="https://auth.example/verify",
+    )
+    assert '<a href="https://frontend.example/platform/login">' in fake_provider.sent[0].html_content
+
+
+def test_approval_mail_contains_login_and_publish_next_step(fake_provider, frontend_settings):
+    sending.send_review_decision_email(
+        to_email="club@example.com", org_name="Testverein", org_slug="testverein",
+        decision="approve", note=None,
+    )
+    msg = fake_provider.sent[0]
+    assert "freigeschaltet" in msg.subject
+    assert '<a href="https://frontend.example/pilot/testverein/login">' in msg.html_content
+    assert "Camp prüfen und veröffentlichen, dann den Anmeldelink an Eltern teilen" in msg.html_content
+    assert "Ihr dauerhafter Login" in msg.html_content
+
+
+def test_rejection_mail_preserves_reason_and_login(fake_provider, frontend_settings):
+    sending.send_review_decision_email(
+        to_email="club@example.com", org_name="Testverein <script>test</script>",
+        org_slug="testverein", decision="reject", note='Bitte <Impressum> & Kontakt ergänzen.',
+    )
+    body = fake_provider.sent[0].html_content
+    assert "Begründung:" in body
+    assert "Bitte &lt;Impressum&gt; &amp; Kontakt ergänzen." in body
+    assert "&lt;script&gt;test&lt;/script&gt;" in body
+    assert "<script>" not in body
+    assert '<a href="https://frontend.example/pilot/testverein/login">' in body
+    assert "erneut zur Prüfung ein" in body
+
+
+@pytest.mark.parametrize("mail_kind", ["signup", "approve", "reject"])
+def test_onboarding_mail_errors_are_visible_without_personal_data(
+    monkeypatch, fake_provider, frontend_settings, caplog, mail_kind,
+):
+    def fail(message):
+        raise RuntimeError("club@example.com private-provider-response")
+
+    monkeypatch.setattr(fake_provider, "send", fail)
+    kwargs = dict(to_email="club@example.com", org_name="Private Test Club", org_slug="testverein")
+    if mail_kind == "signup":
+        assert sending.send_signup_confirmation_email(
+            **kwargs, confirmation_link="https://auth.example/verify",
+        ) is False
+    else:
+        sending.send_review_decision_email(**kwargs, decision=mail_kind, note=None)
+    assert "failed (error_type=RuntimeError)" in caplog.text
+    for private_value in ("club@example.com", "Private Test Club", "private-provider-response"):
+        assert private_value not in caplog.text

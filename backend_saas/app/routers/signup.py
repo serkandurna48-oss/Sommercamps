@@ -281,16 +281,17 @@ def _send_confirmation_email(*, email: str, org_name: str, slug: str) -> bool:
     email. Returns True if the email was dispatched, False on any failure.
     Never raises."""
     try:
-        link = supabase_auth.generate_confirmation_link(email)
+        link = supabase_auth.generate_confirmation_link(email, org_slug=slug)
     except Exception as exc:
         logger.warning(
-            "Signup confirmation link generation failed (slug=%s): %s", slug, exc
+            "Signup confirmation link generation failed (error_type=%s)", type(exc).__name__
         )
         return False
     sent = notifications_sending.send_signup_confirmation_email(
         to_email=email,
         org_name=org_name,
         confirmation_link=link,
+        org_slug=slug,
     )
     if not sent:
         logger.warning("Signup confirmation email send failed (slug=%s)", slug)
@@ -327,7 +328,7 @@ def signup_resend(data: ResendRequest, request: Request) -> dict:
             org_name="CampsPilot",
             confirmation_link=link,
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Signup confirmation resend failed (error_type=%s)", type(exc).__name__)
 
     return {}

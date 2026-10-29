@@ -407,7 +407,8 @@ export async function cancelRegistrationAdmin(
 }
 
 /** A2: Sendet die zum aktuellen Status passende Eltern-Mail erneut.
- * 502 = Mailversand abgelehnt (Grund steht danach in email_error). */
+ * 422 = Mailversand abgelehnt (Grund steht danach in email_error). Bewusst
+ * nicht 502: 502 deutet adminRequest als Server-Neustart. */
 export async function resendRegistrationMailAdmin(
   orgSlug: string,
   campSlug: string,

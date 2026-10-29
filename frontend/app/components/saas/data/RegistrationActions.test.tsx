@@ -102,8 +102,8 @@ it.each([false, true])('keeps cancellation result after the action disappears (p
   const result = container.querySelector('[role="status"]')!
   expect(result.textContent).toContain('Mia Test storniert.')
   if (hasPromoted) {
-    expect(result.textContent).toContain('Noah Test hat den Platz erhalten – Eltern jetzt informieren.')
-    expect(result.querySelector('a')?.getAttribute('href')).toBe('mailto:waiting@example.com')
+    expect(result.textContent).toContain('Noah Test hat den Platz erhalten. Die Familie wurde automatisch per E-Mail informiert.')
+    expect(result.querySelector('a')?.getAttribute('href')).toBe('/pilot/club/camps/camp/warteliste')
   } else {
     expect(result.querySelector('a')).toBeNull()
   }
@@ -128,21 +128,21 @@ it.each([2, 3])('shows the capacity hint instead of a promote button at occupanc
   expect(promoteWaitlistAction).not.toHaveBeenCalled()
 })
 
-it('names the next child and confirms camp, price and manual notification', async () => {
+it('names the next child and confirms camp, price and automatic notification', async () => {
   vi.mocked(promoteWaitlistAction).mockResolvedValue({ error: null, success: 'Platz vergeben.', promoted })
   await renderWaitlist()
   await click('Platz an Noah Test vergeben')
   expect(promoteWaitlistAction).not.toHaveBeenCalled()
   expect(container.textContent).toContain('Platz an Noah Test für Sommercamp vergeben?')
   expect(container.textContent?.replace(/\s/g, ' ')).toContain('Preis: 129,00 €')
-  expect(container.textContent).toContain('Eltern werden nicht automatisch benachrichtigt')
+  expect(container.textContent).toContain('Die Familie bekommt nach der Platzvergabe automatisch eine E-Mail.')
   await submit()
   expect(promoteWaitlistAction).toHaveBeenCalledOnce()
   await renderWaitlist([])
   const result = container.querySelector('[role="status"]')!
-  expect(result.textContent).toContain('Noah Test hat den Platz erhalten – Eltern jetzt informieren.')
-  expect(result.querySelector('a')?.textContent).toBe('Eltern informieren')
-  expect(result.querySelector('a')?.getAttribute('href')).toBe('mailto:waiting@example.com')
+  expect(result.textContent).toContain('Noah Test hat den Platz erhalten. Die Familie wurde automatisch per E-Mail informiert.')
+  expect(result.querySelector('a')?.textContent).toBe('Zur Warteliste')
+  expect(result.querySelector('a')?.getAttribute('href')).not.toContain('mailto:')
 })
 
 it('keeps a failed cancellation retryable without reporting success', async () => {
@@ -155,9 +155,9 @@ it('keeps a failed cancellation retryable without reporting success', async () =
   expect(actionForm()).toBeNull()
 })
 
-it('admin hints and parent FAQ agree that promotion sends no automatic message', () => {
-  expect(de.waitlistPage.promoteHint).toContain('nicht automatisch benachrichtigt')
+it('admin hints and parent FAQ agree that promotion sends an automatic mail', () => {
+  expect(de.waitlistPage.promoteHint).toContain('automatisch eine E-Mail')
   const faq = publicUI.faq.find(item => item.q.includes('ausgebucht'))!
-  expect(faq.a).toContain('keine automatische E-Mail')
-  expect(faq.a).toContain('der Verein meldet sich')
+  expect(faq.a).toContain('automatisch eine E-Mail')
+  expect(faq.a).not.toContain('keine automatische E-Mail')
 })

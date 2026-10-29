@@ -59,7 +59,8 @@ it.each(['tradition', 'akademie', 'kompakt'] as const)('zeigt beide sekundären 
 })
 
 it('lädt die ICS-Datei lokal mit Camp-Slug, korrektem Ende und ohne Personendaten herunter', async () => {
-  vi.useFakeTimers()
+  // Nur Date/Timeouts faken: jsdom-FileReader braucht echte setImmediate-/Microtask-Ticks.
+  vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] })
   vi.setSystemTime(new Date('2026-10-24T12:34:56Z'))
   const createObjectURL = vi.fn((_blob: Blob) => 'blob:test-calendar')
   const revokeObjectURL = vi.fn()

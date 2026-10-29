@@ -18,7 +18,13 @@
    Muster-IBANs `DE89…`, `example.com`). Muster-Scan nach Brevo-/Stripe-/
    Supabase-Schlüsseln und DB-URLs (aktueller Stand + letzte 400 Commits): nur
    Platzhalter. Ein vollständiger Scan der ganzen Historie fehlt noch.
-5. **Onboarding-Lücken** (Bestätigungslink, Passwort-Reset) – A1.
+5. **Onboarding-Lücken** (Bestätigungslink, Passwort-Reset) – Code in A1.
+   Zusätzlich Konfiguration: Supabase Site URL steht in beiden Projekten auf
+   `localhost:3000`, kein eigenes SMTP (siehe 08).
+5b. **IP-Rate-Limit beim Selbststart wirkt auf Render nicht:** vier Anfragen
+   hintereinander von derselben IP wurden alle angenommen (29.10.). Der
+   Limiter sieht vermutlich Proxy-IPs. Vor einem eigenen Limit für
+   Anmeldungen erst `TRUSTED_PROXY_HOPS`/`X-Forwarded-For` auf Render klären.
 6. **Eltern-Kommunikation bei Warteliste/Storno fehlt** – A2.
 7. **Kein Monitoring/Alarm, Backup-Restore nie geübt.**
 8. **Migrationen manuell je Umgebung.** Am 28.10. fehlte auf Staging eine

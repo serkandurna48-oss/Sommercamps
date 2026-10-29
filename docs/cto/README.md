@@ -13,6 +13,7 @@ Vercel und Render geprüft. Wo etwas nur angenommen ist, steht es dabei.
 | 5 | [05-saas-v1-abnahme.md](05-saas-v1-abnahme.md) | 8 Abläufe: Stand, Lücken, Abnahmekriterien |
 | 6 | [06-auftraege-ahmad.md](06-auftraege-ahmad.md) | Drei priorisierte Aufträge |
 | 7 | [07-risiken-und-entscheidungen.md](07-risiken-und-entscheidungen.md) | Offene Risiken, Entscheidungen |
+| 8 | [08-einstellungen-und-abnahme.md](08-einstellungen-und-abnahme.md) | Dashboard-Einstellungen, Abnahme-Durchlauf v1 |
 
 **Die drei Regeln, die nie brechen dürfen**
 

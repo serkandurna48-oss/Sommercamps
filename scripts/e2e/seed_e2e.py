@@ -16,6 +16,7 @@ from psycopg2 import sql
 ROOT = Path(__file__).resolve().parents[2]
 PORT = int(os.environ.get("REVIEW_POSTGRES_PORT", "55443"))
 DB = "e2e_campspilot"
+OWNER_ID = "00000000-0000-4000-8000-00000000e2e0"
 BASE = dict(host="127.0.0.1", port=PORT, user="postgres", connect_timeout=5)
 
 
@@ -52,6 +53,9 @@ def main() -> None:
                        6, 14, 1, 14900, 'published')""",
             (org_id,),
         )
+        # Platform owner for the self-start journey (matches fake_gotrue.py seed user).
+        cur.execute("INSERT INTO auth.users (id) VALUES (%s)", (OWNER_ID,))
+        cur.execute("INSERT INTO platform_owners (user_id) VALUES (%s)", (OWNER_ID,))
     print(f"seeded {DB} on 127.0.0.1:{PORT}")
 
 

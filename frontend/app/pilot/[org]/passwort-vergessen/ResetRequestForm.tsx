@@ -14,6 +14,6 @@ export default function ResetRequestForm({ orgSlug }: { orgSlug: string }) {
       <input className="login-field" id="reset-email" name="email" type="email" autoComplete="email" required />
       <button className="login-btn" type="submit" disabled={pending}>{pending ? 'Wird angefordert …' : 'Link anfordern'}</button>
     </form>}
-    <Link className="login-label underline" href={`/pilot/${encodeURIComponent(orgSlug)}/login`}>Zur Anmeldung</Link>
+    <Link className="login-label cp-focus inline-flex min-h-[44px] items-center underline" href={`/pilot/${encodeURIComponent(orgSlug)}/login`}>Zur Anmeldung</Link>
   </>
 }

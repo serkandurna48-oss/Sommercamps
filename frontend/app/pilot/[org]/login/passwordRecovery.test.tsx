@@ -7,6 +7,7 @@ const auth = vi.hoisted(() => ({
   resetPasswordForEmail: vi.fn(),
   setSession: vi.fn(),
   updateUser: vi.fn(),
+  signOut: vi.fn(),
 }))
 vi.mock('../../../lib/supabaseServer', () => ({ getSupabaseServerClient: () => ({ auth }) }))
 vi.mock('../../../lib/saasApi', () => ({ fetchOrganization: vi.fn().mockResolvedValue(null) }))
@@ -150,6 +151,7 @@ describe('Neues Passwort', () => {
     expect(auth.setSession).toHaveBeenCalledWith(session)
     expect(auth.updateUser).toHaveBeenCalledWith({ password: 'neues-passwort' })
     expect(auth.setSession.mock.invocationCallOrder[0]).toBeLessThan(auth.updateUser.mock.invocationCallOrder[0])
+    expect(auth.signOut).toHaveBeenCalledWith({ scope: 'global' })
     expect(container.querySelector('[role="status"]')?.textContent).toContain('Ihr Passwort wurde geändert.')
     expect(container.querySelector('a[href="/pilot/testverein/login"]')?.textContent).toBe('Zur Anmeldung')
     expect(container.querySelector('form')).toBeNull()
@@ -205,5 +207,15 @@ describe('Neues Passwort', () => {
   it('liest ausschließlich vollständige Recovery-Fragmente', () => {
     expect(readRecoverySession(recoveryHash)).toEqual(session)
     expect(readRecoverySession(recoveryHash + '&error_code=otp_expired')).toBeNull()
+  })
+})
+
+
+describe('Login nach Bestätigungslink', () => {
+  it('entfernt Tokens aus dem Fragment der Adresse', async () => {
+    window.history.replaceState(null, '', '/pilot/testverein/login#access_token=a&refresh_token=b&type=signup')
+    await act(async () => root.render(await LoginPage({ params: Promise.resolve({ org: 'testverein' }) })))
+    expect(window.location.hash).toBe('')
+    expect(window.location.pathname).toBe('/pilot/testverein/login')
   })
 })

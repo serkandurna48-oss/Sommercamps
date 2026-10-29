@@ -62,6 +62,7 @@ _FETCH_REGISTRATION = """
         r.child_first_name,
         r.child_last_name,
         r.email_sent_at,
+        r.email_error,
         r.camp_id,
         c.start_date,
         c.end_date
@@ -117,6 +118,20 @@ def _fetch_registration(registration_token: UUID, organization_id: UUID) -> Opti
 def _mark_sent(registration_token: UUID, organization_id: UUID) -> None:
     with db.get_cursor() as cur:
         cur.execute(_MARK_SENT, (datetime.now(timezone.utc), registration_token, organization_id))
+
+
+def _error_code(exc: Exception) -> str:
+    """Short, PII-free reason stored in email_error (shown to club admins via the API)."""
+    text = str(exc)
+    if "NOTIFICATION_ALLOWED_RECIPIENTS" in text:
+        return "blocked_outside_production"
+    if "NOTIFICATION_PROVIDER" in text:
+        return "mail_provider_not_configured"
+    response = getattr(exc, "response", None)
+    status_code = getattr(response, "status_code", None)
+    if isinstance(status_code, int):
+        return f"provider_http_{status_code}"
+    return type(exc).__name__
 
 
 def _mark_error(registration_token: UUID, error: str, organization_id: UUID) -> None:
@@ -260,7 +275,7 @@ def send_registration_notification(
             exc,
         )
         try:
-            _mark_error(registration_token, str(exc), organization_id)
+            _mark_error(registration_token, _error_code(exc), organization_id)
         except Exception:
             pass
 
@@ -290,7 +305,12 @@ def send_review_decision_email(
     provider as registration notifications (FakeProvider in tests)."""
     from html import escape
 
-    login_link = escape(get_settings().login_url(org_slug))
+    try:
+        login_link = escape(get_settings().login_url(org_slug))
+    except ValueError as exc:
+        # FRONTEND_BASE_URL missing in a deployed env: never mail a localhost link.
+        logger.error("send_review_decision_email skipped (error_type=%s)", type(exc).__name__)
+        return
     login_html = '<p>Ihr dauerhafter Login: <a href="' + login_link + '">' + login_link + '</a></p>'
     if decision == "approve":
         subject = "Ihr Verein wurde freigeschaltet - CampsPilot"
@@ -352,7 +372,11 @@ def send_signup_confirmation_email(
 
     e_org_name = escape(org_name)
     e_link = escape(confirmation_link)
-    login_link = escape(get_settings().login_url(org_slug))
+    try:
+        login_link = escape(get_settings().login_url(org_slug))
+    except ValueError as exc:
+        logger.error("send_signup_confirmation_email skipped (error_type=%s)", type(exc).__name__)
+        return False
     subject = "Bitte bestätigen Sie Ihre Registrierung"
     body = (
         "<p>Sehr geehrte Damen und Herren,</p>"
@@ -472,7 +496,7 @@ def send_status_change_notification(registration_token: UUID, organization_id: U
             type(exc).__name__,
         )
         try:
-            _mark_error(registration_token, f"{kind}: {exc}", organization_id)
+            _mark_error(registration_token, f"{kind}: {_error_code(exc)}", organization_id)
         except Exception:
             pass
 
@@ -480,11 +504,19 @@ def send_status_change_notification(registration_token: UUID, organization_id: U
 def resend_registration_mail(registration_token: UUID, organization_id: UUID) -> None:
     """Admin-triggered. Sends the mail matching the current status again,
     regardless of email_sent_at. Records the outcome and re-raises on failure."""
+    reg = _fetch_registration(registration_token, organization_id)
+    previous_error = (reg or {}).get("email_error") or ""
+    # A failed "Platz frei" mail is resent as such, not as a plain confirmation.
+    kind_hint = (
+        "promoted"
+        if previous_error.startswith("promoted:") and (reg or {}).get("status") in ("registered", "confirmed")
+        else "current"
+    )
     try:
-        _send_for_status(registration_token, organization_id, "current")
+        _send_for_status(registration_token, organization_id, kind_hint)
     except Exception as exc:
         try:
-            _mark_error(registration_token, f"resend: {exc}", organization_id)
+            _mark_error(registration_token, f"{kind_hint}: {_error_code(exc)}", organization_id)
         except Exception:
             pass
         raise

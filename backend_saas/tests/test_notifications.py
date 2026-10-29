@@ -402,8 +402,7 @@ def test_send_marks_error_when_provider_fails(monkeypatch, fake_provider):
 
     _call_send()
 
-    assert len(errors) == 1
-    assert "brevo down" in errors[0]
+    assert errors == ["ConnectionError"]  # PII-free code, provider text stays in logs only
 
 
 def test_send_does_not_raise_when_context_missing(monkeypatch, fake_provider):
@@ -1150,3 +1149,27 @@ def test_onboarding_mail_errors_are_visible_without_personal_data(
     assert "failed (error_type=RuntimeError)" in caplog.text
     for private_value in ("club@example.com", "Private Test Club", "private-provider-response"):
         assert private_value not in caplog.text
+
+
+@pytest.mark.parametrize("app_env", ["production", "staging"])
+def test_deployed_env_without_frontend_base_url_never_mails_localhost(monkeypatch, fake_provider, app_env):
+    """Review blocker: a forgotten FRONTEND_BASE_URL must not put localhost links into club mails."""
+    from app.config import get_settings
+    from app import supabase_auth
+
+    monkeypatch.setenv("APP_ENV", app_env)
+    monkeypatch.delenv("FRONTEND_BASE_URL", raising=False)
+    get_settings.cache_clear()
+    try:
+        assert sending.send_signup_confirmation_email(
+            to_email="club@example.com", org_name="Testverein", org_slug="testverein",
+            confirmation_link="https://auth.example/verify",
+        ) is False
+        sending.send_review_decision_email(
+            to_email="club@example.com", org_name="Testverein", org_slug="testverein", decision="approve", note=None,
+        )
+        assert fake_provider.sent == []
+        with pytest.raises(supabase_auth.SupabaseAuthError):
+            supabase_auth.generate_confirmation_link("club@example.com", org_slug="testverein")
+    finally:
+        get_settings.cache_clear()

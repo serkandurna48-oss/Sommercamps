@@ -129,6 +129,6 @@ describe('A2: Mailstatus im Teilnehmerdetail', () => {
   it('bestätigt eine gesendete Mail ruhig', async () => {
     await open({ ...registration, email_error: null, email_sent_at: '2027-01-01T10:00:00Z' })
     expect(container.textContent).toContain('Mail an die Familie gesendet.')
-    expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Mail nochmals senden')).toBe(true)
+    expect([...container.querySelectorAll('button')].some(b => b.textContent?.includes('Mail') && b.textContent.includes('senden'))).toBe(false)
   })
 })

@@ -37,7 +37,7 @@ export default function NewPasswordForm({ orgSlug }: { orgSlug: string }) {
       {state.error && <p className="login-error" id="password-error" role="alert">{state.error}</p>}
       <button className="login-btn" type="submit" disabled={pending}>{pending ? 'Wird gespeichert …' : 'Passwort speichern'}</button>
     </form>}
-    {link.ready && !state.success && <Link className="login-label underline" href={`${base}/passwort-vergessen`}>Neuen Link anfordern</Link>}
-    <Link className="login-label underline" href={`${base}/login`}>Zur Anmeldung</Link>
+    {link.ready && !state.success && <Link className="login-label cp-focus inline-flex min-h-[44px] items-center underline" href={`${base}/passwort-vergessen`}>Neuen Link anfordern</Link>}
+    <Link className="login-label cp-focus inline-flex min-h-[44px] items-center underline" href={`${base}/login`}>Zur Anmeldung</Link>
   </>
 }

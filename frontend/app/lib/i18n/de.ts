@@ -115,7 +115,7 @@ export const de = {
         count === 1
           ? `Eine Anmeldung wartet bei „${campTitle}“ auf einen Platz`
           : `${count} Anmeldungen warten bei „${campTitle}“ auf einen Platz`,
-      hint: 'Beim Nachrücken werden die Eltern nicht automatisch benachrichtigt. Der Verein meldet sich bei ihnen.',
+      hint: 'Beim Nachrücken bekommt die Familie automatisch eine E-Mail mit der Platzbestätigung.',
     },
     review: 'Ansehen',
     markDone: 'Erledigt',
@@ -194,7 +194,7 @@ export const de = {
     familiesWaiting: (n: number) => (n === 1 ? '1 Familie wartet' : `${n} Familien warten`),
     promote: (name: string) => `Platz an ${name} vergeben`,
     promoting: 'Wird vergeben …',
-    promoteHint: 'Beim Nachrücken werden die Eltern nicht automatisch benachrichtigt. Der Verein meldet sich bei ihnen.',
+    promoteHint: 'Beim Nachrücken bekommt die Familie automatisch eine E-Mail mit der Platzbestätigung.',
     promoteNoCapacity: 'Alle Plätze belegt – nach einer Stornierung rückt das nächste Kind automatisch nach.',
     promoteSuccess: (name: string) => `${name} ist jetzt angemeldet.`,
     promoteError: 'Konnte nicht aufrücken – erneut versuchen.',
@@ -521,7 +521,7 @@ export const publicUI = {
   },
   faq: [
     { q: 'Wie läuft die Bezahlung ab?', a: 'Die Bestätigung zeigt Ihnen, ob ein Platz reserviert ist oder Ihr Kind auf der Warteliste steht. Bei einem reservierten Platz überweisen Sie mit dem angegebenen Verwendungszweck. Falls keine Bankdaten hinterlegt sind, meldet sich der Verein zur Zahlung. Auf der Warteliste entstehen noch keine Kosten.' },
-    { q: 'Was passiert, wenn ein Camp ausgebucht ist?', a: 'Sie können sich auf die Warteliste setzen. Sobald ein Platz frei wird, rückt das nächste Kind automatisch nach. Es wird keine automatische E-Mail versendet; der Verein meldet sich bei Ihnen, wenn Ihr Kind einen Platz erhält.' },
+    { q: 'Was passiert, wenn ein Camp ausgebucht ist?', a: 'Sie können sich auf die Warteliste setzen. Sobald ein Platz frei wird, rückt das nächste Kind automatisch nach. Erhält Ihr Kind einen Platz, bekommen Sie automatisch eine E-Mail mit der Bestätigung.' },
     { q: 'Wie kann ich stornieren?', a: 'Schreiben Sie dem Camp-Team einfach eine E-Mail. Die genauen Stornobedingungen stehen in den Teilnahmebedingungen.' },
     { q: 'Wer darf mein Kind abholen?', a: 'Die abholberechtigten Personen geben Sie direkt im Anmeldeformular an. Bitte halten Sie bei der Abholung einen Lichtbildausweis bereit.' },
     { q: 'Wie erreiche ich das Camp-Team?', a: 'Die E-Mail-Adresse des Vereins finden Sie am Ende dieser Seite. Wir antworten in der Regel am selben Tag.' },

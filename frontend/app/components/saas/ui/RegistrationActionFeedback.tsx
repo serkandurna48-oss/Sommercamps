@@ -17,19 +17,17 @@ export default function RegistrationActionFeedback({ children, registrations, wa
   const [feedback, setFeedback] = useState<{
     success: string
     promotedName: string | null
-    parentEmail: string | null
   } | null>(null)
 
   function reportResult(result: ActionFormState) {
     if (!result.success) return
     const promoted = registrations.find(r => r.registration_token === result.promoted?.registration_token)
-    // Snapshot names/contact before revalidation removes the waiting child.
+    // Snapshot the name before revalidation removes the waiting child.
     setFeedback({
       success: result.success,
       promotedName: result.promoted
         ? (promoted ? `${promoted.child_first_name} ${promoted.child_last_name}` : 'Das nächste Kind auf der Warteliste')
         : null,
-      parentEmail: promoted?.parent_email ?? null,
     })
   }
 
@@ -40,10 +38,8 @@ export default function RegistrationActionFeedback({ children, registrations, wa
           <p>{feedback.success}</p>
           {feedback.promotedName && (
             <>
-              <p>{feedback.promotedName} hat den Platz erhalten – Eltern jetzt informieren.</p>
-              <a className="underline" href={feedback.parentEmail ? `mailto:${feedback.parentEmail}` : waitlistHref}>
-                {feedback.parentEmail ? 'Eltern informieren' : 'Zur Warteliste'}
-              </a>
+              <p>{feedback.promotedName} hat den Platz erhalten. Die Familie wurde automatisch per E-Mail informiert.</p>
+              <a className="underline" href={waitlistHref}>Zur Warteliste</a>
             </>
           )}
         </div>

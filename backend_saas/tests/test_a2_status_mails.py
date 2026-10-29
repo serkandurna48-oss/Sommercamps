@@ -220,7 +220,7 @@ def test_manual_promote_mails_parent_and_is_audited(monkeypatch):
     assert audit[0]["action"] == "registration.waitlist_promoted"
 
 
-def test_resend_endpoint_success_502_and_404(monkeypatch):
+def test_resend_endpoint_success_422_and_404(monkeypatch):
     _, audit = _api(monkeypatch)
     token = uuid4()
     row = {"registration_token": token, "email_sent_at": datetime(2027, 1, 1, tzinfo=timezone.utc)}
@@ -242,7 +242,7 @@ def test_resend_endpoint_success_502_and_404(monkeypatch):
     assert ok.status_code == 200 and sent == [token]
     assert audit[0]["action"] == "registration.mail_resent"
     assert missing.status_code == 404
-    assert failed.status_code == 502 and "provider" not in failed.text
+    assert failed.status_code == 422 and "provider" not in failed.text
 
 
 def test_resend_requires_auth():

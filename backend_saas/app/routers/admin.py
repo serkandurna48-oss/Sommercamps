@@ -558,7 +558,7 @@ def resend_registration_mail(
 ) -> ResendMailResponse:
     """Sends the parent mail that matches the registration's current status
     again (confirmation, waitlist or cancellation). Synchronous on purpose:
-    the admin clicked a button and must see whether it worked. 502 = the
+    the admin clicked a button and must see whether it worked. 422 = the
     mail provider refused; the reason is stored in email_error."""
     organization = require_organization(organization_slug)
     camp = require_camp(organization, camp_slug)
@@ -569,7 +569,7 @@ def resend_registration_mail(
         notifications_sending.resend_registration_mail(registration_token, organization["id"])
     except Exception as exc:
         logger.warning("Resend mail failed (organization_slug=%s, error_type=%s)", organization_slug, type(exc).__name__)
-        raise HTTPException(status_code=502, detail="Die Mail konnte nicht versendet werden.") from exc
+        raise HTTPException(status_code=422, detail="Die Mail konnte nicht versendet werden.") from exc
     platform_roles.write_audit_log(
         actor_user_id=auth.user_id,
         actor_email=auth.email,

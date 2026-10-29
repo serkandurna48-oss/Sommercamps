@@ -115,7 +115,8 @@ test('Fremder Verein startet ohne Hilfe bis zur verwalteten Anmeldung', async ({
   const colleague = 'kollegin@probelauf.e2e.example'
   await owner.getByLabel('E-Mail-Adresse des Vereinsadmins').fill(colleague)
   await owner.getByRole('button', { name: 'Einladen' }).click()
-  await expect(owner.getByText(`Einladung an ${colleague} gesendet.`, { exact: false })).toBeVisible()
+  // Check the stored result; the transient notice may be replaced when the page revalidates.
+  await expect.poll(async () => (await outbox(colleague)).some(m => m.kind === 'recovery_link'), { timeout: 15_000 }).toBe(true)
   const invite = (await outbox(colleague)).find(m => m.kind === 'recovery_link')
   expect(invite?.link).toContain('127.0.0.1%3A3113/pilot/sv-probelauf/neues-passwort')
   const admin2 = await (await browser.newContext()).newPage()

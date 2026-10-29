@@ -1,7 +1,7 @@
 """Minimal stand-in for Supabase Auth (GoTrue) for local browser E2E only.
 
 Listens on 127.0.0.1 only. Implements just the calls CampsPilot makes:
-admin user create/delete/lookup, generate_link (signup), verify, password and
+admin user create/delete/lookup, generate_link (signup, recovery), verify, password and
 refresh-token grants, /user, logout, recover. Every "mail" Supabase or the API
 would trigger is recorded in an in-memory outbox (GET /__outbox?email=...).
 Not a security boundary - never run outside a test machine.
@@ -113,11 +113,11 @@ class Handler(BaseHTTPRequestHandler):
                 if not entry:
                     self._send(303, None, {"Location": "about:blank#error=access_denied"})
                     return
-                email, redirect_to = entry
+                email, redirect_to, link_type = entry
                 USERS[email]["confirmed"] = True
                 s = _session(USERS[email])
                 frag = urlencode({"access_token": s["access_token"], "refresh_token": s["refresh_token"],
-                                  "expires_in": 3600, "token_type": "bearer", "type": "signup"})
+                                  "expires_in": 3600, "token_type": "bearer", "type": link_type})
                 self._send(303, None, {"Location": f"{redirect_to}#{frag}"})
             else:
                 self._send(404, {"msg": "not found"})
@@ -139,10 +139,14 @@ class Handler(BaseHTTPRequestHandler):
             elif url.path == "/auth/v1/admin/generate_link":
                 email = body["email"].lower()
                 redirect_to = (q.get("redirect_to") or [body.get("redirect_to", "")])[0]
+                link_type = body.get("type", "signup")
+                if link_type not in ("signup", "recovery") or email not in USERS:
+                    self._send(422, {"msg": "unsupported link request"})
+                    return
                 token = uuid.uuid4().hex
-                VERIFY[token] = (email, redirect_to)
-                link = f"http://127.0.0.1:{PORT}/auth/v1/verify?token={token}&type=signup&redirect_to={quote(redirect_to)}"
-                OUTBOX.append({"to": email, "kind": "signup_link", "link": link})
+                VERIFY[token] = (email, redirect_to, link_type)
+                link = f"http://127.0.0.1:{PORT}/auth/v1/verify?token={token}&type={link_type}&redirect_to={quote(redirect_to)}"
+                OUTBOX.append({"to": email, "kind": f"{link_type}_link", "link": link})
                 self._send(200, {"action_link": link, "email": email})
             elif url.path == "/auth/v1/token":
                 grant = (q.get("grant_type") or [""])[0]

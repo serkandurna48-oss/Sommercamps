@@ -507,10 +507,9 @@ class MeOut(BaseModel):
 
 
 class AddOrganizationMemberRequest(BaseModel):
-    """Assigns an *existing* Supabase Auth user as org_admin by email —
-    deliberately not an "invite" (no email is sent, see
-    app/supabase_auth.py::find_user_by_email's docstring). The account
-    must already exist (created via scripts/create_platform_user.py)."""
+    """Adds an org_admin by email. An existing account is assigned and told
+    by mail; for an unknown address an account is created and an invite
+    with a set-password link is sent."""
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
@@ -524,6 +523,8 @@ class OrganizationMemberOut(BaseModel):
     email: Optional[str] = None
     role: str
     created_at: datetime
+    invited: bool = False
+    invite_mail_sent: Optional[bool] = None
 
 
 class PlatformStatsOut(BaseModel):

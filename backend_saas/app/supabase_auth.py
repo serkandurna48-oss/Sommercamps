@@ -155,10 +155,11 @@ class SupabaseEmailConflictError(SupabaseAuthError):
     """A user with this email address already exists in Supabase Auth."""
 
 
-def create_user(email: str, password: str) -> SupabaseUser:
+def create_user(email: str, password: str, *, email_confirmed: bool = False) -> SupabaseUser:
     """Creates a new Supabase Auth user via the admin API. The user is created
     without email confirmation (email_confirm=false), meaning they need to
-    confirm their address before they can sign in. Raises
+    confirm their address before they can sign in. Invited admins are created
+    with email_confirmed=True: the invite link itself proves the address. Raises
     SupabaseEmailConflictError if the email is already registered, and
     SupabaseAuthError for any other failure."""
     settings = get_settings()
@@ -172,7 +173,7 @@ def create_user(email: str, password: str) -> SupabaseUser:
                 "Authorization": f"Bearer {settings.supabase_service_role_key}",
                 "apikey": settings.supabase_service_role_key,
             },
-            json={"email": email, "password": password, "email_confirm": False},
+            json={"email": email, "password": password, "email_confirm": email_confirmed},
             timeout=10.0,
         )
     except httpx.HTTPError as exc:
@@ -235,6 +236,7 @@ def delete_user(user_id: str) -> None:
 
 def generate_confirmation_link(
     email: str, *, org_slug: str | None = None, redirect_to: str | None = None,
+    link_type: str = "signup",
 ) -> str:
     """Generates a signup confirmation link via the Supabase Admin API.
     Uses POST /auth/v1/admin/generate_link with type='signup'.
@@ -248,7 +250,10 @@ def generate_confirmation_link(
 
     Redirects to the organization's login (platform login for resends without
     a slug). Explicit overrides must use the configured frontend origin.
-    Raises SupabaseAuthError on any failure."""
+    link_type='recovery' creates a set-password link for an existing account
+    (used for admin invites). Raises SupabaseAuthError on any failure."""
+    if link_type not in ("signup", "recovery"):
+        raise SupabaseAuthError("Unsupported link type")
     settings = get_settings()
     try:
         target = settings.validate_frontend_redirect(
@@ -266,7 +271,7 @@ def generate_confirmation_link(
                 "Authorization": f"Bearer {settings.supabase_service_role_key}",
                 "apikey": settings.supabase_service_role_key,
             },
-            json={"type": "signup", "email": email},
+            json={"type": link_type, "email": email},
             params={"redirect_to": target},
             timeout=10.0,
         )

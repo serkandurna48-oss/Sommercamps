@@ -85,6 +85,10 @@ class Settings(BaseSettings):
             raise ValueError("Invalid organization slug for login URL")
         return f"{self.frontend_base_url}/pilot/{org_slug}/login"
 
+    def password_setup_url(self, org_slug: str) -> str:
+        """Target of invite links: the organization's set-new-password page."""
+        return self.login_url(org_slug).removesuffix("/login") + "/neues-passwort"
+
     def validate_frontend_redirect(self, target: str) -> str:
         """Require the exact frontend origin; never trust a caller's host."""
         if not self.frontend_base_is_usable():

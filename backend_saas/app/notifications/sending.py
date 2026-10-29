@@ -406,6 +406,51 @@ def send_signup_confirmation_email(
         return False
 
 
+def send_member_invite_email(
+    *,
+    to_email: str,
+    org_name: str,
+    link: str,
+    new_account: bool,
+) -> bool:
+    """Tells a new org_admin about their access. New accounts get a
+    set-password link (valid 24h), existing accounts their login link.
+    Returns True if the provider accepted the message. Never raises."""
+    from html import escape
+
+    from .mail import MailMessage
+
+    e_org = escape(org_name)
+    e_link = escape(link)
+    if new_account:
+        subject = f"Einladung: {org_name} auf CampsPilot verwalten"
+        body = (
+            "<p>Guten Tag,</p>"
+            "<p>Sie wurden eingeladen, den Verein <strong>" + e_org + "</strong> auf CampsPilot mitzuverwalten.</p>"
+            '<p><a href="' + e_link + '">Passwort festlegen und loslegen</a></p>'
+            "<p>Der Link ist 24 Stunden gültig. Danach können Sie auf der Anmeldeseite "
+            "über „Passwort vergessen?“ jederzeit einen neuen Link anfordern.</p>"
+            "<p>Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren.</p>"
+            "<p>Mit freundlichen Grüßen<br>Ihr CampsPilot-Team</p>"
+        )
+    else:
+        subject = f"Sie verwalten jetzt {org_name} auf CampsPilot"
+        body = (
+            "<p>Guten Tag,</p>"
+            "<p>Ihr bestehendes CampsPilot-Konto hat jetzt Zugriff auf den Verein <strong>" + e_org + "</strong>.</p>"
+            '<p>Login: <a href="' + e_link + '">' + e_link + "</a></p>"
+            "<p>Mit freundlichen Grüßen<br>Ihr CampsPilot-Team</p>"
+        )
+    msg = MailMessage(to_email=to_email, subject=subject, html_content=body)
+    msg.sender_name = f"{org_name} über CampsPilot"
+    try:
+        get_provider().send(msg)
+        return True
+    except Exception as exc:
+        logger.warning("send_member_invite_email failed (error_type=%s)", type(exc).__name__)
+        return False
+
+
 def retry_registration_notification(
     registration_token: UUID,
     organization_id: UUID,

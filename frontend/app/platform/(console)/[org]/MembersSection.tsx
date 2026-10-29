@@ -4,13 +4,10 @@ import { useActionState } from 'react'
 import type { OrganizationMember } from '../../../lib/saasAdminApi'
 import { addOrganizationMemberAction, removeOrganizationMemberAction, type AddMemberState } from './memberActions'
 
-const initialState: AddMemberState = { error: null }
+const initialState: AddMemberState = { error: null, notice: null }
 
-/** Vereinsadmins zuweisen/entfernen (Auftrag Paket B) — owner-only Aktion,
- * kein Einladungs-Flow. Das Konto muss vorher per
- * scripts/create_platform_user.py angelegt worden sein; eine unbekannte
- * E-Mail liefert eine konkrete Fehlermeldung statt eines stillen
- * Fehlschlags. */
+/** Vereinsadmins einladen/entfernen — owner-only. Neue Adressen bekommen
+ * eine Einladung, bestehende Konten werden zugewiesen und informiert. */
 export default function MembersSection({ orgSlug, members }: { orgSlug: string; members: OrganizationMember[] }) {
   const boundAction = addOrganizationMemberAction.bind(null, orgSlug)
   const [state, formAction, pending] = useActionState(boundAction, initialState)
@@ -21,8 +18,8 @@ export default function MembersSection({ orgSlug, members }: { orgSlug: string; 
         Vereinsadmins
       </h2>
       <p className="cp-chip mb-3" style={{ color: 'var(--cp-muted)' }}>
-        Wer neben dir diesen Verein verwalten darf. Das Konto muss bereits existieren (siehe
-        scripts/create_platform_user.py) — es wird keine Einladungs-E-Mail verschickt.
+        Wer neben dir diesen Verein verwalten darf. Neue Adressen bekommen eine Einladung per E-Mail,
+        bestehende Konten erhalten sofort Zugriff.
       </p>
 
       {members.length === 0 ? (
@@ -59,6 +56,7 @@ export default function MembersSection({ orgSlug, members }: { orgSlug: string; 
           name="email"
           required
           placeholder="admin@verein.example"
+          aria-label="E-Mail-Adresse des Vereinsadmins"
           className="cp-body min-w-[240px] flex-1 rounded-[var(--cp-r-field)] border px-3 py-2"
           style={{ borderColor: 'var(--cp-field-line)' }}
         />
@@ -68,12 +66,17 @@ export default function MembersSection({ orgSlug, members }: { orgSlug: string; 
           className="cp-chip rounded-[var(--cp-r-chip)] border px-4 py-2 disabled:opacity-50"
           style={{ borderColor: 'var(--cp-field-line)', color: 'var(--cp-ink)' }}
         >
-          {pending ? 'Wird zugewiesen …' : 'Als Vereinsadmin zuweisen'}
+          {pending ? 'Wird eingeladen …' : 'Einladen'}
         </button>
       </form>
       {state.error && (
         <p className="cp-chip mt-2" style={{ color: 'var(--cp-error)' }} role="alert">
           {state.error}
+        </p>
+      )}
+      {state.notice && (
+        <p className="cp-chip mt-2" style={{ color: 'var(--cp-ink)' }} role="status">
+          {state.notice}
         </p>
       )}
     </section>

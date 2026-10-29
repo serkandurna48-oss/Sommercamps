@@ -194,22 +194,6 @@ def test_add_member_requires_platform_owner(monkeypatch):
     assert response.status_code == 403
 
 
-def test_add_member_unknown_email_returns_404(monkeypatch):
-    org = _org_row()
-    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
-    monkeypatch.setattr(supabase_auth, "find_user_by_email", lambda email: None)
-    headers = owner_headers()
-
-    with TestClient(app) as client:
-        response = client.post(
-            f"/admin/organizations/{org['slug']}/members",
-            json={"email": "nobody@example.com"},
-            headers=headers,
-        )
-
-    assert response.status_code == 404
-
-
 def test_add_member_success(monkeypatch):
     org = _org_row()
     monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)

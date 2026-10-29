@@ -558,6 +558,8 @@ export interface OrganizationMember {
   email: string | null
   role: string
   created_at: string
+  invited?: boolean
+  invite_mail_sent?: boolean | null
 }
 
 export async function fetchOrganizationMembersAdmin(orgSlug: string, token: string): Promise<OrganizationMember[]> {
@@ -571,7 +573,6 @@ export async function fetchOrganizationMembersAdmin(orgSlug: string, token: stri
  * Docstring). 404 heißt: noch kein Konto für diese E-Mail vorhanden. */
 export async function addOrganizationMemberAdmin(orgSlug: string, token: string, email: string): Promise<OrganizationMember> {
   const res = await adminMutate(`/admin/organizations/${orgSlug}/members`, token, 'POST', { email })
-  if (res.status === 404) throw new AdminActionError(de.adminApi.accountMissing)
   if (!res.ok) throw new AdminActionError(de.adminApi.memberAdd)
   return res.json() as Promise<OrganizationMember>
 }

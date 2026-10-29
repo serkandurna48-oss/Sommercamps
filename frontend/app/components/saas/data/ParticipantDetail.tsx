@@ -243,24 +243,26 @@ export default function ParticipantDetail({
           </ButtonLink>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2" aria-label="E-Mail an die Familie">
+        <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="E-Mail an die Familie">
           {mailFailed ? (
-            <p className="cp-body" role="status" style={{ color: 'var(--cp-error)' }}>
-              Letzte Mail an die Familie ist nicht angekommen.
-            </p>
+            <>
+              <p className="cp-body" style={{ color: 'var(--cp-error)' }}>
+                Letzte Mail an die Familie ist nicht angekommen.
+              </p>
+              <ActionForm
+                action={resendMail}
+                label="Mail erneut senden"
+                pendingLabel="Wird gesendet …"
+                variant="primary"
+                brandStrong={brandStrong}
+                brandOn={brandOn}
+              />
+            </>
           ) : registration.email_sent_at ? (
             <p className="cp-body" style={{ color: 'var(--cp-muted)' }}>
               Mail an die Familie gesendet.
             </p>
           ) : null}
-          <ActionForm
-            action={resendMail}
-            label={mailFailed ? 'Mail erneut senden' : 'Mail nochmals senden'}
-            pendingLabel="Wird gesendet …"
-            variant={mailFailed ? 'primary' : 'secondary'}
-            brandStrong={brandStrong}
-            brandOn={brandOn}
-          />
         </div>
 
         {isOpenPayment(registration) && (

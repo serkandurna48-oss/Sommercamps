@@ -560,11 +560,8 @@ def resend_registration_mail(
     mail provider refused; the reason is stored in email_error."""
     organization = require_organization(organization_slug)
     camp = require_camp(organization, camp_slug)
-    exists = any(
-        row["registration_token"] == registration_token
-        for row in registrations_repo.list_registrations_for_camp(organization["id"], camp["id"])
-    )
-    if not exists:
+    rows = registrations_repo.list_registrations_for_camp(organization["id"], camp["id"])
+    if not any(row["registration_token"] == registration_token for row in rows):
         raise HTTPException(status_code=404, detail="Registration not found")
     try:
         notifications_sending.resend_registration_mail(registration_token, organization["id"])

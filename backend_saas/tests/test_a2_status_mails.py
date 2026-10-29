@@ -133,7 +133,7 @@ def test_status_change_failure_is_recorded_never_raised(monkeypatch):
         sending.send_status_change_notification(reg["registration_token"], ORG_ID, "promoted")
     finally:
         reset_provider_for_testing(None)
-    assert marks[0][0] == "error" and marks[0][1].startswith("promoted: ")
+    assert marks == [("error", "promoted: blocked_outside_production")]
 
 
 def test_resend_uses_current_status_and_raises_on_failure(monkeypatch, fake):
@@ -145,7 +145,25 @@ def test_resend_uses_current_status_and_raises_on_failure(monkeypatch, fake):
     reset_provider_for_testing(RecipientGuardProvider(FakeProvider(), [], "staging"))
     with pytest.raises(RuntimeError):
         sending.resend_registration_mail(reg["registration_token"], ORG_ID)
-    assert marks[-1][0] == "error" and marks[-1][1].startswith("resend: ")
+    assert marks[-1] == ("error", "current: blocked_outside_production")
+
+
+def test_resend_after_failed_promoted_mail_resends_platz_frei(monkeypatch, fake):
+    marks = []
+    reg = {**_reg("registered"), "email_error": "promoted: provider_http_500"}
+    _wire(monkeypatch, reg, marks)
+    sending.resend_registration_mail(reg["registration_token"], ORG_ID)
+    assert fake.sent[0].subject.startswith("Platz frei")
+
+
+def test_error_code_hides_provider_text():
+    import httpx
+
+    request = httpx.Request("POST", "https://api.brevo.com/v3/smtp/email")
+    response = httpx.Response(400, request=request, text="invalid email eva@example.com")
+    exc = httpx.HTTPStatusError("Client error for eva@example.com", request=request, response=response)
+    assert sending._error_code(exc) == "provider_http_400"
+    assert sending._error_code(ValueError("eva@example.com")) == "ValueError"
 
 
 def test_plus_address_reaches_listed_base_inbox_only():

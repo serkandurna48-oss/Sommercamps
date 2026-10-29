@@ -93,7 +93,7 @@ def test_blocked_registration_mail_is_recorded_not_sent(monkeypatch):
     _call_send()
     assert inner.sent == []
     assert sent == []
-    assert len(errors) == 1 and "NOTIFICATION_ALLOWED_RECIPIENTS" in errors[0]
+    assert errors == ["blocked_outside_production"]
 
 
 def test_allowed_registration_mail_is_marked_sent(monkeypatch):

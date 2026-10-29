@@ -23,9 +23,22 @@ if (Test-Path $pgHelper) {
     $pgUp = $false
     try { $c = New-Object Net.Sockets.TcpClient('127.0.0.1', 55443); $c.Close(); $pgUp = $true } catch {}
     if (-not $pgUp) {
-        docker run -d --name campspilot-dev-pg -p 127.0.0.1:55443:5432 -e POSTGRES_HOST_AUTH_METHOD=trust postgres:17 | Out-Null
+        cmd /c "docker info >nul 2>&1"
         if ($LASTEXITCODE -ne 0) { throw 'Start Docker Desktop, or run your own throwaway Postgres on 127.0.0.1:55443' }
-        foreach ($i in 1..30) { docker exec campspilot-dev-pg pg_isready -U postgres *> $null; if ($LASTEXITCODE -eq 0) { break }; Start-Sleep 1 }
+        $existing = (cmd /c "docker ps -a --filter name=^campspilot-dev-pg$ --format {{.Names}} 2>nul")
+        if ($existing -eq 'campspilot-dev-pg') {
+            cmd /c "docker start campspilot-dev-pg >nul 2>&1"
+        } else {
+            cmd /c "docker run -d --name campspilot-dev-pg -p 127.0.0.1:55443:5432 -e POSTGRES_HOST_AUTH_METHOD=trust postgres:17 >nul 2>&1"
+        }
+        if ($LASTEXITCODE -ne 0) { throw 'Could not start the campspilot-dev-pg container' }
+        $ready = $false
+        foreach ($i in 1..60) {
+            cmd /c "docker exec campspilot-dev-pg pg_isready -h 127.0.0.1 -U postgres >nul 2>&1"
+            if ($LASTEXITCODE -eq 0) { $ready = $true; break }
+            Start-Sleep 1
+        }
+        if (-not $ready) { throw 'Postgres in campspilot-dev-pg did not become ready' }
     }
 }
 & $python -I "$PSScriptRoot/local.py" init

@@ -158,7 +158,16 @@ class RecipientGuardProvider:
 
 
 def _allowed_recipients() -> list[str]:
-    return (os.getenv("NOTIFICATION_ALLOWED_RECIPIENTS") or "").split(",")
+    entries = [e.strip() for e in (os.getenv("NOTIFICATION_ALLOWED_RECIPIENTS") or "").split(",")]
+    entries = [e for e in entries if e]
+    invalid = [e for e in entries if "@" not in e]
+    if invalid:
+        logger.warning(
+            "NOTIFICATION_ALLOWED_RECIPIENTS: %d entries without '@' are ignored "
+            "(use 'name@domain' or '@domain')",
+            len(invalid),
+        )
+    return [e for e in entries if "@" in e]
 
 
 _provider: Optional[MailProvider] = None
@@ -187,7 +196,7 @@ def _app_env() -> str:
             value = get_settings().app_env
         except Exception:  # settings incomplete (e.g. isolated tests)
             value = "local"
-    return (value or "local").lower()
+    return (value or "local").strip().lower()
 
 
 def _build_provider() -> MailProvider:
@@ -200,7 +209,16 @@ def _build_provider() -> MailProvider:
         )
         app_env = _app_env()
         if app_env != "production":
-            return RecipientGuardProvider(brevo, _allowed_recipients(), app_env)
+            allowed = _allowed_recipients()
+            # Loud at startup: a mistyped APP_ENV in production would otherwise
+            # block every parent mail silently until someone reads email_error.
+            logger.warning(
+                "Mail recipient guard ACTIVE (APP_ENV=%r is not 'production'): "
+                "%d allowed entries, all other recipients are blocked",
+                app_env,
+                len(allowed),
+            )
+            return RecipientGuardProvider(brevo, allowed, app_env)
         return brevo
     if value == "fake":
         return FakeProvider()

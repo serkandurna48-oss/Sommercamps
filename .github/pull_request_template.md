@@ -23,7 +23,7 @@
 
 ## Prüfung
 
-- [ ] CI „SaaS checks“ grün auf dem **letzten** Commit (SHA: ______)
+- [ ] CI `saas-backend` + `saas-frontend` grün auf dem **letzten** Commit (SHA: ______)
 - [ ] Lokal: `scripts/dev/test-saas.ps1` bzw. `scripts/dev/test-saas.sh`
 - [ ] Neuer Code hat einen Test, der ohne die Änderung fehlschlägt
 - [ ] Auf Staging durchgeklickt (nur synthetische Testdaten), Link: ______

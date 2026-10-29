@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Run the same SaaS checks as .github/workflows/ci-saas.yml on a dev machine.
 # Needs: Docker (or --use-existing-postgres), Python 3.13, Node 24.
-# Safety: Postgres is a throwaway container bound to 127.0.0.1:55443. No .env
-# files are read, no cloud database, no mail provider (APP_ENV=test).
+# Safety: Postgres is a throwaway container bound to 127.0.0.1:55443, tests only
+# connect to 127.0.0.1, no mail provider (APP_ENV=test). Refuses to run if
+# backend_saas/.env exists (Settings would read it).
 #
 #   scripts/dev/test-saas.sh                 # backend + frontend (no build)
 #   scripts/dev/test-saas.sh --backend       # only backend_saas
@@ -34,7 +35,16 @@ if [ "$RUN_BACKEND" = 1 ]; then
     docker run --rm -d --name "$PG_NAME" -p 127.0.0.1:55443:5432 \
       -e POSTGRES_HOST_AUTH_METHOD=trust postgres:17 >/dev/null
     STARTED_PG=1
-    for _ in $(seq 1 30); do docker exec "$PG_NAME" pg_isready -U postgres >/dev/null 2>&1 && break; sleep 1; done
+    ready=0
+    for _ in $(seq 1 60); do
+      # TCP probe: the image's temporary init server only listens on the socket.
+      if docker exec "$PG_NAME" pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; then ready=1; break; fi
+      sleep 1
+    done
+    [ "$ready" = 1 ] || { echo "Postgres did not become ready" >&2; exit 1; }
+  fi
+  if [ -e "$ROOT/backend_saas/.env" ]; then
+    echo "backend_saas/.env exists. Move it away: tests must not read real settings." >&2; exit 1
   fi
   cd "$ROOT/backend_saas"
   [ -d .venv ] || python3 -m venv .venv

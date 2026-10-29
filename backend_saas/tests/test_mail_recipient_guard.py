@@ -58,7 +58,7 @@ def test_empty_allowlist_blocks_all():
         guard.send(_msg("someone@example.com"))
 
 
-@pytest.mark.parametrize("app_env", ["staging", "staging (Text)", "local", "preview", "Production "])
+@pytest.mark.parametrize("app_env", ["staging", "staging (Text)", "local", "preview", "prod"])
 def test_brevo_is_guarded_outside_exact_production(monkeypatch, app_env):
     monkeypatch.setenv("NOTIFICATION_PROVIDER", "brevo")
     monkeypatch.setenv("BREVO_API_KEY", "not-a-real-key")
@@ -68,10 +68,11 @@ def test_brevo_is_guarded_outside_exact_production(monkeypatch, app_env):
     assert isinstance(provider, RecipientGuardProvider)
 
 
-def test_brevo_unguarded_in_production(monkeypatch):
+@pytest.mark.parametrize("app_env", ["production", "Production", " production "])
+def test_brevo_unguarded_in_production(monkeypatch, app_env):
     monkeypatch.setenv("NOTIFICATION_PROVIDER", "brevo")
     monkeypatch.setenv("BREVO_API_KEY", "not-a-real-key")
-    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_ENV", app_env)
     provider = mail_mod._build_provider()
     assert isinstance(provider, BrevoProvider)
 
@@ -105,3 +106,28 @@ def test_allowed_registration_mail_is_marked_sent(monkeypatch):
     _call_send()
     assert any(m.to_email == "max@example.com" for m in inner.sent)
     assert len(sent) == 1
+
+
+def test_guard_logs_once_at_build_and_ignores_entries_without_at(monkeypatch, caplog):
+    monkeypatch.setenv("NOTIFICATION_PROVIDER", "brevo")
+    monkeypatch.setenv("BREVO_API_KEY", "not-a-real-key")
+    monkeypatch.setenv("APP_ENV", "staging")
+    monkeypatch.setenv("NOTIFICATION_ALLOWED_RECIPIENTS", "example.com, qa@campspilot.app")
+    with caplog.at_level("WARNING"):
+        provider = mail_mod._build_provider()
+    assert "guard ACTIVE" in caplog.text and "without '@'" in caplog.text
+    assert provider.is_allowed("qa@campspilot.app")
+    assert not provider.is_allowed("someone@example.com")
+
+
+def test_signup_mail_failure_log_has_no_address(caplog):
+    from app.notifications.sending import send_signup_confirmation_email
+
+    reset_provider_for_testing(RecipientGuardProvider(_Inner(), [], "staging"))
+    with caplog.at_level("WARNING"):
+        ok = send_signup_confirmation_email(
+            to_email="geheim@example.com", org_name="Testverein", confirmation_link="https://x.test/c"
+        )
+    assert ok is False
+    assert "geheim@example.com" not in caplog.text
+    assert "Testverein" in caplog.text

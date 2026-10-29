@@ -56,13 +56,20 @@ Manuelle Retention-Dry-Run-Datei: `backend_saas/scripts/retention_dry_run.py`.
 
 ## 4. Live-Code und GitHub sind NICHT dieselbe Branch-Spitze
 
+> **Korrektur 29.10.2026 (gegen Vercel-Einstellungen geprüft):** Alle drei
+> Vercel-Projekte (`campspilot`, `jkperformance`, `sommercamps`) bauen
+> Production automatisch aus `main`. `campspilot` Production (`74588ce`) kam
+> per „Promote“ einer Preview; JK und KSV-Legacy laufen auf `main` = `946a8b7`.
+> Ein Merge nach `main` geht also sofort auf drei Live-Seiten. Gültiger
+> Ablauf und aktuelle SHAs: [docs/cto/03-git-und-deployment.md](../cto/03-git-und-deployment.md).
+
 **Zeitpunkt dieser Prüfung (28.10.2026):**
 
 | System | Quelle | Verifizierter Code-Stand |
 |---|---|---|
 | Vercel `campspilot` Produktion | Deployment `dpl_Ba96ARdpTDre72HCnX2spM8QSRzQ` | `74588ce` (READY) |
 | Render `campspilot-prod` | Branch `feat/platform-foundation` | `4c2a61a` |
-| GitHub `main` | Default-Branch | `946a8b7` (NICHT Produktionsquelle) |
+| GitHub `main` | Default-Branch, Production-Branch aller 3 Vercel-Projekte | `946a8b7` (JK + KSV-Legacy live) |
 | GitHub `ux/ksv-cleaner-parent-20261028` | fortgesetzte UX-Arbeit | `36b0bdb` |
 | GitHub `demo/jan` | Vorschau-/Entwicklungsstand | `36b0bdb` |
 

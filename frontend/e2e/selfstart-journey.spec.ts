@@ -81,7 +81,13 @@ test('Fremder Verein startet ohne Hilfe bis zur verwalteten Anmeldung', async ({
   await page.locator('#price_euros').fill('99')
   await page.getByRole('button', { name: 'Camp anlegen' }).click()
   await expect(page).toHaveURL(/camps\/probecamp-ostern\/konfiguration/)
-  await page.locator('#location').fill('Sportplatz Probe')
+  // Fill only after hydration: a value typed into the server-rendered input can be reset.
+  await page.waitForLoadState('networkidle')
+  await expect(async () => {
+    await page.locator('#location').fill('Sportplatz Probe')
+    await page.waitForTimeout(300)
+    await expect(page.locator('#location')).toHaveValue('Sportplatz Probe', { timeout: 500 })
+  }).toPass({ timeout: 15_000 })
   await page.getByRole('button', { name: 'Camp veröffentlichen' }).click()
   await expect(page.locator('main')).toContainText(/Camp:\s*Öffentlich/, { timeout: 15_000 })
 
@@ -140,6 +146,10 @@ test('Fremder Verein startet ohne Hilfe bis zur verwalteten Anmeldung', async ({
   await page.getByRole('button', { name: 'Anmeldung stornieren' }).click()
   await page.locator('section[aria-label="Anmeldung stornieren"] button[type="submit"]').click()
   await expect(page.getByText(/storniert/).first()).toBeVisible({ timeout: 15_000 })
+  // The right child was cancelled and the waiting child holds the spot now.
+  await page.reload()
+  await expect(page.getByRole('button', { name: /Mia Testkind.*Storniert/s })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Noah Testkind.*Angemeldet/s })).toBeVisible()
   await page.goto(`/pilot/${CLUB.slug}/warteliste`)
   await expect(page.getByText('Noah Testkind')).toHaveCount(0)
 })

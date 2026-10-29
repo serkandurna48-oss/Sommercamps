@@ -24,7 +24,6 @@ On Render with one load-balancer in front: set TRUSTED_PROXY_HOPS=1.
 from __future__ import annotations
 
 import logging
-import os
 import re
 import threading
 import time
@@ -35,6 +34,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from .. import supabase_auth
+from ..ratelimit import resolve_client_ip
 from ..notifications import sending as notifications_sending
 from ..repositories import organizations as organizations_repo
 from ..supabase_auth import SupabaseAuthError, SupabaseEmailConflictError
@@ -70,25 +70,11 @@ def _check_rate_limit(ip: str) -> bool:
 
 
 def _get_client_ip(request: Request) -> str:
-    """Returns the IP to use for rate limiting.
+    """Returns the IP to use for rate limiting (see app/ratelimit.py).
 
-    With TRUSTED_PROXY_HOPS=0 (default): request.client.host.
-    With TRUSTED_PROXY_HOPS=n: the n-th entry from the END of
-    X-Forwarded-For (appended by the nth trusted proxy hop).
-    Reading TRUSTED_PROXY_HOPS from os.environ at call time so tests can
-    use monkeypatch.setenv without clearing the lru_cache'd Settings."""
-    try:
-        hops = int(os.environ.get("TRUSTED_PROXY_HOPS", "0") or "0")
-    except (TypeError, ValueError):
-        hops = 0
-    if hops > 0:
-        xff = request.headers.get("x-forwarded-for", "")
-        parts = [p.strip() for p in xff.split(",") if p.strip()]
-        if len(parts) >= hops:
-            return parts[-hops]
-    if request.client:
-        return request.client.host
-    return "unknown"
+    Signup keeps its strict behaviour: without a trusted source it limits on
+    request.client.host, even if that is a shared proxy address."""
+    return resolve_client_ip(request)[0]
 
 
 # ---------------------------------------------------------------------------

@@ -160,6 +160,8 @@ export async function submitRegistration(
       ? 'Bitte prüfen Sie die markierten Angaben.'
       : res.status === 409
         ? 'Für dieses Kind liegt für dieses Camp bereits eine Anmeldung vor.'
+        : res.status === 429
+          ? 'Zu viele Anmeldungen in kurzer Zeit. Bitte versuchen Sie es in einer Stunde erneut.'
         : res.status === 404 || res.status === 422
           ? 'Die Anmeldung für dieses Camp ist derzeit nicht möglich. Bitte wenden Sie sich an den Verein.'
           : 'Die Anmeldung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.'

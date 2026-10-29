@@ -28,9 +28,14 @@ aus. Folge heute: Bestätigungslinks aus dem Selbststart landen auf localhost.
 - `NOTIFICATION_ALLOWED_RECIPIENTS` = `serkandurna48@gmail.com`
   (erlaubt auch `serkandurna48+irgendwas@gmail.com`)
 - `FRONTEND_BASE_URL` = `https://campspilot-git-demo-jan-serkans-projects-a49183cd.vercel.app`
+- `TRUSTED_CLIENT_IP_HEADER` = `cf-connecting-ip` (Spam-Schutz Elternanmeldung).
+  Prüfen: Nach dem Deploy darf im Log **keine** Warnung „Client IP rate limit inactive“
+  erscheinen, sobald eine Anmeldung eingeht. Erscheint sie, sendet Render den Header
+  nicht → Wert leeren und mir Bescheid geben.
 
 ### 4. Render **campspilot-prod** → Environment
 - `FRONTEND_BASE_URL` = `https://campspilot.vercel.app`
+- `TRUSTED_CLIENT_IP_HEADER` = `cf-connecting-ip`, erst wenn er auf Staging geprüft ist.
 - Nicht setzen: `NOTIFICATION_ALLOWED_RECIPIENTS` (Production schickt echt).
 
 ### 5. Render → Account → Notifications

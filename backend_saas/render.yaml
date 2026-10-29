@@ -53,3 +53,9 @@ services:
         sync: false           # NUR Staging/Nicht-Produktion: kommagetrennte Test-Empfänger
                                # (z. B. "qa@deine-domain.de,@example.com"). Ohne Eintrag wird
                                # außerhalb von APP_ENV=production JEDE Mail blockiert.
+      - key: TRUSTED_CLIENT_IP_HEADER
+        sync: false           # Header mit der echten Besucher-IP, den der Edge-Proxy setzt (Render: vermutlich "cf-connecting-ip", nach dem Setzen im Log prüfen).
+                               # Ohne Wert bleibt das Anmelde-Limit pro IP aus (Log-Warnung "rate limit inactive"),
+                               # weil sonst alle Eltern hinter der Proxy-IP gemeinsam gesperrt würden.
+      - key: REGISTRATION_RATE_LIMIT_PER_HOUR
+        sync: false           # optional, Standard 30 Elternanmeldungen pro IP und Stunde

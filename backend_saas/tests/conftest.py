@@ -58,3 +58,14 @@ def _clear_auth_dependency_overrides():
     from app.main import app
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def _reset_registration_rate_limit():
+    """The public registration limiter is process-global; tests share one
+    TestClient address, so every test starts with an empty window."""
+    from app.ratelimit import registration_limiter
+
+    registration_limiter.reset()
+    yield
+    registration_limiter.reset()

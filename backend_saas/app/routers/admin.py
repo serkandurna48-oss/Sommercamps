@@ -34,7 +34,7 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
 from ..admin_resolve import require_camp, require_organization
 from ..auth_deps import AuthContext, get_auth_context, require_org_access, require_platform_owner
@@ -42,6 +42,7 @@ from .. import supabase_auth
 from ..supabase_auth import SupabaseAuthError
 
 from ..admin_schemas import (
+    ResendMailResponse,
     AddOrganizationMemberRequest,
     AuditLogEntryOut,
     CampAdminOut,
@@ -430,7 +431,10 @@ def _admin_tenant(organization: dict) -> TenantContext:
     response_model=WaitlistPromoteResponse,
 )
 def promote_waitlist(
-    organization_slug: str, camp_slug: str, auth: AuthContext = Depends(require_org_access)
+    organization_slug: str,
+    camp_slug: str,
+    background_tasks: BackgroundTasks,
+    auth: AuthContext = Depends(require_org_access),
 ) -> WaitlistPromoteResponse:
     """
     Exposes the existing, already-tested
@@ -453,6 +457,22 @@ def promote_waitlist(
         camp_slug,
         promoted is not None,
     )
+    if promoted is not None:
+        platform_roles.write_audit_log(
+            actor_user_id=auth.user_id,
+            actor_email=auth.email,
+            action="registration.waitlist_promoted",
+            organization_id=str(organization["id"]),
+            target_type="registration",
+            target_id=str(promoted["registration_token"]),
+            metadata={},
+        )
+        background_tasks.add_task(
+            notifications_sending.send_status_change_notification,
+            promoted["registration_token"],
+            organization["id"],
+            "promoted",
+        )
     return WaitlistPromoteResponse(promoted=promoted)
 
 
@@ -461,7 +481,11 @@ def promote_waitlist(
     response_model=CancelRegistrationResponse,
 )
 def cancel_registration(
-    organization_slug: str, camp_slug: str, registration_token: UUID, auth: AuthContext = Depends(require_org_access)
+    organization_slug: str,
+    camp_slug: str,
+    registration_token: UUID,
+    background_tasks: BackgroundTasks,
+    auth: AuthContext = Depends(require_org_access),
 ) -> CancelRegistrationResponse:
     """
     Exposes registrations_repo.cancel_registration_and_promote_next as an
@@ -503,7 +527,61 @@ def cancel_registration(
         target_id=str(registration_token),
         metadata={"promoted": result["promoted"] is not None},
     )
+    # Parents learn about the change by mail (best effort, after the response).
+    background_tasks.add_task(
+        notifications_sending.send_status_change_notification,
+        registration_token,
+        organization["id"],
+        "cancelled",
+    )
+    if result["promoted"] is not None:
+        background_tasks.add_task(
+            notifications_sending.send_status_change_notification,
+            result["promoted"]["registration_token"],
+            organization["id"],
+            "promoted",
+        )
     return CancelRegistrationResponse(**result)
+
+
+@router.post(
+    "/organizations/{organization_slug}/camps/{camp_slug}/registrations/{registration_token}/resend-mail",
+    response_model=ResendMailResponse,
+)
+def resend_registration_mail(
+    organization_slug: str,
+    camp_slug: str,
+    registration_token: UUID,
+    auth: AuthContext = Depends(require_org_access),
+) -> ResendMailResponse:
+    """Sends the parent mail that matches the registration's current status
+    again (confirmation, waitlist or cancellation). Synchronous on purpose:
+    the admin clicked a button and must see whether it worked. 502 = the
+    mail provider refused; the reason is stored in email_error."""
+    organization = require_organization(organization_slug)
+    camp = require_camp(organization, camp_slug)
+    rows = registrations_repo.list_registrations_for_camp(organization["id"], camp["id"])
+    if not any(row["registration_token"] == registration_token for row in rows):
+        raise HTTPException(status_code=404, detail="Registration not found")
+    try:
+        notifications_sending.resend_registration_mail(registration_token, organization["id"])
+    except Exception as exc:
+        logger.warning("Resend mail failed (organization_slug=%s, error_type=%s)", organization_slug, type(exc).__name__)
+        raise HTTPException(status_code=502, detail="Die Mail konnte nicht versendet werden.") from exc
+    platform_roles.write_audit_log(
+        actor_user_id=auth.user_id,
+        actor_email=auth.email,
+        action="registration.mail_resent",
+        organization_id=str(organization["id"]),
+        target_type="registration",
+        target_id=str(registration_token),
+        metadata={},
+    )
+    row = next(
+        r for r in registrations_repo.list_registrations_for_camp(organization["id"], camp["id"])
+        if r["registration_token"] == registration_token
+    )
+    return ResendMailResponse(registration_token=registration_token, email_sent_at=row.get("email_sent_at"))
 
 
 @router.patch(

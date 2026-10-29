@@ -9,7 +9,7 @@ import RegistrationActionFeedback from '../ui/RegistrationActionFeedback'
 import ParticipantList from './ParticipantList'
 import WaitlistCard from './WaitlistCard'
 
-vi.mock('../actions/waitlistActions', () => ({
+vi.mock('../actions/waitlistActions', () => ({ resendRegistrationMailAction: vi.fn(),
   cancelRegistrationAction: vi.fn(),
   promoteWaitlistAction: vi.fn(),
   updateRegistrationDetailsAction: vi.fn(),
@@ -48,8 +48,10 @@ async function click(label: string) {
   expect(button, `Missing button: ${label}`).toBeDefined()
   await act(() => button!.click())
 }
+// Forms outside the A2 mail block (that one is always present in the detail view).
+const actionForm = () => [...container.querySelectorAll('form')].find(f => !f.closest('[aria-label="E-Mail an die Familie"]')) ?? null
 async function submit() {
-  const form = container.querySelector('form')
+  const form = actionForm()
   expect(form).not.toBeNull()
   await act(async () => { form!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })) })
 }
@@ -86,7 +88,7 @@ it('Behalten closes confirmation without cancelling', async () => {
   await click('Anmeldung stornieren')
   await click('Behalten')
   expect(cancelRegistrationAction).not.toHaveBeenCalled()
-  expect(container.querySelector('form')).toBeNull()
+  expect(actionForm()).toBeNull()
   expect(container.textContent).not.toContain('Zahlungsstatus:')
 })
 
@@ -150,7 +152,7 @@ it('keeps a failed cancellation retryable without reporting success', async () =
   await submit()
   expect(container.querySelector('[role="alert"]')?.textContent).toBe('Bitte erneut versuchen.')
   expect(container.querySelector('[role="status"]')).toBeNull()
-  expect(container.querySelector('form')).toBeNull()
+  expect(actionForm()).toBeNull()
 })
 
 it('admin hints and parent FAQ agree that promotion sends no automatic message', () => {

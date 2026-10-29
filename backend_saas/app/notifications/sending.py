@@ -6,6 +6,13 @@ send_registration_notification — called from the registration router
   because the registration is already committed and must not be rolled back
   due to a mail error. Records email_sent_at on success, email_error on failure.
 
+send_status_change_notification — best-effort parent mail after the club
+  cancels a registration or a waitlisted child moves up. Records
+  email_sent_at / email_error like the confirmation mail.
+
+resend_registration_mail — explicit admin action: sends the mail that fits
+  the registration's CURRENT status again. Raises on failure (the admin sees it).
+
 retry_registration_notification — idempotent re-send for a registration
   that hasn't received a mail yet (email_sent_at IS NULL). Safe to call
   multiple times; second call is a no-op if the first succeeded.
@@ -24,7 +31,7 @@ from ..config import get_settings
 from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES
 from ..payment_reference import payment_reference as build_payment_reference
 from .mail import get_provider
-from .templates import build_provider_mail, build_registration_mail
+from .templates import build_cancellation_mail, build_provider_mail, build_registration_mail
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +62,7 @@ _FETCH_REGISTRATION = """
         r.child_first_name,
         r.child_last_name,
         r.email_sent_at,
+        r.email_error,
         r.camp_id,
         c.start_date,
         c.end_date
@@ -110,6 +118,20 @@ def _fetch_registration(registration_token: UUID, organization_id: UUID) -> Opti
 def _mark_sent(registration_token: UUID, organization_id: UUID) -> None:
     with db.get_cursor() as cur:
         cur.execute(_MARK_SENT, (datetime.now(timezone.utc), registration_token, organization_id))
+
+
+def _error_code(exc: Exception) -> str:
+    """Short, PII-free reason stored in email_error (shown to club admins via the API)."""
+    text = str(exc)
+    if "NOTIFICATION_ALLOWED_RECIPIENTS" in text:
+        return "blocked_outside_production"
+    if "NOTIFICATION_PROVIDER" in text:
+        return "mail_provider_not_configured"
+    response = getattr(exc, "response", None)
+    status_code = getattr(response, "status_code", None)
+    if isinstance(status_code, int):
+        return f"provider_http_{status_code}"
+    return type(exc).__name__
 
 
 def _mark_error(registration_token: UUID, error: str, organization_id: UUID) -> None:
@@ -253,7 +275,7 @@ def send_registration_notification(
             exc,
         )
         try:
-            _mark_error(registration_token, str(exc), organization_id)
+            _mark_error(registration_token, _error_code(exc), organization_id)
         except Exception:
             pass
 
@@ -411,3 +433,90 @@ def retry_registration_notification(
         child_last_name=reg["child_last_name"],
         notify_provider=False,
     )
+
+
+STATUS_CHANGE_KINDS = ("promoted", "cancelled")
+
+
+def _send_for_status(registration_token: UUID, organization_id: UUID, kind: str) -> None:
+    """kind: 'promoted' | 'cancelled' | 'current'. Raises on any failure."""
+    reg = _fetch_registration(registration_token, organization_id)
+    if reg is None:
+        raise RuntimeError("registration not found")
+    ctx = _fetch_mail_context(organization_id, reg["camp_id"])
+    if ctx is None:
+        raise RuntimeError("org/camp context not found")
+    status = reg["status"]
+    if kind == "cancelled" or (kind == "current" and status == "cancelled"):
+        msg = build_cancellation_mail(
+            org_name=ctx["org_name"],
+            org_email=ctx["org_email"],
+            org_phone=ctx.get("org_phone"),
+            camp_title=ctx["camp_title"],
+            camp_start=reg["start_date"],
+            camp_end=reg["end_date"],
+            parent_email=reg["parent_email"],
+        )
+    else:
+        msg = build_registration_mail(
+            status=status,
+            org_name=ctx["org_name"],
+            payee_name=ctx["payee_name"],
+            org_email=ctx["org_email"],
+            org_phone=ctx.get("org_phone"),
+            camp_title=ctx["camp_title"],
+            camp_start=reg["start_date"],
+            camp_end=reg["end_date"],
+            parent_email=reg["parent_email"],
+            payment_reference=build_payment_reference(ctx["camp_title"], registration_token),
+            iban=ctx.get("iban"),
+            price_cents=ctx.get("price_cents"),
+            currency=ctx.get("currency"),
+            promoted=kind == "promoted",
+        )
+    msg.sender_name = f"{ctx['org_name']} über CampsPilot"
+    provider = get_provider()
+    provider.send(msg)
+    if getattr(provider, "delivers", True):
+        _mark_sent(registration_token, organization_id)
+
+
+def send_status_change_notification(registration_token: UUID, organization_id: UUID, kind: str) -> None:
+    """Best-effort, never raises. Failure is stored in email_error so the club
+    sees it in its participant list and can resend."""
+    if kind not in STATUS_CHANGE_KINDS:
+        raise ValueError(kind)
+    try:
+        _send_for_status(registration_token, organization_id, kind)
+    except Exception as exc:
+        logger.warning(
+            "send_status_change_notification failed (kind=%s, token=%s, error_type=%s)",
+            kind,
+            registration_token,
+            type(exc).__name__,
+        )
+        try:
+            _mark_error(registration_token, f"{kind}: {_error_code(exc)}", organization_id)
+        except Exception:
+            pass
+
+
+def resend_registration_mail(registration_token: UUID, organization_id: UUID) -> None:
+    """Admin-triggered. Sends the mail matching the current status again,
+    regardless of email_sent_at. Records the outcome and re-raises on failure."""
+    reg = _fetch_registration(registration_token, organization_id)
+    previous_error = (reg or {}).get("email_error") or ""
+    # A failed "Platz frei" mail is resent as such, not as a plain confirmation.
+    kind_hint = (
+        "promoted"
+        if previous_error.startswith("promoted:") and (reg or {}).get("status") in ("registered", "confirmed")
+        else "current"
+    )
+    try:
+        _send_for_status(registration_token, organization_id, kind_hint)
+    except Exception as exc:
+        try:
+            _mark_error(registration_token, f"{kind_hint}: {_error_code(exc)}", organization_id)
+        except Exception:
+            pass
+        raise

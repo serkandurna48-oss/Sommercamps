@@ -402,8 +402,7 @@ def test_send_marks_error_when_provider_fails(monkeypatch, fake_provider):
 
     _call_send()
 
-    assert len(errors) == 1
-    assert "brevo down" in errors[0]
+    assert errors == ["ConnectionError"]  # PII-free code, provider text stays in logs only
 
 
 def test_send_does_not_raise_when_context_missing(monkeypatch, fake_provider):

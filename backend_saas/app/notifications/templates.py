@@ -41,7 +41,10 @@ def build_registration_mail(
     iban: Optional[str],
     price_cents: Optional[int] = None,
     currency: Optional[str] = None,
+    promoted: bool = False,
 ) -> MailMessage:
+    """promoted=True: the registration moved up from the waitlist; same payment
+    details as a direct confirmation, but the parent is told a spot opened up."""
     # Escape all user-supplied strings before interpolating into HTML.
     e_org_name = escape(org_name)
     e_payee = escape(payee_name) if payee_name else e_org_name
@@ -60,8 +63,12 @@ def build_registration_mail(
         formatted = f"{price_cents // 100},{price_cents % 100:02d}"
         amount_line = f"<p>Betrag: <strong>{formatted}&nbsp;{e_cur}</strong></p>\n"
 
-    if status == "registered":
-        subject = f"Anmeldebestätigung – {camp_title}"
+    if status in ("registered", "confirmed"):
+        subject = (
+            f"Platz frei – Ihre Anmeldung ist bestätigt – {camp_title}"
+            if promoted
+            else f"Anmeldebestätigung – {camp_title}"
+        )
         if e_iban:
             payment_block = (
                 f"{amount_line}"
@@ -76,10 +83,15 @@ def build_registration_mail(
                 f"<p>Der Verein meldet sich zur Zahlung. {e_payee} sendet Ihnen die Zahlungsdetails direkt.<br>"
                 f"E-Mail: {e_org_email}{phone_line}</p>"
             )
+        intro = (
+            f"<p>Für <strong>{e_camp_title}</strong> ({dates}) ist ein Platz frei geworden. "
+            "Ihre Anmeldung von der Warteliste ist jetzt bestätigt.</p>"
+            if promoted
+            else f"<p>Ihre Anmeldung für <strong>{e_camp_title}</strong>\n({dates}) ist bei uns eingegangen.</p>"
+        )
         html = f"""\
 <p>Guten Tag,</p>
-<p>Ihre Anmeldung für <strong>{e_camp_title}</strong>
-({dates}) ist bei uns eingegangen.</p>
+{intro}
 {payment_block}
 <p>Bei Fragen wenden Sie sich direkt an {e_org_name}:<br>
 E-Mail: {e_org_email}{phone_line}</p>
@@ -99,6 +111,37 @@ E-Mail: {e_org_email}{phone_line}</p>
     return MailMessage(
         to_email=parent_email,
         subject=subject,
+        html_content=html,
+        reply_to=org_email,
+    )
+
+
+def build_cancellation_mail(
+    *,
+    org_name: str,
+    org_email: str,
+    org_phone: Optional[str],
+    camp_title: str,
+    camp_start: date,
+    camp_end: date,
+    parent_email: str,
+) -> MailMessage:
+    """Sent to the parent when the club cancels a registration."""
+    e_org_name = escape(org_name)
+    e_org_email = escape(org_email)
+    e_camp_title = escape(camp_title)
+    e_phone = escape(org_phone) if org_phone else None
+    phone_line = f"<br>Telefon: {e_phone}" if e_phone else ""
+    dates = _date_range(camp_start, camp_end)
+    html = f"""\
+<p>Guten Tag,</p>
+<p>Ihre Anmeldung für <strong>{e_camp_title}</strong> ({dates}) wurde storniert.</p>
+<p>Falls Sie bereits bezahlt haben oder Fragen zur Stornierung haben, wenden Sie sich bitte direkt an {e_org_name}:<br>
+E-Mail: {e_org_email}{phone_line}</p>
+<p>Viele Grüße,<br>{e_org_name}</p>"""
+    return MailMessage(
+        to_email=parent_email,
+        subject=f"Anmeldung storniert – {camp_title}",
         html_content=html,
         reply_to=org_email,
     )

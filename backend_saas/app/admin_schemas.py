@@ -306,6 +306,11 @@ class WaitlistPromoteResponse(BaseModel):
     promoted: Optional[RegistrationStatusOut] = None
 
 
+class ResendMailResponse(BaseModel):
+    registration_token: UUID
+    email_sent_at: Optional[datetime] = None
+
+
 class CancelRegistrationResponse(BaseModel):
     """`promoted` is null when the cancelled registration was itself
     waitlisted (nothing freed) or no one else was waiting."""
@@ -472,6 +477,9 @@ class RegistrationAdminOut(RegistrationCreated):
     created_at: datetime
     # KV1: Antworten auf die Zusatzfragen des Vereins.
     extra_answers: dict[str, str] = Field(default_factory=dict)
+    # A2: last parent-mail outcome, so the club sees failed mails and can resend.
+    email_sent_at: Optional[datetime] = None
+    email_error: Optional[str] = None
 
 
 class GlobalRegistrationOut(RegistrationAdminOut):

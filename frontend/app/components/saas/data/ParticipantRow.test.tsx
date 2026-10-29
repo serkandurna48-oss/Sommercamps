@@ -6,7 +6,7 @@ import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
 import ParticipantRow from './ParticipantRow'
 import { updateRegistrationDetailsAction } from '../actions/waitlistActions'
 
-vi.mock('../actions/waitlistActions', () => ({
+vi.mock('../actions/waitlistActions', () => ({ resendRegistrationMailAction: vi.fn(),
   cancelRegistrationAction: vi.fn(),
   updateRegistrationDetailsAction: vi.fn(),
 }))
@@ -109,5 +109,26 @@ describe('participant correction workflow', () => {
     await render({ ...registration, child_first_name: 'Corrected', payment_status: 'paid', status: 'cancelled' })
     expect(container.textContent).toContain('Bezahlt')
     expect([...container.querySelectorAll('button')].some(b => b.textContent?.toLowerCase().includes('stornieren'))).toBe(false)
+  })
+})
+
+describe('A2: Mailstatus im Teilnehmerdetail', () => {
+  async function open(row: RegistrationAdmin) {
+    await render(row)
+    const trigger = container.querySelector<HTMLButtonElement>('button[aria-expanded]')!
+    await act(() => trigger.click())
+  }
+
+  it('zeigt eine fehlgeschlagene Mail deutlich und bietet erneutes Senden an', async () => {
+    await open({ ...registration, email_error: 'promoted: provider down', email_sent_at: null })
+    expect(container.textContent).toContain('Letzte Mail an die Familie ist nicht angekommen.')
+    expect(container.textContent).not.toContain('provider down')
+    expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Mail erneut senden')).toBe(true)
+  })
+
+  it('bestätigt eine gesendete Mail ruhig', async () => {
+    await open({ ...registration, email_error: null, email_sent_at: '2027-01-01T10:00:00Z' })
+    expect(container.textContent).toContain('Mail an die Familie gesendet.')
+    expect([...container.querySelectorAll('button')].some(b => b.textContent?.includes('Mail') && b.textContent.includes('senden'))).toBe(false)
   })
 })

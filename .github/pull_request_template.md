@@ -1,76 +1,52 @@
 <!--
-  Bitte ausfüllen, bevor der PR zur Review freigegeben wird.
-  Nicht zutreffende Punkte explizit als "N/A" markieren statt zu löschen —
-  so bleibt nachvollziehbar, dass der Punkt geprüft und bewusst übersprungen wurde.
+  CampsPilot SaaS PR. Workflow: docs/cto/03-git-und-deployment.md
+  Base branch: `demo/jan` (Staging). Never open feature PRs against `main`:
+  `main` deploys the production frontend.
+  Mark items that do not apply as "N/A" instead of deleting them.
 -->
 
-## Ziel und Problem
+## Kundennutzen und Fertig-Kriterium
 
-<!-- Was soll dieser PR erreichen? Welches Problem löst er? -->
+<!-- Welcher Nutzerablauf wird besser? Woran sieht man, dass es fertig ist? -->
 
-## Durchgeführte Änderungen
+## Änderungen
 
-<!-- Stichpunktartig, konkret. Kein "diverse Fixes". -->
+<!-- Stichpunkte, konkret. -->
 
-## Bewusst nicht veränderte Bereiche
+## Betroffene Mandanten
 
-<!-- Was hättest du anfassen können, hast es aber absichtlich nicht getan — und warum? -->
+- [ ] Alle SaaS-Vereine (geteilter Code)
+- [ ] Nur KSV (`ksv-baunatal`, tenant-scoped)
+- [ ] Nur JK / anderer Verein: ______
+- [ ] Legacy `backend/` oder klassische Vereinsseite
+- [ ] Keiner (Doku, Tooling)
 
-## Betroffene Kunden
+## Prüfung
 
-- [ ] KSV Baunatal
-- [ ] JK Performance Academy
-- [ ] Beide
-- [ ] Keiner (z. B. reine Doku, Tooling)
+- [ ] CI „SaaS checks“ grün auf dem **letzten** Commit (SHA: ______)
+- [ ] Lokal: `scripts/dev/test-saas.ps1` bzw. `scripts/dev/test-saas.sh`
+- [ ] Neuer Code hat einen Test, der ohne die Änderung fehlschlägt
+- [ ] Auf Staging durchgeklickt (nur synthetische Testdaten), Link: ______
+- [ ] Mobile geprüft (falls UI)
+- [ ] Falls Legacy betroffen: `npm run build` mit `NEXT_PUBLIC_ACTIVE_CLUB=ksv` **und** `=jk`, `python -m py_compile backend/main.py`
 
-## Testcheckliste
+## Datenbank, Env, Abhängigkeiten
 
-- [ ] `npm run lint` grün
-- [ ] `npx tsc --noEmit` grün
-- [ ] `npm run build` grün (KSV-Konfiguration, `NEXT_PUBLIC_ACTIVE_CLUB` unset)
-- [ ] `npm run build` grün (JK-Konfiguration, `NEXT_PUBLIC_ACTIVE_CLUB=jk`) — falls Frontend betroffen
-- [ ] `python -m py_compile main.py camp_config.py` grün — falls Backend betroffen
-- [ ] Manuell im Browser geprüft (nicht nur Build-Erfolg)
+- [ ] Neue Migration: ______ (idempotent, in Staging-Supabase angewendet, Rollback beschrieben)
+- [ ] Neue Env-Var: ______ (in `.env.example` + Render/Vercel **Staging** gesetzt; Prod-Wert notiert)
+- [ ] Neue Dependency: ______ (Grund)
+- [ ] N/A
 
-## KSV-Regressionscheck
+## Datenschutz
 
-<!-- Nur ausfüllen, wenn KSV betroffen sein könnte (auch bei geteiltem Code/Backend). -->
+- [ ] Keine echten Eltern-/Kinddaten in Code, Tests, Logs, Screenshots
+- [ ] Neue personenbezogene Felder? Datenschutzerklärung/Retention geprüft
+- [ ] N/A
 
-- [ ] Hero/Landingpage sieht wie erwartet aus
-- [ ] Preisanzeige stimmt (kommt aus Backend-`/config`, kein hartkodierter/veralteter Wert)
-- [ ] Anmeldeformular: Absenden funktioniert, Bestätigungsseite erscheint
-- [ ] Admin-Login und Registrierungstabelle funktionieren
-- [ ] Mobile-Darstellung geprüft
-- [ ] N/A — Änderung kann KSV nicht betreffen (Begründung: ______)
+## Risiko und Rollback
 
-## JK-Regressionscheck
-
-<!-- Nur ausfüllen, wenn JK betroffen sein könnte. -->
-
-- [ ] Mit `NEXT_PUBLIC_ACTIVE_CLUB=jk` lokal geprüft
-- [ ] Keine KSV-spezifischen Inhalte (Rechtsdaten, Kontakt, Preise) sichtbar
-- [ ] Mobile-Darstellung geprüft
-- [ ] N/A — Änderung kann JK nicht betreffen (Begründung: ______)
-
-## Risiken
-
-<!-- Was könnte im schlimmsten Fall schiefgehen? Was ist der Blast Radius? -->
+<!-- Was geht im schlimmsten Fall kaputt? Wie zurück (Revert, Redeploy vorheriger SHA, Migration)? -->
 
 ## Screenshots
 
-<!-- Bei jeder visuellen Änderung: Vorher/Nachher, Desktop + Mobile. Sonst diesen Abschnitt löschen. -->
-
-## Datenbank- oder Env-Änderungen
-
-- [ ] Neue Migration hinzugefügt (Dateiname: ______) — idempotent (`IF NOT EXISTS`/`IF EXISTS`)?
-- [ ] Backup vor Migration gezogen bzw. Snapshot-Plan dokumentiert
-- [ ] Neue Env-Var eingeführt (Name: ______) — in `.env.example`/`.env.local.example` **und**
-      in Render-/Vercel-Dashboard ergänzt?
-- [ ] Neue Dependency hinzugefügt (Name/Version: ______) — Grund: ______
-- [ ] N/A — keine DB-, Env- oder Dependency-Änderungen
-
-## Rollback-Hinweis
-
-<!-- Wie macht man diese Änderung im Notfall rückgängig? Reicht ein Redeploy des
-     vorherigen Deploys (Render/Vercel), oder braucht es zusätzliche Schritte
-     (z. B. Migration zurückrollen, Env-Var entfernen)? -->
+<!-- Bei UI-Änderungen: vorher/nachher, Desktop + Mobile. Sonst löschen. -->

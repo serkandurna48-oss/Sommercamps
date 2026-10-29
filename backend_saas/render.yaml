@@ -46,6 +46,9 @@ services:
       - key: NOTIFICATION_FROM_EMAIL
         sync: false           # sender address (SPF/DKIM-verifizierte Domain in Brevo); default noreply@campspilot.app
         # Absendername ist dynamisch: "{org_name} über CampsPilot" — kein NOTIFICATION_FROM_NAME mehr nötig
+      - key: FRONTEND_BASE_URL
+        sync: false           # Pflicht: HTTPS-Origin des Frontends ohne Pfad. Prod: https://campspilot.vercel.app,
+                               # Staging: Vercel-Branch-URL von demo/jan. Ohne Wert werden Signup-/Freigabemails blockiert.
       - key: NOTIFICATION_ALLOWED_RECIPIENTS
         sync: false           # NUR Staging/Nicht-Produktion: kommagetrennte Test-Empfänger
                                # (z. B. "qa@deine-domain.de,@example.com"). Ohne Eintrag wird

@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useRef, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import GrainOverlay from '../GrainOverlay'
@@ -17,6 +17,7 @@ interface LoginFormProps {
   orgTheme?: PublicTheme
   brandStrong?: string
   brandOn?: string
+  children?: React.ReactNode
 }
 
 const initialState: LoginState = { error: null }
@@ -28,6 +29,7 @@ export default function LoginForm({
   orgTheme = 'tradition',
   brandStrong,
   brandOn,
+  children,
 }: LoginFormProps) {
   const boundAction = loginAction.bind(null, orgSlug)
   const [state, formAction, pending] = useActionState(boundAction, initialState)
@@ -35,6 +37,14 @@ export default function LoginForm({
   const [resending, setResending] = useState(false)
   const [resendFeedback, setResendFeedback] = useState<{ error: boolean; message: string } | null>(null)
   const short = orgName ? orgShortCode(orgName) : null
+
+  useEffect(() => {
+    // The signup confirmation redirect lands here with live tokens in the fragment;
+    // never keep them in the address bar or history (shared club PCs).
+    if (window.location.hash.includes('access_token')) {
+      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
+    }
+  }, [])
 
   async function resendConfirmation() {
     const input = formRef.current?.elements.namedItem('email') as HTMLInputElement | null
@@ -73,7 +83,7 @@ export default function LoginForm({
     >
       <GrainOverlay />
       <div className="login-wrap">
-        <form ref={formRef} action={formAction} className="login-card">
+        <div className="login-card">
           {/* Logo */}
           <div className="login-logo">
             {orgLogoUrl ? (
@@ -94,6 +104,7 @@ export default function LoginForm({
             <p className="login-brand-label">{orgName}</p>
           )}
 
+          {children ?? <form ref={formRef} action={formAction}>
           <h1 className="login-h1">Anmelden</h1>
           <p>Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse über den Link in der Bestätigungsmail. Danach melden Sie sich hier an und richten Ihren Verein ein.</p>
 
@@ -135,13 +146,17 @@ export default function LoginForm({
           <button type="submit" disabled={pending} className="login-btn">
             {pending ? 'Wird geprüft …' : 'Anmelden'}
           </button>
+          <Link className="login-label cp-focus inline-flex min-h-[44px] items-center underline" href={`/pilot/${encodeURIComponent(orgSlug)}/passwort-vergessen`}>
+            Passwort vergessen?
+          </Link>
           <p>Keine Bestätigungsmail erhalten oder Link abgelaufen? Geben Sie oben Ihre E-Mail-Adresse ein und fordern Sie die Mail erneut an.</p>
           <button type="button" onClick={resendConfirmation} disabled={resending} className="cp-focus inline-flex min-h-[44px] items-center underline">
             {resending ? 'Wird angefragt …' : 'Bestätigungsmail erneut anfordern'}
           </button>
           {resendFeedback && <p role={resendFeedback.error ? 'alert' : 'status'}>{resendFeedback.message}</p>}
           <Link href="/campspilot" className="cp-focus inline-flex min-h-[44px] items-center underline">Zurück zu CampsPilot</Link>
-        </form>
+          </form>}
+        </div>
       </div>
     </div>
   )

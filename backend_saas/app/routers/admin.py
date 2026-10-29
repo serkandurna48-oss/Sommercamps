@@ -284,6 +284,7 @@ def review_organization(
     notifications_sending.send_review_decision_email(
         to_email=row["contact_email"],
         org_name=row["name"],
+        org_slug=organization_slug,
         decision=data.decision,
         note=data.note,
     )

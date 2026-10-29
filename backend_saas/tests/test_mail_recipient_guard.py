@@ -130,4 +130,4 @@ def test_signup_mail_failure_log_has_no_address(caplog):
         )
     assert ok is False
     assert "geheim@example.com" not in caplog.text
-    assert "Testverein" in caplog.text
+    assert "failed (error_type=RuntimeError)" in caplog.text

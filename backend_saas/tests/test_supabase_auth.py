@@ -36,6 +36,10 @@ class _FakeClient:
         self.calls += 1
         return self._respond(*args, **kwargs)
 
+    def post(self, *args, **kwargs):
+        self.calls += 1
+        return self._respond(*args, **kwargs)
+
 
 def _fake_client(monkeypatch, respond) -> _FakeClient:
     client = _FakeClient(respond)
@@ -272,3 +276,103 @@ def test_revoked_token_is_rejected_after_ttl(monkeypatch, cache_clock):
         supabase_auth.verify_access_token(token)
     assert client.calls == 2
     assert not supabase_auth._token_cache
+
+
+@pytest.fixture
+def confirmation_settings(monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setenv("FRONTEND_BASE_URL", "https://frontend.example")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "fake-service-role-key")
+    get_settings.cache_clear()
+    yield get_settings()
+    get_settings.cache_clear()
+
+
+@pytest.mark.parametrize("org_slug,path", [
+    ("testverein", "/pilot/testverein/login"),
+    (None, "/platform/login"),
+])
+def test_confirmation_link_redirects_to_same_site_login(monkeypatch, confirmation_settings, org_slug, path):
+    requests = []
+
+    def respond(url, **kwargs):
+        requests.append((url, kwargs))
+        return _FakeResponse(200, {"action_link": "https://auth.example/verify?token=fake"})
+
+    client = _fake_client(monkeypatch, respond)
+    assert supabase_auth.generate_confirmation_link("club@example.com", org_slug=org_slug) == "https://auth.example/verify?token=fake"
+    assert client.calls == 1
+    url, kwargs = requests[0]
+    assert url.endswith("/auth/v1/admin/generate_link")
+    assert kwargs["params"] == {"redirect_to": "https://frontend.example" + path}
+    assert kwargs["json"] == {"type": "signup", "email": "club@example.com"}
+
+
+@pytest.mark.parametrize("target", [
+    "https://external.example/login",
+    "https://frontend.example.external.example/login",
+    "https://external.frontend.example/login",
+    "http://frontend.example/platform/login",
+    "https://frontend.example:444/platform/login",
+    "https://frontend.example:0/platform/login",
+    "//external.example/login",
+    "/platform/login",
+    "https://frontend.example@external.example/login",
+    "https://external.example@frontend.example/login",
+    "https://frontend.example\\@external.example/login",
+    "https://front\nend.example/platform/login",
+    "javascript:alert(1)",
+    "https://frontend.example:invalid/login",
+    "https://frontend.example/platform/login?next=https://external.example",
+    "https://frontend.example/platform/login#https://external.example",
+    "",
+])
+def test_confirmation_link_rejects_unsafe_redirect_before_provider_call(monkeypatch, confirmation_settings, target):
+    client = _fake_client(monkeypatch, lambda *a, **kw: pytest.fail("Must not contact Supabase"))
+    with pytest.raises(supabase_auth.SupabaseAuthError, match="Invalid confirmation redirect target"):
+        supabase_auth.generate_confirmation_link("club@example.com", redirect_to=target)
+    assert client.calls == 0
+
+
+def test_confirmation_link_accepts_explicit_same_origin_target(monkeypatch, confirmation_settings):
+    requests = []
+
+    def respond(url, **kwargs):
+        requests.append(kwargs)
+        return _FakeResponse(200, {"action_link": "https://auth.example/verify"})
+
+    _fake_client(monkeypatch, respond)
+    target = "https://frontend.example:443/pilot/testverein/login"
+    supabase_auth.generate_confirmation_link("club@example.com", redirect_to=target)
+    assert requests[0]["params"]["redirect_to"] == target
+
+
+@pytest.mark.parametrize("slug", ["../external", "//external.example", "club?next=external", "club/login", ""])
+def test_confirmation_link_rejects_invalid_org_slug(monkeypatch, confirmation_settings, slug):
+    client = _fake_client(monkeypatch, lambda *a, **kw: pytest.fail("Must not contact Supabase"))
+    with pytest.raises(supabase_auth.SupabaseAuthError):
+        supabase_auth.generate_confirmation_link("club@example.com", org_slug=slug)
+    assert client.calls == 0
+
+
+@pytest.mark.parametrize("origin", [
+    "https://frontend.example/path", "https://frontend.example?next=external",
+    "https://frontend.example#fragment", "https://user@frontend.example",
+    "http://frontend.example", "javascript:alert(1)", "//frontend.example",
+    "https://frontend.example:invalid", "https://front\nend.example", "",
+])
+def test_frontend_base_url_rejects_unsafe_configuration(confirmation_settings, origin):
+    from pydantic import ValidationError
+    from app.config import Settings
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, FRONTEND_BASE_URL=origin)
+
+
+def test_frontend_base_url_has_safe_local_default(monkeypatch):
+    from app.config import Settings
+
+    monkeypatch.delenv("FRONTEND_BASE_URL", raising=False)
+    settings = Settings(_env_file=None)
+    assert settings.login_url("testverein") == "http://localhost:3000/pilot/testverein/login"

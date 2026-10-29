@@ -17,9 +17,10 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 
 from ..deps import get_tenant_context
+from ..ratelimit import registration_limiter, trusted_client_ip
 from ..notifications.sending import send_registration_notification
 from ..repositories import registrations as registrations_repo
 from ..repositories.registrations import (
@@ -46,6 +47,7 @@ def create_registration(
     camp_slug: str,
     data: RegistrationCreate,
     background_tasks: BackgroundTasks,
+    request: Request,
     tenant: TenantContext = Depends(get_tenant_context),
 ) -> RegistrationCreated:
     """
@@ -55,6 +57,14 @@ def create_registration(
     carries no organization_id/camp_id field at all (see RegistrationCreate),
     so neither ID this write depends on ever originates from the client.
     """
+    client_ip = trusted_client_ip(request)
+    if client_ip is not None and not registration_limiter.allow(client_ip):
+        logger.info("Registration rejected: rate limit (organization_slug=%s)", tenant.slug)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Zu viele Anmeldungen von diesem Anschluss. Bitte versuchen Sie es später erneut.",
+        )
+
     camp = registrations_repo.get_registration_target(tenant, camp_slug)
     if camp is None:
         # Unknown slug, draft/closed/archived, or a different tenant's camp

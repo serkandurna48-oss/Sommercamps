@@ -104,8 +104,12 @@ test('Fremder Verein startet ohne Hilfe bis zur verwalteten Anmeldung', async ({
   // No logo uploaded: the owner approves with an explicit exception.
   await owner.getByRole('button', { name: 'Trotzdem freigeben' }).click()
   await owner.getByRole('button', { name: 'Ausnahme bestätigen und freigeben' }).click()
-  // The action revalidates the page, so the transient status text is replaced by the final state.
-  await expect(owner.getByLabel('Freigabe').getByText(/^Freigegeben/)).toBeVisible({ timeout: 15_000 })
+  // The transient status text is replaced once the page revalidates; check the stored state.
+  await expect(owner.getByRole('button', { name: 'Ausnahme bestätigen und freigeben' })).toHaveCount(0, { timeout: 15_000 })
+  await expect(async () => {
+    await owner.reload()
+    await expect(owner.getByLabel('Freigabe', { exact: true }).getByText(/^Freigegeben am/)).toBeVisible({ timeout: 2_000 })
+  }).toPass({ timeout: 30_000 })
 
   // 5. Parents: first child gets the spot, second the waitlist
   await anon.goto(`/pilot/${CLUB.slug}`)

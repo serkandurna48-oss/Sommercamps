@@ -367,10 +367,9 @@ def send_signup_confirmation_email(
         provider.send(msg)
         return True
     except Exception as exc:
-        # No address in the log (PII); the org name is enough to find the case.
+        # No address, org name or provider response in the log (PII).
         logger.warning(
-            "send_signup_confirmation_email failed (org=%s, error_type=%s)",
-            org_name,
+            "send_signup_confirmation_email failed (error_type=%s)",
             type(exc).__name__,
         )
         return False

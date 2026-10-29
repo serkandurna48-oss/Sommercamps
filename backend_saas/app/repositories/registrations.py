@@ -326,7 +326,8 @@ _ADMIN_REGISTRATION_FIELDS = """
     child_first_name, child_last_name, child_birth_date,
     emergency_contact_name, emergency_contact_phone,
     medical_notes, allergies, jersey_size, pickup_authorized,
-    photo_permission, created_at, extra_answers
+    photo_permission, created_at, extra_answers,
+    email_sent_at, email_error
 """
 
 _LIST_REGISTRATIONS_FOR_CAMP = f"""

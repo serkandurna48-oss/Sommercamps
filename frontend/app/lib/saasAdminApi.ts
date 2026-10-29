@@ -107,6 +107,9 @@ export interface RegistrationAdmin {
   created_at: string
   // KV1: Antworten auf die Zusatzfragen des Vereins. Default {} wenn nicht vorhanden.
   extra_answers?: Record<string, string>
+  // A2: Ergebnis der letzten Eltern-Mail (Bestätigung, Warteliste, Nachrücken, Storno).
+  email_sent_at?: string | null
+  email_error?: string | null
 }
 
 export class AdminActionError extends Error {
@@ -401,6 +404,22 @@ export async function cancelRegistrationAdmin(
     'POST',
   )
   return res.json() as Promise<{ cancelled: RegistrationStatusResult; promoted: RegistrationStatusResult | null }>
+}
+
+/** A2: Sendet die zum aktuellen Status passende Eltern-Mail erneut.
+ * 502 = Mailversand abgelehnt (Grund steht danach in email_error). */
+export async function resendRegistrationMailAdmin(
+  orgSlug: string,
+  campSlug: string,
+  registrationToken: string,
+  token: string,
+): Promise<{ registration_token: string; email_sent_at: string | null }> {
+  const res = await mutateOrThrow(
+    `/admin/organizations/${orgSlug}/camps/${campSlug}/registrations/${registrationToken}/resend-mail`,
+    token,
+    'POST',
+  )
+  return res.json() as Promise<{ registration_token: string; email_sent_at: string | null }>
 }
 
 export async function setPaymentStatusAdmin(

@@ -48,6 +48,8 @@ export const de = {
     cancelFailed: "Konnte nicht storniert werden – erneut versuchen.",
     namesRequired: "Vor- und Nachname dürfen nicht leer sein.",
     detailsFailed: "Konnte nicht gespeichert werden – Angaben prüfen und erneut versuchen.",
+    mailResent: "Mail erneut gesendet.",
+    mailResendFailed: "Mail konnte nicht gesendet werden – Adresse prüfen oder Familie direkt kontaktieren.",
   },
   adminApi: {
     auth: "Admin-Sitzung abgelaufen oder ungültig",

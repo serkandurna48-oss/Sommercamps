@@ -14,7 +14,7 @@ import ParticipantList from '../data/ParticipantList'
 import LogoutButton from '../shell/LogoutButton'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
 
-vi.mock('../actions/waitlistActions', () => ({
+vi.mock('../actions/waitlistActions', () => ({ resendRegistrationMailAction: vi.fn(),
   cancelRegistrationAction: vi.fn(), updateRegistrationDetailsAction: vi.fn(),
 }))
 vi.mock('../actions/paymentActions', () => ({ setPaymentStatusAction: vi.fn() }))

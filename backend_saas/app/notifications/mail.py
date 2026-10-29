@@ -142,8 +142,15 @@ class RecipientGuardProvider:
         address = (email or "").strip().lower()
         if "@" not in address:
             return False
-        domain = "@" + address.rsplit("@", 1)[1]
-        return any(entry == address or (entry.startswith("@") and entry == domain) for entry in self._allowed)
+        local, _, host = address.rpartition("@")
+        domain = "@" + host
+        # name+tag@host reaches the same inbox as name@host: allow it when the
+        # base address is listed (lets one tester use many signup addresses).
+        base = local.split("+", 1)[0] + "@" + host
+        return any(
+            entry in (address, base) or (entry.startswith("@") and entry == domain)
+            for entry in self._allowed
+        )
 
     def send(self, message: MailMessage) -> None:
         if not self.is_allowed(message.to_email):

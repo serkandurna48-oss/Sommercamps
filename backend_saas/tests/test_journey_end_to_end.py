@@ -319,10 +319,14 @@ def _run_journey(cursor, identities, fake: FakeProvider) -> None:
         kind3_row = next(r for r in regs_after if r["registration_token"] == tok3)
         assert kind3_row["status"] == "registered"
 
-        # Keine automatische Mail beim Nachrücken (admin benachrichtigt manuell)
-        assert len(fake.sent) == mails_before_cancel, (
-            "Nachrücken sendet keine automatische Mail"
-        )
+        # A2: Storno und Nachrücken informieren beide Familien automatisch
+        new_mails = fake.sent[mails_before_cancel:]
+        assert [m.subject for m in new_mails] == [
+            "Anmeldung storniert – Sommerreise 2027",
+            "Platz frei – Ihre Anmeldung ist bestätigt – Sommerreise 2027",
+        ]
+        assert "Platz frei geworden" in new_mails[1].html_content
+        assert kind3_row["email_error"] is None
 
         # ── Schritt 9: Tagesliste enthält Kind 1 + Kind 3, nicht Kind 2 ─────
         export_resp = req(

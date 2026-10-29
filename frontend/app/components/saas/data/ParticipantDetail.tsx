@@ -5,7 +5,7 @@ import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewConte
 import { useActionState, useEffect, useId, useState } from 'react'
 import { de, paymentStatusLabel } from '../../../lib/i18n/de'
 import type { RegistrationAdmin, RegistrationQuestion } from '../../../lib/saasAdminApi'
-import { cancelRegistrationAction, updateRegistrationDetailsAction } from '../actions/waitlistActions'
+import { cancelRegistrationAction, resendRegistrationMailAction, updateRegistrationDetailsAction } from '../actions/waitlistActions'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import { hasMissingEmergencyContact, hasNotes, isOpenPayment } from '../commandCenterLogic'
 import ActionForm from '../ui/ActionForm'
@@ -55,6 +55,11 @@ export default function ParticipantDetail({
     const result = await cancelRegistrationAction(orgSlug, campSlug, registration.registration_token, previous)
     return result.success ? { ...result, success: `${childName} storniert.` } : result
   }
+  const previewMode = useAdminPreview()
+  const resendMail: React.ComponentProps<typeof ActionForm>['action'] = previewMode
+    ? async () => ({ error: null, success: 'Vorschau: Es wird keine Mail gesendet.' })
+    : resendRegistrationMailAction.bind(null, orgSlug, campSlug, registration.registration_token)
+  const mailFailed = Boolean(registration.email_error)
   const markPaid = setPaymentStatusAction.bind(null, orgSlug, campSlug, registration.registration_token, 'paid', de.paymentsPage.markPaidSuccess)
   const markWaived = setPaymentStatusAction.bind(null, orgSlug, campSlug, registration.registration_token, 'waived', de.paymentsPage.markWaivedSuccess)
   const markRefunded = setPaymentStatusAction.bind(null, orgSlug, campSlug, registration.registration_token, 'refunded', de.paymentsPage.markRefundedSuccess)
@@ -236,6 +241,26 @@ export default function ParticipantDetail({
           <ButtonLink href={`tel:${registration.parent_phone}`}>
             Anrufen
           </ButtonLink>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2" aria-label="E-Mail an die Familie">
+          {mailFailed ? (
+            <p className="cp-body" role="status" style={{ color: 'var(--cp-error)' }}>
+              Letzte Mail an die Familie ist nicht angekommen.
+            </p>
+          ) : registration.email_sent_at ? (
+            <p className="cp-body" style={{ color: 'var(--cp-muted)' }}>
+              Mail an die Familie gesendet.
+            </p>
+          ) : null}
+          <ActionForm
+            action={resendMail}
+            label={mailFailed ? 'Mail erneut senden' : 'Mail nochmals senden'}
+            pendingLabel="Wird gesendet …"
+            variant={mailFailed ? 'primary' : 'secondary'}
+            brandStrong={brandStrong}
+            brandOn={brandOn}
+          />
         </div>
 
         {isOpenPayment(registration) && (

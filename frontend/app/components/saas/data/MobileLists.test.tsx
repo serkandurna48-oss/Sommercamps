@@ -16,7 +16,7 @@ import { setPaymentStatusAction } from '../actions/paymentActions'
 import { buildPaymentReminder, buildOpenPaymentList } from '../../../lib/zahlungserinnerung'
 
 vi.mock('../actions/paymentActions', () => ({ setPaymentStatusAction: vi.fn() }))
-vi.mock('../actions/waitlistActions', () => ({ cancelRegistrationAction: vi.fn(), promoteWaitlistAction: vi.fn(), updateRegistrationDetailsAction: vi.fn() }))
+vi.mock('../actions/waitlistActions', () => ({ resendRegistrationMailAction: vi.fn(), cancelRegistrationAction: vi.fn(), promoteWaitlistAction: vi.fn(), updateRegistrationDetailsAction: vi.fn() }))
 
 const fixture = getPreviewFixtures(false, new Date('2026-10-24T12:00:00Z'))
 const camp = fixture.camps[0]

@@ -8,6 +8,7 @@ import {
   AdminConnectionError,
   cancelRegistrationAdmin,
   promoteWaitlistAdmin,
+  resendRegistrationMailAdmin,
   updateRegistrationDetailsAdmin,
   type RegistrationAdmin,
 } from '../../../lib/saasAdminApi'
@@ -69,6 +70,26 @@ export async function cancelRegistrationAction(
     }
   } catch (error) {
     return { error: error instanceof AdminConnectionError ? error.message : de.adminActions.cancelFailed, success: null }
+  }
+}
+
+/** A2: Eltern-Mail zum aktuellen Status erneut senden (Bestätigung,
+ * Warteliste oder Storno). Für fehlgeschlagene Mails im Teilnehmerbereich. */
+export async function resendRegistrationMailAction(
+  orgSlug: string,
+  campSlug: string,
+  registrationToken: string,
+  _prev: ActionFormState,
+): Promise<ActionFormState> {
+  const token = await getValidAccessToken()
+  if (!token) return { error: de.adminActions.sessionExpired, success: null }
+  try {
+    await resendRegistrationMailAdmin(orgSlug, campSlug, registrationToken, token)
+    revalidatePath(`/pilot/${orgSlug}`, 'layout')
+    return { error: null, success: de.adminActions.mailResent }
+  } catch (error) {
+    revalidatePath(`/pilot/${orgSlug}`, 'layout')
+    return { error: error instanceof AdminConnectionError ? error.message : de.adminActions.mailResendFailed, success: null }
   }
 }
 

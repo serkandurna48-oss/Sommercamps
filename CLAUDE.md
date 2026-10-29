@@ -1,4 +1,6 @@
-# CLAUDE.md — CampsPilot
+# CLAUDE.md
+
+> **CTO-Korrektur 28.10.2026:** Vor Architektur- oder Release-Entscheidungen unbedingt [docs/architecture/current-state-2026-10-28.md](docs/architecture/current-state-2026-10-28.md) lesen. Die untenstehende historische Beschreibung von KSV/JK als einzigem Produktivpfad und die alten `backend/`-Diagramme bilden den heute produktiven Multi-Tenant-SaaS-Pfad unter `backend_saas/` und `/pilot/[org]` NICHT vollständig ab. Vercel/Render-Dashboard-SHAs haben Vorrang vor GitHub-Branch-Namen und veralteten Roadmaps.
 
 > Kompakte Projektsteuerungsdatei für KI-Assistenten. Bei Widersprüchen zum Code gilt: **Code
 > schlägt dieses Dokument** — dann bitte hier updaten. Ausführliche Hintergründe stehen in den

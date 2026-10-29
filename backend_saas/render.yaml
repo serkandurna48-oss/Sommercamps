@@ -40,9 +40,13 @@ services:
         sync: false           # comma-separated extra allowed origins; empty until a real
                                # frontend exists — see README.md "CORS"
       - key: NOTIFICATION_PROVIDER
-        sync: false           # "brevo" for real mail; anything else/unset → FakeProvider (local dev/CI)
+        sync: false           # "brevo" for real mail. Unset/unknown: skip in local/test, error elsewhere (see mail.py)
       - key: BREVO_API_KEY
         sync: false           # required when NOTIFICATION_PROVIDER=brevo; get from Brevo Dashboard
       - key: NOTIFICATION_FROM_EMAIL
         sync: false           # sender address (SPF/DKIM-verifizierte Domain in Brevo); default noreply@campspilot.app
         # Absendername ist dynamisch: "{org_name} über CampsPilot" — kein NOTIFICATION_FROM_NAME mehr nötig
+      - key: NOTIFICATION_ALLOWED_RECIPIENTS
+        sync: false           # NUR Staging/Nicht-Produktion: kommagetrennte Test-Empfänger
+                               # (z. B. "qa@deine-domain.de,@example.com"). Ohne Eintrag wird
+                               # außerhalb von APP_ENV=production JEDE Mail blockiert.

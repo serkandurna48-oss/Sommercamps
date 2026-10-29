@@ -24,6 +24,8 @@ export async function setNewPassword(session: RecoverySession | null, _prev: Pas
       }
       return { error: 'Das Passwort konnte nicht gespeichert werden. Bitte versuchen Sie es später erneut.', success: false }
     }
+    // End every other session of this account (e.g. after a compromise).
+    try { await supabase.auth.signOut({ scope: 'global' }) } catch { /* password is already changed */ }
     return { error: null, success: true }
   } catch {
     return { error: 'Das Passwort konnte nicht gespeichert werden. Bitte versuchen Sie es später erneut.', success: false }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useRef, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import GrainOverlay from '../GrainOverlay'
@@ -37,6 +37,14 @@ export default function LoginForm({
   const [resending, setResending] = useState(false)
   const [resendFeedback, setResendFeedback] = useState<{ error: boolean; message: string } | null>(null)
   const short = orgName ? orgShortCode(orgName) : null
+
+  useEffect(() => {
+    // The signup confirmation redirect lands here with live tokens in the fragment;
+    // never keep them in the address bar or history (shared club PCs).
+    if (window.location.hash.includes('access_token')) {
+      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
+    }
+  }, [])
 
   async function resendConfirmation() {
     const input = formRef.current?.elements.namedItem('email') as HTMLInputElement | null
@@ -138,7 +146,7 @@ export default function LoginForm({
           <button type="submit" disabled={pending} className="login-btn">
             {pending ? 'Wird geprüft …' : 'Anmelden'}
           </button>
-          <Link className="login-label underline" href={`/pilot/${encodeURIComponent(orgSlug)}/passwort-vergessen`}>
+          <Link className="login-label cp-focus inline-flex min-h-[44px] items-center underline" href={`/pilot/${encodeURIComponent(orgSlug)}/passwort-vergessen`}>
             Passwort vergessen?
           </Link>
           <p>Keine Bestätigungsmail erhalten oder Link abgelaufen? Geben Sie oben Ihre E-Mail-Adresse ein und fordern Sie die Mail erneut an.</p>

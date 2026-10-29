@@ -68,7 +68,17 @@ class Settings(BaseSettings):
         parts.port  # Reject malformed ports at startup.
         return value.rstrip("/")
 
+    def frontend_base_is_usable(self) -> bool:
+        """Outside local/test/development a loopback origin means FRONTEND_BASE_URL
+        was never set; links built from it would reach no real user."""
+        if self.app_env.strip().lower() in ("local", "test", "development"):
+            return True
+        host = (urlsplit(self.frontend_base_url).hostname or "").lower()
+        return host not in ("localhost", "127.0.0.1", "::1")
+
     def login_url(self, org_slug: str | None = None) -> str:
+        if not self.frontend_base_is_usable():
+            raise ValueError("FRONTEND_BASE_URL is not configured for this environment")
         if org_slug is None:
             return f"{self.frontend_base_url}/platform/login"
         if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", org_slug):
@@ -77,6 +87,8 @@ class Settings(BaseSettings):
 
     def validate_frontend_redirect(self, target: str) -> str:
         """Require the exact frontend origin; never trust a caller's host."""
+        if not self.frontend_base_is_usable():
+            raise ValueError("FRONTEND_BASE_URL is not configured for this environment")
         base = urlsplit(self.frontend_base_url)
         parts = urlsplit(target)
         default_ports = {"http": 80, "https": 443}

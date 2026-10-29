@@ -290,7 +290,12 @@ def send_review_decision_email(
     provider as registration notifications (FakeProvider in tests)."""
     from html import escape
 
-    login_link = escape(get_settings().login_url(org_slug))
+    try:
+        login_link = escape(get_settings().login_url(org_slug))
+    except ValueError as exc:
+        # FRONTEND_BASE_URL missing in a deployed env: never mail a localhost link.
+        logger.error("send_review_decision_email skipped (error_type=%s)", type(exc).__name__)
+        return
     login_html = '<p>Ihr dauerhafter Login: <a href="' + login_link + '">' + login_link + '</a></p>'
     if decision == "approve":
         subject = "Ihr Verein wurde freigeschaltet - CampsPilot"
@@ -352,7 +357,11 @@ def send_signup_confirmation_email(
 
     e_org_name = escape(org_name)
     e_link = escape(confirmation_link)
-    login_link = escape(get_settings().login_url(org_slug))
+    try:
+        login_link = escape(get_settings().login_url(org_slug))
+    except ValueError as exc:
+        logger.error("send_signup_confirmation_email skipped (error_type=%s)", type(exc).__name__)
+        return False
     subject = "Bitte bestätigen Sie Ihre Registrierung"
     body = (
         "<p>Sehr geehrte Damen und Herren,</p>"

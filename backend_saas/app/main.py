@@ -40,12 +40,12 @@ logging.basicConfig(level=settings.log_level)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     db.init_pool()
     logger.info("%s started (env=%s)", settings.app_name, settings.app_env)
-    if settings.app_env.strip().lower() not in ("local", "test", "development") and (
-        "localhost" in settings.frontend_base_url or "127.0.0.1" in settings.frontend_base_url
-    ):
-        # Mail links and signup redirects would point to a developer machine.
+    if not settings.frontend_base_is_usable():
+        # Signup/review mails with login links are refused until this is set
+        # (see Settings.login_url); registrations and the parent flow keep working.
         logger.error(
-            "FRONTEND_BASE_URL is %s in env=%s - set it to the deployed frontend origin",
+            "FRONTEND_BASE_URL is %s in env=%s - signup and review mails are blocked "
+            "until it is set to the deployed frontend origin",
             settings.frontend_base_url,
             settings.app_env,
         )

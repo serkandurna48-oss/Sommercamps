@@ -80,11 +80,15 @@ class SupabaseAuthError(Exception):
 
 
 class SupabaseUser:
-    __slots__ = ("id", "email")
+    __slots__ = ("id", "email", "needs_password_setup")
 
-    def __init__(self, id: str, email: str | None):
+    def __init__(self, id: str, email: str | None, needs_password_setup: bool = False):
         self.id = id
         self.email = email
+        # True when the address was never confirmed or the account never
+        # signed in: its password may be unknown to the owner of the address
+        # (e.g. a squatted self-signup), so invites must send a set-password link.
+        self.needs_password_setup = needs_password_setup
 
 
 def verify_access_token(access_token: str) -> SupabaseUser:
@@ -308,24 +312,33 @@ def find_user_by_email(email: str) -> SupabaseUser | None:
     if not settings.supabase_service_role_key:
         raise SupabaseAuthError("SUPABASE_SERVICE_ROLE_KEY not configured")
 
-    try:
-        response = get_client().get(
-            f"{settings.supabase_url}/auth/v1/admin/users",
-            headers={
-                "Authorization": f"Bearer {settings.supabase_service_role_key}",
-                "apikey": settings.supabase_service_role_key,
-            },
-            params={"email": email},
-            timeout=5.0,
-        )
-    except httpx.HTTPError as exc:
-        raise SupabaseAuthError("Supabase Auth admin API unreachable") from exc
+    per_page = 200
+    for page in range(1, 51):  # GoTrue lists users page by page; cap at 10k accounts
+        try:
+            response = get_client().get(
+                f"{settings.supabase_url}/auth/v1/admin/users",
+                headers={
+                    "Authorization": f"Bearer {settings.supabase_service_role_key}",
+                    "apikey": settings.supabase_service_role_key,
+                },
+                params={"email": email, "page": page, "per_page": per_page},
+                timeout=5.0,
+            )
+        except httpx.HTTPError as exc:
+            raise SupabaseAuthError("Supabase Auth admin API unreachable") from exc
 
-    if response.status_code != 200:
-        raise SupabaseAuthError(f"Supabase Auth admin lookup failed (status={response.status_code})")
+        if response.status_code != 200:
+            raise SupabaseAuthError(f"Supabase Auth admin lookup failed (status={response.status_code})")
 
-    users = response.json().get("users", [])
-    for candidate in users:
-        if candidate.get("email", "").lower() == email.lower():
-            return SupabaseUser(id=candidate["id"], email=candidate.get("email"))
+        users = response.json().get("users", [])
+        for candidate in users:
+            if candidate.get("email", "").lower() == email.lower():
+                return SupabaseUser(
+                    id=candidate["id"],
+                    email=candidate.get("email"),
+                    needs_password_setup=not candidate.get("email_confirmed_at")
+                    or not candidate.get("last_sign_in_at"),
+                )
+        if len(users) < per_page:
+            return None
     return None

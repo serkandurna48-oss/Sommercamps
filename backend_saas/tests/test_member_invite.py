@@ -151,3 +151,19 @@ def test_invite_mail_escapes_org_name(env):
     html = env["fake"].sent[0].html_content
     assert "<b>FC</b>" not in html and "&lt;b&gt;FC&lt;/b&gt;" in html
     assert "b=1&amp;c=2" in html
+
+
+def test_existing_unconfirmed_account_gets_set_password_link(env):
+    """A squatted self-signup must not keep its attacker-chosen password:
+    the real owner of the address gets a recovery link, not a login link."""
+    env["mp"].setattr(
+        supabase_auth, "find_user_by_email",
+        lambda email: supabase_auth.SupabaseUser(id="u-squat", email=email, needs_password_setup=True),
+    )
+    env["mp"].setattr(supabase_auth, "create_user", lambda *a, **k: pytest.fail("must not create"))
+    with TestClient(app) as client:
+        response = _post(client, "opfer@example.com")
+    assert response.status_code == 201
+    assert response.json()["invited"] is True
+    assert env["links"] == [("opfer@example.com", "http://localhost:3000/pilot/demo-fc/neues-passwort", "recovery")]
+    assert env["fake"].sent[0].subject.startswith("Einladung:")

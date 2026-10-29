@@ -53,6 +53,7 @@ def _jwt(sub: str, email: str, ttl: int = 3600) -> str:
 def _user_json(u: dict) -> dict:
     return {"id": u["id"], "aud": "authenticated", "role": "authenticated", "email": u["email"],
             "email_confirmed_at": "2026-01-01T00:00:00Z" if u["confirmed"] else None,
+            "last_sign_in_at": "2026-01-01T00:00:00Z" if u.get("signed_in") else None,
             "app_metadata": {}, "user_metadata": {}, "created_at": "2026-01-01T00:00:00Z"}
 
 
@@ -158,6 +159,7 @@ class Handler(BaseHTTPRequestHandler):
                         self._send(400, {"error": "invalid_grant", "error_code": "email_not_confirmed",
                                          "error_description": "Email not confirmed"})
                     else:
+                        u["signed_in"] = True
                         self._send(200, _session(u))
                 elif grant == "refresh_token":
                     email = TOKENS.pop(body.get("refresh_token", ""), None)

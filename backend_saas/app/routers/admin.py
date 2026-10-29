@@ -789,6 +789,10 @@ def add_organization_member(
 
     row = platform_roles.add_organization_member(organization["id"], user.id, role="org_admin")
 
+    # An existing account that never confirmed or never signed in gets a
+    # set-password link too: its password may have been chosen by someone
+    # else (squatted self-signup) or never been sent (earlier failed invite).
+    invited = invited or user.needs_password_setup
     mail_sent = False
     try:
         if invited:

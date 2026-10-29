@@ -376,3 +376,45 @@ def test_frontend_base_url_has_safe_local_default(monkeypatch):
     monkeypatch.delenv("FRONTEND_BASE_URL", raising=False)
     settings = Settings(_env_file=None)
     assert settings.login_url("testverein") == "http://localhost:3000/pilot/testverein/login"
+
+
+def test_find_user_by_email_pages_through_users(monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "fake-service-role-key")
+    get_settings.cache_clear()
+    pages = []
+
+    def get(*a, **k):
+        page = k["params"]["page"]
+        pages.append(page)
+        if page == 1:
+            return _FakeResponse(200, {"users": [{"id": f"u{i}", "email": f"u{i}@example.com"} for i in range(200)]})
+        return _FakeResponse(200, {"users": [{
+            "id": "late", "email": "late@example.com",
+            "email_confirmed_at": "2026-01-01T00:00:00Z", "last_sign_in_at": "2026-02-01T00:00:00Z",
+        }]})
+
+    _fake_client(monkeypatch, get)
+    user = supabase_auth.find_user_by_email("late@example.com")
+    assert user is not None and user.id == "late"
+    assert user.needs_password_setup is False
+    assert pages == [1, 2]
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    get_settings.cache_clear()
+
+
+@pytest.mark.parametrize("fields", [
+    {},  # never confirmed (squatted self-signup)
+    {"email_confirmed_at": "2026-01-01T00:00:00Z"},  # confirmed but never signed in
+])
+def test_find_user_by_email_flags_accounts_needing_password_setup(monkeypatch, fields):
+    from app.config import get_settings
+
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "fake-service-role-key")
+    get_settings.cache_clear()
+    _fake_client(monkeypatch, lambda *a, **k: _FakeResponse(
+        200, {"users": [{"id": "u1", "email": "x@example.com", **fields}]}))
+    assert supabase_auth.find_user_by_email("x@example.com").needs_password_setup is True
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    get_settings.cache_clear()

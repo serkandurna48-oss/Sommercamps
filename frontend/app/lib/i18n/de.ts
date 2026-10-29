@@ -62,7 +62,6 @@ export const de = {
     registrationsLoad: "Anmeldungen konnten nicht geladen werden",
     auditLoad: "Änderungsverlauf konnte nicht geladen werden",
     membersLoad: "Zugriffsliste konnte nicht geladen werden",
-    accountMissing: "Für diese E-Mail existiert noch kein Konto",
     memberAdd: "Zugriff konnte nicht zugewiesen werden",
     memberRemove: "Zugriff konnte nicht entfernt werden",
     reviewSave: "Freigabe konnte nicht gespeichert werden",

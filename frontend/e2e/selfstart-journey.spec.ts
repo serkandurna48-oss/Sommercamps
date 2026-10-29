@@ -111,6 +111,23 @@ test('Fremder Verein startet ohne Hilfe bis zur verwalteten Anmeldung', async ({
     await expect(owner.getByLabel('Freigabe', { exact: true }).getByText(/^Freigegeben am/)).toBeVisible({ timeout: 2_000 })
   }).toPass({ timeout: 30_000 })
 
+  // 4b. Owner invites a second club admin who sets a password and logs in
+  const colleague = 'kollegin@probelauf.e2e.example'
+  await owner.getByLabel('E-Mail-Adresse des Vereinsadmins').fill(colleague)
+  await owner.getByRole('button', { name: 'Einladen' }).click()
+  // Check the stored result; the transient notice may be replaced when the page revalidates.
+  await expect.poll(async () => (await outbox(colleague)).some(m => m.kind === 'recovery_link'), { timeout: 15_000 }).toBe(true)
+  const invite = (await outbox(colleague)).find(m => m.kind === 'recovery_link')
+  expect(invite?.link).toContain('127.0.0.1%3A3113/pilot/sv-probelauf/neues-passwort')
+  const admin2 = await (await browser.newContext()).newPage()
+  await admin2.goto(invite!.link!)
+  await admin2.locator('#new-password').fill('kollegin-passwort-123')
+  await admin2.locator('#confirm-password').fill('kollegin-passwort-123')
+  await admin2.locator('form button[type="submit"]').click()
+  await expect(admin2.getByText('Ihr Passwort wurde geändert.', { exact: false })).toBeVisible()
+  await login(admin2, `/pilot/${CLUB.slug}/login`, colleague, 'kollegin-passwort-123')
+  await expect(admin2).toHaveURL(/\/pilot\/sv-probelauf\/dashboard/)
+
   // 5. Parents: first child gets the spot, second the waitlist
   await anon.goto(`/pilot/${CLUB.slug}`)
   await expect(anon.getByRole('button', { name: /Probecamp Ostern/ })).toBeVisible()

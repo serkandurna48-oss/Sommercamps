@@ -6,32 +6,33 @@ import { addOrganizationMemberAdmin, removeOrganizationMemberAdmin } from '../..
 
 export interface AddMemberState {
   error: string | null
+  notice: string | null
 }
 
-/** Weist ein bestehendes Supabase-Auth-Konto per E-Mail als org_admin zu
- * — kein Einladungs-Flow (kein E-Mail-Versand, siehe Backend-Docstring).
- * Das Konto muss vorher über scripts/create_platform_user.py angelegt
- * worden sein. */
+/** Fügt einen Vereinsadmin per E-Mail hinzu. Unbekannte Adressen bekommen
+ * eine Einladung mit Link zum Passwort-Festlegen, bestehende Konten eine
+ * Info-Mail mit Login-Link (siehe Backend add_organization_member). */
 export async function addOrganizationMemberAction(
   orgSlug: string,
   _prev: AddMemberState,
   formData: FormData,
 ): Promise<AddMemberState> {
   const token = await getValidAccessToken()
-  if (!token) return { error: 'Sitzung abgelaufen — bitte neu anmelden.' }
+  if (!token) return { error: 'Sitzung abgelaufen — bitte neu anmelden.', notice: null }
 
   const email = String(formData.get('email') ?? '').trim()
-  if (!email) return { error: 'Bitte E-Mail-Adresse eingeben.' }
+  if (!email) return { error: 'Bitte E-Mail-Adresse eingeben.', notice: null }
 
+  let member
   try {
-    await addOrganizationMemberAdmin(orgSlug, token, email)
+    member = await addOrganizationMemberAdmin(orgSlug, token, email)
   } catch (err) {
-    if (err instanceof Error) return { error: err.message }
-    return { error: 'Zugriff konnte nicht zugewiesen werden.' }
+    if (err instanceof Error) return { error: err.message, notice: null }
+    return { error: 'Zugriff konnte nicht zugewiesen werden.', notice: null }
   }
 
   revalidatePath(`/platform/${orgSlug}`)
-  return { error: null }
+  return { error: null, notice: memberNotice(email, member.invited === true, member.invite_mail_sent !== false) }
 }
 
 export async function removeOrganizationMemberAction(orgSlug: string, memberId: string): Promise<void> {
@@ -39,4 +40,13 @@ export async function removeOrganizationMemberAction(orgSlug: string, memberId: 
   if (!token) return
   await removeOrganizationMemberAdmin(orgSlug, memberId, token).catch(() => undefined)
   revalidatePath(`/platform/${orgSlug}`)
+}
+
+function memberNotice(email: string, invited: boolean, mailSent: boolean): string {
+  if (!mailSent) {
+    return `${email} hat Zugriff, aber die E-Mail ist nicht angekommen. Bitte „Passwort vergessen?“ auf der Vereins-Anmeldeseite nutzen lassen.`
+  }
+  return invited
+    ? `Einladung an ${email} gesendet. Der Link zum Passwort-Festlegen ist 24 Stunden gültig.`
+    : `${email} hat jetzt Zugriff und wurde per E-Mail informiert.`
 }

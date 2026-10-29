@@ -32,6 +32,7 @@ app/routers/registrations.py applies to child data.
 from __future__ import annotations
 
 import logging
+import secrets
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -39,7 +40,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from ..admin_resolve import require_camp, require_organization
 from ..auth_deps import AuthContext, get_auth_context, require_org_access, require_platform_owner
 from .. import supabase_auth
-from ..supabase_auth import SupabaseAuthError
+from ..supabase_auth import SupabaseAuthError, SupabaseEmailConflictError
+from ..config import get_settings
 
 from ..admin_schemas import (
     ResendMailResponse,
@@ -756,40 +758,77 @@ def list_organization_members(
 def add_organization_member(
     organization_slug: str, data: AddOrganizationMemberRequest, auth: AuthContext = Depends(require_platform_owner)
 ) -> OrganizationMemberOut:
-    """Assigns an *existing* Supabase Auth account (looked up by email via
-    the Admin API) as org_admin for this organization. Deliberately not an
-    invite flow — no email is sent (out of scope for this sprint, see
-    app/supabase_auth.py::find_user_by_email). The account must already
-    exist; create one with scripts/create_platform_user.py first."""
+    """Adds an org_admin by email. An existing Supabase Auth account is
+    assigned and told by mail. For an unknown address an account with a
+    random, never-shared password is created and an invite with a
+    set-password link (/pilot/{slug}/neues-passwort) is sent. The assignment
+    stands even if the mail fails; `invite_mail_sent` tells the owner."""
     organization = require_organization(organization_slug)
+    settings = get_settings()
 
     try:
         user = supabase_auth.find_user_by_email(data.email)
+        invited = False
+        if user is None:
+            try:
+                user = supabase_auth.create_user(
+                    data.email, secrets.token_urlsafe(32), email_confirmed=True
+                )
+                invited = True
+            except SupabaseEmailConflictError:
+                # Created concurrently: fall back to the existing account.
+                user = supabase_auth.find_user_by_email(data.email)
+                if user is None:
+                    raise SupabaseAuthError("Account vanished after conflict")
     except SupabaseAuthError as exc:
-        logger.warning("Could not look up user by email for member assignment: %s", exc)
+        logger.warning("Member invite: Supabase Auth unavailable (error_type=%s)", type(exc).__name__)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="User lookup unavailable — SUPABASE_SERVICE_ROLE_KEY not configured or Supabase Auth unreachable",
+            detail="Konto-Verwaltung gerade nicht erreichbar. Bitte später erneut versuchen.",
         ) from exc
 
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No account exists for this email yet — create one first (scripts/create_platform_user.py)",
-        )
-
     row = platform_roles.add_organization_member(organization["id"], user.id, role="org_admin")
-    logger.info("Organization member assigned (organization_slug=%s, role=org_admin)", organization_slug)
+
+    # An existing account that never confirmed or never signed in gets a
+    # set-password link too: its password may have been chosen by someone
+    # else (squatted self-signup) or never been sent (earlier failed invite).
+    invited = invited or user.needs_password_setup
+    mail_sent = False
+    try:
+        if invited:
+            link = supabase_auth.generate_confirmation_link(
+                data.email,
+                redirect_to=settings.password_setup_url(organization_slug),
+                link_type="recovery",
+            )
+        else:
+            link = settings.login_url(organization_slug)
+        mail_sent = notifications_sending.send_member_invite_email(
+            to_email=data.email,
+            org_name=organization["name"],
+            link=link,
+            new_account=invited,
+        )
+    except (SupabaseAuthError, ValueError) as exc:
+        logger.error("Member invite mail not sent (error_type=%s)", type(exc).__name__)
+
+    logger.info(
+        "Organization member assigned (organization_slug=%s, role=org_admin, invited=%s, mail_sent=%s)",
+        organization_slug, invited, mail_sent,
+    )
     platform_roles.write_audit_log(
         actor_user_id=auth.user_id,
         actor_email=auth.email,
-        action="organization.member_assigned",
+        action="organization.member_invited" if invited else "organization.member_assigned",
         organization_id=str(organization["id"]),
         target_type="organization_member",
         target_id=user.id,
-        metadata={"email": data.email, "role": "org_admin"},
+        metadata={"email": data.email, "role": "org_admin", "invite_mail_sent": mail_sent},
     )
-    return OrganizationMemberOut.model_validate({**row, "user_id": str(row["user_id"]), "email": user.email})
+    return OrganizationMemberOut.model_validate({
+        **row, "user_id": str(row["user_id"]), "email": user.email,
+        "invited": invited, "invite_mail_sent": mail_sent,
+    })
 
 
 @router.delete(

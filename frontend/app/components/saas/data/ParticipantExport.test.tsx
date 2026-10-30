@@ -39,7 +39,7 @@ afterEach(async () => {
   }
 })
 async function render(rows = [registration], search = '', questions: RegistrationQuestion[] = []) {
-  await act(() => root.render(<StrictMode><ParticipantExport registrations={rows} camp={camp} orgSlug="demo" orgName="Testverein" filter="all" search={search} allColumns={[{ header: 'Kind', value: row => row.child_first_name }]} questions={questions} onReset={reset} /></StrictMode>))
+  await act(() => root.render(<StrictMode><ParticipantExport registrations={rows} camp={camp} orgSlug="demo" orgName="Testverein" orgLogoUrl="/test-logo.svg" brandColor="#a01010" filter="all" search={search} allColumns={[{ header: 'Kind', value: row => row.child_first_name }]} questions={questions} onReset={reset} /></StrictMode>))
 }
 function button(label: string) {
   const found = [...document.querySelectorAll('button')].find(b => b.textContent?.trim() === label)
@@ -119,6 +119,11 @@ describe('participant export workflow', () => {
       'Mo 05.07.', 'Di 06.07.', 'Mi 07.07.', 'Do 08.07.', 'Fr 09.07.',
     ])
     expect(dialog.querySelector('tbody tr td:last-child')?.textContent).toBe('')
+    // Trainer handout: club logo, brand color and the printed day marked.
+    expect(dialog.querySelector<HTMLImageElement>('.cp-sheet-logo')?.getAttribute('src')).toBe('/test-logo.svg')
+    expect(dialog.querySelector<HTMLElement>('.cp-print-sheet')?.style.getPropertyValue('--cp-sheet-brand')).toBe('#a01010')
+    expect(dialog.querySelectorAll('th.cp-sheet-today')).toHaveLength(1)
+    expect(dialog.querySelector('.cp-sheet-notes')).not.toBeNull()
     await click('Zurück zur Liste')
     expect(document.querySelector('dialog')).toBeNull()
     expect(document.activeElement).toBe(button('Exportieren'))

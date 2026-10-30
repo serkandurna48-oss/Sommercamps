@@ -21,6 +21,7 @@ import NewPasswordForm from '../neues-passwort/NewPasswordForm'
 import { requestPasswordReset } from '../passwort-vergessen/actions'
 import { setNewPassword } from '../neues-passwort/actions'
 import { initialPasswordState, INVALID_RECOVERY_LINK, readRecoverySession } from '../passwort-vergessen/recovery'
+vi.mock('../../../components/saas/fonts', () => ({ archivo: { variable: 'font-cp' } }))
 
 const neutral = 'Wenn ein Konto zu dieser E-Mail existiert, haben wir Ihnen einen Link geschickt.'
 const session = { access_token: 'test-access', refresh_token: 'test-refresh' }

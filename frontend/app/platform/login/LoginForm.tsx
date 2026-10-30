@@ -1,28 +1,19 @@
 'use client'
 
 import { useActionState } from 'react'
-import { archivo } from '../../components/saas/fonts'
-import GrainOverlay from '../../components/saas/GrainOverlay'
-import '../../components/saas/tokens.css'
+import AuthShell from '../../components/saas/auth/AuthShell'
 import { platformLoginAction } from './actions'
 
 export default function PlatformLoginForm() {
   const [state, formAction, pending] = useActionState(platformLoginAction, { error: null })
 
   return (
-    <div className={`${archivo.variable} cp-scope flex min-h-screen items-center justify-center p-6`}>
-      <GrainOverlay />
-      <form
-        action={formAction}
-        className="w-full max-w-sm rounded-[var(--cp-r-card)] border p-8"
-        style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}
-      >
-        <p className="cp-label" style={{ color: 'var(--cp-muted)' }}>
-          CampsPilot
-        </p>
-        <h1 className="cp-title mt-1 mb-6">Plattform-Anmeldung</h1>
+    <AuthShell name="CampsPilot Plattform" product>
+      <form action={formAction}>
+        <h1 className="login-h1">Anmelden</h1>
+        <p>Zugang für das CampsPilot-Team zur Verwaltung aller Vereine.</p>
 
-        <label className="cp-label mb-1.5 block" style={{ color: 'var(--cp-ink-2)' }} htmlFor="email">
+        <label className="login-label" htmlFor="email">
           E-Mail
         </label>
         <input
@@ -31,14 +22,13 @@ export default function PlatformLoginForm() {
           type="email"
           required
           autoFocus
-          aria-describedby={state.error ? "login-error" : undefined}
+          aria-describedby={state.error ? 'login-error' : undefined}
           aria-invalid={state.error ? true : undefined}
           autoComplete="username"
-          className="cp-subheading mb-4 w-full rounded-[var(--cp-r-field)] border px-4 py-3 cp-focus"
-          style={{ borderColor: 'var(--cp-field-line)', fontSize: '16px' }}
+          className="login-field"
         />
 
-        <label className="cp-label mb-1.5 block" style={{ color: 'var(--cp-ink-2)' }} htmlFor="password">
+        <label className="login-label" htmlFor="password">
           Passwort
         </label>
         <input
@@ -46,32 +36,22 @@ export default function PlatformLoginForm() {
           name="password"
           type="password"
           required
-          aria-describedby={state.error ? "login-error" : undefined}
+          aria-describedby={state.error ? 'login-error' : undefined}
           aria-invalid={state.error ? true : undefined}
           autoComplete="current-password"
-          className="cp-subheading w-full rounded-[var(--cp-r-field)] border px-4 py-3 cp-focus"
-          style={{ borderColor: 'var(--cp-field-line)', fontSize: '16px' }}
+          className="login-field"
         />
 
         {state.error && (
-          <p
-            id="login-error" className="cp-body mt-3 rounded-[var(--cp-r-chip)] border px-3 py-2 text-sm"
-            style={{ color: 'var(--cp-error)', background: 'var(--cp-error-bg)', borderColor: 'var(--cp-error-line)' }}
-            role="alert"
-          >
+          <p id="login-error" className="login-error" role="alert">
             {state.error}
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="cp-subheading mt-6 w-full rounded-[var(--cp-r-field)] py-3.5 disabled:opacity-50"
-          style={{ background: 'var(--cp-ink)', color: '#FFFFFF' }}
-        >
+        <button type="submit" disabled={pending} className="login-btn">
           {pending ? 'Wird geprüft …' : 'Anmelden'}
         </button>
       </form>
-    </div>
+    </AuthShell>
   )
 }

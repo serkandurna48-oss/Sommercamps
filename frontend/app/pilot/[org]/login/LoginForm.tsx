@@ -1,12 +1,8 @@
 'use client'
 
 import { useActionState, useEffect, useRef, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
-import GrainOverlay from '../GrainOverlay'
-import { publicFontClassName, type PublicTheme } from '../publicFonts'
-import '../publicTheme.css'
-import '../../../components/saas/ui/focus.css'
+import AuthShell from '../../../components/saas/auth/AuthShell'
 import { loginAction, type LoginState } from './actions'
 import { orgShortCode } from '../../../lib/parentFlowFormat'
 
@@ -14,7 +10,8 @@ interface LoginFormProps {
   orgSlug: string
   orgName?: string
   orgLogoUrl?: string | null
-  orgTheme?: PublicTheme
+  /** Product-level sign-in (CampsPilot itself, no club yet). */
+  product?: boolean
   brandStrong?: string
   brandOn?: string
   children?: React.ReactNode
@@ -26,7 +23,7 @@ export default function LoginForm({
   orgSlug,
   orgName,
   orgLogoUrl,
-  orgTheme = 'tradition',
+  product = false,
   brandStrong,
   brandOn,
   children,
@@ -71,93 +68,69 @@ export default function LoginForm({
   }
 
   return (
-    <div
-      className={`cp-public cp-admin-login ${publicFontClassName(orgTheme)}`}
-      data-theme={orgTheme}
-      style={
-        {
-          '--brand-strong': brandStrong ?? '#2B6F4C',
-          '--brand-on': brandOn ?? '#FFFFFF',
-        } as React.CSSProperties
-      }
-    >
-      <GrainOverlay />
-      <div className="login-wrap">
-        <div className="login-card">
-          {/* Logo */}
-          <div className="login-logo">
-            {orgLogoUrl ? (
-              <Image
-                src={orgLogoUrl}
-                alt={orgName ?? 'Logo'}
-                width={56}
-                height={56}
-                unoptimized
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-              />
-            ) : (
-              short
-            )}
-          </div>
+    <AuthShell name={orgName} logoUrl={orgLogoUrl} initials={short} product={product}
+      accent={brandStrong ? { strong: brandStrong, on: brandOn } : undefined}>
+      {children ?? <form ref={formRef} action={formAction}>
+        <h1 className="login-h1">Anmelden</h1>
+        <p>{product
+          ? 'Melden Sie sich mit dem Konto an, mit dem Sie Ihren Verein registriert haben.'
+          : 'Melden Sie sich an, um Camps, Anmeldungen und Zahlungen Ihres Vereins zu verwalten.'}</p>
 
-          {orgName && (
-            <p className="login-brand-label">{orgName}</p>
-          )}
+        <label className="login-label" htmlFor="email">
+          E-Mail
+        </label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          required
+          autoFocus
+          aria-describedby={state.error ? "login-error" : undefined}
+          aria-invalid={state.error ? true : undefined}
+          autoComplete="username"
+          className="login-field"
+        />
 
-          {children ?? <form ref={formRef} action={formAction}>
-          <h1 className="login-h1">Anmelden</h1>
-          <p>Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse über den Link in der Bestätigungsmail. Danach melden Sie sich hier an und richten Ihren Verein ein.</p>
-
-          <label className="login-label" htmlFor="email">
-            E-Mail
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            autoFocus
-            aria-describedby={state.error ? "login-error" : undefined}
-            aria-invalid={state.error ? true : undefined}
-            autoComplete="username"
-            className="login-field"
-          />
-
+        <div className="auth-row">
           <label className="login-label" htmlFor="password">
             Passwort
           </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            aria-describedby={state.error ? "login-error" : undefined}
-            aria-invalid={state.error ? true : undefined}
-            autoComplete="current-password"
-            className="login-field"
-          />
-
-          {state.error && (
-            <p id="login-error" className="login-error" role="alert">
-              {state.error}
-            </p>
+          {orgSlug && (
+            <Link className="auth-link cp-focus" href={`/pilot/${encodeURIComponent(orgSlug)}/passwort-vergessen`}>
+              Passwort vergessen?
+            </Link>
           )}
+        </div>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          required
+          aria-describedby={state.error ? "login-error" : undefined}
+          aria-invalid={state.error ? true : undefined}
+          autoComplete="current-password"
+          className="login-field"
+        />
 
-          <button type="submit" disabled={pending} className="login-btn">
-            {pending ? 'Wird geprüft …' : 'Anmelden'}
-          </button>
-          <Link className="login-label cp-focus inline-flex min-h-[44px] items-center underline" href={`/pilot/${encodeURIComponent(orgSlug)}/passwort-vergessen`}>
-            Passwort vergessen?
-          </Link>
-          <p>Keine Bestätigungsmail erhalten oder Link abgelaufen? Geben Sie oben Ihre E-Mail-Adresse ein und fordern Sie die Mail erneut an.</p>
-          <button type="button" onClick={resendConfirmation} disabled={resending} className="cp-focus inline-flex min-h-[44px] items-center underline">
+        {state.error && (
+          <p id="login-error" className="login-error" role="alert">
+            {state.error}
+          </p>
+        )}
+
+        <button type="submit" disabled={pending} className="login-btn">
+          {pending ? 'Wird geprüft …' : 'Anmelden'}
+        </button>
+
+        <div className="auth-links">
+          <p>Gerade registriert? Bestätigen Sie zuerst Ihre E-Mail-Adresse über den Link in der Bestätigungsmail.</p>
+          <button type="button" onClick={resendConfirmation} disabled={resending} className="cp-focus">
             {resending ? 'Wird angefragt …' : 'Bestätigungsmail erneut anfordern'}
           </button>
           {resendFeedback && <p role={resendFeedback.error ? 'alert' : 'status'}>{resendFeedback.message}</p>}
-          <Link href="/campspilot" className="cp-focus inline-flex min-h-[44px] items-center underline">Zurück zu CampsPilot</Link>
-          </form>}
+          <Link href="/campspilot" className="cp-focus">Zurück zu CampsPilot</Link>
         </div>
-      </div>
-    </div>
+      </form>}
+    </AuthShell>
   )
 }

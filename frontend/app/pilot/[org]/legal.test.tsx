@@ -35,6 +35,7 @@ vi.mock('react', async () => {
 
 import LegalShell from './LegalShell'
 import LoginForm from './login/LoginForm'
+vi.mock('../../components/saas/fonts', () => ({ archivo: { variable: 'font-cp' } }))
 
 const org: OrganizationPublic = {
   slug: 'demo',
@@ -114,33 +115,28 @@ it('LoginForm rendert Logo und Submit-Button', () => {
       orgSlug="demo"
       orgName="Demo FC"
       orgLogoUrl="https://example.com/logo.png"
-      orgTheme="tradition"
       brandStrong="#9b2020"
       brandOn="#ffffff"
     />,
   )
-  // next/image URL-encodiert den src; alt-Attribut ist stabiler Nachweis
-  expect(html).toContain('alt="Demo FC"')
+  // Logo is decorative next to the visible club name.
+  expect(html).toContain('logo.png')
+  expect(html).toContain('Demo FC')
   expect(html).toContain('type="submit"')
   expect(html).toContain('Anmelden')
 })
 
 it('LoginForm rendert Vereinsname als Label', () => {
   const html = renderToStaticMarkup(
-    <LoginForm orgSlug="demo" orgName="Demo FC" orgTheme="akademie" />,
+    <LoginForm orgSlug="demo" orgName="Demo FC" />,
   )
   expect(html).toContain('Demo FC')
   expect(html).toContain('type="submit"')
 })
 
-it.each(['tradition', 'akademie', 'kompakt'] as const)(
-  'LoginForm %s rendert data-theme und Login-Karte',
-  (theme) => {
-    const html = renderToStaticMarkup(
-      <LoginForm orgSlug="demo" orgTheme={theme} />,
-    )
-    expect(html).toContain(`data-theme="${theme}"`)
-    expect(html).toContain('login-card')
-    expect(html).toContain('type="submit"')
-  },
-)
+it('LoginForm nutzt die gemeinsame Login-Oberfläche des Produkts', () => {
+  const html = renderToStaticMarkup(<LoginForm orgSlug="demo" />)
+  expect(html).toContain('cp-auth')
+  expect(html).toContain('auth-card')
+  expect(html).toContain('type="submit"')
+})

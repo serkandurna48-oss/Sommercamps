@@ -67,10 +67,16 @@ Manuelle Retention-Dry-Run-Datei: `backend_saas/scripts/retention_dry_run.py`.
 
 | System | Quelle | Verifizierter Code-Stand |
 |---|---|---|
-| Vercel `campspilot` Produktion | Promote von `demo/jan`, 30.10.2026 früh (Serkan) | `daf7fef` (vorher `74588ce`) |
-| Render `campspilot-prod` | Branch `feat/platform-foundation`, Fast-Forward 29.10.2026 abends | `daf7fef` (vorher `4c2a61a`) |
+| Vercel `campspilot` Produktion | Promote der Preview, 30.10.2026 19:10 (Serkan) | `c840fa8` = v1-Release (vorher `daf7fef`) |
+| Render `campspilot-prod` | Branch `feat/platform-foundation`, Fast-Forward 30.10.2026 nachmittags | `c840fa8` (vorher `daf7fef`) |
 | GitHub `main` | Default-Branch, Production-Branch aller 3 Vercel-Projekte | `946a8b7` (JK + KSV-Legacy live) |
-| GitHub `demo/jan` | Staging (Render `campspilot-staging` + Vercel-Preview) | `0c28a18` (30.10., noch nicht released: #51 Eltern-E-Mail, #52 Impressum) |
+| GitHub `demo/jan` | Staging (Render `campspilot-staging` + Vercel-Preview) | `c840fa8` (30.10., = Production) |
+
+v1-Release `c840fa8` enthält #51–#62: Eltern-E-Mail korrigieren, Impressum-Pflichtangaben,
+Eltern-Fokus, Plattform-Kopf, einzeilige Marketing-Navigation auf dem Handy, Slug-Prüfung,
+Zahlungsstatus „Kostenlos“ (z. B. Trainerkinder), KSV-Hero und Datum-Hover.
+Geprüft nach dem Promote: `/campspilot`, `/preise`, `/pilot/ksv-baunatal`, `/platform/login`
+antworten 200 ohne Vercel-Login, Prod-API `/health` ok.
 
 **ACHTUNG:** Die UX-Branch-Spitze ist inzwischen weiter als das zuletzt
 bestätigte Vercel-Produktionsdeployment. Keine Behauptung „auf live“, nur weil

@@ -159,14 +159,14 @@ describe('admin accessibility primitives', () => {
       await act(() => edit.click())
     }
     const controls = [...container.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('.cp-roster-row input[name], .cp-roster-row textarea[name]')]
-    expect(controls).toHaveLength(10)
-    expect(new Set(controls.map(control => control.id)).size).toBe(10)
+    expect(controls).toHaveLength(12)
+    expect(new Set(controls.map(control => control.id)).size).toBe(12)
     for (const control of controls) expect(control.labels?.[0]?.htmlFor).toBe(control.id)
     const firstTrigger = rows[0].querySelector('button[aria-expanded]') as HTMLButtonElement
     controls[0].value = 'Changed first name'
     await act(() => firstTrigger.click())
     expect(controls[0].closest('[inert]')).not.toBeNull()
-    expect(controls[5].closest('[inert]')).toBeNull()
+    expect(controls[6].closest('[inert]')).toBeNull()
     await act(() => firstTrigger.click())
     expect(controls[0].isConnected).toBe(true)
     expect(controls[0].value).toBe('Changed first name')

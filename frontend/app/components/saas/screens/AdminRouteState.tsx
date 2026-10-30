@@ -8,6 +8,7 @@ import MatchdayBand from '../shell/MatchdayBand'
 import { useOrganizationIdentity } from '../shell/OrganizationContext'
 import ErrorState from '../state/ErrorState'
 import Skeleton from '../state/Skeleton'
+import { PAGE } from '../ui/pageLayout'
 
 /** Route fallbacks retain the authenticated club identity and parent navigation. */
 export default function AdminRouteState({ reset }: { reset?: () => void }) {
@@ -23,7 +24,7 @@ export default function AdminRouteState({ reset }: { reset?: () => void }) {
       title={titles[section ?? ''] ?? de.adminRoute.campOverview} backHref={backHref}
       brandColor={computeBrandTokens(org?.primary_color ?? null).brand}
       tabs={campSlug ? campTabs(orgSlug, campSlug) : orgTabs(orgSlug)} />
-    <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+    <main className={PAGE}>
       {reset ? <ErrorState onRetry={reset} dashboardHref={`/pilot/${orgSlug}/dashboard`} /> : <div role="status" aria-label={de.states.loading}><Skeleton className="mb-4 h-20 w-full" /><Skeleton className="h-48 w-full" /></div>}
     </main>
   </>

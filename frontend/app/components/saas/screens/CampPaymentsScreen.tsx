@@ -9,6 +9,7 @@ import { de, formatDateRange, formatEuro } from '../../../lib/i18n/de'
 
 import EmptyCampScreen from './EmptyCampScreen'
 import type { CampScreenProps } from './types'
+import { PAGE } from '../ui/pageLayout'
 
 export default function CampPaymentsScreen({ orgSlug, campSlug, org, camp, registrations, initialFilter = 'open' }: CampScreenProps & { initialFilter?: 'open' | 'paid' | 'all' }) {
   if (!camp) return <EmptyCampScreen orgSlug={orgSlug} org={org} />
@@ -34,12 +35,12 @@ export default function CampPaymentsScreen({ orgSlug, campSlug, org, camp, regis
         brandColor={brand.brand}
       />
 
-      <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
-        <p className="cp-body mb-4" style={{ color: 'var(--cp-muted)' }}>berechnet aus aktuellen Anmeldungen und Campreis</p>
+      <main className={PAGE}>
         <StatGrid>
           <StatCard label="Eingegangen / Offen" value={`${formatEuro(money.collectedCents)} / ${formatEuro(money.openCents)}`} wide />
           <StatCard label={de.command.filterPaymentOpen} value={String(openCount)} numericValue={openCount} tone="pending" />
         </StatGrid>
+        <p className="cp-hint mt-2 mb-6">Beträge berechnet aus den aktuellen Anmeldungen und dem Campreis.</p>
 
         <PaymentSection
           org={{ name: org.name, legal_name: org.legal_name, iban: org.iban, contact_person_name: org.contact_person_name, contact_email: org.contact_email }}

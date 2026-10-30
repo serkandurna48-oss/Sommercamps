@@ -4,6 +4,7 @@ import MatchdayBand from '../shell/MatchdayBand'
 import { orgTabs } from '../navTabs'
 import type { OrganizationIdentityProps } from './types'
 import { DUPLICATE_MISSING, type CampDuplicate } from '../config/campDuplicate'
+import { PAGE_FORM } from '../ui/pageLayout'
 
 export default function CampCreateScreen({ orgSlug, org, initialValues, sourceMissing = false }: OrganizationIdentityProps & { initialValues?: CampDuplicate; sourceMissing?: boolean }) {
 
@@ -20,7 +21,7 @@ export default function CampCreateScreen({ orgSlug, org, initialValues, sourceMi
         brandColor={brand.brand}
       />
 
-      <main className="mx-auto max-w-[640px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+      <main className={PAGE_FORM}>
         <h2 className="cp-title mb-1" style={{ color: 'var(--cp-ink)' }}>
           {initialValues ? 'Camp duplizieren' : 'Camp anlegen'}
         </h2>

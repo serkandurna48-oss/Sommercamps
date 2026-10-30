@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { fetchGlobalRegistrationsAdmin, type GlobalRegistration } from '../../../lib/saasAdminApi'
+import { PAGE } from '../../../components/saas/ui/pageLayout'
 
 const STATUS_LABEL: Record<string, string> = {
   registered: 'Angemeldet',
@@ -38,7 +39,7 @@ export default async function GlobalRegistrationsPage({
   })
 
   return (
-    <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+    <main className={PAGE}>
       <h1 className="cp-title mb-1" style={{ color: 'var(--cp-ink)' }}>
         Anmeldungen
       </h1>

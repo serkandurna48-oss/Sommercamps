@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { fetchAuditLogAdmin } from '../../../lib/saasAdminApi'
+import { PAGE } from '../../../components/saas/ui/pageLayout'
 
 const ACTION_LABEL: Record<string, string> = {
   'organization.publish_state_changed': 'Verein veröffentlicht/zurückgezogen',
@@ -22,7 +23,7 @@ export default async function AuditLogPage() {
   const entries = await fetchAuditLogAdmin(token)
 
   return (
-    <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+    <main className={PAGE}>
       <h1 className="cp-title mb-1" style={{ color: 'var(--cp-ink)' }}>
         Änderungsverlauf
       </h1>

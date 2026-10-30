@@ -30,7 +30,7 @@ export default function ParentEmailCopy({ registrations }: { registrations: Regi
   }
 
   return (
-    <div className="cp-noprint mb-4 space-y-2 cp-body">
+    <div className="cp-noprint space-y-2 cp-body">
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" variant="secondary" disabled={pending || emails.length === 0} onClick={copyEmails}>
           E-Mail-Adressen kopieren
@@ -43,7 +43,7 @@ export default function ParentEmailCopy({ registrations }: { registrations: Regi
           Auch Warteliste
         </label>
       </div>
-      <p>Alle Anmeldungen dieses Camps ohne Stornierungen, unabhängig von Suche und Auswahl.</p>
+      <p className="cp-hint">Alle Anmeldungen dieses Camps ohne Stornierungen, unabhängig von Suche und Auswahl.</p>
       <div aria-live="polite">
         {emails.length === 0 && <p role="status">Keine E-Mail-Adressen zum Kopieren vorhanden.</p>}
         {currentResult?.copied && <p role="status">{emails.length} Adressen kopiert – fügen Sie sie in Ihrem E-Mail-Programm in das BCC-Feld ein.</p>}

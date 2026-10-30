@@ -12,6 +12,7 @@ import ParticipantList from '../data/ParticipantList'
 import { campTabs } from '../navTabs'
 import { de, formatDateRange, formatEuro } from '../../../lib/i18n/de'
 import type { CampScreenProps } from './types'
+import { PAGE } from '../ui/pageLayout'
 
 export default function CampDetailScreen({ orgSlug, campSlug, org, camp, registrations, initialFilter = 'all', initialSort = 'newest' }: CampScreenProps & { initialFilter?: ParticipantFilter; initialSort?: ParticipantSort }) {
   if (!camp) return <EmptyCampScreen orgSlug={orgSlug} org={org} />
@@ -40,7 +41,7 @@ export default function CampDetailScreen({ orgSlug, campSlug, org, camp, registr
         brandColor={brand.brand}
       />
 
-      <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+      <main className={PAGE}>
         <div className="mb-6 flex justify-end">
           <ButtonLink variant="secondary" href={`/pilot/${orgSlug}/camps/new?von=${encodeURIComponent(campSlug)}`}>Camp duplizieren</ButtonLink>
         </div>

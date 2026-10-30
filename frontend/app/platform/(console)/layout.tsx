@@ -51,7 +51,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
       <StagingBanner />
       <GrainOverlay />
       <header className="border-b" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-ink)' }}>
-        <div className="mx-auto flex max-w-[1080px] flex-wrap items-center justify-between gap-3 px-4 py-4 md:px-8">
+        <div className="mx-auto flex max-w-[1128px] flex-wrap items-center justify-between gap-3 px-4 py-4 md:px-6">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link href="/platform" className="cp-subheading" style={{ color: '#FFFFFF' }}>
               CampsPilot Plattform

@@ -20,6 +20,7 @@ import Field from '../ui/Field'
 import Link from '../preview/AdminLink'
 import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 import { orgTabs } from '../navTabs'
+import { PAGE_FORM } from '../ui/pageLayout'
 
 type WizardStep = 1 | 2 | 3 | 4
 type SaveState = { ok: boolean; error?: string }
@@ -65,7 +66,7 @@ export default function EinrichtungScreen({
         tabs={tabs}
         brandColor={brand.brand}
       />
-      <main className="mx-auto max-w-[640px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+      <main className={PAGE_FORM}>
         <ProgressBar step={step} total={4} />
         {step === 1 && (
           <Step1Auftritt orgSlug={orgSlug} org={org} brand={brand} onSuccess={goNext} />

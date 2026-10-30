@@ -7,6 +7,7 @@ import { de, formatDateRange } from '../../../lib/i18n/de'
 
 import EmptyCampScreen from './EmptyCampScreen'
 import type { CampScreenProps } from './types'
+import { PAGE_READING } from '../ui/pageLayout'
 
 export default function CampTasksScreen({ orgSlug, campSlug, org, camp, registrations }: CampScreenProps) {
   if (!camp) return <EmptyCampScreen orgSlug={orgSlug} org={org} />
@@ -28,7 +29,7 @@ export default function CampTasksScreen({ orgSlug, campSlug, org, camp, registra
         brandColor={brand.brand}
       />
 
-      <main className="mx-auto max-w-[920px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+      <main className={PAGE_READING}>
         <h2 className="cp-title mb-6" style={{ color: 'var(--cp-ink)' }}>
           {de.tasksPage.heading}
         </h2>

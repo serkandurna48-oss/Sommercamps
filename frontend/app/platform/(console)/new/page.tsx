@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import NewOrgForm from './NewOrgForm'
+import { PAGE_FORM } from '../../../components/saas/ui/pageLayout'
 
 export default function NewOrganizationPage() {
   return (
-    <main className="mx-auto max-w-[640px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+    <main className={PAGE_FORM}>
       <Link href="/platform" className="cp-chip mb-4 inline-block" style={{ color: 'var(--cp-muted)' }}>
         ← Alle Vereine
       </Link>

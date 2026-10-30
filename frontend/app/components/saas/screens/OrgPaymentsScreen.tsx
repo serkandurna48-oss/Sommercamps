@@ -7,6 +7,7 @@ import StatGrid from '../ui/StatGrid'
 import { orgTabs } from '../navTabs'
 import { de, formatEuro } from '../../../lib/i18n/de'
 import type { OrganizationScreenProps } from './types'
+import { PAGE } from '../ui/pageLayout'
 
 export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsByCamp }: OrganizationScreenProps) {
 
@@ -38,7 +39,7 @@ export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsBy
         brandColor={brand.brand}
       />
 
-      <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+      <main className={PAGE}>
         <h2 className="cp-title mb-1" style={{ color: 'var(--cp-ink)' }}>
           {de.paymentsPage.heading}
         </h2>
@@ -46,11 +47,11 @@ export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsBy
           {de.paymentsPage.subtitleOrg}
         </p>
 
-        <p className="cp-body mb-4" style={{ color: 'var(--cp-muted)' }}>berechnet aus aktuellen Anmeldungen und Campreis</p>
         <StatGrid>
           <StatCard label="Eingegangen / Offen" value={`${formatEuro(money.collectedCents)} / ${formatEuro(money.openCents)}`} wide />
           <StatCard label={de.command.filterPaymentOpen} value={String(openCount)} numericValue={openCount} tone="pending" />
         </StatGrid>
+        <p className="cp-hint mt-2 mb-6">Beträge berechnet aus den aktuellen Anmeldungen und dem Campreis.</p>
 
         <PaymentSection
           org={{ name: org.name, legal_name: org.legal_name, iban: org.iban, contact_person_name: org.contact_person_name, contact_email: org.contact_email }}

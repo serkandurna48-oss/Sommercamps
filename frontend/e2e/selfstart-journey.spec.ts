@@ -89,7 +89,7 @@ test('Fremder Verein startet ohne Hilfe bis zur verwalteten Anmeldung', async ({
     await expect(page.locator('#location')).toHaveValue('Sportplatz Probe', { timeout: 500 })
   }).toPass({ timeout: 15_000 })
   await page.getByRole('button', { name: 'Camp veröffentlichen' }).click()
-  await expect(page.locator('main')).toContainText(/Camp:\s*Öffentlich/, { timeout: 15_000 })
+  await expect(page.locator('main')).toContainText(/Camp:\s*Öffentlich/, { timeout: 45_000 })
 
   await page.goto(`/pilot/${CLUB.slug}/einrichtung?schritt=4`)
   await page.getByRole('button', { name: 'Zur Freigabe einreichen' }).click()

@@ -1,5 +1,11 @@
 # 6. Drei Aufträge für Ahmad (priorisiert)
 
+> **Stand 30.10.2026: A1 und A2 erledigt, A3 teilweise** (Rate-Limit #46; Uptime-Alarm und
+> getrennte Release-Branches noch offen). In Production mit `c840fa8`.
+> Die lokalen Branches `feat/be1b-mails-weiterweg` und `feat/cx35b-passwort-vergessen`
+> sind in diesen PRs aufgegangen und werden nicht mehr gebraucht. Dokument bleibt als
+> Verlauf stehen.
+
 Regel für alle drei: Branch von `demo/jan`, PR gegen `demo/jan`, CI grün, Review
 durch Serkan, Staging-Nachweis im PR. Kein Production-Zugang nötig.
 

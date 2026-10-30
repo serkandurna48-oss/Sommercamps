@@ -1,9 +1,0 @@
-Lokaler unabhängiger Diff-Review durch Agent /root/review (rein lesend).
-Ergebnis: keine blockierenden Befunde.
-- Fokus/status und Geschwister-Reset abgedeckt.
-- Druckstyles erhalten die Bestätigung und verstecken Seitenkopf/Fuß/Navigation/Buttons.
-- Öffentliche Datentypen enthalten keinen konfigurierbaren Nächste-Schritte-Text; Fallback passt.
-- Kontrastfix mit --brand-on im tradition-Theme bestätigt; andere Themes behalten ihre Tokens.
-- Tatsächliche Browser-Druckdarstellung nicht geprüft.
-- Der verlangte Versandtext ist umgesetzt; die API-Antwort enthält keinen Versandstatus.
-Keine Dateien durch Reviewer geändert, keine Tests durch Reviewer gestartet.

@@ -5,6 +5,23 @@ Staging von der Marketingseite bis „erste Anmeldung verwaltet und exportiert�
 kommt – einmal mit Bildschirmaufnahme belegt – und danach dieselbe Version
 kontrolliert in Production geht.
 
+## Nachtrag 30.10.2026 – v1 released, Funktionsumfang geschlossen
+
+v1 ist mit `c840fa8` in Production (Frontend per Vercel-Promote, Backend per Fast-Forward
+von `feat/platform-foundation`). Marketingseite, Preise, Vereins-Selbststart, Elternseite,
+Vereinsbereich (Teilnehmer, Zahlungen inkl. „Kostenlos“, Warteliste, Export) und
+Plattform-Konsole sind enthalten. Ab hier gilt **Funktionsstopp für v1**: nur noch Fehler,
+Texte und Kundenwünsche aus dem Pilotbetrieb.
+
+**Bewusst nach v1:** Online-Zahlung (Stripe), Analyse (PR #63, PostHog, braucht AVV und
+Datenschutzprüfung), automatischer Mail-Retry, Bounce-Tracking, Eltern-Selbststorno,
+weitere Admins pro Verein über die Einladung hinaus, Löschfristen-Automatik,
+Legacy-Migration von JK/KSV.
+
+**Bekannter Fehler:** „Camp veröffentlichen“ bleibt in der Browser-E2E gelegentlich hängen,
+obwohl das Speichern erfolgreich war (ca. 2 von 6 CI-Läufen, lokal selten). Neuer Lauf
+hilft; in Production nicht beobachtet. Ursache offen.
+
 ## Nachtrag 29.10.2026, 13 Uhr – was seit der Tabelle unten erledigt ist
 
 Alles gemergt nach `demo/jan`, CI grün (Backend, Frontend, Browser-E2E). Noch **nicht** auf Staging

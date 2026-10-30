@@ -26,3 +26,9 @@ Thumbs.db
 # not just accidentally untracked.
 Doku/
 JK-Bilder/
+
+# Agent work products: QA logs/screenshots stay local, handovers go to
+# docs/archive/uebergaben/ (never in the repo root).
+/.qa-*/
+/UEBERGABE-*.md
+/CODEX-UEBERGABE-*.md

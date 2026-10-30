@@ -105,7 +105,8 @@
   border-radius: var(--cp-r-field);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.cp-auth .login-field:focus {
+.cp-auth .login-field:focus,
+.cp-auth .login-field:focus-visible {
   outline: none;
   border-color: var(--auth-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--auth-accent) 22%, transparent);

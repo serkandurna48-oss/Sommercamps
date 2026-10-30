@@ -164,11 +164,11 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
             </p>
             <p>
               Freiwillig und nur nach gesonderter Zustimmung nutzen wir PostHog Cloud EU
-              (PostHog Inc., EU-Rechenzentrum) zur Auswertung anonymisierter Ereignisse wie
+              (PostHog Inc., EU-Rechenzentrum) zur Auswertung pseudonymisierter Ereignisse wie
               Aufrufen von Camp-Seiten und dem Beginn, Erfolg oder technischen Fehlschlagen
               einer Anmeldung. Übertragen werden nur öffentliche Vereins-/Camp-Kennungen,
               Ereignistyp, ggf. technischer HTTP-Status sowie eine zufällige Kennung für
-              die aktuelle Browser-Sitzung. Keine Namen, E-Mail-Adressen, Geburtsdaten,
+              die aktuelle Browser-Sitzung (damit können Ereignisse innerhalb eines Tabs\n              zusammengefasst werden). Keine Namen, E-Mail-Adressen, Geburtsdaten,
               Gesundheitsdaten, Formulareingaben oder vollständigen URLs. Es werden keine
               Nutzerprofile angelegt, keine Analyse-Cookies gesetzt und keine Sitzungen aufgezeichnet.
               Die IP-Anonymisierung ist im PostHog-Projekt aktiviert. Rechtsgrundlage ist

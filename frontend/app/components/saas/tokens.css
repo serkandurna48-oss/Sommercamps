@@ -716,3 +716,20 @@
   .cp-today-card { padding: var(--cp-card-padding); }
   .cp-today-card .cp-mobile-actions { margin-top: var(--cp-list-gap); }
 }
+
+/* Toolbar above lists: actions side by side, explanations as quiet hints. */
+.cp-scope .cp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px 32px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--cp-line-2);
+}
+.cp-scope .cp-toolbar > * { margin-bottom: 0; }
+.cp-scope .cp-hint {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--cp-muted);
+}

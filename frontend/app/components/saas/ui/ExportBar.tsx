@@ -99,7 +99,7 @@ export default function ExportBar<T>({
         <IconChevronDown className={`transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`} />
       </Button>
 
-      {summary && <div className="mt-2 text-sm" aria-live="polite">{summary}</div>}
+      {summary && <div className="cp-hint mt-2" aria-live="polite">{summary}</div>}
 
       {open && (
         <div

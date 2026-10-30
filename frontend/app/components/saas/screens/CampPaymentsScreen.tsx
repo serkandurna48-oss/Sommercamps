@@ -36,11 +36,11 @@ export default function CampPaymentsScreen({ orgSlug, campSlug, org, camp, regis
       />
 
       <main className={PAGE}>
-        <p className="cp-body mb-4" style={{ color: 'var(--cp-muted)' }}>berechnet aus aktuellen Anmeldungen und Campreis</p>
         <StatGrid>
           <StatCard label="Eingegangen / Offen" value={`${formatEuro(money.collectedCents)} / ${formatEuro(money.openCents)}`} wide />
           <StatCard label={de.command.filterPaymentOpen} value={String(openCount)} numericValue={openCount} tone="pending" />
         </StatGrid>
+        <p className="cp-hint mt-2 mb-6">Beträge berechnet aus den aktuellen Anmeldungen und dem Campreis.</p>
 
         <PaymentSection
           org={{ name: org.name, legal_name: org.legal_name, iban: org.iban, contact_person_name: org.contact_person_name, contact_email: org.contact_email }}

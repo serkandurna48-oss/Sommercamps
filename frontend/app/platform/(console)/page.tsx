@@ -6,6 +6,7 @@ import { submittedOrganizations } from '../reviewChecklist'
 import OrganizationList from './OrganizationList'
 import StatsOverview from './StatsOverview'
 import SubmittedOrgsSection from './SubmittedOrgsSection'
+import { PAGE } from '../../components/saas/ui/pageLayout'
 
 async function loadReviewData(organizations: OrganizationAdmin[], token: string) {
   const submitted = submittedOrganizations(organizations)
@@ -24,7 +25,7 @@ export default async function PlatformPage() {
   const { submitted, campsByOrg, loadedAt } = await loadReviewData(organizations, token)
 
   return (
-    <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+    <main className={PAGE}>
       <StatsOverview stats={stats} />
       <SubmittedOrgsSection orgs={submitted} campsByOrg={campsByOrg} loadedAt={loadedAt} />
 

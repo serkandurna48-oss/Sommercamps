@@ -80,6 +80,7 @@ export default function ParticipantList({
   return (
     <RegistrationActionFeedback registrations={registrations} waitlistHref={`/pilot/${orgSlug}/camps/${campSlug}/warteliste`}>
       {registrations.length === 0 ? <EmptyState title={de.command.noParticipants} /> : <div>
+      <div className="cp-toolbar">
       <ParticipantExport
         registrations={registrations}
         camp={camp}
@@ -92,6 +93,7 @@ export default function ParticipantList({
         onReset={() => { setFilter('all'); setSearch('') }}
       />
       <ParentEmailCopy registrations={registrations} />
+      </div>
 
       <div className="cp-mobile-filters mb-4 flex flex-col gap-2 xl:flex-row xl:items-center">
         <label className="cp-label flex flex-col gap-1">
@@ -136,7 +138,7 @@ export default function ParticipantList({
       </div>
 
       <div className="mb-4 cp-body" aria-live="polite">
-        <p>{filtered.length} Anmeldungen · {filtered.filter(isActiveRegistration).length} Teilnehmende, {filtered.filter(r => r.status === 'waitlist').length} Warteliste, {filtered.filter(r => r.status === 'cancelled').length} storniert</p>
+        <p className="cp-hint">{filtered.length} Anmeldungen · {filtered.filter(isActiveRegistration).length} Teilnehmende, {filtered.filter(r => r.status === 'waitlist').length} Warteliste, {filtered.filter(r => r.status === 'cancelled').length} storniert</p>
         {(filter !== 'all' || search.trim()) && <div className="flex flex-wrap items-center gap-2">
           <p>Gefiltert: {[search.trim() && 'Suche „' + search.trim() + '“', filter !== 'all' && (filter === 'payment-open' ? 'Zahlung offen' : 'Fehlende Notfallkontakte')].filter(Boolean).join(' · ')}</p>
           <Button type="button" onClick={() => { setFilter('all'); setSearch('') }}>Filter zurücksetzen</Button>

@@ -119,12 +119,12 @@ export default function OrganizationConfigForm({
           <Field
             label="Anschrift (für Impressum/Datenschutz)"
             htmlFor="legal_address"
-            hint="Straße, PLZ, Ort – erscheint auf der öffentlichen Impressum-/Datenschutzseite dieses Vereins. Ohne diese Angabe zeigt die Seite ehrlich „noch nicht angegeben“, nie die Daten eines anderen Vereins."
+            hint="Straße, PLZ, Ort – bei einem e.V. zusätzlich „Vertreten durch: …“ (Vorstand) und „Vereinsregister: Amtsgericht …, VR …“, je eine Zeile. Erscheint auf der öffentlichen Impressum-/Datenschutzseite dieses Vereins. Ohne diese Angabe zeigt die Seite ehrlich „noch nicht angegeben“, nie die Daten eines anderen Vereins."
           >
             <textarea
               id="legal_address"
               name="legal_address"
-              rows={2}
+              rows={4}
               defaultValue={inputValue('legal_address', org.legal_address ?? '')}
               className={INPUT_CLASS}
               style={INPUT_STYLE}

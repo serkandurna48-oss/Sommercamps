@@ -51,6 +51,25 @@ export function selectedPrintColumns(fields: ParticipantPrintField[], selected: 
     : [field])
 }
 
+/**
+ * Returns the color unchanged if it has ≥ 4.5:1 contrast against white print
+ * paper (#fff). Very light colors (e.g. bright yellow #f5f500) would be
+ * invisible on white; they are replaced with the print-ink dark fallback so
+ * that all headers, borders and alert marks stay legible.
+ */
+export function printSafeBrandColor(color: string): string {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(color)
+  if (!m) return color
+  const toLinear = (channel: number) => {
+    const s = channel / 255
+    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+  }
+  const L = 0.2126 * toLinear(parseInt(m[1], 16))
+    + 0.7152 * toLinear(parseInt(m[2], 16))
+    + 0.0722 * toLinear(parseInt(m[3], 16))
+  return (1.05 / (L + 0.05)) >= 4.5 ? color : '#171c19'
+}
+
 /** Keep A4 text readable. Attendance cells need only half a text column.
  * Repeat the name only when selected; row numbers link every section. */
 export function printColumnSections(columns: ParticipantPrintField[]): ParticipantPrintField[][] {

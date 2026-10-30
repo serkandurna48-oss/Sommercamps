@@ -1,7 +1,27 @@
 import { describe, expect, it } from 'vitest'
 import { registrations } from '../../dev/admin-vorschau/fixtures'
 import type { RegistrationAdmin, RegistrationQuestion } from '../../lib/saasAdminApi'
-import { DEFAULT_PRINT_FIELDS, participantPrintFields, printColumnSections, selectedPrintColumns } from './participantPrint'
+import { DEFAULT_PRINT_FIELDS, participantPrintFields, printColumnSections, printSafeBrandColor, selectedPrintColumns } from './participantPrint'
+
+describe('printSafeBrandColor — Kontrast auf weißem Druckpapier', () => {
+  it('behält dunkle Vereinsfarben unverändert (Kontrast ≥ 4,5:1 auf Weiß)', () => {
+    expect(printSafeBrandColor('#d71920')).toBe('#d71920')
+    expect(printSafeBrandColor('#8a6a00')).toBe('#8a6a00')
+    expect(printSafeBrandColor('#000000')).toBe('#000000')
+    expect(printSafeBrandColor('#C8102E')).toBe('#C8102E')
+  })
+  it('ersetzt sehr helle Farben durch dunklen Fallback statt unsichtbarer Linie', () => {
+    expect(printSafeBrandColor('#f5f500')).toBe('#171c19')
+    expect(printSafeBrandColor('#ffff00')).toBe('#171c19')
+    expect(printSafeBrandColor('#ffffff')).toBe('#171c19')
+    expect(printSafeBrandColor('#f0f0f0')).toBe('#171c19')
+  })
+  it('gibt ungültige Hex-Werte unverändert zurück', () => {
+    expect(printSafeBrandColor('invalid')).toBe('invalid')
+    expect(printSafeBrandColor('')).toBe('')
+    expect(printSafeBrandColor('#gg0000')).toBe('#gg0000')
+  })
+})
 
 const camp = { start_date: '2027-07-05', end_date: '2027-07-09' }
 const question: RegistrationQuestion = { key: 'verein', label: 'Herkunftsverein laut Anmeldung', type: 'text', options: null, other_label: null, required: false }

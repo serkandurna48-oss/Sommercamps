@@ -613,7 +613,7 @@
     @bottom-right { content: "Seite " counter(page) " von " counter(pages); font: 8pt Arial, sans-serif; color: #565d59; }
   }
   .cp-print-sheet { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .cp-print-sheet .cp-sheet-head { display: grid !important; gap: 2mm 7mm; margin-bottom: 4mm; padding-bottom: 3mm; border-bottom-width: 0.9mm; }
+  .cp-print-sheet .cp-sheet-head { display: grid !important; gap: 2mm 7mm; margin-bottom: 4mm; padding-bottom: 3mm; border-bottom-width: 0.9mm; break-after: avoid; }
   .cp-sheet-logo { width: 24mm; height: 24mm; }
   .cp-print-sheet .cp-print-org { font-size: 11pt; }
   .cp-sheet-alert { padding-left: 1.5mm; border-left-width: 0.8mm; }

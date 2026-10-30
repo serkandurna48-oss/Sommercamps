@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" width="300" height="100">
+  <rect width="300" height="100" fill="#1a1a2e"/>
+  <circle cx="50" cy="50" r="30" fill="#e2b96a"/>
+  <text x="52" y="54" text-anchor="middle" font-size="10" fill="#1a1a2e" font-family="sans-serif" font-weight="bold">TV</text>
+  <text x="170" y="42" text-anchor="middle" font-size="18" fill="#e2b96a" font-family="sans-serif" font-weight="bold">TESTVEREIN</text>
+  <text x="170" y="66" text-anchor="middle" font-size="12" fill="#b0b8c1" font-family="sans-serif">Fußballakademie · 3:1</text>
+</svg>

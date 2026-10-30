@@ -23,6 +23,12 @@ export type EventDetails = {
   status_code?: number
 }
 
+/** Analytics stays fully off (no banner, no privacy text) until a PostHog key
+ * is configured for the deployment. Activate per environment after the DPA. */
+export function isAnalyticsEnabled(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_POSTHOG_KEY)
+}
+
 export function getAnalyticsConsent(): AnalyticsConsent | null {
   if (typeof window === 'undefined') return null
   try {

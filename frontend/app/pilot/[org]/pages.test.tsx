@@ -129,3 +129,15 @@ it('Teilnahmebedingungen: ohne terms_text zeigt Verweis auf Anbieterbedingungen'
   expect(html).toContain('Es gelten die Teilnahme-')
   expect(html).not.toContain('tb-4')
 })
+
+it('Datenschutz: PostHog-Abschnitt nur mit konfiguriertem Analyse-Schlüssel', async () => {
+  vi.stubEnv('NEXT_PUBLIC_POSTHOG_KEY', '')
+  const off = renderToStaticMarkup(await DatenschutzPage({ params: Promise.resolve({ org: 'demo' }) }))
+  expect(off).not.toContain('PostHog')
+  expect(off).not.toContain('Einwilligung zur Nutzungsanalyse')
+  vi.stubEnv('NEXT_PUBLIC_POSTHOG_KEY', 'phc_test')
+  const on = renderToStaticMarkup(await DatenschutzPage({ params: Promise.resolve({ org: 'demo' }) }))
+  expect(on).toContain('PostHog Cloud EU')
+  expect(on).not.toContain('\\n')
+  vi.unstubAllEnvs()
+})

@@ -270,14 +270,12 @@ async def stripe_connect_webhook(
         payment_intent = obj.get("payment_intent")
         if not isinstance(session_id, str) or not isinstance(paid_amount, int):
             raise HTTPException(400, "Stripe-Zahlungsdaten unvollständig")
-        if payment_intent is not None and (
-            not isinstance(payment_intent, str) or not PAYMENT_INTENT_ID.fullmatch(payment_intent)
-        ):
+        if not isinstance(payment_intent, str) or not PAYMENT_INTENT_ID.fullmatch(payment_intent):
             raise HTTPException(400, "Ungültiger Stripe-PaymentIntent")
         with db.get_cursor() as cur:
             cur.execute(
                 """select r.id, r.payment_status, r.status, r.stripe_checkout_amount_cents,
-                          r.stripe_checkout_currency
+                          r.stripe_checkout_currency, r.stripe_payment_intent_id
                    from camp_registrations r
                    join organizations o on o.id = r.organization_id
                    where r.stripe_checkout_session_id = %s
@@ -294,7 +292,12 @@ async def stripe_connect_webhook(
                 logger.error("Stripe amount/currency mismatch; payment not marked paid")
                 raise HTTPException(409, "Zahlungsbetrag stimmt nicht überein")
             if row["payment_status"] == "paid":
-                return {"received": True, "settled": True}
+                if row.get("stripe_payment_intent_id") == payment_intent:
+                    return {"received": True, "settled": True}
+                # A payment was manually recorded, or another Stripe intent
+                # was settled. Do not falsely claim the new charge reconciled.
+                logger.error("Duplicate Stripe charge on already-paid registration; refund review required")
+                return {"received": True, "settled": False}
             if row["status"] not in ("registered", "confirmed") or row["payment_status"] != "open":
                 # Never restore cancelled/waived/refunded registrations.
                 logger.warning("Stripe payment for non-payable registration; manual refund review needed")

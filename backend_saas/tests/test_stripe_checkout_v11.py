@@ -132,8 +132,7 @@ def test_waitlisted_registration_cannot_checkout(monkeypatch):
     assert len(cursor.executed) == 1
 
 
-@pytest.mark.asyncio
-async def test_unsigned_webhook_rejected_before_database_access(monkeypatch):
+def test_unsigned_webhook_rejected_before_database_access(monkeypatch):
     monkeypatch.setattr(payments, "get_settings", lambda: SimpleNamespace(
         stripe_checkout_enabled=True, stripe_webhook_secret="whsec_test"
     ))
@@ -146,6 +145,7 @@ async def test_unsigned_webhook_rejected_before_database_access(monkeypatch):
         async def body(self):
             return b'{"type":"checkout.session.completed"}'
     with pytest.raises(HTTPException) as exc:
-        await payments.stripe_connect_webhook(FakeRequest(), "invalid")
+        import asyncio
+        asyncio.run(payments.stripe_connect_webhook(FakeRequest(), "invalid"))
     assert exc.value.status_code == 400
     assert not called

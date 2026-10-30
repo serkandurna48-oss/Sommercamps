@@ -62,6 +62,7 @@ async function saveFirstEdit() {
     input.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
   })
   expect(updateRegistrationDetailsAction).toHaveBeenCalledOnce()
+  expect(vi.mocked(updateRegistrationDetailsAction).mock.calls[0][4].get('parent_email')).toBe(registration.parent_email)
   expect(container.textContent).toContain('Corrected')
 }
 

@@ -606,7 +606,7 @@ def test_update_registration_details_success(monkeypatch):
 
     captured = {}
 
-    def _update(org_id, camp_id, reg_token, child_first_name, child_last_name, jersey_size, allergies, pickup_authorized):
+    def _update(org_id, camp_id, reg_token, child_first_name, child_last_name, jersey_size, allergies, pickup_authorized, parent_email=None):
         captured["camp_id"] = camp_id
         captured["reg_token"] = reg_token
         captured["child_first_name"] = child_first_name
@@ -668,7 +668,7 @@ def test_update_registration_details_blank_optional_becomes_none(monkeypatch):
 
     captured = {}
 
-    def _update(org_id, camp_id, reg_token, child_first_name, child_last_name, jersey_size, allergies, pickup_authorized):
+    def _update(org_id, camp_id, reg_token, child_first_name, child_last_name, jersey_size, allergies, pickup_authorized, parent_email=None):
         captured["allergies"] = allergies
         captured["jersey_size"] = jersey_size
         return _registration_row(registration_token=reg_token)
@@ -718,3 +718,29 @@ def test_update_registration_details_without_auth_returns_401():
         )
 
     assert response.status_code == 401
+
+
+def test_update_registration_details_parent_email(monkeypatch):
+    """A typo in the parent address is fixable; omitted keeps the stored one."""
+    org = _org_row()
+    camp = _camp_row(org["id"])
+    monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
+    monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+    seen = []
+    audits = []
+    monkeypatch.setattr(platform_roles, "write_audit_log", lambda **kw: audits.append(kw))
+
+    def _update(org_id, camp_id, reg_token, *fields, parent_email=None):
+        seen.append(fields[-1] if len(fields) == 6 else parent_email)
+        return _registration_row(registration_token=reg_token)
+
+    monkeypatch.setattr(registrations_repo, "update_registration_details", _update)
+    url = f"/admin/organizations/demo-fc/camps/summer-1/registrations/{uuid4()}/details"
+    base = {"child_first_name": "Lea", "child_last_name": "Musterkind"}
+    with TestClient(app) as client:
+        assert client.patch(url, json={**base, "parent_email": "neu@example.com"}, headers=_auth_headers()).status_code == 200
+        assert client.patch(url, json=base, headers=_auth_headers()).status_code == 200
+        assert client.patch(url, json={**base, "parent_email": "kein-at-zeichen"}, headers=_auth_headers()).status_code == 422
+    assert seen == ["neu@example.com", None]
+    assert audits[0]["metadata"] == {"parent_email_submitted": True}
+    assert "neu@example.com" not in str(audits)

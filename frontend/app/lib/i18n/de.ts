@@ -48,6 +48,7 @@ export const de = {
     cancelFailed: "Konnte nicht storniert werden – erneut versuchen.",
     namesRequired: "Vor- und Nachname dürfen nicht leer sein.",
     detailsFailed: "Konnte nicht gespeichert werden – Angaben prüfen und erneut versuchen.",
+    parentEmailInvalid: "Bitte eine gültige E-Mail-Adresse der Eltern eingeben.",
     mailResent: "Mail erneut gesendet.",
     mailResendFailed: "Mail konnte nicht gesendet werden – Adresse prüfen oder Familie direkt kontaktieren.",
   },
@@ -148,6 +149,7 @@ export const de = {
     fieldJerseySize: 'Trikotgröße',
     fieldAllergies: 'Allergien',
     fieldPickupAuthorized: 'Abholberechtigte',
+    fieldParentEmail: 'E-Mail der Eltern',
   },
   states: {
     loading: 'Wird geladen …',

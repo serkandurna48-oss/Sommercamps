@@ -444,7 +444,8 @@ _UPDATE_REGISTRATION_DETAILS = f"""
         child_last_name = %s,
         jersey_size = %s,
         allergies = %s,
-        pickup_authorized = %s
+        pickup_authorized = %s,
+        parent_email = coalesce(%s, parent_email)
     where registration_token = %s
       and organization_id = %s
       and camp_id = %s
@@ -461,6 +462,7 @@ def update_registration_details(
     jersey_size: Optional[str],
     allergies: Optional[str],
     pickup_authorized: Optional[str],
+    parent_email: Optional[str] = None,
 ) -> Optional[dict]:
     """Corrects a participant's own submitted data after the fact — MVP-
     Auftrag "Teilnehmerdaten-Korrektur". Same tenant-scoping rule as
@@ -477,6 +479,7 @@ def update_registration_details(
                 jersey_size,
                 allergies,
                 pickup_authorized,
+                parent_email,
                 registration_token,
                 organization_id,
                 camp_id,

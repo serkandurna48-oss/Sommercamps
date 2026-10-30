@@ -208,6 +208,7 @@ def test_signed_webhook_credits_only_verified_amount_and_account(monkeypatch):
     # Replaying an already-settled event must not update the registration.
     cursor.executed.clear()
     cursor.row["payment_status"] = "paid"
+    cursor.row["stripe_payment_intent_id"] = payment_intent
     assert asyncio.run(payments.stripe_connect_webhook(FakeRequest(), header))["settled"]
     assert len(cursor.executed) == 1
 

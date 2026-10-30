@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { ButtonLink } from '../../../components/saas/ui/Button'
 import { notFound, redirect } from 'next/navigation'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { fetchCampsAdmin, fetchOrganizationAdmin, fetchOrganizationMembersAdmin } from '../../../lib/saasAdminApi'
@@ -80,36 +81,10 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/pilot/${org.slug}/konfiguration`}
-            className="cp-chip rounded-[var(--cp-r-chip)] border px-3 py-2"
-            style={{ borderColor: 'var(--cp-field-line)', color: 'var(--cp-ink)' }}
-          >
-            Bearbeiten
-          </Link>
-          <Link
-            href={`/platform/${org.slug}/preview`}
-            className="cp-chip rounded-[var(--cp-r-chip)] border px-3 py-2"
-            style={{ borderColor: 'var(--cp-field-line)', color: 'var(--cp-ink)' }}
-          >
-            Vorschau
-          </Link>
-          <Link
-            href={`/pilot/${org.slug}/dashboard`}
-            className="cp-subheading inline-flex items-center justify-center rounded-[var(--cp-r-field)] px-4"
-            style={{ background: 'var(--cp-ink)', color: '#FFFFFF' }}
-          >
-            Vereinsverwaltung öffnen
-          </Link>
-          {org.site_published && (
-            <Link
-              href={`/pilot/${org.slug}`}
-              className="cp-chip rounded-[var(--cp-r-chip)] border px-3 py-2"
-              style={{ borderColor: 'var(--cp-field-line)', color: 'var(--cp-muted)' }}
-            >
-              Öffentliche Seite
-            </Link>
-          )}
+          <ButtonLink href={`/pilot/${org.slug}/dashboard`} variant="primary">Vereinsverwaltung öffnen</ButtonLink>
+          <ButtonLink href={`/pilot/${org.slug}/konfiguration`}>Bearbeiten</ButtonLink>
+          <ButtonLink href={`/platform/${org.slug}/preview`}>Vorschau</ButtonLink>
+          {org.site_published && <ButtonLink href={`/pilot/${org.slug}`}>Öffentliche Seite</ButtonLink>}
         </div>
       </div>
 

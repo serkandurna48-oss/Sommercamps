@@ -60,7 +60,7 @@ export default function CampCreateForm({
           <input id="title" name="title" required value={title} onChange={event => setTitle(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
         <Field label="Web-Adresse" htmlFor="slug" hint="Aus Ihrem Titel vorgeschlagen. Sie können sie vor dem Anlegen ändern: Kleinbuchstaben, Zahlen und Bindestriche.">
-          <input id="slug" name="slug" required pattern="[a-z0-9-]+" value={customSlug ?? suggestCampSlug(title)} onChange={event => setCustomSlug(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
+          <input id="slug" name="slug" required pattern="[a-z0-9\-]+" value={customSlug ?? suggestCampSlug(title)} onChange={event => setCustomSlug(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Beginn" htmlFor="start_date">

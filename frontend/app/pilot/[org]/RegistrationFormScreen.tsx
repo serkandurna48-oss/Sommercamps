@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, RegistrationCreated, RegistrationQuestion } from '../../lib/saasApi'
 import { submitRegistration } from '../../lib/saasApi'
+import { captureSaasEvent } from '../../lib/saasAnalytics'
 import { formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
 import ExtraQuestions from './ExtraQuestions'
 import { getClubAssets } from './clubAssets'
@@ -256,6 +257,7 @@ export default function RegistrationFormScreen({
     setServerFields({})
 
     if (Object.keys(validation).length > 0 || !extraDone) {
+      captureSaasEvent('camp_registration_failed', orgSlug, camp.slug, { error_kind: 'validation' })
       focusFirstInvalid()
       return
     }
@@ -289,6 +291,7 @@ export default function RegistrationFormScreen({
         extra_answers: Object.keys(form.extraAnswers).length > 0 ? form.extraAnswers : undefined,
       })
       if (!outcome.ok) {
+        captureSaasEvent('camp_registration_failed', orgSlug, camp.slug, { error_kind: 'api', status_code: outcome.status })
         setErrorStatus(outcome.status)
         setServerError(submitErrorMessage(outcome.status))
         const mapping = {
@@ -308,9 +311,13 @@ export default function RegistrationFormScreen({
         else requestAnimationFrame(() => serverErrorRef.current?.focus())
         return
       }
+      captureSaasEvent('camp_registration_succeeded', orgSlug, camp.slug, {
+        result: outcome.data.status === 'registered' || outcome.data.status === 'waitlist' ? outcome.data.status : 'other',
+      })
       setSubmitted(true)
       onSubmitted(outcome.data, form.childFirstName.trim() || 'Ihr Kind', form.parentEmail.trim(), parentDetailsOnly(form))
     } catch {
+      captureSaasEvent('camp_registration_failed', orgSlug, camp.slug, { error_kind: 'network', status_code: 0 })
       setErrorStatus(0)
       setServerError(submitErrorMessage(0))
     } finally {

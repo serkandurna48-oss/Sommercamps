@@ -27,6 +27,7 @@ import PublicState from './PublicState'
 import RegistrationUnavailable from './RegistrationUnavailable'
 import RetryButton from './RetryButton'
 import type { ParentDetails } from './siblingRegistration'
+import { captureSaasEvent } from '../../lib/saasAnalytics'
 
 type ScreenName = 'org' | 'camp' | 'form' | 'done' | 'wait'
 
@@ -153,6 +154,7 @@ export default function ParentFlow({
   }
 
   function goForm() {
+    captureSaasEvent('camp_registration_started', org.slug, selectedSlug ?? undefined)
     setScreen('form')
   }
 

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { fetchOrganization } from '../../../lib/saasApi'
 import LegalShell from '../LegalShell'
+import { AnalyticsSettingsButton } from '../../AnalyticsConsent'
 
 export async function generateMetadata({ params }: { params: Promise<{ org: string }> }): Promise<Metadata> {
   const { org: orgSlug } = await params
@@ -161,6 +162,21 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
               personenbezogene Nutzerprofile über verschiedene Websites erstellt.
               Google- oder Meta-Werbenetzwerke sind auf dieser Anmeldeseite nicht integriert.
             </p>
+            <p>
+              Freiwillig und nur nach gesonderter Zustimmung nutzen wir PostHog Cloud EU
+              (PostHog Inc., EU-Rechenzentrum) zur Auswertung anonymisierter Ereignisse wie
+              Aufrufen von Camp-Seiten und dem Beginn, Erfolg oder technischen Fehlschlagen
+              einer Anmeldung. Übertragen werden nur öffentliche Vereins-/Camp-Kennungen,
+              Ereignistyp, ggf. technischer HTTP-Status sowie eine zufällige Kennung für
+              die aktuelle Browser-Sitzung. Keine Namen, E-Mail-Adressen, Geburtsdaten,
+              Gesundheitsdaten, Formulareingaben oder vollständigen URLs. Es werden keine
+              Nutzerprofile angelegt, keine Analyse-Cookies gesetzt und keine Sitzungen aufgezeichnet.
+              Die IP-Anonymisierung ist im PostHog-Projekt aktiviert. Rechtsgrundlage ist
+              Art. 6 Abs. 1 lit. a DSGVO (Einwilligung). Eine Ablehnung hat keine Auswirkungen
+              auf die Anmeldung. Die Entscheidung wird lokal im Browser gespeichert und
+              kann hier jederzeit für die Zukunft geändert werden.
+            </p>
+            <AnalyticsSettingsButton />
           </section>
         </div>
       </main>

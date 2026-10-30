@@ -70,7 +70,7 @@ export default function AnalyticsConsentBanner() {
     >
       <p style={{ fontWeight: 700, margin: '0 0 6px' }}>Freiwillige Nutzungsanalyse</p>
       <p style={{ margin: '0 0 12px' }}>
-        Dürfen wir anonym erfassen, welche Camp-Seiten besucht werden und ob Anmeldungen
+        Dürfen wir datensparsam erfassen, welche Camp-Seiten besucht werden und ob Anmeldungen
         begonnen oder abgeschlossen werden? Wir verwenden PostHog (EU), ohne Namen,
         E-Mail-Adressen, Gesundheitsdaten, Formulareingaben oder Sitzungsaufnahmen.
         Die Anmeldung funktioniert auch ohne Zustimmung.{' '}

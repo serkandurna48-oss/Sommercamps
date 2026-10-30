@@ -67,11 +67,10 @@ Manuelle Retention-Dry-Run-Datei: `backend_saas/scripts/retention_dry_run.py`.
 
 | System | Quelle | Verifizierter Code-Stand |
 |---|---|---|
-| Vercel `campspilot` Produktion | Deployment `dpl_Ba96ARdpTDre72HCnX2spM8QSRzQ` | `74588ce` (READY) |
-| Render `campspilot-prod` | Branch `feat/platform-foundation` | `4c2a61a` |
+| Vercel `campspilot` Produktion | Promote von `demo/jan`, 30.10.2026 früh (Serkan) | `daf7fef` (vorher `74588ce`) |
+| Render `campspilot-prod` | Branch `feat/platform-foundation`, Fast-Forward 29.10.2026 abends | `daf7fef` (vorher `4c2a61a`) |
 | GitHub `main` | Default-Branch, Production-Branch aller 3 Vercel-Projekte | `946a8b7` (JK + KSV-Legacy live) |
-| GitHub `ux/ksv-cleaner-parent-20261028` | fortgesetzte UX-Arbeit | `36b0bdb` |
-| GitHub `demo/jan` | Vorschau-/Entwicklungsstand | `36b0bdb` |
+| GitHub `demo/jan` | Staging (Render `campspilot-staging` + Vercel-Preview) | `0c28a18` (30.10., noch nicht released: #51 Eltern-E-Mail, #52 Impressum) |
 
 **ACHTUNG:** Die UX-Branch-Spitze ist inzwischen weiter als das zuletzt
 bestätigte Vercel-Produktionsdeployment. Keine Behauptung „auf live“, nur weil

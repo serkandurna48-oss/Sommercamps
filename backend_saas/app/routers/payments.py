@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 import re
-import time
+import secrets
 from uuid import UUID
 
 import stripe
@@ -217,7 +217,7 @@ def create_checkout(
                 # No application fee; SaaS subscription is billed separately.
                 metadata={"organization_id": str(tenant.organization_id), "camp_slug": camp_slug},
                 stripe_account=account,
-                idempotency_key=f"campspilot-{registration_token}-{int(time.time() // 86400)}",
+                idempotency_key=f"campspilot-{registration_token}-{secrets.token_hex(12)}",
             )
         except stripe.error.StripeError:
             logger.warning("Checkout creation failed (organization_slug=%s)", tenant.slug)

@@ -17,6 +17,11 @@ export function isOpenPayment(r: RegistrationAdmin): boolean {
   return isActiveRegistration(r) && r.payment_status === 'open'
 }
 
+/** Any manual payment decision (paid, free, refunded) can be undone while the registration is active. */
+export function canReopenPayment(r: RegistrationAdmin): boolean {
+  return isActiveRegistration(r) && ['paid', 'waived', 'refunded'].includes(r.payment_status)
+}
+
 /** Amounts are calculated by the caller using each camp's price. */
 export function openPaymentStats(registrations: RegistrationAdmin[]): { count: number } {
   return { count: registrations.filter(isOpenPayment).length }

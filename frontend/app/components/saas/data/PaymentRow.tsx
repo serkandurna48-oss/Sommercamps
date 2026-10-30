@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { de, formatDateRange, formatEuro, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
-import { isActiveRegistration, isOpenPayment } from '../commandCenterLogic'
+import { isActiveRegistration, isOpenPayment, canReopenPayment } from '../commandCenterLogic'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import ActionForm from '../ui/ActionForm'
 import type { ActionFormState } from '../ui/ActionForm'
@@ -50,6 +50,7 @@ export default function PaymentRow({
   }
   const markWaived = setPaymentStatusAction.bind(null, orgSlug, camp.slug, registration.registration_token, 'waived', de.paymentsPage.markWaivedSuccess)
   const markRefunded = setPaymentStatusAction.bind(null, orgSlug, camp.slug, registration.registration_token, 'refunded', de.paymentsPage.markRefundedSuccess)
+  const markOpen = setPaymentStatusAction.bind(null, orgSlug, camp.slug, registration.registration_token, 'open', de.paymentsPage.markOpenSuccess)
 
   return (
     <div className="cp-ledger-row cp-mobile-card border-t" data-status={registration.payment_status} style={{ borderTopColor: 'var(--cp-line-2)' }}>
@@ -120,6 +121,15 @@ export default function PaymentRow({
             pendingLabel={de.paymentsPage.updating}
             variant="danger"
             requireConfirm="Bereits erfolgte Rückzahlung als erstattet markieren? CampsPilot überweist kein Geld."
+          />
+        )}
+        {canReopenPayment(registration) && (
+          <ActionForm
+            action={markOpen}
+            label={de.paymentsPage.markOpen}
+            pendingLabel={de.paymentsPage.updating}
+            variant="secondary"
+            requireConfirm={de.paymentsPage.markOpenConfirm}
           />
         )}
           </RowOverflow>

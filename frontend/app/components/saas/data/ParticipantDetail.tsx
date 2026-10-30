@@ -7,7 +7,7 @@ import { de, paymentStatusLabel } from '../../../lib/i18n/de'
 import type { RegistrationAdmin, RegistrationQuestion } from '../../../lib/saasAdminApi'
 import { cancelRegistrationAction, resendRegistrationMailAction, updateRegistrationDetailsAction } from '../actions/waitlistActions'
 import { setPaymentStatusAction } from '../actions/paymentActions'
-import { hasMissingEmergencyContact, hasNotes, isOpenPayment } from '../commandCenterLogic'
+import { hasMissingEmergencyContact, hasNotes, isOpenPayment, canReopenPayment } from '../commandCenterLogic'
 import ActionForm from '../ui/ActionForm'
 import { useRegistrationActionFeedback } from '../ui/RegistrationActionFeedback'
 import Button, { ButtonLink } from '../ui/Button'
@@ -63,6 +63,7 @@ export default function ParticipantDetail({
   const markPaid = setPaymentStatusAction.bind(null, orgSlug, campSlug, registration.registration_token, 'paid', de.paymentsPage.markPaidSuccess)
   const markWaived = setPaymentStatusAction.bind(null, orgSlug, campSlug, registration.registration_token, 'waived', de.paymentsPage.markWaivedSuccess)
   const markRefunded = setPaymentStatusAction.bind(null, orgSlug, campSlug, registration.registration_token, 'refunded', de.paymentsPage.markRefundedSuccess)
+  const markOpen = setPaymentStatusAction.bind(null, orgSlug, campSlug, registration.registration_token, 'open', de.paymentsPage.markOpenSuccess)
 
   const [editing, setEditing] = useState(false)
   const preview = useAdminPreview()
@@ -282,9 +283,12 @@ export default function ParticipantDetail({
             <ActionForm action={markWaived} label={de.paymentsPage.markWaived} pendingLabel={de.paymentsPage.updating} variant="secondary" requireConfirm={de.paymentsPage.waivedConfirm} />
           </div>
         )}
-        {registration.payment_status === 'paid' && (
-          <div className="mt-3">
-            <ActionForm action={markRefunded} label={de.paymentsPage.markRefunded} pendingLabel={de.paymentsPage.updating} variant="danger" requireConfirm="Wirklich erstatten?" />
+        {canReopenPayment(registration) && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {registration.payment_status === 'paid' && (
+              <ActionForm action={markRefunded} label={de.paymentsPage.markRefunded} pendingLabel={de.paymentsPage.updating} variant="danger" requireConfirm="Wirklich erstatten?" />
+            )}
+            <ActionForm action={markOpen} label={de.paymentsPage.markOpen} pendingLabel={de.paymentsPage.updating} variant="secondary" requireConfirm={de.paymentsPage.markOpenConfirm} />
           </div>
         )}
 

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import AnalyticsConsentBanner from '../AnalyticsConsent'
 import { notFound } from 'next/navigation'
 import { computeBrandSafe } from '../../lib/brandPipeline'
 import { readableTextOn } from '../../lib/readableTextOn'
@@ -94,6 +95,8 @@ export default async function PilotOrgPage({ params, searchParams }: PageProps) 
       <div className="app">
         <ParentFlow org={org} camps={camps} hadPastCamps={hadPastCamps} initialCampSlug={typeof selectedSlug === 'string' ? selectedSlug : undefined} />
       </div>
+      {/* Inside the themed wrapper so the banner uses the club's colors and fonts. */}
+      <AnalyticsConsentBanner orgSlug={org.slug} isLanding />
     </div>
   )
 }

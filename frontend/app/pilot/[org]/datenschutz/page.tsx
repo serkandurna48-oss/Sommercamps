@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { fetchOrganization } from '../../../lib/saasApi'
 import LegalShell from '../LegalShell'
 import { AnalyticsSettingsButton } from '../../AnalyticsConsent'
+import { isAnalyticsEnabled } from '../../../lib/saasAnalytics'
 
 export async function generateMetadata({ params }: { params: Promise<{ org: string }> }): Promise<Metadata> {
   const { org: orgSlug } = await params
@@ -162,13 +163,15 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
               personenbezogene Nutzerprofile über verschiedene Websites erstellt.
               Google- oder Meta-Werbenetzwerke sind auf dieser Anmeldeseite nicht integriert.
             </p>
+            {isAnalyticsEnabled() && <>
             <p>
               Freiwillig und nur nach gesonderter Zustimmung nutzen wir PostHog Cloud EU
               (PostHog Inc., EU-Rechenzentrum) zur Auswertung pseudonymisierter Ereignisse wie
               Aufrufen von Camp-Seiten und dem Beginn, Erfolg oder technischen Fehlschlagen
               einer Anmeldung. Übertragen werden nur öffentliche Vereins-/Camp-Kennungen,
               Ereignistyp, ggf. technischer HTTP-Status sowie eine zufällige Kennung für
-              die aktuelle Browser-Sitzung (damit können Ereignisse innerhalb eines Tabs\n              zusammengefasst werden). Keine Namen, E-Mail-Adressen, Geburtsdaten,
+              die aktuelle Browser-Sitzung (damit können Ereignisse innerhalb eines Tabs
+              zusammengefasst werden). Keine Namen, E-Mail-Adressen, Geburtsdaten,
               Gesundheitsdaten, Formulareingaben oder vollständigen URLs. Es werden keine
               Nutzerprofile angelegt, keine Analyse-Cookies gesetzt und keine Sitzungen aufgezeichnet.
               Die IP-Anonymisierung ist im PostHog-Projekt aktiviert. Rechtsgrundlage ist
@@ -177,6 +180,7 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
               kann hier jederzeit für die Zukunft geändert werden.
             </p>
             <AnalyticsSettingsButton />
+            </>}
           </section>
         </div>
       </main>

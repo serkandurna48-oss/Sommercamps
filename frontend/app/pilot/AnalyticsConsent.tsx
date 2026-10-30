@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { captureSaasEvent, getAnalyticsConsent, saveAnalyticsConsent } from '../lib/saasAnalytics'
+import { captureSaasEvent, getAnalyticsConsent, isAnalyticsEnabled, saveAnalyticsConsent } from '../lib/saasAnalytics'
 
 const OPEN_EVENT = 'campspilot:open-analytics-settings'
 
@@ -41,7 +41,7 @@ export default function AnalyticsConsentBanner() {
     return () => window.removeEventListener(OPEN_EVENT, open)
   }, [])
 
-  if (!hydrated || !orgSlug || !visible) return null
+  if (!isAnalyticsEnabled() || !hydrated || !orgSlug || !visible) return null
 
   const choose = (value: 'accepted' | 'rejected') => {
     if (!saveAnalyticsConsent(value)) {

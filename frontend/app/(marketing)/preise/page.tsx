@@ -13,13 +13,13 @@ export default function PreisePage() {
   return (
     <>
       <a className="skip-link" href="#inhalt">Zum Inhalt springen</a>
-      <nav className="nav" aria-label="Hauptnavigation">
+      <nav className="nav solid" aria-label="Hauptnavigation">
         <div className="wrap nav-in">
           <Link className="brand" href="/campspilot">
             <BrandMark className="mark-svg" width={35} height={24} />
             CampsPilot<span className="sr"> — Startseite</span>
           </Link>
-          <Link className="btn sm fill" href={registrierungHref}>Verein registrieren</Link>
+          <Link className="btn sm fill" href={registrierungHref}><span className="nav-long">Verein registrieren</span><span className="nav-short">Registrieren</span></Link>
         </div>
       </nav>
       <main id="inhalt" tabIndex={-1}>

@@ -10,7 +10,7 @@ export async function generateMetadata() {
 export default function RegistrierenPage() {
   return (
     <div className="cp-scope">
-      <nav className="nav" id="nav">
+      <nav className="nav solid" id="nav">
         <div className="wrap nav-in">
           <Link className="brand" href="/campspilot">
             <BrandMark className="mark-svg" width={35} height={24} />

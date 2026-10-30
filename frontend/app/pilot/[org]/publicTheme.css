@@ -851,15 +851,16 @@
   background: var(--brand);
   border-color: var(--brand);
 }
-.cp-public .camp.full .c-go {
-  color: var(--info);
-  background: var(--info-bg);
-  border-color: var(--info-line);
-}
+.cp-public .camp.full .c-go,
 .cp-public[data-theme='akademie'] .camp.full .c-go {
-  color: var(--pending);
-  background: var(--pending-bg);
-  border-color: var(--pending-line);
+  /* Waitlist stays in the club colour as a secondary action, not a status colour. */
+  color: var(--brand-strong);
+  background: transparent;
+  border-color: var(--brand-strong);
+}
+/* Headings focused by script (route change, errors) must not show a box. */
+.cp-public [tabindex='-1']:focus {
+  outline: none;
 }
 .cp-public .camp:not(.full):hover .c-go {
   transform: translateX(3px);

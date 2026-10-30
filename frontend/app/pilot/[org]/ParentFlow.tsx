@@ -916,7 +916,7 @@ function WaitScreen({
           Ausgebucht
         </span>
         <h1 ref={headingRef} tabIndex={-1} className="d1" data-split style={{ fontSize: 'clamp(27px,6vw,44px)' }}>
-          Alle {camp.capacity} Plätze sind vergeben
+          Alle Plätze sind vergeben
         </h1>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: 'var(--ink-2)', maxWidth: '42ch' }}>
           Sie können Ihr Kind über das Formular auf die Warteliste setzen.

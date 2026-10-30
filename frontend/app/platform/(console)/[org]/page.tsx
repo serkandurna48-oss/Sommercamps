@@ -64,7 +64,7 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
   const progress = setupProgressCount(steps)
 
   return (
-    <main className={`mx-auto w-full max-w-[1080px] px-4 py-10 md:px-8 xl:px-6 [&>*]:max-w-[880px] ${org.review_status === 'submitted' ? 'cp-review-page' : 'pb-24 md:pb-10'}`}>
+    <main className={`mx-auto w-full max-w-[1128px] px-4 py-10 md:px-6 [&>*]:max-w-[880px] ${org.review_status === 'submitted' ? 'cp-review-page' : 'pb-24 md:pb-10'}`}>
       <Link href="/platform" className="cp-chip mb-4 inline-block" style={{ color: 'var(--cp-muted)' }}>
         ← Alle Vereine
       </Link>

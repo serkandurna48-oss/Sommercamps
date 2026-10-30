@@ -445,6 +445,7 @@ export interface RegistrationDetailsInput {
   jersey_size: string | null
   allergies: string | null
   pickup_authorized: string | null
+  parent_email?: string
 }
 
 /** MVP-Auftrag "Teilnehmerdaten-Korrektur" — lässt einen org_admin/owner

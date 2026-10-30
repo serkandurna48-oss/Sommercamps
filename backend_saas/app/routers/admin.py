@@ -654,6 +654,7 @@ def update_registration_details(
         data.jersey_size,
         data.allergies,
         data.pickup_authorized,
+        str(data.parent_email) if data.parent_email else None,
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Registration not found")
@@ -670,7 +671,7 @@ def update_registration_details(
         organization_id=str(organization["id"]),
         target_type="registration",
         target_id=str(registration_token),
-        metadata=None,
+        metadata={"parent_email_submitted": data.parent_email is not None},
     )
     return RegistrationAdminOut.model_validate({**row, "camp_title": camp["title"]})
 

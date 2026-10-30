@@ -142,6 +142,17 @@ export default function ParticipantDetail({
                   style={INPUT_STYLE}
                 />
               </Field>
+              <Field label={de.command.fieldParentEmail} htmlFor={fieldId('parent_email')}>
+                <input
+                  id={fieldId('parent_email')}
+                  name="parent_email"
+                  type="email"
+                  required
+                  defaultValue={registration.parent_email}
+                  className={INPUT_CLASS}
+                  style={INPUT_STYLE}
+                />
+              </Field>
             </div>
             <Field label={de.command.fieldAllergies} htmlFor={fieldId('allergies')}>
               <textarea

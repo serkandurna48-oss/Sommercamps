@@ -133,6 +133,10 @@ export async function updateRegistrationDetailsAction(
     const value = String(formData.get(key) ?? '').trim()
     return value ? value : null
   }
+  const parentEmail = String(formData.get('parent_email') ?? '').trim()
+  if (formData.has('parent_email') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
+    return { error: de.adminActions.parentEmailInvalid, saved: false, registration: null }
+  }
 
   try {
     const registration = await updateRegistrationDetailsAdmin(orgSlug, campSlug, registrationToken, token, {
@@ -141,6 +145,7 @@ export async function updateRegistrationDetailsAction(
       jersey_size: optional('jersey_size'),
       allergies: optional('allergies'),
       pickup_authorized: optional('pickup_authorized'),
+      ...(parentEmail ? { parent_email: parentEmail } : {}),
     })
     revalidatePath(`/pilot/${orgSlug}`, 'layout')
     return { error: null, saved: true, registration }

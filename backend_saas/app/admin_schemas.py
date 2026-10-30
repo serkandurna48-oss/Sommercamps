@@ -346,8 +346,10 @@ class RegistrationDetailsUpdate(BaseModel):
     CampConfigUpdate, the admin UI is a full edit form that always
     resends every field it shows, so there is no "field omitted vs.
     explicitly cleared" ambiguity to model here. Restricted to exactly the
-    fields the Auftrag names — no parent contact/medical/consent fields,
-    since correcting those is out of scope for this feature."""
+    fields the Auftrag names, plus parent_email (a typo there means the
+    family never gets a mail; the club fixes it and then resends). No other
+    parent contact/medical/consent fields. parent_email=None keeps the
+    stored address, so older clients that do not send it stay valid."""
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
@@ -356,6 +358,7 @@ class RegistrationDetailsUpdate(BaseModel):
     jersey_size: Optional[str] = None
     allergies: Optional[str] = None
     pickup_authorized: Optional[str] = None
+    parent_email: Optional[EmailStr] = None
 
     @field_validator("jersey_size", "allergies", "pickup_authorized", mode="after")
     @classmethod

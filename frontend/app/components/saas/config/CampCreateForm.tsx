@@ -50,7 +50,13 @@ export default function CampCreateForm({
         return { error: 'Bitte prüfen Sie die Anmeldezeiten in Ihrer Zeitzone.' }
       }
     }
-    return boundAction(previous, data)
+    const result = await boundAction(previous, data)
+    if (result.redirectTo) {
+      // Full page load (see createCampAction); stay pending until the page unloads.
+      window.location.assign(result.redirectTo)
+      return new Promise<CampCreateActionState>(() => {})
+    }
+    return result
   }, initialState)
 
   return (

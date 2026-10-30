@@ -48,9 +48,11 @@ beforeEach(() => {
 const CAMP_FIELDS = { slug: 'sommer', title: 'Sommer', start_date: '2027-07-05', end_date: '2027-07-09', age_min: '6', age_max: '12', capacity: '20', price_euros: '149.50' }
 
 it('always creates a draft even when an obsolete immediate-publication field is submitted', async () => {
-  await createCampAction('demo', { error: null }, makeFormData({ ...CAMP_FIELDS, publish_now: 'on' }))
+  const result = await createCampAction('demo', { error: null }, makeFormData({ ...CAMP_FIELDS, publish_now: 'on' }))
   expect(createCampAdmin).toHaveBeenCalledWith('demo', 'tok-123', expect.objectContaining({ slug: 'sommer', status: 'draft', price_cents: 14950 }))
-  expect(redirect).toHaveBeenCalledWith('/pilot/demo/camps/sommer/konfiguration?created=1')
+  // Full page load instead of a soft redirect (publish hang, 30.10.2026).
+  expect(result).toEqual({ error: null, redirectTo: '/pilot/demo/camps/sommer/konfiguration?created=1' })
+  expect(redirect).not.toHaveBeenCalled()
   expect(updateCampAdmin).not.toHaveBeenCalled()
 })
 
@@ -62,7 +64,7 @@ const COPY_FIELDS = {
 
 it('legt die Kopie als Entwurf an, ergänzt die weiteren Felder und öffnet die neue Konfiguration', async () => {
   vi.mocked(createCampAdmin).mockResolvedValueOnce({ slug: 'neue-kopie' } as CampAdmin)
-  await createCampAction('demo', { error: null }, makeFormData(COPY_FIELDS))
+  const result = await createCampAction('demo', { error: null }, makeFormData(COPY_FIELDS))
   expect(createCampAdmin).toHaveBeenCalledExactlyOnceWith('demo', 'tok-123', {
     slug: 'sommer', title: 'Sommer', start_date: '2027-07-05', end_date: '2027-07-09',
     age_min: 6, age_max: 12, capacity: 20, price_cents: 14950, status: 'draft',
@@ -73,7 +75,7 @@ it('legt die Kopie als Entwurf an, ergänzt die weiteren Felder und öffnet die 
   })
   expect(vi.mocked(createCampAdmin).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(updateCampAdmin).mock.invocationCallOrder[0])
   expect(updateOrganizationAdmin).not.toHaveBeenCalled()
-  expect(redirect).toHaveBeenCalledWith('/pilot/demo/camps/neue-kopie/konfiguration?duplicate=1')
+  expect(result.redirectTo).toBe('/pilot/demo/camps/neue-kopie/konfiguration?duplicate=1')
 })
 
 it.each(['start_date', 'end_date'])('speichert die Kopie nicht ohne %s', async field => {
@@ -98,9 +100,9 @@ it('ergänzt bei einem Adresskonflikt kein bestehendes Camp', async () => {
 
 it('führt bei fehlgeschlagenem PATCH zum bestehenden Entwurf mit Warnhinweis', async () => {
   vi.mocked(updateCampAdmin).mockRejectedValueOnce(new Error('PATCH fehlgeschlagen'))
-  await createCampAction('demo', { error: null }, makeFormData(COPY_FIELDS))
+  const result = await createCampAction('demo', { error: null }, makeFormData(COPY_FIELDS))
   expect(createCampAdmin).toHaveBeenCalledOnce()
-  expect(redirect).toHaveBeenCalledWith('/pilot/demo/camps/sommer/konfiguration?duplicate=incomplete')
+  expect(result.redirectTo).toBe('/pilot/demo/camps/sommer/konfiguration?duplicate=incomplete')
 })
 
 it('describes address conflicts without technical slug wording and does not redirect', async () => {

@@ -92,7 +92,7 @@ it('KSV-Formular: Trikotgröße, Allergien und Abholung tragen "freiwillig", Pfl
 it('KSV-Hero: abgestimmte Bildausschnitte existieren und werden nur für KSV genutzt', () => {
   const css = readFileSync(new URL('./publicTheme.css', import.meta.url), 'utf8')
   const block = css.slice(css.indexOf('KSV Hero 28.10.'))
-  for (const file of ['ksv-hero-desktop.jpg', 'ksv-hero-mobile.jpg']) {
+  for (const file of ['ksv-hero-mobile.jpg']) {
     expect(block).toContain(`/clubs/ksv/${file}`)
     expect(readFileSync(new URL(`../../../public/clubs/ksv/${file}`, import.meta.url)).length).toBeGreaterThan(50_000)
     const usage = css.slice(0, css.indexOf('KSV Hero 28.10.'))

@@ -46,7 +46,7 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
       <span className="c-body">
         <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span className="c-name">{camp.title}</span>
-          <span>{formatCampDateRange(camp.start_date, camp.end_date)}</span>
+          <span className="c-when">{formatCampDateRange(camp.start_date, camp.end_date)}</span>
         </span>
         <span className="tags">
           {camp.is_full && <span className="chip public-availability">Ausgebucht</span>}

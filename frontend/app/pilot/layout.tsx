@@ -1,5 +1,6 @@
 import { Oswald, Work_Sans } from 'next/font/google'
 import StagingBanner from '../components/saas/StagingBanner'
+import AnalyticsConsentBanner from './AnalyticsConsent'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { robots: { index: false } }
@@ -24,6 +25,7 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
   return (
     <div className={`${oswald.variable} ${workSans.variable} [font-family:var(--font-pilot-body)]`}>
       <StagingBanner />
+      <AnalyticsConsentBanner />
       {children}
     </div>
   )

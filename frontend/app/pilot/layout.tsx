@@ -25,8 +25,8 @@ export default function PilotLayout({ children }: { children: React.ReactNode })
   return (
     <div className={`${oswald.variable} ${workSans.variable} [font-family:var(--font-pilot-body)]`}>
       <StagingBanner />
-      {children}
       <AnalyticsConsentBanner />
+      {children}
     </div>
   )
 }

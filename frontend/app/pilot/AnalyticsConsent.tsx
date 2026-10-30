@@ -51,11 +51,9 @@ export default function AnalyticsConsentBanner({ orgSlug, isLanding = false }: {
 
   return (
     <aside role="region" aria-labelledby="cp-consent-title" data-testid="analytics-consent" className="cp-consent">
-      <p id="cp-consent-title" className="cp-consent-title">Freiwillige Nutzungsanalyse</p>
+      <p id="cp-consent-title" className="cp-consent-title">Nutzungsanalyse erlauben?</p>
       <p className="cp-consent-text">
-        Wir möchten datensparsam auswerten, welche Camp-Seiten aufgerufen und ob Anmeldungen
-        abgeschlossen werden – ohne Namen, Formular- oder Gesundheitsdaten. Die Anmeldung
-        klappt auch ohne.{' '}
+        Freiwillig und datensparsam, ohne Namen oder Formulardaten.{' '}
         <a href={`/pilot/${orgSlug}/datenschutz#ds-8`}>Mehr dazu</a>
       </p>
       {storageError && <p role="alert" className="cp-consent-error">

@@ -169,3 +169,34 @@ export async function submitRegistration(
   }
   return { ok: true, data: body as RegistrationCreated }
 }
+
+/** Stripe availability is separate from registration and defaults to false. */
+export async function getStripePaymentAvailability(orgSlug: string, campSlug: string): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${baseUrl()}/api/v1/organizations/${encodeURIComponent(orgSlug)}/camps/${encodeURIComponent(campSlug)}/payment-options`,
+      { cache: 'no-store' },
+    )
+    if (!res.ok) return false
+    const data = await res.json()
+    return data?.online_payment_available === true
+  } catch {
+    return false
+  }
+}
+
+/** Registration token is a bearer capability; never send child data to Stripe. */
+export async function createStripeCheckout(
+  orgSlug: string, campSlug: string, registrationToken: string,
+): Promise<string> {
+  const res = await fetch(
+    `${baseUrl()}/api/v1/organizations/${encodeURIComponent(orgSlug)}/camps/${encodeURIComponent(campSlug)}/registrations/${encodeURIComponent(registrationToken)}/checkout`,
+    { method: 'POST' },
+  )
+  if (!res.ok) throw new Error('Online-Zahlung ist gerade nicht verfügbar')
+  const data = await res.json()
+  if (typeof data?.url !== 'string' || !/^https:\/\/checkout\.stripe\.com\//.test(data.url)) {
+    throw new Error('Ungültiger Checkout-Link')
+  }
+  return data.url
+}

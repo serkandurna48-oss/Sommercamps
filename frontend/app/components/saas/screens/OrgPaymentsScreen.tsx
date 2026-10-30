@@ -7,6 +7,7 @@ import StatGrid from '../ui/StatGrid'
 import { orgTabs } from '../navTabs'
 import { de, formatEuro } from '../../../lib/i18n/de'
 import type { OrganizationScreenProps } from './types'
+import { PAGE } from '../ui/pageLayout'
 
 export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsByCamp }: OrganizationScreenProps) {
 
@@ -38,7 +39,7 @@ export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsBy
         brandColor={brand.brand}
       />
 
-      <main className="mx-auto max-w-[1080px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+      <main className={PAGE}>
         <h2 className="cp-title mb-1" style={{ color: 'var(--cp-ink)' }}>
           {de.paymentsPage.heading}
         </h2>

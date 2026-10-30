@@ -4,6 +4,7 @@ import MatchdayBand from '../shell/MatchdayBand'
 import { orgTabs } from '../navTabs'
 import { de } from '../../../lib/i18n/de'
 import type { OrganizationIdentityProps } from './types'
+import { PAGE_READING } from '../ui/pageLayout'
 
 const sections = [
   { id: 'einrichtung', title: de.hilfe.s1 },
@@ -49,7 +50,7 @@ export default function HilfeScreen({ orgSlug, org }: OrganizationIdentityProps)
         brandColor={brand.brand}
       />
       <main
-        className="mx-auto max-w-[920px] space-y-10 px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6"
+        className={`${PAGE_READING} space-y-10`}
         style={{ color: 'var(--cp-ink)' }}
       >
         <nav aria-label={de.hilfe.contents}>

@@ -8,6 +8,7 @@ import SuccessNote from '../state/SuccessNote'
 import type { CampScreenProps } from './types'
 import { DUPLICATE_SUCCESS } from '../config/campDuplicate'
 import { ButtonLink } from '../ui/Button'
+import { PAGE_FORM } from '../ui/pageLayout'
 
 export default function CampConfigScreen({ orgSlug, campSlug, org, camp, created = false, duplicate }: Omit<CampScreenProps, 'registrations'> & { created?: boolean; duplicate?: '1' | 'incomplete' }) {
   if (!camp) return <EmptyCampScreen orgSlug={orgSlug} org={org} />
@@ -26,7 +27,7 @@ export default function CampConfigScreen({ orgSlug, campSlug, org, camp, created
         brandColor={brand.brand}
       />
 
-      <main className="mx-auto max-w-[640px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+      <main className={PAGE_FORM}>
         <h2 className="cp-title mb-1" style={{ color: 'var(--cp-ink)' }}>
           Camp-Einstellungen
         </h2>

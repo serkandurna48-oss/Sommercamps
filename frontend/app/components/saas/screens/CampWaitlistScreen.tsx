@@ -10,6 +10,7 @@ import type { WaitlistExportRow } from '../waitlistExport'
 
 import EmptyCampScreen from './EmptyCampScreen'
 import type { CampScreenProps } from './types'
+import { PAGE_READING } from '../ui/pageLayout'
 
 export default function CampWaitlistScreen({ orgSlug, campSlug, org, camp, registrations }: CampScreenProps) {
   if (!camp) return <EmptyCampScreen orgSlug={orgSlug} org={org} />
@@ -31,7 +32,7 @@ export default function CampWaitlistScreen({ orgSlug, campSlug, org, camp, regis
         brandColor={brand.brand}
       />
 
-      <main className="mx-auto max-w-[920px] px-4 py-10 pb-24 md:px-8 md:pb-10 xl:px-6">
+      <main className={PAGE_READING}>
         <h2 className="cp-title mb-6" style={{ color: 'var(--cp-ink)' }}>
           {de.waitlistPage.heading}
         </h2>

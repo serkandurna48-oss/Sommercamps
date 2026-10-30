@@ -70,8 +70,9 @@ def _stripe_dict(value):
 def _stripe_client():
     settings = get_settings()
     key = settings.stripe_secret_key
-    if not settings.stripe_checkout_enabled or not key:
-        raise HTTPException(503, "Online-Zahlung noch nicht eingerichtet")
+    if not settings.stripe_checkout_enabled or not key or not settings.stripe_webhook_secret:
+        # Never accept funds without a configured reconciliation webhook.
+        raise HTTPException(503, "Online-Zahlung noch nicht vollständig eingerichtet")
     # Never accidentally use a live Stripe key against a staging database.
     production = settings.app_env.strip().lower() == "production"
     if (production and not key.startswith("sk_live_")) or (
@@ -100,7 +101,7 @@ def get_payment_options(
     tenant: TenantContext = Depends(get_tenant_context),
 ) -> PaymentOptions:
     settings = get_settings()
-    if not settings.stripe_checkout_enabled or not settings.stripe_secret_key:
+    if not (settings.stripe_checkout_enabled and settings.stripe_secret_key and settings.stripe_webhook_secret):
         return PaymentOptions(online_payment_available=False)
     org = _organization_payment_details(tenant.organization_id)
     return PaymentOptions(
@@ -132,7 +133,7 @@ def connect_existing_stripe_account(
     except stripe.error.StripeError:
         raise HTTPException(422, "Stripe-Konto nicht verbunden oder nicht abrufbar") from None
 
-    enabled = bool(account.get("charges_enabled"))
+    enabled = bool(account.get("charges_enabled") and account.get("payouts_enabled"))
     with db.get_cursor() as cur:
         cur.execute(
             """update organizations
@@ -200,8 +201,12 @@ def create_checkout(
                 session = _stripe_dict(client.checkout.Session.retrieve(existing, stripe_account=account))
                 if session.get("status") == "open" and session.get("url"):
                     return CheckoutURL(url=session["url"])
-                if session.get("payment_status") == "paid":
+                if session.get("status") == "complete" or session.get("payment_status") == "paid":
+                    # A completed Checkout can still have a pending asynchronous
+                    # payment. A second Session could charge twice.
                     raise HTTPException(409, "Zahlung wird bereits verarbeitet")
+                if session.get("status") != "expired":
+                    raise HTTPException(503, "Zahlungsstatus derzeit nicht eindeutig")
             except stripe.error.StripeError:
                 logger.warning("Could not retrieve previous checkout session (organization_slug=%s)", tenant.slug)
                 raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None

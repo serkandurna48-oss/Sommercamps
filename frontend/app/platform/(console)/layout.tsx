@@ -10,6 +10,8 @@ import { AdminAuthError, fetchMe, fetchOrganizationsAdmin } from '../../lib/saas
 import ReviewNavLink from './ReviewNavLink'
 import { redirect } from 'next/navigation'
 import { platformLogoutAction } from '../logoutAction'
+import BrandMark from '../../components/marketing/BrandMark'
+import Button from '../../components/saas/ui/Button'
 
 export const metadata = { title: 'CampsPilot Plattform' }
 
@@ -50,34 +52,32 @@ export default async function PlatformLayout({ children }: { children: React.Rea
     <div className={`${archivo.variable} cp-scope min-h-screen`}>
       <StagingBanner />
       <GrainOverlay />
-      <header className="border-b" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-ink)' }}>
-        <div className="mx-auto flex max-w-[1128px] flex-wrap items-center justify-between gap-3 px-4 py-4 md:px-6">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <Link href="/platform" className="cp-subheading" style={{ color: '#FFFFFF' }}>
-              CampsPilot Plattform
+      {/* Same band as the club admin (MatchdayBand): dark surface, accent line, identity left, sign-out right. */}
+      <header className="px-4 pt-3 pb-1 md:px-6 md:pt-4 md:pb-2" style={{ background: 'var(--cp-band)', borderTop: '3px solid #c24f1a', color: 'var(--cp-on-band)', ['--accent' as string]: '#d4581f' }}>
+        <div className="mx-auto flex max-w-[1080px] flex-col">
+          <div className="flex min-h-[44px] items-center justify-between gap-4 pb-2 md:pb-3">
+            <Link href="/platform" className="cp-focus flex items-center gap-3" style={{ color: 'var(--cp-on-band)' }}>
+              <span className="grid h-9 w-9 place-items-center rounded-[10px]" style={{ background: 'var(--cp-band-2)' }} aria-hidden="true">
+                <BrandMark width={22} height={15} />
+              </span>
+              <span className="cp-subheading">CampsPilot Plattform</span>
             </Link>
-            <nav aria-label="Plattform-Konsole" className="flex flex-wrap items-center gap-4">
-              <ReviewNavLink orgs={organizations} />
-              <Link href="/platform" prefetch={false} className="cp-chip" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                Vereine
-              </Link>
-              <Link href="/platform/registrations" prefetch={false} className="cp-chip" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                Anmeldungen
-              </Link>
-              <Link href="/platform/audit-log" prefetch={false} className="cp-chip" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                Änderungsverlauf
-              </Link>
-            </nav>
+            <form action={platformLogoutAction}>
+              <Button type="submit">Abmelden</Button>
+            </form>
           </div>
-          <form action={platformLogoutAction}>
-            <button
-              type="submit"
-              className="cp-focus min-h-[44px] min-w-[44px] cp-chip rounded-[var(--cp-r-chip)] border px-3 py-2"
-              style={{ borderColor: 'rgba(255,255,255,0.3)', color: '#FFFFFF' }}
-            >
-              Abmelden
-            </button>
-          </form>
+          <nav aria-label="Plattform-Konsole" className="flex flex-wrap items-center gap-x-6 border-t pt-1" style={{ borderColor: 'var(--cp-band-line)' }}>
+            <ReviewNavLink orgs={organizations} />
+            <Link href="/platform" prefetch={false} className="cp-focus cp-body inline-flex min-h-11 items-center" style={{ color: 'var(--cp-on-band-2)' }}>
+              Vereine
+            </Link>
+            <Link href="/platform/registrations" prefetch={false} className="cp-focus cp-body inline-flex min-h-11 items-center" style={{ color: 'var(--cp-on-band-2)' }}>
+              Anmeldungen
+            </Link>
+            <Link href="/platform/audit-log" prefetch={false} className="cp-focus cp-body inline-flex min-h-11 items-center" style={{ color: 'var(--cp-on-band-2)' }}>
+              Änderungsverlauf
+            </Link>
+          </nav>
         </div>
       </header>
       {children}

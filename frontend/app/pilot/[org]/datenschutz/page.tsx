@@ -90,7 +90,7 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
           <section id="ds-4">
             <h2>4. Speicherung</h2>
             <p>
-              Die Daten liegen in einer Supabase-Postgres-Datenbank (EU-Hosting). Zugriff haben der
+              Die Daten liegen in einer Datenbank unseres technischen Dienstleisters Supabase auf Servern in der EU. Zugriff haben der
               Anmeldeserver und angemeldete, berechtigte Verantwortliche des jeweiligen Anbieters.
             </p>
           </section>

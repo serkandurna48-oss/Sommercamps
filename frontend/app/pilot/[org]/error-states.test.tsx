@@ -95,7 +95,7 @@ it('Camp nach Auswahl entfernt: deutscher Hinweis, Vereinslogo und funktionieren
 it('Camp voll: erklärt die Warteliste und öffnet deren Formular', async () => {
   await renderFlow([{ ...camp, is_full: true, spots_remaining: 0, registered_count: 20 }])
   await openCamp()
-  expect(host.textContent).toContain('Alle 20 Plätze sind vergeben')
+  expect(host.textContent).toContain('Alle Plätze sind vergeben')
   expect(host.textContent).toContain('Sie können Ihr Kind über das Formular auf die Warteliste setzen.')
   expect(host.querySelector('img')?.getAttribute('alt')).toBe(org.name)
   await act(async () => action('Auf die Warteliste setzen').click())

@@ -3683,6 +3683,86 @@
   }
 }
 
+/* Optional analytics consent: a quiet card in the club's own theme, bottom
+ * right on desktop and a bottom sheet on phones. Both choices carry equal
+ * weight in size and position; only "Erlauben" uses the club color. */
+.cp-public .cp-consent {
+  position: fixed;
+  z-index: 60;
+  right: 20px;
+  bottom: 20px;
+  width: min(340px, calc(100% - 40px));
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--brand-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 28%), 0 2px 8px rgb(0 0 0 / 12%);
+  animation: cp-consent-in 0.42s var(--ease) both;
+}
+.cp-public .cp-consent-title {
+  margin: 0 0 2px;
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.cp-public .cp-consent-text { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-2, var(--ink)); }
+.cp-public .cp-consent-text a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.cp-public .cp-consent-error { margin: 10px 0 0; font-size: 13px; color: var(--error, #b42318); }
+.cp-public .cp-consent-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.cp-public .cp-consent-btn {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--field);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+.cp-public .cp-consent-btn:hover { border-color: var(--ink); }
+.cp-public .cp-consent-btn-primary { border-color: var(--brand-strong); background: var(--brand-strong); color: var(--brand-on); }
+.cp-public .cp-consent-btn-primary:hover { border-color: var(--brand-strong); filter: brightness(1.08); }
+.cp-public .cp-consent-btn:focus-visible,
+.cp-public .cp-consent-text a:focus-visible,
+.cp-public .cp-consent-settings:focus-visible { outline: 2px solid var(--brand-strong); outline-offset: 3px; }
+.cp-public .cp-consent-settings {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--field);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+@keyframes cp-consent-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@media (max-width: 560px) {
+  .cp-public .cp-consent {
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    border-width: 3px 0 0;
+    border-radius: 16px 16px 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cp-public .cp-consent { animation: none; }
+}
+@media print {
+  .cp-public .cp-consent { display: none; }
+}
+
 /* KSV parent polish: deliberately scoped by tenant, never by shared theme. */
 .cp-public[data-org='ksv-baunatal'] {
   --cp-r-chip: 12px;

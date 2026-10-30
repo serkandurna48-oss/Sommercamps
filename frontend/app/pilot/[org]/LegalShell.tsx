@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import AnalyticsConsentBanner from '../AnalyticsConsent'
 import Image from 'next/image'
 import Link from 'next/link'
 import { computeBrandSafe } from '../../lib/brandPipeline'
@@ -35,6 +36,7 @@ export default function LegalShell({ org, children }: { org: OrganizationPublic;
       }
     >
       <GrainOverlay />
+      <AnalyticsConsentBanner orgSlug={org.slug} />
       <div className="app">
         <nav className="legal-nav" aria-label="Seitennavigation">
           <div className="nav-left">

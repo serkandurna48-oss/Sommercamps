@@ -22,7 +22,7 @@ export interface PaymentEntry {
   camp: CampAdmin
 }
 
-type Filter = 'open' | 'paid' | 'all'
+type Filter = 'open' | 'paid' | 'waived' | 'all'
 
 function buildColumns(showCampTitle: boolean): ExportColumn<PaymentEntry>[] {
   return [
@@ -69,6 +69,7 @@ export default function PaymentSection({
     () => ({
       open: entries.filter(e => isOpenPayment(e.registration)).length,
       paid: entries.filter(e => e.registration.payment_status === 'paid').length,
+      waived: entries.filter(e => e.registration.payment_status === 'waived').length,
       all: entries.length,
     }),
     [entries],
@@ -147,6 +148,15 @@ export default function PaymentSection({
           brandColor={brandColor}
           onClick={() => setFilter(f => (f === 'paid' ? 'all' : 'paid'))}
         />
+        {counts.waived > 0 && (
+          <FilterButton
+            label={de.paymentsPage.filterWaived}
+            count={counts.waived}
+            active={filter === 'waived'}
+            brandColor={brandColor}
+            onClick={() => setFilter(f => (f === 'waived' ? 'all' : 'waived'))}
+          />
+        )}
         <FilterButton label={de.paymentsPage.filterAll} count={counts.all} active={filter === 'all'} brandColor={brandColor} onClick={() => setFilter('all')} />
       </div>
       </div>
@@ -160,7 +170,7 @@ export default function PaymentSection({
           <EmptyState title={filter === 'open' && query
             ? `Keine offene Zahlung zu „${search.trim()}“.`
             : entries.length === 0 ? emptyLabel
-              : filter === 'open' && !query && allSettled ? 'Alle aktiven Anmeldungen sind bezahlt oder erlassen.'
+              : filter === 'open' && !query && allSettled ? 'Alle aktiven Anmeldungen sind bezahlt oder kostenlos.'
                 : de.paymentsPage.emptyFiltered} />
           {filter === 'open' && <Button type="button" onClick={() => setFilter('all')}>Auch bezahlte durchsuchen</Button>}
         </div>

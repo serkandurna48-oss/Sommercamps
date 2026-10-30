@@ -173,14 +173,14 @@ describe('payment workflow', () => {
 
   it('shows the settled empty state and offers a visible All filter', async () => {
     await render([paidEntry])
-    expect(container.textContent).toContain('Alle aktiven Anmeldungen sind bezahlt oder erlassen.')
+    expect(container.textContent).toContain('Alle aktiven Anmeldungen sind bezahlt oder kostenlos.')
     await click('Alle1')
     expect(container.querySelector('.cp-ledger-row')).not.toBeNull()
   })
 
   it('does not call refunded registrations paid or waived', async () => {
     await render([{ ...entry, registration: { ...entry.registration, payment_status: 'refunded' } }])
-    expect(container.textContent).not.toContain('Alle aktiven Anmeldungen sind bezahlt oder erlassen.')
+    expect(container.textContent).not.toContain('Alle aktiven Anmeldungen sind bezahlt oder kostenlos.')
   })
 
   it('keeps the payment receipt after the refreshed row disappears, and undo calls open', async () => {

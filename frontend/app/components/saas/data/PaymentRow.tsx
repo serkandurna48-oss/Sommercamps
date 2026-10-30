@@ -102,8 +102,8 @@ export default function PaymentRow({
               action={markWaived}
               label={de.paymentsPage.markWaived}
               pendingLabel={de.paymentsPage.updating}
-              variant="danger"
-              requireConfirm="Wirklich erlassen?"
+              variant="secondary"
+              requireConfirm={de.paymentsPage.waivedConfirm}
             />
             </RowOverflow>
           </div>

@@ -251,6 +251,11 @@ async def stripe_connect_webhook(
     except (ValueError, stripe.error.SignatureVerificationError):
         raise HTTPException(400, "Ungültige Stripe-Signatur") from None
 
+    # stripe-python returns an Event (StripeObject), not a plain dict.
+    # Convert after signature verification so all subsequent .get calls work.
+    if hasattr(event, "to_dict_recursive"):
+        event = event.to_dict_recursive()
+
     expected_live = settings.app_env.strip().lower() == "production"
     if event.get("livemode") is not expected_live:
         raise HTTPException(400, "Falscher Stripe-Modus")

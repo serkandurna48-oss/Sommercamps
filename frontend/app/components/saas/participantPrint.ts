@@ -72,17 +72,23 @@ export function printSafeBrandColor(color: string): string {
 
 /** Keep A4 text readable. Attendance cells need only half a text column.
  * Repeat the name only when selected; row numbers link every section. */
+/** Paper width units per column: free text needs room, short values little. */
+export function printColumnCost(column: Pick<ParticipantPrintField, 'attendance' | 'size'>): number {
+  if (column.attendance) return 0.5
+  return column.size === 'l' ? 1.5 : column.size === 's' ? 0.75 : 1
+}
+
 export function printColumnSections(columns: ParticipantPrintField[]): ParticipantPrintField[][] {
   const name = columns.find(column => column.id === 'name')
   const sections: ParticipantPrintField[][] = []
   let current: ParticipantPrintField[] = []
   let width = 0
   for (const column of columns) {
-    const cost = column.attendance ? 0.5 : 1
-    if (width + cost > 6) {
+    const cost = printColumnCost(column)
+    if (current.length && width + cost > 6) {
       sections.push(current)
-      current = name ? [name] : []
-      width = current.length
+      current = name && column !== name ? [name] : []
+      width = current.reduce((sum, c) => sum + printColumnCost(c), 0)
     }
     current.push(column)
     width += cost

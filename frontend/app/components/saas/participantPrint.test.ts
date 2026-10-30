@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { registrations } from '../../dev/admin-vorschau/fixtures'
 import type { RegistrationAdmin, RegistrationQuestion } from '../../lib/saasAdminApi'
-import { DEFAULT_PRINT_FIELDS, participantPrintFields, printColumnSections, printSafeBrandColor, selectedPrintColumns } from './participantPrint'
+import { DEFAULT_PRINT_FIELDS, participantPrintFields, printColumnCost, printColumnSections, printSafeBrandColor, selectedPrintColumns } from './participantPrint'
 
 describe('printSafeBrandColor — Kontrast auf weißem Druckpapier', () => {
   it('behält dunkle Vereinsfarben unverändert (Kontrast ≥ 4,5:1 auf Weiß)', () => {
@@ -68,10 +68,17 @@ describe('participant print field selection', () => {
     const sections = printColumnSections(selected)
     expect(sections.length).toBeGreaterThan(1)
     expect(sections.every(section => section[0].id === 'name')).toBe(true)
-    expect(sections.every(section => section.reduce((sum, c) => sum + (c.attendance ? 0.5 : 1), 0) <= 6)).toBe(true)
+    expect(sections.every(section => section.reduce((sum, c) => sum + printColumnCost(c), 0) <= 6)).toBe(true)
     expect(sections.flat().filter(c => c.id !== 'name')).toEqual(selected.filter(c => c.id !== 'name'))
     const unnamed = selected.filter(c => c.id !== 'name')
     expect(printColumnSections(unnamed).flat()).toEqual(unnamed)
     expect(printColumnSections([])).toEqual([])
+  })
+  // DRUCKHT 30.10.: five free-text columns on one sheet left 3 cm per column for a 300-character note.
+  it('gibt Freitextspalten mehr Platz, damit lange Gesundheitsangaben nicht zu schmal werden', () => {
+    const ids = ['name', 'emergency', 'pickup', 'allergies', 'medical', 'photo']
+    const sections = printColumnSections(selectedPrintColumns(fields, ids, camp))
+    expect(sections.length).toBeGreaterThan(1)
+    expect(sections.every(section => section.filter(c => c.size === 'l').length <= 4)).toBe(true)
   })
 })

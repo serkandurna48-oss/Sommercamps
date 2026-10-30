@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import ParticipantPrintDialog from '../../components/saas/data/ParticipantPrintDialog'
 import type { CampAdmin, RegistrationAdmin, RegistrationQuestion } from '../../lib/saasAdminApi'
 import { DEFAULT_PRINT_FIELDS, participantPrintFields, type PrintPurpose } from '../../components/saas/participantPrint'
@@ -26,9 +26,10 @@ const LOGO_URLS: Record<string, string | undefined> = {
 }
 
 function addDays(dateStr: string, n: number): string {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const dt = new Date(y, m - 1, d + n)
-  return dt.toISOString().slice(0, 10)
+  // UTC arithmetic: local midnight + toISOString shifts a day east of UTC.
+  const day = new Date(`${dateStr}T00:00:00Z`)
+  day.setUTCDate(day.getUTCDate() + n)
+  return day.toISOString().slice(0, 10)
 }
 
 function makeRows(n: number): RegistrationAdmin[] {
@@ -108,8 +109,8 @@ export default function DruckTestClient({ params }: { params: Params }) {
   const [selectedFields, setSelectedFields] = useState<string[]>(
     colsMode === 'all' ? allIds : defaultIds,
   )
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => { setMounted(true) }, [])
+  // The dialog portals into document.body: render it only in the browser.
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
 
   if (!mounted) return <p style={{ padding: 24, fontFamily: 'sans-serif' }}>Lade Druckvorschau…</p>
 

@@ -47,7 +47,7 @@ export default function NewOrgForm() {
           htmlFor="org_slug"
           hint="Nur Kleinbuchstaben, Zahlen, Bindestriche — später nicht mehr änderbar."
         >
-          <input id="org_slug" name="org_slug" required pattern="[a-z0-9-]+" className={INPUT_CLASS} style={INPUT_STYLE} />
+          <input id="org_slug" name="org_slug" required pattern="[a-z0-9\-]+" className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
         <Field label="Vereinsname" htmlFor="org_name">
           <input id="org_name" name="org_name" required className={INPUT_CLASS} style={INPUT_STYLE} />
@@ -74,7 +74,7 @@ export default function NewOrgForm() {
           Weitere Camps können danach in der Vereins-Verwaltung ergänzt werden.
         </p>
         <Field label="Slug (Teil der Web-Adresse)" htmlFor="camp_slug">
-          <input id="camp_slug" name="camp_slug" required pattern="[a-z0-9-]+" className={INPUT_CLASS} style={INPUT_STYLE} />
+          <input id="camp_slug" name="camp_slug" required pattern="[a-z0-9\-]+" className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
         <Field label="Titel" htmlFor="camp_title">
           <input id="camp_title" name="camp_title" required className={INPUT_CLASS} style={INPUT_STYLE} />

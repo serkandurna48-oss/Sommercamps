@@ -22,7 +22,6 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ org
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '48px 64px 24px' }}>
         <div style={{ display: 'flex', fontSize: 28 }}>CampsPilot</div>
         {/* ImageResponse renders plain image elements, without next/image. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         {logoUrl && <img src={logoUrl} alt="Vereinslogo" width={120} height={120} style={{ objectFit: 'contain' }} />}
       </div>
       <div style={{ display: 'flex', flex: 1, alignItems: 'center', padding: '0 64px 40px', fontSize: name.length > 45 ? 56 : 76, fontWeight: 700, lineHeight: 1.1, overflowWrap: 'break-word' }}>

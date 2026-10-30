@@ -10,7 +10,7 @@ import { parentDetailsOnly } from './siblingRegistration'
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
 vi.mock('./motion', () => ({ useParentFlowMotion: () => {} }))
-vi.mock('../../lib/saasApi', () => ({ submitRegistration: vi.fn() }))
+vi.mock('../../lib/saasApi', () => ({ submitRegistration: vi.fn(), getStripePaymentAvailability: vi.fn().mockResolvedValue(false), createStripeCheckout: vi.fn() }))
 
 const org: OrganizationPublic = {
   slug: 'testverein', name: 'Testverein', legal_name: null, legal_address: null,

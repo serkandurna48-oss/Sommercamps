@@ -23,7 +23,7 @@ export default async function OrgImpressumPage({ params }: { params: Promise<{ o
   return (
     <LegalShell org={org}>
       <main className="legal-col" lang="de">
-        <span className="legal-label">Angaben gemäß § 5 TMG</span>
+        <span className="legal-label">Angaben gemäß § 5 DDG</span>
         <h1 className="legal-h1">Impressum</h1>
 
         <div className="legal-body">

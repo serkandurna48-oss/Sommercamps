@@ -340,11 +340,11 @@ function Step2Rechtliches({
         <Field
           label="Anschrift (für Impressum)"
           htmlFor="w-legal_address"
-          hint="Straße, PLZ, Ort – erscheint auf der öffentlichen Impressum-Seite."
+          hint="Straße, PLZ, Ort – bei einem e.V. zusätzlich „Vertreten durch: …“ (Vorstand) und „Vereinsregister: Amtsgericht …, VR …“, je eine Zeile. Erscheint auf der öffentlichen Impressum-Seite."
         >
           <textarea
             id="w-legal_address" name="legal_address"
-            rows={2}
+            rows={4}
             defaultValue={org.legal_address ?? ''}
             className={INPUT_CLASS} style={INPUT_STYLE}
           />

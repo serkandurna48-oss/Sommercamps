@@ -149,3 +149,73 @@ def test_unsigned_webhook_rejected_before_database_access(monkeypatch):
         asyncio.run(payments.stripe_connect_webhook(FakeRequest(), "invalid"))
     assert exc.value.status_code == 400
     assert not called
+
+
+def test_signed_webhook_credits_only_verified_amount_and_account(monkeypatch):
+    """Real Stripe signature verification, mocked DB; no external payment."""
+    import asyncio
+    import hashlib
+    import hmac
+    import json
+    import time
+    from uuid import uuid4
+
+    secret = "whsec_test_signing_secret"
+    account_id = "acct_1234567890123456"
+    payment_intent = "pi_12345678901234567890"
+    session_id = "cs_test_12345678901234567890"
+
+    event = {
+        "id": "evt_1234567890",
+        "type": "checkout.session.completed",
+        "livemode": False,
+        "account": account_id,
+        "data": {"object": {
+            "id": session_id, "object": "checkout.session",
+            "payment_status": "paid", "amount_total": 14900,
+            "currency": "eur", "payment_intent": payment_intent,
+        }},
+    }
+    body = json.dumps(event, separators=(",", ":")).encode()
+    timestamp = int(time.time())
+    digest = hmac.new(secret.encode(), f"{timestamp}.".encode() + body, hashlib.sha256).hexdigest()
+    header = f"t={timestamp},v1={digest}"
+
+    class FakeRequest:
+        async def body(self):
+            return body
+
+    monkeypatch.setattr(payments, "get_settings", lambda: SimpleNamespace(
+        app_env="staging", stripe_checkout_enabled=True, stripe_webhook_secret=secret,
+    ))
+    monkeypatch.setattr(payments, "_stripe_client", lambda: stripe)
+    cursor = _Cursor({
+        "id": uuid4(), "status": "registered", "payment_status": "open",
+        "stripe_checkout_amount_cents": 14900, "stripe_checkout_currency": "eur",
+    })
+    @contextmanager
+    def fake_cursor():
+        yield cursor
+
+    monkeypatch.setattr(payments.db, "get_cursor", fake_cursor)
+    assert asyncio.run(payments.stripe_connect_webhook(FakeRequest(), header)) == {
+        "received": True, "settled": True,
+    }
+    assert cursor.executed[0][1] == (session_id, account_id, account_id)
+    assert "'paid'" in cursor.executed[1][0]
+    assert cursor.executed[1][1][0] == payment_intent
+
+    # Replaying an already-settled event must not update the registration.
+    cursor.executed.clear()
+    cursor.row["payment_status"] = "paid"
+    assert asyncio.run(payments.stripe_connect_webhook(FakeRequest(), header))["settled"]
+    assert len(cursor.executed) == 1
+
+    # A signed but mismatched amount must never be accepted.
+    cursor.executed.clear()
+    cursor.row["payment_status"] = "open"
+    cursor.row["stripe_checkout_amount_cents"] = 15000
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(payments.stripe_connect_webhook(FakeRequest(), header))
+    assert error.value.status_code == 409
+    assert len(cursor.executed) == 1

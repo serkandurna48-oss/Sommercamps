@@ -145,7 +145,7 @@ test('Fremder Verein startet ohne Hilfe bis zur verwalteten Anmeldung', async ({
   await page.getByRole('button', { name: /Mia Testkind/ }).first().click()
   await page.getByRole('button', { name: 'Anmeldung stornieren' }).click()
   await page.locator('section[aria-label="Anmeldung stornieren"] button[type="submit"]').click()
-  await expect(page.getByText(/storniert/).first()).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('Mia Testkind storniert.').first()).toBeVisible({ timeout: 15_000 })
   // The right child was cancelled and the waiting child holds the spot now.
   await page.reload()
   await expect(page.getByRole('button', { name: /Mia Testkind.*Storniert/s })).toBeVisible()

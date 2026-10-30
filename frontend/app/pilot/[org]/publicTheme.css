@@ -3545,7 +3545,8 @@
 }
 
 /* Two-tone keyboard focus stays visible on club colors and photographs (21:1). */
-.cp-public .screen :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+/* Headings with tabindex=-1 receive focus by script (step change); they are not controls and get no ring. */
+.cp-public .screen :is(button, a, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])):focus-visible {
   outline: var(--focus-width) solid var(--focus-light);
   outline-offset: var(--focus-width);
   box-shadow: 0 0 0 var(--focus-outer-width) var(--focus-dark);

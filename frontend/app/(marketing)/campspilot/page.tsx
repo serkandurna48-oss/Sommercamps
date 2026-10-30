@@ -41,7 +41,7 @@ export default function CampsPilotPage() {
             <a href="#preis">{preise.navigation}</a>
             <a href="#pilot">Pilot</a>
           </div>
-          <Link href={registrierungHref} className="btn sm fill">Verein registrieren</Link>
+          <Link href={registrierungHref} className="btn sm fill"><span className="nav-long">Verein registrieren</span><span className="nav-short">Registrieren</span></Link>
         </div>
       </nav>
 

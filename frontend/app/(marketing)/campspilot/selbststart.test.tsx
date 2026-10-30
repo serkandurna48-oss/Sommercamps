@@ -33,7 +33,8 @@ describe.each([
 
   it('führt auch über Navigation und alle Paketkarten primär zur Registrierung', () => {
     const nav = page.querySelector('nav .btn')!
-    expect(nav.textContent).toBe('Verein registrieren')
+    expect(nav.querySelector('.nav-long')?.textContent).toBe('Verein registrieren')
+    expect(nav.querySelector('.nav-short')?.textContent).toBe('Registrieren')
     expect(nav.getAttribute('href')).toBe('/campspilot/registrieren')
     const cards = page.querySelectorAll('#preis article')
     expect(cards).toHaveLength(3)

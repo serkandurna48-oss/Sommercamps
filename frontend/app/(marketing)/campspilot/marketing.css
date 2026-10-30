@@ -49,7 +49,6 @@
   --price-amount-size: clamp(40px, 4vw, 56px);
   --price-small-size: 15px;
   --price-list-indent: 20px;
-  --price-mobile-anchor: 156px;
   --focus-color: var(--fog);
   --focus-backdrop: var(--night);
   --focus-width: 3px;
@@ -373,10 +372,14 @@
   .cp-scope .nav-links { display: flex; }
   .cp-scope .nav-links a:not([href="#preis"]) { display: none; }
 }
+/* Phones: one compact row (brand, Preise, short CTA) so the fixed bar stays small. */
+.cp-scope .nav .nav-short { display: none; }
 @media (max-width: 640px) {
-  .cp-scope { --anchor-offset: var(--price-mobile-anchor); }
-  .cp-scope .nav-in { height: auto; flex-wrap: wrap; gap: var(--price-copy-gap); padding-block: var(--price-copy-gap); }
-  .cp-scope .nav .btn { width: 100%; margin-left: 0; }
+  .cp-scope .nav-in { height: 60px; gap: 16px; }
+  .cp-scope .nav .brand { font-size: 16px; gap: 9px; }
+  .cp-scope .nav .btn.sm { height: 38px; padding: 0 14px; margin-left: 0; }
+  .cp-scope .nav .nav-long { display: none; }
+  .cp-scope .nav .nav-short { display: inline; }
 }
 
 /* ── Hero ─────────────────────────────────────────────────── */

@@ -57,6 +57,16 @@ class ConnectAccountStatus(BaseModel):
     online_payment_enabled: bool
 
 
+def _stripe_dict(value):
+    """Normalize stripe-python StripeObject responses (which have no .get)."""
+    if isinstance(value, dict):
+        return value
+    to_dict = getattr(value, "to_dict", None)
+    if callable(to_dict):
+        return to_dict()
+    raise TypeError("Unexpected Stripe response shape")
+
+
 def _stripe_client():
     settings = get_settings()
     key = settings.stripe_secret_key
@@ -118,7 +128,7 @@ def connect_existing_stripe_account(
         raise HTTPException(422, "Ungültige Stripe-Konto-ID")
     client = _stripe_client()
     try:
-        account = client.Account.retrieve(body.stripe_account_id)
+        account = _stripe_dict(client.Account.retrieve(body.stripe_account_id))
     except stripe.error.StripeError:
         raise HTTPException(422, "Stripe-Konto nicht verbunden oder nicht abrufbar") from None
 
@@ -187,7 +197,7 @@ def create_checkout(
         existing = booking.get("stripe_checkout_session_id")
         if existing:
             try:
-                session = client.checkout.Session.retrieve(existing, stripe_account=account)
+                session = _stripe_dict(client.checkout.Session.retrieve(existing, stripe_account=account))
                 if session.get("status") == "open" and session.get("url"):
                     return CheckoutURL(url=session["url"])
                 if session.get("payment_status") == "paid":
@@ -200,7 +210,7 @@ def create_checkout(
         success = f"{settings.frontend_base_url}/pilot/{tenant.slug}/zahlung?result=success"
         cancel = f"{settings.frontend_base_url}/pilot/{tenant.slug}/zahlung?result=cancel"
         try:
-            session = client.checkout.Session.create(
+            session = _stripe_dict(client.checkout.Session.create(
                 mode="payment",
                 payment_method_types=["card"],
                 line_items=[{
@@ -218,7 +228,7 @@ def create_checkout(
                 metadata={"organization_id": str(tenant.organization_id), "camp_slug": camp_slug},
                 stripe_account=account,
                 idempotency_key=f"campspilot-{registration_token}-{secrets.token_hex(12)}",
-            )
+            ))
         except stripe.error.StripeError:
             logger.warning("Checkout creation failed (organization_slug=%s)", tenant.slug)
             raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
@@ -253,8 +263,7 @@ async def stripe_connect_webhook(
 
     # stripe-python returns an Event (StripeObject), not a plain dict.
     # Convert after signature verification so all subsequent .get calls work.
-    if hasattr(event, "to_dict_recursive"):
-        event = event.to_dict_recursive()
+    event = _stripe_dict(event)
 
     expected_live = settings.app_env.strip().lower() == "production"
     if event.get("livemode") is not expected_live:
@@ -265,7 +274,7 @@ async def stripe_connect_webhook(
         raise HTTPException(400, "Stripe-Konto fehlt")
 
     event_type = event["type"]
-    obj = event["data"]["object"]
+    obj = _stripe_dict(_stripe_dict(event["data"])["object"])
     if event_type in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
         if obj.get("payment_status") != "paid":
             return {"received": True, "settled": False}

@@ -520,6 +520,113 @@
   .cp-participant-print .cp-daylist-check-col { width: var(--cp-print-page-check); }
 }
 
+/* Printed sheet: the trainer's handout. Club logo and brand color in the
+ * header, quiet table with room to write, attendance boxes, notes area.
+ * Brand color comes from the accessible brandStrong token per club. */
+.cp-print-sheet {
+  --cp-sheet-brand: var(--cp-print-ink);
+  --cp-sheet-muted: #565d59;
+  --cp-sheet-rule: #c4c9c6;
+  --cp-sheet-zebra: #f2f4f3;
+}
+.cp-print-sheet .cp-sheet-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px 28px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 3px solid var(--cp-sheet-brand);
+}
+.cp-print-sheet .cp-sheet-head p { margin-top: 0; }
+.cp-sheet-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.cp-sheet-logo { width: 60px; height: 60px; flex-shrink: 0; object-fit: contain; }
+.cp-sheet-titles { min-width: 0; }
+.cp-print-sheet .cp-print-org { font-size: 13px; font-weight: 600; color: var(--cp-sheet-muted); }
+.cp-print-sheet .cp-sheet-head h2 { margin-top: 2px; font-size: inherit; line-height: 1.1; }
+.cp-sheet-kind { display: block; font-size: 28px; font-weight: 800; letter-spacing: -0.01em; color: var(--cp-sheet-brand); }
+.cp-sheet-camp { display: block; margin-top: 4px; font-size: 17px; font-weight: 600; color: var(--cp-print-ink); }
+.cp-sr-sep { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.cp-sheet-meta { display: flex; gap: 22px; margin: 0; text-align: right; }
+.cp-sheet-meta dt { font-size: 11px; color: var(--cp-sheet-muted); }
+.cp-sheet-meta dd { margin: 2px 0 0; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cp-sheet-meta .cp-sheet-day dd { font-size: 19px; color: var(--cp-sheet-brand); }
+.cp-print-sheet .cp-sheet-note { grid-column: 1 / -1; font-size: 11px; color: var(--cp-sheet-muted); }
+.cp-participant-print .cp-print-sheet th,
+.cp-participant-print .cp-print-sheet td {
+  border: 0;
+  border-bottom: 1px solid var(--cp-sheet-rule);
+  padding: 6px 10px;
+  vertical-align: middle;
+}
+.cp-participant-print .cp-print-sheet th {
+  font-size: 12px;
+  font-weight: 700;
+  border-bottom: 2px solid var(--cp-print-ink);
+  vertical-align: bottom;
+}
+.cp-participant-print .cp-print-sheet td { height: 40px; font-size: 14px; }
+.cp-participant-print .cp-print-sheet tbody tr:nth-child(even) td { background: var(--cp-sheet-zebra); }
+.cp-participant-print .cp-print-sheet .cp-print-row-number { color: var(--cp-sheet-muted); font-variant-numeric: tabular-nums; }
+.cp-participant-print .cp-print-sheet .cp-daylist-check-col { border-left: 1px solid var(--cp-sheet-rule); font-size: 11px; }
+.cp-participant-print .cp-print-sheet td.cp-daylist-check-col::before {
+  content: '';
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--cp-print-ink);
+  border-radius: 3px;
+  vertical-align: middle;
+}
+.cp-participant-print .cp-print-sheet th.cp-sheet-today { color: var(--cp-sheet-brand); box-shadow: inset 0 -3px 0 var(--cp-sheet-brand); }
+.cp-participant-print .cp-print-sheet td.cp-sheet-today::before { border-width: 2px; border-color: var(--cp-sheet-brand); }
+.cp-sheet-notes {
+  margin-top: 18px;
+  min-height: 120px;
+  padding: 6px 10px;
+  border: 1px solid var(--cp-sheet-rule);
+  border-radius: 4px;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 27px, var(--cp-sheet-rule) 27px 28px);
+  background-origin: content-box;
+  background-clip: content-box;
+  padding-top: 26px;
+}
+.cp-sheet-notes p { margin-top: -20px; }
+.cp-sheet-notes p { font-size: 12px; font-weight: 700; color: var(--cp-sheet-muted); }
+.cp-sheet-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-top: 12px;
+  font-size: 10px;
+  color: var(--cp-sheet-muted);
+}
+@media print {
+  @page {
+    @bottom-right { content: "Seite " counter(page) " von " counter(pages); font: 8pt Arial, sans-serif; color: #565d59; }
+  }
+  .cp-print-sheet { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cp-print-sheet .cp-sheet-head { display: grid !important; gap: 2mm 7mm; margin-bottom: 4mm; padding-bottom: 3mm; border-bottom-width: 0.9mm; }
+  .cp-sheet-logo { width: 17mm; height: 17mm; }
+  .cp-print-sheet .cp-print-org { font-size: 9pt; }
+  .cp-sheet-kind { font-size: 20pt; }
+  .cp-sheet-camp { font-size: 12pt; }
+  .cp-sheet-meta dt { font-size: 7.5pt; }
+  .cp-sheet-meta dd { font-size: 10.5pt; }
+  .cp-sheet-meta .cp-sheet-day dd { font-size: 13pt; }
+  .cp-print-sheet .cp-sheet-note { font-size: 7.5pt; }
+  .cp-participant-print .cp-print-sheet th,
+  .cp-participant-print .cp-print-sheet td { padding: 1mm 2mm; }
+  .cp-participant-print .cp-print-sheet th { font-size: 8.5pt; }
+  .cp-participant-print .cp-print-sheet td { height: 9mm; font-size: 10pt; }
+  .cp-participant-print .cp-print-sheet td.cp-daylist-check-col::before { width: 4mm; height: 4mm; }
+  .cp-sheet-notes { min-height: 36mm; padding-top: 7mm; break-inside: avoid; background-image: repeating-linear-gradient(to bottom, transparent 0 7.5mm, var(--cp-sheet-rule) 7.5mm calc(7.5mm + 0.25mm)); }
+  .cp-sheet-notes p { margin-top: -5.5mm; }
+  .cp-sheet-notes p { font-size: 8.5pt; }
+  .cp-sheet-foot { font-size: 7pt; break-inside: avoid; }
+}
+
 /* ----------------------------------------------------------------------
  * Filmkorn (Design-Reifung nach dem zweiten Praxistest) — derselbe
  * Materialgedanke wie im Eltern-Flow (siehe pilot/[org]/publicTheme.css

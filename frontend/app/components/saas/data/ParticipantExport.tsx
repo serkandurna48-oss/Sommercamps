@@ -11,11 +11,13 @@ import DayListPrint from './DayListPrint'
 import ParticipantListPrint from './ParticipantListPrint'
 import { DEFAULT_PRINT_FIELDS } from '../participantPrint'
 
-export default function ParticipantExport({ registrations, camp, orgSlug, orgName, filter, search, allColumns, questions, onReset }: {
+export default function ParticipantExport({ registrations, camp, orgSlug, orgName, orgLogoUrl, brandColor, filter, search, allColumns, questions, onReset }: {
   registrations: RegistrationAdmin[]
   camp: CampAdmin
   orgSlug: string
   orgName?: string
+  orgLogoUrl?: string | null
+  brandColor?: string
   filter: ParticipantFilter
   search: string
   allColumns: ExportColumn<RegistrationAdmin>[]
@@ -66,7 +68,7 @@ export default function ParticipantExport({ registrations, camp, orgSlug, orgNam
       printEnabled={purpose !== 'payments'}
       printLabel="Drucken / Als PDF speichern"
     />
-    {printing === 'daylist' && <DayListPrint camp={camp} rows={rows} filterText={filterText} orgName={orgName} questions={questions} selectedFields={printFields.daylist} onFieldsChange={daylist => setPrintFields(previous => ({ ...previous, daylist }))} onClose={() => setPrinting(null)} />}
-    {printing === 'participants' && <ParticipantListPrint camp={camp} rows={filtered} filterText={filterText} orgName={orgName} questions={questions} selectedFields={printFields.participants} onFieldsChange={participants => setPrintFields(previous => ({ ...previous, participants }))} onClose={() => setPrinting(null)} />}
+    {printing === 'daylist' && <DayListPrint camp={camp} rows={rows} filterText={filterText} orgName={orgName} orgLogoUrl={orgLogoUrl} brandColor={brandColor} questions={questions} selectedFields={printFields.daylist} onFieldsChange={daylist => setPrintFields(previous => ({ ...previous, daylist }))} onClose={() => setPrinting(null)} />}
+    {printing === 'participants' && <ParticipantListPrint camp={camp} rows={filtered} filterText={filterText} orgName={orgName} orgLogoUrl={orgLogoUrl} brandColor={brandColor} questions={questions} selectedFields={printFields.participants} onFieldsChange={participants => setPrintFields(previous => ({ ...previous, participants }))} onClose={() => setPrinting(null)} />}
   </>
 }

@@ -41,6 +41,7 @@ export default function ParticipantList({
   brandColor,
   orgSlug,
   orgName,
+  orgLogoUrl,
   campSlug,
   camp,
   questions,
@@ -51,6 +52,7 @@ export default function ParticipantList({
   brandColor: string
   orgSlug: string
   orgName?: string
+  orgLogoUrl?: string | null
   campSlug: string
   camp: CampAdmin
   questions?: RegistrationQuestion[]
@@ -86,6 +88,8 @@ export default function ParticipantList({
         camp={camp}
         orgSlug={orgSlug}
         orgName={orgName}
+        orgLogoUrl={orgLogoUrl}
+        brandColor={brand.brandStrong}
         filter={filter}
         search={search}
         allColumns={PARTICIPANT_COLUMNS}

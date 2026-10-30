@@ -490,6 +490,14 @@ export function formatDate(value: string | Date): string {
   return Number.isNaN(date.getTime()) ? 'Unbekannt' : new Intl.DateTimeFormat('de-DE', dateOptions).format(date)
 }
 
+/** ISO calendar day (YYYY-MM-DD) as "Mittwoch, 13.01.2027" for printed day lists. */
+export function formatWeekdayDate(isoDay: string): string {
+  const day = new Date(`${isoDay}T00:00:00Z`)
+  if (Number.isNaN(day.getTime())) return formatDate(isoDay)
+  const weekday = new Intl.DateTimeFormat('de-DE', { weekday: 'long', timeZone: 'UTC' }).format(day)
+  return `${weekday}, ${new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(day)}`
+}
+
 export function formatDateTime(value: string | Date): string {
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? 'Unbekannt' : `${formatDate(date)}, ${formatTime(date)}`

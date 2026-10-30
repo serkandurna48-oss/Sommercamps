@@ -124,6 +124,8 @@ describe('participant export workflow', () => {
     expect(dialog.querySelector<HTMLElement>('.cp-print-sheet')?.style.getPropertyValue('--cp-sheet-brand')).toBe('#a01010')
     expect(dialog.querySelectorAll('th.cp-sheet-today')).toHaveLength(1)
     expect(dialog.querySelector('.cp-sheet-notes')).not.toBeNull()
+    expect(dialog.querySelector('th.cp-col-l')?.textContent).toBe('Name')
+    expect(dialog.querySelector('th.cp-col-s')?.textContent).toBe('Jahrgang')
     await click('Zurück zur Liste')
     expect(document.querySelector('dialog')).toBeNull()
     expect(document.activeElement).toBe(button('Exportieren'))

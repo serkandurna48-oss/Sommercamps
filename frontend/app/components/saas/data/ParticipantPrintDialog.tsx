@@ -50,8 +50,16 @@ export default function ParticipantPrintDialog({ camp, rows, filterText, orgName
   const dayIndex = purpose === 'daylist' && validDate
     ? Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${camp.start_date}T00:00:00Z`)) / 86_400_000)
     : -1
-  const cellClass = (column: { id: string, attendance?: boolean }) => !column.attendance ? undefined
-    : column.id === `attendance:${dayIndex}` ? 'cp-daylist-check-col cp-sheet-today' : 'cp-daylist-check-col'
+  const cellClass = (column: { id: string, attendance?: boolean, size?: string }) => column.attendance
+    ? column.id === `attendance:${dayIndex}` ? 'cp-daylist-check-col cp-sheet-today' : 'cp-daylist-check-col'
+    : column.size ? `cp-col-${column.size}` : undefined
+  const cellValue = (column: { attendance?: boolean, alert?: boolean, value: (row: RegistrationAdmin) => unknown }, row: RegistrationAdmin) => {
+    if (column.attendance) return ''
+    const raw = column.value(row)
+    const text = raw === null || raw === undefined ? '' : String(raw).trim()
+    if (!text) return <span className="cp-sheet-empty">–</span>
+    return column.alert ? <strong className="cp-sheet-alert">{text}</strong> : text
+  }
 
   return createPortal(
     <dialog ref={dialogRef} aria-labelledby={titleId} onCancel={onClose} className="cp-scope cp-daylist-preview cp-participant-print">
@@ -124,7 +132,7 @@ export default function ParticipantPrintDialog({ camp, rows, filterText, orgName
                   <thead><tr><th scope="col" className="cp-print-row-number">Nr.</th>{section.map(column => <th key={column.id} scope="col" className={cellClass(column)}>{column.header}</th>)}</tr></thead>
                   <tbody>{rows.map((row, rowIndex) => <tr key={row.registration_token}>
                     <td className="cp-print-row-number">{rowIndex + 1}</td>
-                    {section.map(column => <td key={column.id} className={cellClass(column)}>{column.value(row) ?? ''}</td>)}
+                    {section.map(column => <td key={column.id} className={cellClass(column)}>{cellValue(column, row)}</td>)}
                   </tr>)}</tbody>
                 </table>
               </div>

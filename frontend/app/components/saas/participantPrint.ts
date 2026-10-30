@@ -8,6 +8,10 @@ export interface ParticipantPrintField extends ExportColumn<RegistrationAdmin> {
   id: string
   group: 'Teilnahme' | 'Kontakt und Betreuung' | 'Zusatzfragen'
   attendance?: boolean
+  /** Column width on paper: s = short values (year, size), l = names and free text. */
+  size?: 's' | 'm' | 'l'
+  /** Safety-relevant for trainers: filled values are printed emphasized. */
+  alert?: boolean
 }
 
 export const DEFAULT_PRINT_FIELDS: Record<PrintPurpose, string[]> = {
@@ -18,22 +22,22 @@ export const DEFAULT_PRINT_FIELDS: Record<PrintPurpose, string[]> = {
 /** Only explicit fields from the existing admin contract are offered. */
 export function participantPrintFields(questions: RegistrationQuestion[] = []): ParticipantPrintField[] {
   return [
-    { id: 'name', header: 'Name', group: 'Teilnahme', value: r => `${r.child_first_name} ${r.child_last_name}` },
-    { id: 'year', header: 'Jahrgang', group: 'Teilnahme', value: r => r.child_birth_date.slice(0, 4) },
-    { id: 'status', header: 'Anmeldestatus', group: 'Teilnahme', value: r => registrationStatusLabel[r.status] ?? r.status },
-    { id: 'payment', header: 'Zahlungsstatus', group: 'Teilnahme', value: r => paymentStatusLabel[r.payment_status] ?? r.payment_status },
-    { id: 'jersey', header: 'Trikotgröße', group: 'Teilnahme', value: r => r.jersey_size },
+    { id: 'name', header: 'Name', group: 'Teilnahme', size: 'l', value: r => `${r.child_first_name} ${r.child_last_name}` },
+    { id: 'year', header: 'Jahrgang', group: 'Teilnahme', size: 's', value: r => r.child_birth_date.slice(0, 4) },
+    { id: 'status', header: 'Anmeldestatus', group: 'Teilnahme', size: 'm', value: r => registrationStatusLabel[r.status] ?? r.status },
+    { id: 'payment', header: 'Zahlungsstatus', group: 'Teilnahme', size: 'm', value: r => paymentStatusLabel[r.payment_status] ?? r.payment_status },
+    { id: 'jersey', header: 'Trikotgröße', group: 'Teilnahme', size: 's', value: r => r.jersey_size },
     { id: 'attendance', header: 'Anwesenheit je Camptag', group: 'Teilnahme', attendance: true, value: () => '' },
-    { id: 'parent', header: 'Elternteil', group: 'Kontakt und Betreuung', value: r => `${r.parent_first_name} ${r.parent_last_name}` },
-    { id: 'email', header: 'E-Mail', group: 'Kontakt und Betreuung', value: r => r.parent_email },
-    { id: 'phone', header: 'Telefon', group: 'Kontakt und Betreuung', value: r => r.parent_phone },
-    { id: 'emergency', header: 'Notfallkontakt', group: 'Kontakt und Betreuung', value: r => [r.emergency_contact_name, r.emergency_contact_phone].filter(Boolean).join(' · ') },
-    { id: 'pickup', header: 'Abholberechtigt', group: 'Kontakt und Betreuung', value: r => r.pickup_authorized },
-    { id: 'allergies', header: 'Allergien', group: 'Kontakt und Betreuung', value: r => r.allergies },
-    { id: 'medical', header: 'Medizinische Hinweise', group: 'Kontakt und Betreuung', value: r => r.medical_notes },
-    { id: 'photo', header: 'Fotoerlaubnis', group: 'Kontakt und Betreuung', value: r => r.photo_permission ? 'Ja' : 'Nein' },
+    { id: 'parent', header: 'Elternteil', group: 'Kontakt und Betreuung', size: 'm', value: r => `${r.parent_first_name} ${r.parent_last_name}` },
+    { id: 'email', header: 'E-Mail', group: 'Kontakt und Betreuung', size: 'l', value: r => r.parent_email },
+    { id: 'phone', header: 'Telefon', group: 'Kontakt und Betreuung', size: 'm', value: r => r.parent_phone },
+    { id: 'emergency', header: 'Notfallkontakt', group: 'Kontakt und Betreuung', size: 'l', value: r => [r.emergency_contact_name, r.emergency_contact_phone].filter(Boolean).join(' · ') },
+    { id: 'pickup', header: 'Abholberechtigt', group: 'Kontakt und Betreuung', size: 'l', value: r => r.pickup_authorized },
+    { id: 'allergies', header: 'Allergien', group: 'Kontakt und Betreuung', size: 'l', alert: true, value: r => r.allergies },
+    { id: 'medical', header: 'Medizinische Hinweise', group: 'Kontakt und Betreuung', size: 'l', alert: true, value: r => r.medical_notes },
+    { id: 'photo', header: 'Fotoerlaubnis', group: 'Kontakt und Betreuung', size: 's', value: r => r.photo_permission ? 'Ja' : 'Nein' },
     ...questions.map(q => ({
-      id: `extra:${q.key}`, header: q.label, group: 'Zusatzfragen' as const,
+      id: `extra:${q.key}`, header: q.label, group: 'Zusatzfragen' as const, size: 'm' as const,
       value: (r: RegistrationAdmin) => r.extra_answers?.[q.key],
     })),
   ]

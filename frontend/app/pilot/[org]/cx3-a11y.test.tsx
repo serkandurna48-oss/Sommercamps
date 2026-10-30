@@ -190,7 +190,7 @@ it.each(['ksv-baunatal', 'neutral'])('%s fokussiert die Camp-Auswahl ohne verste
 })
 
 it('sichert kontrastreiche Fokusringe und mindestens 24-Pixel-Ziele inklusive Radio/Checkbox ab', () => {
-  expect(css).toContain('.cp-public .screen :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible')
+  expect(css).toContain(".cp-public .screen :is(button, a, input, select, textarea, summary, [tabindex]:not([tabindex='-1'])):focus-visible")
   expect(css).toContain('outline: var(--focus-width) solid var(--focus-light)')
   expect(css).toContain('box-shadow: 0 0 0 var(--focus-outer-width) var(--focus-dark)')
   expect(css).toContain('--focus-light: #ffffff')

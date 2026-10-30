@@ -3225,9 +3225,12 @@
   }
 }
 
-/* Hover: date digit accent on camp cards */
+/* Hover: the camp date takes the club colour, in every theme (date block or date line). */
+.cp-public .camp .c-when { transition: color 0.25s var(--ease); }
 .cp-public .camp:hover .c-date .num,
-.cp-public .camp:focus-visible .c-date .num {
+.cp-public .camp:focus-visible .c-date .num,
+.cp-public .camp:hover .c-when,
+.cp-public .camp:focus-visible .c-when {
   color: var(--brand-strong);
 }
 
@@ -3844,7 +3847,7 @@
 }
 
 /* KSV Hero 28.10. (mit Serkan Schritt fuer Schritt abgestimmt, 14:30-14:56):
-   heller hinter der Schrift; Desktop zeigt nur den Ausschnitt Kinder + Rami (ksv-hero-desktop.jpg),
+   heller hinter der Schrift; Desktop zeigt das ganze Originalfoto (30.10.: Ausschnitt war zu nah und unscharf),
    Handy nur den markierten Ausschnitt (ksv-hero-mobile.jpg) mit Text ueber den Jungs,
    'Camp auswaehlen' oben rechts im Logo-Abstand, Zahlenzeile schmal und mittig.
    Beide Ausschnitte stammen aus ksv-1-mannschaft.jpg. Das img bleibt fuer Alt/Prioritaet im DOM. */
@@ -3857,8 +3860,7 @@
 @media (min-width: 600px) {
   .cp-public[data-org='ksv-baunatal'] .hero.h-akad,
   .cp-public[data-org='ksv-baunatal'] .hero.h-akad .in { min-height: min(100svh, 860px); }
-  .cp-public[data-org='ksv-baunatal'] .h-akad .bg { background: url('/clubs/ksv/ksv-hero-desktop.jpg') center 20% / cover no-repeat; }
-  .cp-public[data-org='ksv-baunatal'] .h-akad .bg img { opacity: 0; }
+  /* Desktop shows the full original photo (sharper, less zoomed than a crop, Serkan 30.10.). */
 }
 @media (max-width: 599px) {
   .cp-public[data-org='ksv-baunatal'] .hero.h-akad {

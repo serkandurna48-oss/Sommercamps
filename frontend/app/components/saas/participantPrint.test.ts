@@ -21,7 +21,7 @@ describe('participant print field selection', () => {
     expect(selectedPrintColumns(fields, [], camp)).toEqual([])
   })
   it.each([
-    ['open', 'Zahlung offen'], ['paid', 'Bezahlt'], ['refunded', 'Erstattet'], ['waived', 'Erlassen'], ['cancelled', 'Storniert'],
+    ['open', 'Zahlung offen'], ['paid', 'Bezahlt'], ['refunded', 'Erstattet'], ['waived', 'Kostenlos'], ['cancelled', 'Storniert'],
   ] as const)('renders payment state %s in German', (payment_status, label) => {
     const [column] = selectedPrintColumns(fields, ['payment'], camp)
     expect(column.value({ ...registrations[0], payment_status })).toBe(label)

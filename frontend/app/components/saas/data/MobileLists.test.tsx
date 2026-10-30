@@ -38,7 +38,7 @@ afterEach(async () => {
   vi.unstubAllGlobals()
 })
 
-it.each(['Bezahlt', 'Offen', 'Storniert', 'Warteliste', 'Erlassen'])('status text remains visible, including the dot variant: %s', label => {
+it.each(['Bezahlt', 'Offen', 'Storniert', 'Warteliste', 'Kostenlos'])('status text remains visible, including the dot variant: %s', label => {
   for (const dot of [false, true]) {
     host.innerHTML = renderToStaticMarkup(<StatusChip tone="pending" label={label} dot={dot} />)
     expect(host.querySelector('.cp-chip')?.textContent).toBe(label)

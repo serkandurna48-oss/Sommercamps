@@ -15,7 +15,7 @@ const PAYMENT_LABEL: Record<string, string> = {
   open: 'Offen',
   paid: 'Bezahlt',
   refunded: 'Erstattet',
-  waived: 'Erlassen',
+  waived: 'Kostenlos',
   cancelled: 'Storniert',
 }
 

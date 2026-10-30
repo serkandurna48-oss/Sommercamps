@@ -279,7 +279,7 @@ export default function ParticipantDetail({
         {isOpenPayment(registration) && (
           <div className="mt-3 flex flex-wrap gap-2">
             <ActionForm action={markPaid} label={de.paymentsPage.markPaid} pendingLabel={de.paymentsPage.updating} variant={editing ? 'secondary' : 'primary'} brandStrong={brandStrong} brandOn={brandOn} />
-            <ActionForm action={markWaived} label={de.paymentsPage.markWaived} pendingLabel={de.paymentsPage.updating} variant="danger" requireConfirm="Wirklich erlassen?" />
+            <ActionForm action={markWaived} label={de.paymentsPage.markWaived} pendingLabel={de.paymentsPage.updating} variant="secondary" requireConfirm={de.paymentsPage.waivedConfirm} />
           </div>
         )}
         {registration.payment_status === 'paid' && (

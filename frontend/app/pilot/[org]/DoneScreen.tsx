@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { CampPublic, OrganizationPublic, RegistrationCreated } from '../../lib/saasApi'
+import { createStripeCheckout, getStripePaymentAvailability } from '../../lib/saasApi'
 import { formatCampDateRange, formatPrice } from '../../lib/parentFlowFormat'
 import { buildCampIcs } from '../../lib/ics'
 import { useParentFlowMotion } from './motion'
@@ -32,6 +33,9 @@ export default function DoneScreen({
   onRegisterSibling?: () => void
 }) {
   const [copiedField, setCopiedField] = useState<'ref' | 'iban' | 'betrag' | null>(null)
+  const [stripeAvailable, setStripeAvailable] = useState(false)
+  const [stripeLoading, setStripeLoading] = useState(false)
+  const [stripeError, setStripeError] = useState<string | null>(null)
   const waitlisted = result.status === 'waitlist'
   const payTo = org.legal_name ?? org.name
   const bandTextColor = org.theme === 'tradition' ? 'var(--brand-on)' : 'var(--on-band)'
@@ -42,6 +46,28 @@ export default function DoneScreen({
   useParentFlowMotion(org.theme, containerRef)
   const headingRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => { headingRef.current?.focus() }, [])
+
+  useEffect(() => {
+    if (waitlisted || result.payment_status !== 'open' || camp.price_cents <= 0) return
+    let current = true
+    void getStripePaymentAvailability(org.slug, camp.slug).then(available => {
+      if (current) setStripeAvailable(available)
+    })
+    return () => { current = false }
+  }, [org.slug, camp.slug, camp.price_cents, result.payment_status, waitlisted])
+
+  async function handleStripeCheckout() {
+    if (stripeLoading) return
+    setStripeError(null)
+    setStripeLoading(true)
+    try {
+      const url = await createStripeCheckout(org.slug, camp.slug, result.registration_token)
+      window.location.assign(url)
+    } catch {
+      setStripeError('Online-Zahlung ist gerade nicht möglich. Sie können überweisen oder den Verein kontaktieren.')
+      setStripeLoading(false)
+    }
+  }
 
   // This screen mounts only after a registration in the browser. Exclude filters and tokens.
   const publicPath = `/pilot/${encodeURIComponent(org.slug)}?camp=${encodeURIComponent(camp.slug)}`
@@ -136,6 +162,20 @@ export default function DoneScreen({
               <dd className="num">{formatPrice(camp.price_cents, camp.currency)}</dd>
             </div>
           </dl>
+
+          {!waitlisted && stripeAvailable && result.payment_status === 'open' && (
+            <div className="done-transfer" style={{ marginBottom: 18 }}>
+              <span className="done-transfer-label">Online bezahlen</span>
+              <p style={{ marginTop: 6, marginBottom: 12 }}>
+                Sicher per Karte über Stripe. Der Betrag geht direkt an {payTo}.
+              </p>
+              <button className="btn primary btn-pill" type="button" disabled={stripeLoading}
+                aria-busy={stripeLoading} onClick={handleStripeCheckout}>
+                {stripeLoading ? 'Weiterleitung zu Stripe …' : `Jetzt ${priceText} online bezahlen`}
+              </button>
+              {stripeError && <p role="alert" style={{ marginTop: 10 }}>{stripeError}</p>}
+            </div>
+          )}
 
           {!waitlisted && iban && (
             <div className="done-transfer">

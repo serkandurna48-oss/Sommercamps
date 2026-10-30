@@ -20,12 +20,17 @@ export default function AnalyticsConsentBanner() {
   const [storageError, setStorageError] = useState(false)
 
   useEffect(() => {
-    setHydrated(true)
+    // Read browser storage after hydration; avoid synchronous state updates
+    // within effects, which violate React 19's set-state-in-effect rule.
     if (!orgSlug) return
-    const choice = getAnalyticsConsent()
-    setVisible(choice === null)
-    if (choice === 'accepted' && isLanding) captureSaasEvent('camp_page_viewed', orgSlug)
-  }, [orgSlug, pathname, isLanding])
+    const frame = window.requestAnimationFrame(() => {
+      setHydrated(true)
+      const choice = getAnalyticsConsent()
+      setVisible(choice === null)
+      if (choice === 'accepted' && isLanding) captureSaasEvent('camp_page_viewed', orgSlug)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [orgSlug, isLanding])
 
   useEffect(() => {
     const open = () => {
@@ -54,10 +59,12 @@ export default function AnalyticsConsentBanner() {
       aria-label="Freiwillige Nutzungsanalyse"
       data-testid="analytics-consent"
       style={{
-        position: 'fixed', zIndex: 1000, left: 16, bottom: 16, right: 16,
-        maxWidth: 650, margin: '0 auto', background: '#fff', color: '#172b20',
+        // In document flow, never cover the registration CTA or form fields.
+        position: 'relative', zIndex: 1, boxSizing: 'border-box',
+        width: 'calc(100% - 32px)', maxWidth: 650, margin: '12px auto',
+        background: '#fff', color: '#172b20',
         border: '1px solid #cdd9d0', borderRadius: 12, padding: '18px 20px',
-        boxShadow: '0 8px 32px rgba(0,0,0,.2)', fontFamily: 'Arial, sans-serif',
+        boxShadow: '0 3px 12px rgba(0,0,0,.09)', fontFamily: 'Arial, sans-serif',
         lineHeight: 1.5, fontSize: 14,
       }}
     >

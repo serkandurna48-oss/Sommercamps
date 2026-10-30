@@ -20,7 +20,7 @@ def test_off_by_default(monkeypatch):
 
 def test_wrong_mode_refused_in_staging(monkeypatch):
     monkeypatch.setattr(payments, "get_settings", lambda: MagicMock(
-        stripe_checkout_enabled=True, stripe_secret_key="sk_live_fake", app_env="staging"
+        stripe_checkout_enabled=True, stripe_secret_key="sk_live_fake", stripe_webhook_secret="whsec_test", app_env="staging"
     ))
     with pytest.raises(HTTPException) as err:
         payments._stripe_client()
@@ -29,7 +29,7 @@ def test_wrong_mode_refused_in_staging(monkeypatch):
 
 def test_wrong_mode_refused_in_production(monkeypatch):
     monkeypatch.setattr(payments, "get_settings", lambda: MagicMock(
-        stripe_checkout_enabled=True, stripe_secret_key="sk_test_fake", app_env="production"
+        stripe_checkout_enabled=True, stripe_secret_key="sk_test_fake", stripe_webhook_secret="whsec_test", app_env="production"
     ))
     with pytest.raises(HTTPException) as err:
         payments._stripe_client()
@@ -220,3 +220,43 @@ def test_signed_webhook_credits_only_verified_amount_and_account(monkeypatch):
         asyncio.run(payments.stripe_connect_webhook(FakeRequest(), header))
     assert error.value.status_code == 409
     assert len(cursor.executed) == 1
+
+
+def test_checkout_disabled_without_signed_webhook_configuration(monkeypatch):
+    monkeypatch.setattr(payments, "get_settings", lambda: SimpleNamespace(
+        stripe_checkout_enabled=True, stripe_secret_key="sk_test_example",
+        stripe_webhook_secret=None, app_env="staging",
+    ))
+    with pytest.raises(HTTPException) as error:
+        payments._stripe_client()
+    assert error.value.status_code == 503
+
+
+def test_completed_session_without_confirmed_payment_cannot_be_replaced(monkeypatch):
+    from uuid import uuid4
+    booking = {
+        "id": uuid4(), "status": "registered", "payment_status": "open",
+        "stripe_checkout_session_id": "cs_test_1234567890",
+        "stripe_account_id": "acct_1234567890123456",
+        "stripe_charges_enabled": True, "online_payment_enabled": True,
+        "title": "Feriencamp", "price_cents": 14900, "currency": "EUR",
+        "camp_status": "published",
+    }
+    cursor = _Cursor(booking)
+
+    @contextmanager
+    def fake_cursor():
+        yield cursor
+
+    client = MagicMock()
+    client.checkout.Session.retrieve.return_value = {
+        "status": "complete", "payment_status": "unpaid",
+    }
+    monkeypatch.setattr(payments.db, "get_cursor", fake_cursor)
+    monkeypatch.setattr(payments, "_stripe_client", lambda: client)
+    with pytest.raises(HTTPException) as error:
+        payments.create_checkout("winter", uuid4(), SimpleNamespace(
+            organization_id=uuid4(), slug="club-one",
+        ))
+    assert error.value.status_code == 409
+    client.checkout.Session.create.assert_not_called()

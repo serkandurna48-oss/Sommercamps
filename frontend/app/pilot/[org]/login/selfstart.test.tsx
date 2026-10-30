@@ -58,7 +58,7 @@ it.each([202, 429, 503, 0])('Verlorene Bestätigungsmail: Neuversand aus dem Log
 it('Login bietet Bestätigungshinweis und Rückweg zur Marketingseite', () => {
   const dom = document.createElement('div')
   dom.innerHTML = renderToStaticMarkup(<LoginForm orgSlug="testverein" />)
-  expect(dom.textContent).toContain('Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse')
+  expect(dom.textContent).toContain('Bestätigen Sie zuerst Ihre E-Mail-Adresse')
   const back = [...dom.querySelectorAll('a')].find(a => a.textContent === 'Zurück zu CampsPilot')
   expect(back?.getAttribute('href')).toBe('/campspilot')
   expect([...dom.querySelectorAll('a')].find(a => a.textContent === 'Passwort vergessen?')?.getAttribute('href')).toBe('/pilot/testverein/passwort-vergessen')

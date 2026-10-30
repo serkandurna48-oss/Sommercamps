@@ -1,0 +1,199 @@
+/*
+ * One sign-in surface for every account page (club login, password reset,
+ * CampsPilot sign-in, platform login). Built on the product tokens in
+ * ../tokens.css; the only per-page variable is the accent:
+ * --auth-accent / --auth-on (club colour, or CampsPilot orange).
+ * Class names (login-h1, login-label, login-field, login-btn, login-error)
+ * are shared with the form components so they need no styling of their own.
+ */
+
+.cp-auth {
+  --auth-accent: #2b6f4c;
+  --auth-on: #ffffff;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 48px 16px;
+  background: var(--cp-paper);
+  color: var(--cp-ink);
+}
+
+.cp-auth .auth-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px 28px 24px;
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-line);
+  border-radius: var(--cp-r-card);
+}
+
+.cp-auth .auth-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.cp-auth .auth-logo {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--auth-accent);
+  color: var(--auth-on);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.cp-auth .auth-logo.has-image {
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-line-2);
+}
+.cp-auth .auth-logo.is-mark {
+  background: var(--cp-band);
+  color: #ffffff;
+  --accent: #d4581f;
+}
+.cp-auth .auth-logo img { width: 100%; height: 100%; object-fit: contain; }
+.cp-auth .auth-name { font-size: 15px; font-weight: 600; line-height: 1.3; }
+
+.cp-auth .login-h1 {
+  margin: 0 0 8px;
+  font-size: 30px;
+  line-height: 1.1;
+  font-weight: 700;
+  font-stretch: 112%;
+  letter-spacing: -0.02em;
+}
+.cp-auth .auth-card p {
+  margin: 0 0 16px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--cp-ink-2);
+}
+.cp-auth .auth-card form { display: flex; flex-direction: column; }
+
+.cp-auth .login-label {
+  display: block;
+  margin: 16px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cp-ink);
+}
+.cp-auth .auth-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cp-auth .auth-row .login-label { margin-bottom: 6px; }
+
+.cp-auth .login-field {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--cp-ink);
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-field-line);
+  border-radius: var(--cp-r-field);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.cp-auth .login-field:focus {
+  outline: none;
+  border-color: var(--auth-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--auth-accent) 22%, transparent);
+}
+.cp-auth .login-field[aria-invalid='true'] { border-color: var(--cp-error); }
+
+.cp-auth .login-btn {
+  height: 48px;
+  margin-top: 24px;
+  width: 100%;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--auth-on);
+  background: var(--auth-accent);
+  border: 0;
+  border-radius: var(--cp-r-field);
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.cp-auth .login-btn:hover { filter: brightness(1.08); }
+.cp-auth .login-btn:disabled { opacity: 0.55; cursor: not-allowed; filter: none; }
+.cp-auth .login-btn:focus-visible { outline: 2px solid var(--cp-ink); outline-offset: 3px; }
+
+.cp-auth .login-error {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--cp-error);
+  background: var(--cp-error-bg);
+  border: 1px solid var(--cp-error-line);
+  border-radius: var(--cp-r-chip);
+}
+.cp-auth [role='status'] {
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--cp-ok);
+  background: var(--cp-ok-bg);
+  border: 1px solid var(--cp-ok-line);
+  border-radius: var(--cp-r-chip);
+}
+
+.cp-auth .auth-link,
+.cp-auth .auth-links a,
+.cp-auth .auth-links button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  color: var(--cp-ink-2);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.cp-auth .auth-link:hover,
+.cp-auth .auth-links a:hover,
+.cp-auth .auth-links button:hover { color: var(--cp-ink); }
+
+.cp-auth .auth-links {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--cp-line-2);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.cp-auth .auth-links p { margin: 8px 0 0; font-size: 14px; color: var(--cp-muted); }
+
+.cp-auth .auth-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--cp-muted);
+  --accent: #d4581f;
+}
+.cp-auth .auth-foot svg { width: 22px; height: 15px; color: var(--cp-ink-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-auth .login-field, .cp-auth .login-btn { transition: none; }
+}
+@media (max-width: 480px) {
+  .cp-auth { justify-content: flex-start; padding-top: 32px; }
+  .cp-auth .auth-card { padding: 28px 20px 20px; }
+  .cp-auth .login-h1 { font-size: 26px; }
+}

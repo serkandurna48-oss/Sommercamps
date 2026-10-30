@@ -27,8 +27,8 @@ export default function NewPasswordForm({ orgSlug }: { orgSlug: string }) {
   return <>
     <h1 className="login-h1">Neues Passwort setzen</h1>
     {!link.ready ? <p role="status">Link wird geladen …</p> : state.success ? <p role="status">Ihr Passwort wurde geändert. Sie können sich jetzt mit Ihrem neuen Passwort anmelden.</p> : !link.session ? <p className="login-error" role="alert">{INVALID_RECOVERY_LINK}</p> : <form action={action}>
-      <p id="password-hint">Mindestens 10 Zeichen.</p>
       <label className="login-label" htmlFor="new-password">Neues Passwort</label>
+      <p id="password-hint" style={{ margin: '0 0 6px', fontSize: 14 }}>Mindestens 10 Zeichen.</p>
       <input className="login-field" id="new-password" name="password" type="password" autoComplete="new-password" minLength={10} required
         aria-invalid={!!state.error} aria-describedby={state.error ? 'password-hint password-error' : 'password-hint'} />
       <label className="login-label" htmlFor="confirm-password">Neues Passwort wiederholen</label>
@@ -37,7 +37,9 @@ export default function NewPasswordForm({ orgSlug }: { orgSlug: string }) {
       {state.error && <p className="login-error" id="password-error" role="alert">{state.error}</p>}
       <button className="login-btn" type="submit" disabled={pending}>{pending ? 'Wird gespeichert …' : 'Passwort speichern'}</button>
     </form>}
-    {link.ready && !state.success && <Link className="login-label cp-focus inline-flex min-h-[44px] items-center underline" href={`${base}/passwort-vergessen`}>Neuen Link anfordern</Link>}
-    <Link className="login-label cp-focus inline-flex min-h-[44px] items-center underline" href={`${base}/login`}>Zur Anmeldung</Link>
+    <div className="auth-links">
+      {link.ready && !state.success && <Link className="cp-focus" href={`${base}/passwort-vergessen`}>Neuen Link anfordern</Link>}
+      <Link className="cp-focus" href={`${base}/login`}>Zur Anmeldung</Link>
+    </div>
   </>
 }

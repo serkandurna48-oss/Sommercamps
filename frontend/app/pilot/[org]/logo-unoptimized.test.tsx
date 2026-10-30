@@ -29,6 +29,7 @@ import ParentFlow from './ParentFlow'
 import PublicFooter from './PublicFooter'
 import LegalShell from './LegalShell'
 import LoginForm from './login/LoginForm'
+vi.mock('../../components/saas/fonts', () => ({ archivo: { variable: 'font-cp' } }))
 
 const base: OrganizationPublic = {
   slug: 'demo', name: 'Demo FC', legal_name: null, legal_address: null,

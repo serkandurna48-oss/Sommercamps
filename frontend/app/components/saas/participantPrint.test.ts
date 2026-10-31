@@ -1,7 +1,27 @@
 import { describe, expect, it } from 'vitest'
 import { registrations } from '../../dev/admin-vorschau/fixtures'
 import type { RegistrationAdmin, RegistrationQuestion } from '../../lib/saasAdminApi'
-import { DEFAULT_PRINT_FIELDS, participantPrintFields, printColumnSections, selectedPrintColumns } from './participantPrint'
+import { DEFAULT_PRINT_FIELDS, participantPrintFields, printColumnCost, printColumnSections, printSafeBrandColor, selectedPrintColumns } from './participantPrint'
+
+describe('printSafeBrandColor — Kontrast auf weißem Druckpapier', () => {
+  it('behält dunkle Vereinsfarben unverändert (Kontrast ≥ 4,5:1 auf Weiß)', () => {
+    expect(printSafeBrandColor('#d71920')).toBe('#d71920')
+    expect(printSafeBrandColor('#8a6a00')).toBe('#8a6a00')
+    expect(printSafeBrandColor('#000000')).toBe('#000000')
+    expect(printSafeBrandColor('#C8102E')).toBe('#C8102E')
+  })
+  it('ersetzt sehr helle Farben durch dunklen Fallback statt unsichtbarer Linie', () => {
+    expect(printSafeBrandColor('#f5f500')).toBe('#171c19')
+    expect(printSafeBrandColor('#ffff00')).toBe('#171c19')
+    expect(printSafeBrandColor('#ffffff')).toBe('#171c19')
+    expect(printSafeBrandColor('#f0f0f0')).toBe('#171c19')
+  })
+  it('gibt ungültige Hex-Werte unverändert zurück', () => {
+    expect(printSafeBrandColor('invalid')).toBe('invalid')
+    expect(printSafeBrandColor('')).toBe('')
+    expect(printSafeBrandColor('#gg0000')).toBe('#gg0000')
+  })
+})
 
 const camp = { start_date: '2027-07-05', end_date: '2027-07-09' }
 const question: RegistrationQuestion = { key: 'verein', label: 'Herkunftsverein laut Anmeldung', type: 'text', options: null, other_label: null, required: false }
@@ -48,10 +68,17 @@ describe('participant print field selection', () => {
     const sections = printColumnSections(selected)
     expect(sections.length).toBeGreaterThan(1)
     expect(sections.every(section => section[0].id === 'name')).toBe(true)
-    expect(sections.every(section => section.reduce((sum, c) => sum + (c.attendance ? 0.5 : 1), 0) <= 6)).toBe(true)
+    expect(sections.every(section => section.reduce((sum, c) => sum + printColumnCost(c), 0) <= 6)).toBe(true)
     expect(sections.flat().filter(c => c.id !== 'name')).toEqual(selected.filter(c => c.id !== 'name'))
     const unnamed = selected.filter(c => c.id !== 'name')
     expect(printColumnSections(unnamed).flat()).toEqual(unnamed)
     expect(printColumnSections([])).toEqual([])
+  })
+  // DRUCKHT 30.10.: five free-text columns on one sheet left 3 cm per column for a 300-character note.
+  it('gibt Freitextspalten mehr Platz, damit lange Gesundheitsangaben nicht zu schmal werden', () => {
+    const ids = ['name', 'emergency', 'pickup', 'allergies', 'medical', 'photo']
+    const sections = printColumnSections(selectedPrintColumns(fields, ids, camp))
+    expect(sections.length).toBeGreaterThan(1)
+    expect(sections.every(section => section.filter(c => c.size === 'l').length <= 4)).toBe(true)
   })
 })

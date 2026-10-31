@@ -540,7 +540,7 @@
 }
 .cp-print-sheet .cp-sheet-head p { margin-top: 0; }
 .cp-sheet-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.cp-sheet-logo { width: 84px; height: 84px; flex-shrink: 0; object-fit: contain; }
+.cp-sheet-logo { width: auto; max-width: 150px; height: 84px; flex-shrink: 0; object-fit: contain; object-position: left center; }
 .cp-sheet-titles { min-width: 0; }
 .cp-print-sheet .cp-print-org { font-size: 15px; font-weight: 700; color: var(--cp-print-ink); }
 .cp-print-sheet .cp-sheet-head h2 { margin-top: 2px; font-size: inherit; line-height: 1.1; }
@@ -565,7 +565,7 @@
   border-bottom: 2px solid var(--cp-print-ink);
   vertical-align: bottom;
 }
-.cp-participant-print .cp-print-sheet td { height: 40px; font-size: 14px; }
+.cp-participant-print .cp-print-sheet td { height: 40px; font-size: 14px; overflow-wrap: break-word; hyphens: auto; }
 .cp-participant-print .cp-print-sheet tbody tr:nth-child(even) td { background: var(--cp-sheet-zebra); }
 .cp-participant-print .cp-print-sheet .cp-print-row-number { color: var(--cp-sheet-muted); font-variant-numeric: tabular-nums; }
 .cp-participant-print .cp-print-sheet .cp-daylist-check-col { border-left: 1px solid var(--cp-sheet-rule); font-size: 11px; }
@@ -613,8 +613,8 @@
     @bottom-right { content: "Seite " counter(page) " von " counter(pages); font: 8pt Arial, sans-serif; color: #565d59; }
   }
   .cp-print-sheet { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .cp-print-sheet .cp-sheet-head { display: grid !important; gap: 2mm 7mm; margin-bottom: 4mm; padding-bottom: 3mm; border-bottom-width: 0.9mm; }
-  .cp-sheet-logo { width: 24mm; height: 24mm; }
+  .cp-print-sheet .cp-sheet-head { display: grid !important; gap: 2mm 7mm; margin-bottom: 4mm; padding-bottom: 3mm; border-bottom-width: 0.9mm; break-after: avoid; }
+  .cp-sheet-logo { width: auto; max-width: 44mm; height: 24mm; }
   .cp-print-sheet .cp-print-org { font-size: 11pt; }
   .cp-sheet-alert { padding-left: 1.5mm; border-left-width: 0.8mm; }
   .cp-sheet-kind { font-size: 20pt; }

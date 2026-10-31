@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { berlinDay, formatDateRange, formatDateTime, formatWeekdayDate } from '../../../lib/i18n/de'
 import type { CampAdmin, RegistrationAdmin, RegistrationQuestion } from '../../../lib/saasAdminApi'
 import { dayListCountText } from '../dayListExport'
-import { participantPrintFields, printColumnSections, selectedPrintColumns, DEFAULT_PRINT_FIELDS, type PrintPurpose } from '../participantPrint'
+import { participantPrintFields, printColumnSections, printSafeBrandColor, selectedPrintColumns, DEFAULT_PRINT_FIELDS, type PrintPurpose } from '../participantPrint'
 import Button from '../ui/Button'
 
 export interface ParticipantPrintProps {
@@ -104,7 +104,7 @@ export default function ParticipantPrintDialog({ camp, rows, filterText, orgName
           {!canPrint && <p id={hintId} role="alert">{!columns.length ? 'Bitte wählen Sie mindestens eine Spalte für die Druckausgabe.' : !rows.length ? 'Keine Treffer für diese Druckausgabe.' : 'Bitte wählen Sie ein Datum innerhalb des Camps.'}</p>}
           {canPrint && <>
             <p className="cp-noprint cp-print-status" role="status">{fields.filter(field => selectedFields.includes(field.id)).length} Felder ausgewählt · {sections.length > 1 ? `${sections.length} Tabellenabschnitte mit gleicher Zeilennummer` : 'Vorschau der Druckausgabe'}</p>
-            {sections.map((section, index) => <section key={index} className="cp-print-sheet" style={brandColor ? { '--cp-sheet-brand': brandColor } as React.CSSProperties : undefined}>
+            {sections.map((section, index) => <section key={index} className="cp-print-sheet" style={brandColor ? { '--cp-sheet-brand': printSafeBrandColor(brandColor) } as React.CSSProperties : undefined}>
               <header className="cp-daylist-heading cp-sheet-head">
                 <div className="cp-sheet-id">
                   {/* Plain img: print output must not depend on the image optimizer. */}

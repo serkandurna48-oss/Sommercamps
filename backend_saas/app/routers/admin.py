@@ -77,6 +77,7 @@ from ..repositories import registrations as registrations_repo
 from ..repositories.camps import CampSlugConflictError
 from ..repositories.organizations import OrganizationSlugConflictError
 from ..repositories.registrations import RegistrationNotFoundError
+from .payments import expire_open_checkout
 from ..tenancy import TenantContext
 
 logger = logging.getLogger(__name__)
@@ -536,6 +537,7 @@ def cancel_registration(
         organization["id"],
         "cancelled",
     )
+    background_tasks.add_task(expire_open_checkout, organization["id"], registration_token)
     if result["promoted"] is not None:
         background_tasks.add_task(
             notifications_sending.send_status_change_notification,
@@ -595,6 +597,7 @@ def update_registration_payment_status(
     camp_slug: str,
     registration_token: UUID,
     data: PaymentStatusUpdate,
+    background_tasks: BackgroundTasks,
     auth: AuthContext = Depends(require_org_access),
 ) -> RegistrationAdminOut:
     """Manual payment bookkeeping — see
@@ -624,6 +627,9 @@ def update_registration_payment_status(
         target_id=str(registration_token),
         metadata={"payment_status": data.payment_status},
     )
+    if data.payment_status != "open":
+        # Paid by transfer, free or refunded: close an open online checkout.
+        background_tasks.add_task(expire_open_checkout, organization["id"], registration_token)
     return RegistrationAdminOut.model_validate({**row, "camp_title": camp["title"]})
 
 

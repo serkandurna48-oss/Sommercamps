@@ -110,6 +110,11 @@ class Settings(BaseSettings):
             raise ValueError("Confirmation redirect must use the frontend origin")
         return target
 
+    # Opt-in direct-charge Stripe Connect. Never expose secrets to the browser.
+    stripe_checkout_enabled: bool = Field(default=False, alias="STRIPE_CHECKOUT_ENABLED")
+    stripe_secret_key: Optional[str] = Field(default=None, alias="STRIPE_SECRET_KEY")
+    stripe_webhook_secret: Optional[str] = Field(default=None, alias="STRIPE_CONNECT_WEBHOOK_SECRET")
+
     # Platform accounts (see app/supabase_auth.py). Replaces the previous
     # single-password ADMIN_PASSWORD/JWT_SECRET scheme (feat/platform-
     # foundation) — every admin request now carries a real Supabase Auth

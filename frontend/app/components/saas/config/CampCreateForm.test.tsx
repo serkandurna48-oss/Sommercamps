@@ -118,3 +118,14 @@ it('zeigt die Kopie mit leeren Pflichtterminen und übergibt bearbeitete Angaben
     expect(data.get('currency')).toBe('CHF')
   }
 })
+
+it('öffnet das neue Camp mit vollem Seitenaufruf und bleibt bis dahin im Wartezustand', async () => {
+  const assign = vi.fn()
+  vi.stubGlobal('location', { ...window.location, assign })
+  vi.mocked(createCampAction).mockResolvedValueOnce({ error: null, redirectTo: '/pilot/review/camps/sommer/konfiguration?created=1' })
+  for (const [name, value] of [['title', 'Sommer'], ['start_date', '2027-07-05'], ['end_date', '2027-07-09'], ['age_min', '6'], ['age_max', '12'], ['capacity', '20'], ['price_euros', '149']]) await enter(name, value)
+  await act(async () => { container.querySelector('form')!.requestSubmit() })
+  expect(assign).toHaveBeenCalledWith('/pilot/review/camps/sommer/konfiguration?created=1')
+  expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true)
+  vi.unstubAllGlobals()
+})

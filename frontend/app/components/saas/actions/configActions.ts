@@ -1,7 +1,6 @@
 'use server'
 
 import { readRegistrationQuestions } from '../config/registrationQuestions'
-import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { CAMP_STATUSES } from '../../../lib/i18n/de'
@@ -185,6 +184,8 @@ export async function updateCampConfigAction(
 
 export interface CampCreateActionState {
   error: string | null
+  /** Set on success: the new camp's configuration page, opened with a full page load. */
+  redirectTo?: string
 }
 
 /** Anders als updateCampConfigAction: braucht `slug` (Pflichtfeld bei
@@ -274,5 +275,8 @@ export async function createCampAction(
   }
   revalidatePath(`/pilot/${orgSlug}`, 'layout')
   const result = duplicate ? `duplicate=${copyIncomplete ? 'incomplete' : '1'}` : 'created=1'
-  redirect(`/pilot/${orgSlug}/camps/${createdCamp.slug}/konfiguration?${result}`)
+  // The form opens this with a full page load instead of a server-action redirect:
+  // after the soft redirect the next action on the new page ("Camp veröffentlichen")
+  // could stay pending forever although it was saved (about 1 in 8 under CPU load).
+  return { error: null, redirectTo: `/pilot/${orgSlug}/camps/${createdCamp.slug}/konfiguration?${result}` }
 }

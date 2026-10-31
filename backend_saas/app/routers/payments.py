@@ -21,6 +21,7 @@ from uuid import UUID
 
 import stripe
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, Field
 
 from .. import db
@@ -28,6 +29,8 @@ from ..admin_resolve import require_organization
 from ..auth_deps import AuthContext, require_platform_owner
 from ..config import get_settings
 from ..deps import get_tenant_context
+from ..ratelimit import SlidingWindowLimiter, trusted_client_ip
+from ..repositories import platform_roles
 from ..tenancy import TenantContext
 
 logger = logging.getLogger(__name__)
@@ -35,6 +38,14 @@ router = APIRouter(tags=["Payments"])
 ACCOUNT_ID = re.compile(r"^acct_[A-Za-z0-9]{8,}$")
 CHECKOUT_ID = re.compile(r"^cs_(test_|live_)[A-Za-z0-9]+$")
 PAYMENT_INTENT_ID = re.compile(r"^pi_[A-Za-z0-9]+$")
+# Marks Stripe objects created by CampsPilot. Clubs may use the same connected
+# account for other payments (fees, shop); those events are ignored, never
+# answered with an error that makes Stripe retry and finally disable the endpoint.
+CAMPSPILOT_MARKER = {"campspilot": "1"}
+# Stripe calls must not hold DB connections for the SDK default of 80 s.
+STRIPE_TIMEOUT_SECONDS = 10
+# Per IP and per registration; each call can reach Stripe.
+checkout_limiter = SlidingWindowLimiter(20, 3600.0)
 
 
 class PaymentOptions(BaseModel):
@@ -80,7 +91,31 @@ def _stripe_client():
     ):
         raise HTTPException(503, "Stripe-Schlüssel passt nicht zur Umgebung")
     stripe.api_key = key
+    stripe.max_network_retries = 1
+    if not isinstance(stripe.default_http_client, stripe.RequestsClient) or getattr(
+        stripe.default_http_client, "_timeout", None
+    ) != STRIPE_TIMEOUT_SECONDS:
+        stripe.default_http_client = stripe.RequestsClient(timeout=STRIPE_TIMEOUT_SECONDS)
     return stripe
+
+
+def _is_campspilot(obj: dict) -> bool:
+    metadata = obj.get("metadata") or {}
+    return isinstance(metadata, dict) and metadata.get("campspilot") == "1"
+
+
+def _flag_for_review(organization_id, registration_token, reason: str) -> None:
+    """Money arrived that CampsPilot did not book as paid. Make it findable for
+    the platform owner (audit log) instead of only a log line. No PII."""
+    logger.error("Stripe payment needs manual review (reason=%s)", reason)
+    platform_roles.write_audit_log(
+        actor_user_id=None, actor_email=None,
+        action="stripe.payment_needs_review",
+        organization_id=str(organization_id) if organization_id else None,
+        target_type="registration",
+        target_id=str(registration_token) if registration_token else None,
+        metadata={"reason": reason},
+    )
 
 
 def _organization_payment_details(org_id):
@@ -159,7 +194,12 @@ def create_checkout(
     camp_slug: str,
     registration_token: UUID,
     tenant: TenantContext = Depends(get_tenant_context),
+    request: Request = None,
 ) -> CheckoutURL:
+    client_ip = trusted_client_ip(request) if request is not None else None
+    keys = [f"token:{registration_token}"] + ([f"ip:{client_ip}"] if client_ip else [])
+    if not all(checkout_limiter.allow(key) for key in keys):
+        raise HTTPException(429, "Zu viele Zahlungsversuche. Bitte versuchen Sie es später erneut.")
     client = _stripe_client()
     settings = get_settings()
     # Lock the registration through Stripe's create/retrieve call to avoid two
@@ -230,7 +270,8 @@ def create_checkout(
                 cancel_url=cancel,
                 client_reference_id=str(registration_token),
                 # No application fee; SaaS subscription is billed separately.
-                metadata={"organization_id": str(tenant.organization_id), "camp_slug": camp_slug},
+                metadata={**CAMPSPILOT_MARKER, "organization_id": str(tenant.organization_id), "camp_slug": camp_slug},
+                payment_intent_data={"metadata": {**CAMPSPILOT_MARKER, "organization_id": str(tenant.organization_id)}},
                 stripe_account=account,
                 idempotency_key=f"campspilot-{registration_token}-{secrets.token_hex(12)}",
             ))
@@ -258,11 +299,17 @@ async def stripe_connect_webhook(
     settings = get_settings()
     if not settings.stripe_checkout_enabled or not settings.stripe_webhook_secret:
         raise HTTPException(503, "Stripe-Webhooks nicht konfiguriert")
+    # Raw body for the signature check; everything after runs in a worker
+    # thread so blocking DB/Stripe calls never stall the single event loop.
+    body = await request.body()
+    return await run_in_threadpool(_handle_webhook, body, stripe_signature or "")
+
+
+def _handle_webhook(body: bytes, signature: str) -> dict:
+    settings = get_settings()
     client = _stripe_client()
     try:
-        event = client.Webhook.construct_event(
-            await request.body(), stripe_signature or "", settings.stripe_webhook_secret
-        )
+        event = client.Webhook.construct_event(body, signature, settings.stripe_webhook_secret)
     except (ValueError, stripe.error.SignatureVerificationError):
         raise HTTPException(400, "Ungültige Stripe-Signatur") from None
 
@@ -281,71 +328,137 @@ async def stripe_connect_webhook(
     event_type = event["type"]
     obj = _stripe_dict(_stripe_dict(event["data"])["object"])
     if event_type in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
+        if not _is_campspilot(obj):
+            # The club's own payments on the same account: not ours, no retry.
+            return {"received": True, "ignored": True}
         if obj.get("payment_status") != "paid":
             return {"received": True, "settled": False}
-        session_id = obj.get("id")
-        paid_amount = obj.get("amount_total")
-        paid_currency = (obj.get("currency") or "").lower()
-        payment_intent = obj.get("payment_intent")
-        if not isinstance(session_id, str) or not isinstance(paid_amount, int):
-            raise HTTPException(400, "Stripe-Zahlungsdaten unvollständig")
-        if not isinstance(payment_intent, str) or not PAYMENT_INTENT_ID.fullmatch(payment_intent):
-            raise HTTPException(400, "Ungültiger Stripe-PaymentIntent")
-        with db.get_cursor() as cur:
-            cur.execute(
-                """select r.id, r.payment_status, r.status, r.stripe_checkout_amount_cents,
-                          r.stripe_checkout_currency, r.stripe_payment_intent_id
-                   from camp_registrations r
-                   join organizations o on o.id = r.organization_id
-                   where r.stripe_checkout_session_id = %s
-                         and r.stripe_checkout_account_id = %s
-                         and o.stripe_account_id = %s
-                   for update of r""",
-                (session_id, account, account),
-            )
-            row = cur.fetchone()
-            if row is None:
-                # Retry in case the webhook beat the checkout DB commit.
-                raise HTTPException(503, "Stripe-Zahlung noch nicht zuordenbar")
-            if row["stripe_checkout_amount_cents"] != paid_amount or row["stripe_checkout_currency"] != paid_currency:
-                logger.error("Stripe amount/currency mismatch; payment not marked paid")
-                raise HTTPException(409, "Zahlungsbetrag stimmt nicht überein")
-            if row["payment_status"] == "paid":
-                if row.get("stripe_payment_intent_id") == payment_intent:
-                    return {"received": True, "settled": True}
-                # A payment was manually recorded, or another Stripe intent
-                # was settled. Do not falsely claim the new charge reconciled.
-                logger.error("Duplicate Stripe charge on already-paid registration; refund review required")
-                return {"received": True, "settled": False}
-            if row["status"] not in ("registered", "confirmed") or row["payment_status"] != "open":
-                # Never restore cancelled/waived/refunded registrations.
-                logger.warning("Stripe payment for non-payable registration; manual refund review needed")
-                return {"received": True, "settled": False}
-            cur.execute(
-                """update camp_registrations set payment_status = 'paid',
-                       stripe_payment_intent_id = %s, paid_at = now()
-                   where id = %s and payment_status = 'open'""",
-                (payment_intent, row["id"]),
-            )
-        return {"received": True, "settled": True}
+        return _settle_checkout(client, obj, account)
 
     if event_type == "charge.refunded":
-        intent = obj.get("payment_intent")
-        # Do not mark partially refunded payments as fully refunded.
-        if (
-            isinstance(intent, str) and PAYMENT_INTENT_ID.fullmatch(intent)
-            and obj.get("refunded") is True
-            and obj.get("amount_refunded") == obj.get("amount")
-        ):
-            with db.get_cursor() as cur:
-                cur.execute(
-                    """update camp_registrations r set payment_status = 'refunded'
-                       from organizations o
-                       where o.id = r.organization_id
-                         and o.stripe_account_id = %s
-                         and r.stripe_checkout_account_id = %s
-                         and r.stripe_payment_intent_id = %s
-                         and r.payment_status = 'paid'""",
-                    (account, account, intent),
-                )
+        _record_refund(obj, account)
     return {"received": True}
+
+
+def _fully_refunded(client, payment_intent: str, account: str) -> bool:
+    """Refunds can arrive before the completed event was processed (retries,
+    outages). Ask Stripe for the current state instead of trusting the order."""
+    try:
+        intent = _stripe_dict(client.PaymentIntent.retrieve(
+            payment_intent, expand=["latest_charge"], stripe_account=account,
+        ))
+    except stripe.error.StripeError:
+        raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
+    charge = intent.get("latest_charge")
+    if not isinstance(charge, dict):
+        return False
+    return bool(charge.get("refunded")) and charge.get("amount_refunded") == charge.get("amount")
+
+
+def _settle_checkout(client, obj: dict, account: str) -> dict:
+    session_id = obj.get("id")
+    paid_amount = obj.get("amount_total")
+    paid_currency = (obj.get("currency") or "").lower()
+    payment_intent = obj.get("payment_intent")
+    if not isinstance(session_id, str) or not isinstance(paid_amount, int):
+        raise HTTPException(400, "Stripe-Zahlungsdaten unvollständig")
+    if not isinstance(payment_intent, str) or not PAYMENT_INTENT_ID.fullmatch(payment_intent):
+        raise HTTPException(400, "Ungültiger Stripe-PaymentIntent")
+    # Outside the row lock: a Stripe call must never hold a DB lock.
+    refunded = _fully_refunded(client, payment_intent, account)
+    review = None
+    with db.get_cursor() as cur:
+        cur.execute(
+            """select r.id, r.organization_id, r.registration_token, r.payment_status, r.status,
+                      r.stripe_checkout_amount_cents, r.stripe_checkout_currency,
+                      r.stripe_payment_intent_id
+               from camp_registrations r
+               join organizations o on o.id = r.organization_id
+               where r.stripe_checkout_session_id = %s
+                     and r.stripe_checkout_account_id = %s
+                     and o.stripe_account_id = %s
+               for update of r""",
+            (session_id, account, account),
+        )
+        row = cur.fetchone()
+        if row is None:
+            # Our marker is set, so the row exists or is about to commit.
+            raise HTTPException(503, "Stripe-Zahlung noch nicht zuordenbar")
+        if row["stripe_checkout_amount_cents"] != paid_amount or row["stripe_checkout_currency"] != paid_currency:
+            # 200: a retry cannot fix a wrong amount; flag it for a human.
+            review = "amount_mismatch"
+        elif row["payment_status"] == "paid":
+            if row.get("stripe_payment_intent_id") == payment_intent:
+                return {"received": True, "settled": True}
+            # Paid by transfer or another charge: a second payment arrived.
+            review = "duplicate_payment"
+        elif row["status"] not in ("registered", "confirmed") or row["payment_status"] != "open":
+            # Never restore cancelled/waived/refunded registrations.
+            review = "payment_for_closed_registration"
+        else:
+            cur.execute(
+                """update camp_registrations set payment_status = %s,
+                       stripe_payment_intent_id = %s, paid_at = now()
+                   where id = %s and payment_status = 'open'""",
+                ("refunded" if refunded else "paid", payment_intent, row["id"]),
+            )
+    if review:
+        _flag_for_review(row["organization_id"], row["registration_token"], review)
+        return {"received": True, "settled": False}
+    return {"received": True, "settled": True}
+
+
+def _record_refund(obj: dict, account: str) -> None:
+    intent = obj.get("payment_intent")
+    # Do not mark partially refunded payments as fully refunded.
+    if not (
+        isinstance(intent, str) and PAYMENT_INTENT_ID.fullmatch(intent)
+        and obj.get("refunded") is True
+        and obj.get("amount_refunded") == obj.get("amount")
+    ):
+        return
+    # No matching row: either not ours, or the payment is not settled yet;
+    # _settle_checkout then reads the refund from Stripe itself.
+    with db.get_cursor() as cur:
+        cur.execute(
+            """update camp_registrations r set payment_status = 'refunded'
+               from organizations o
+               where o.id = r.organization_id
+                 and o.stripe_account_id = %s
+                 and r.stripe_checkout_account_id = %s
+                 and r.stripe_payment_intent_id = %s
+                 and r.payment_status = 'paid'""",
+            (account, account, intent),
+        )
+
+
+def expire_open_checkout(organization_id, registration_token) -> None:
+    """Best effort after cancel, waive or a manually booked payment: close a
+    still-open Checkout so parents cannot pay a booking that is settled.
+    Runs as a background task; never raises."""
+    settings = get_settings()
+    if not (settings.stripe_checkout_enabled and settings.stripe_secret_key and settings.stripe_webhook_secret):
+        return
+    try:
+        with db.get_cursor() as cur:
+            cur.execute(
+                """select stripe_checkout_session_id, stripe_checkout_account_id, payment_status, status
+                   from camp_registrations
+                   where organization_id = %s and registration_token = %s""",
+                (organization_id, registration_token),
+            )
+            row = cur.fetchone()
+        if not row or not row["stripe_checkout_session_id"] or not row["stripe_checkout_account_id"]:
+            return
+        if row["payment_status"] == "open" and row["status"] in ("registered", "confirmed"):
+            return  # still payable: keep the session
+        client = _stripe_client()
+        session = _stripe_dict(client.checkout.Session.retrieve(
+            row["stripe_checkout_session_id"], stripe_account=row["stripe_checkout_account_id"],
+        ))
+        if session.get("status") == "open":
+            client.checkout.Session.expire(
+                row["stripe_checkout_session_id"], stripe_account=row["stripe_checkout_account_id"],
+            )
+    except Exception:  # noqa: BLE001 - best effort, the webhook flags late payments
+        logger.warning("Could not expire open Stripe checkout")

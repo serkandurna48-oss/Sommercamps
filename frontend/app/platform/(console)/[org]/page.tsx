@@ -7,6 +7,7 @@ import { fetchCampsAdmin, fetchOrganizationAdmin, fetchOrganizationMembersAdmin 
 import PublishToggle from '../../../components/saas/config/PublishToggle'
 import MembersSection from './MembersSection'
 import BillingNotesForm from './BillingNotesForm'
+import StripeConnectForm from './StripeConnectForm'
 import ReviewBox from './ReviewBox'
 import { computeSetupSteps, setupProgressCount } from '../../setupProgress'
 
@@ -180,6 +181,18 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
             Vertragsstatus: {PLAN_STATUS_LABEL[org.plan_status] ?? org.plan_status}
           </p>
           <BillingNotesForm orgSlug={org.slug} billingNotes={org.billing_notes ?? null} />
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="cp-heading mb-3" style={{ color: 'var(--cp-ink)' }}>
+          Online-Zahlung (Stripe)
+        </h2>
+        <div className="rounded-[var(--cp-r-card)] border p-4" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
+          <p className="cp-body" style={{ color: 'var(--cp-ink)' }}>
+            Eltern sehen nach der Anmeldung zusätzlich „Online bezahlen“, sobald das Konto verbunden ist und Stripe Zahlungen erlaubt. Die Überweisung bleibt immer möglich.
+          </p>
+          <StripeConnectForm orgSlug={org.slug} />
         </div>
       </section>
     </main>

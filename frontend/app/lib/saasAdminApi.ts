@@ -624,3 +624,20 @@ export async function submitReviewAdmin(
   if (!res.ok) throw new AdminActionError(de.adminApi.reviewSubmit)
   return res.json() as Promise<OrganizationAdmin>
 }
+
+export interface StripeConnectStatus {
+  configured: boolean
+  charges_enabled: boolean
+  online_payment_enabled: boolean
+}
+
+/** Owner only: links a Stripe account that is already connected to the
+ * CampsPilot platform. 422 = unknown or not connected account, 503 = Stripe
+ * is not configured for this environment. */
+export async function connectStripeAccount(orgSlug: string, token: string, stripeAccountId: string): Promise<StripeConnectStatus> {
+  const res = await adminMutate(`/admin/organizations/${orgSlug}/stripe/connect-account`, token, 'POST', { stripe_account_id: stripeAccountId })
+  if (res.status === 422) throw new AdminActionError('Stripe-Konto nicht gefunden oder nicht mit CampsPilot verbunden.')
+  if (res.status === 503) throw new AdminActionError('Online-Zahlung ist in dieser Umgebung noch nicht eingerichtet.')
+  if (!res.ok) throw new AdminActionError('Stripe-Konto konnte nicht verbunden werden.')
+  return res.json() as Promise<StripeConnectStatus>
+}

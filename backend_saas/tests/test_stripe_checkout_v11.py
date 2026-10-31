@@ -455,3 +455,52 @@ def test_checkout_marks_session_and_payment_intent_as_campspilot(monkeypatch):
     payments.create_checkout("winter", uuid4(), SimpleNamespace(organization_id=uuid4(), slug="club"))
     assert _CheckoutSession.args["metadata"]["campspilot"] == "1"
     assert _CheckoutSession.args["payment_intent_data"]["metadata"]["campspilot"] == "1"
+
+
+def test_unmatched_marked_session_is_flagged_after_retry_window(webhook_env):
+    webhook_env.monkeypatch.setattr(payments, "_fully_refunded", lambda *_: False)
+    webhook_env.cursor.row = None
+    event = _completed({"campspilot": "1"})
+    event["created"] = int(time.time()) - payments.UNMATCHED_RETRY_SECONDS - 60
+    request, header = _signed(event)
+    assert asyncio.run(payments.stripe_connect_webhook(request, header)) == {"received": True, "settled": False}
+    assert webhook_env.flagged == ["unmatched_session"]
+
+
+def test_replay_after_refund_is_acknowledged_without_alarm(webhook_env):
+    webhook_env.monkeypatch.setattr(payments, "_fully_refunded", lambda *_: True)
+    webhook_env.cursor.row.update(payment_status="refunded", stripe_payment_intent_id="pi_12345678901234567890")
+    request, header = _signed(_completed({"campspilot": "1"}))
+    assert asyncio.run(payments.stripe_connect_webhook(request, header)) == {"received": True, "settled": True}
+    assert webhook_env.flagged == []
+
+
+def test_checkout_never_holds_a_lock_and_refuses_a_concurrent_change(monkeypatch):
+    payments.checkout_limiter.reset()
+    booking = {
+        "id": uuid4(), "status": "registered", "payment_status": "open",
+        "stripe_checkout_session_id": None, "stripe_account_id": ACCOUNT,
+        "stripe_charges_enabled": True, "online_payment_enabled": True,
+        "title": "Feriencamp", "price_cents": 14900, "currency": "EUR", "camp_status": "published",
+    }
+
+    class CasCursor(_Cursor):
+        def fetchone(self):
+            return None if "returning id" in self.executed[-1][0] else self.row
+    cursor = CasCursor(booking)
+
+    @contextmanager
+    def fake_cursor():
+        yield cursor
+    client = MagicMock()
+    client.checkout.Session = _CheckoutSession
+    monkeypatch.setattr(payments.db, "get_cursor", fake_cursor)
+    monkeypatch.setattr(payments, "_stripe_client", lambda: client)
+    monkeypatch.setattr(payments, "get_settings", lambda: SimpleNamespace(frontend_base_url="https://example.com"))
+    token = uuid4()
+    with pytest.raises(HTTPException) as error:
+        payments.create_checkout("winter", token, SimpleNamespace(organization_id=uuid4(), slug="club"))
+    assert error.value.status_code == 409
+    assert all("for update" not in query for query, _ in cursor.executed)
+    # Deterministic key: a double click reaches the same Stripe session.
+    assert _CheckoutSession.args["idempotency_key"] == f"campspilot-{token}-first-14900"

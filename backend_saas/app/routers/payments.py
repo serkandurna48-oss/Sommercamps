@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 import re
-import secrets
+import time
 from uuid import UUID
 
 import stripe
@@ -202,8 +202,9 @@ def create_checkout(
         raise HTTPException(429, "Zu viele Zahlungsversuche. Bitte versuchen Sie es später erneut.")
     client = _stripe_client()
     settings = get_settings()
-    # Lock the registration through Stripe's create/retrieve call to avoid two
-    # concurrent checkout URLs with competing payments for the same booking.
+    # Read without a lock; Stripe calls must never hold a row lock or a pooled
+    # connection. Double clicks are made safe by a deterministic idempotency
+    # key (same Stripe session) and a compare-and-set write below.
     with db.get_cursor() as cur:
         cur.execute(
             """select r.id, r.status, r.payment_status, r.stripe_checkout_session_id,
@@ -213,81 +214,90 @@ def create_checkout(
                join organizations o on o.id = r.organization_id
                join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
                where r.registration_token = %s and r.organization_id = %s
-                     and c.slug = %s
-               for update of r""",
+                     and c.slug = %s""",
             (registration_token, tenant.organization_id, camp_slug),
         )
         booking = cur.fetchone()
-        if not booking:
-            raise HTTPException(404, "Anmeldung nicht gefunden")
-        if booking["status"] not in ("registered", "confirmed") or booking["payment_status"] != "open":
-            raise HTTPException(409, "Für diese Anmeldung ist keine Online-Zahlung möglich")
-        if booking["camp_status"] != "published":
-            raise HTTPException(409, "Dieses Camp ist nicht mehr veröffentlicht")
-        account = booking["stripe_account_id"]
-        if not (
-            account and ACCOUNT_ID.fullmatch(account)
-            and booking["stripe_charges_enabled"] and booking["online_payment_enabled"]
-        ):
-            raise HTTPException(503, "Der Verein hat Online-Zahlung noch nicht aktiviert")
-        amount = booking["price_cents"]
-        currency = (booking["currency"] or "").lower()
-        if not isinstance(amount, int) or amount < 50 or currency != "eur":
-            raise HTTPException(409, "Dieser Camp-Preis ist nicht für Stripe Checkout verfügbar")
+    if not booking:
+        raise HTTPException(404, "Anmeldung nicht gefunden")
+    if booking["status"] not in ("registered", "confirmed") or booking["payment_status"] != "open":
+        raise HTTPException(409, "Für diese Anmeldung ist keine Online-Zahlung möglich")
+    if booking["camp_status"] != "published":
+        raise HTTPException(409, "Dieses Camp ist nicht mehr veröffentlicht")
+    account = booking["stripe_account_id"]
+    if not (
+        account and ACCOUNT_ID.fullmatch(account)
+        and booking["stripe_charges_enabled"] and booking["online_payment_enabled"]
+    ):
+        raise HTTPException(503, "Der Verein hat Online-Zahlung noch nicht aktiviert")
+    amount = booking["price_cents"]
+    currency = (booking["currency"] or "").lower()
+    if not isinstance(amount, int) or amount < 50 or currency != "eur":
+        raise HTTPException(409, "Dieser Camp-Preis ist nicht für Stripe Checkout verfügbar")
 
-        existing = booking.get("stripe_checkout_session_id")
-        if existing:
-            try:
-                session = _stripe_dict(client.checkout.Session.retrieve(existing, stripe_account=account))
-                if session.get("status") == "open" and session.get("url"):
-                    return CheckoutURL(url=session["url"])
-                if session.get("status") == "complete" or session.get("payment_status") == "paid":
-                    # A completed Checkout can still have a pending asynchronous
-                    # payment. A second Session could charge twice.
-                    raise HTTPException(409, "Zahlung wird bereits verarbeitet")
-                if session.get("status") != "expired":
-                    raise HTTPException(503, "Zahlungsstatus derzeit nicht eindeutig")
-            except stripe.error.StripeError:
-                logger.warning("Could not retrieve previous checkout session (organization_slug=%s)", tenant.slug)
-                raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
-
-        # Only public camp title is sent; never send child/parent info or medical data.
-        success = f"{settings.frontend_base_url}/pilot/{tenant.slug}/zahlung?result=success"
-        cancel = f"{settings.frontend_base_url}/pilot/{tenant.slug}/zahlung?result=cancel"
+    existing = booking.get("stripe_checkout_session_id")
+    if existing:
         try:
-            session = _stripe_dict(client.checkout.Session.create(
-                mode="payment",
-                payment_method_types=["card"],
-                line_items=[{
-                    "price_data": {
-                        "currency": currency,
-                        "unit_amount": amount,
-                        "product_data": {"name": booking["title"][:120]},
-                    },
-                    "quantity": 1,
-                }],
-                success_url=success,
-                cancel_url=cancel,
-                client_reference_id=str(registration_token),
-                # No application fee; SaaS subscription is billed separately.
-                metadata={**CAMPSPILOT_MARKER, "organization_id": str(tenant.organization_id), "camp_slug": camp_slug},
-                payment_intent_data={"metadata": {**CAMPSPILOT_MARKER, "organization_id": str(tenant.organization_id)}},
-                stripe_account=account,
-                idempotency_key=f"campspilot-{registration_token}-{secrets.token_hex(12)}",
-            ))
+            session = _stripe_dict(client.checkout.Session.retrieve(existing, stripe_account=account))
+            if session.get("status") == "open" and session.get("url"):
+                return CheckoutURL(url=session["url"])
+            if session.get("status") == "complete" or session.get("payment_status") == "paid":
+                # A completed Checkout can still have a pending asynchronous
+                # payment. A second Session could charge twice.
+                raise HTTPException(409, "Zahlung wird bereits verarbeitet")
+            if session.get("status") != "expired":
+                raise HTTPException(503, "Zahlungsstatus derzeit nicht eindeutig")
         except stripe.error.StripeError:
-            logger.warning("Checkout creation failed (organization_slug=%s)", tenant.slug)
+            logger.warning("Could not retrieve previous checkout session (organization_slug=%s)", tenant.slug)
             raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
 
-        if not session.get("id") or not session.get("url"):
-            raise HTTPException(503, "Zahlungsanbieter hat keine Zahlungsseite geliefert")
+    # Only public camp title is sent; never send child/parent info or medical data.
+    success = f"{settings.frontend_base_url}/pilot/{tenant.slug}/zahlung?result=success"
+    cancel = f"{settings.frontend_base_url}/pilot/{tenant.slug}/zahlung?result=cancel"
+    try:
+        session = _stripe_dict(client.checkout.Session.create(
+            mode="payment",
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": currency,
+                    "unit_amount": amount,
+                    "product_data": {"name": booking["title"][:120]},
+                },
+                "quantity": 1,
+            }],
+            success_url=success,
+            cancel_url=cancel,
+            client_reference_id=str(registration_token),
+            # No application fee; SaaS subscription is billed separately.
+            metadata={**CAMPSPILOT_MARKER, "organization_id": str(tenant.organization_id), "camp_slug": camp_slug},
+            payment_intent_data={"metadata": {**CAMPSPILOT_MARKER, "organization_id": str(tenant.organization_id)}},
+            stripe_account=account,
+            # Same booking, same previous session, same price -> same Stripe session.
+        idempotency_key=f"campspilot-{registration_token}-{existing or 'first'}-{amount}",
+        ))
+    except stripe.error.StripeError:
+        logger.warning("Checkout creation failed (organization_slug=%s)", tenant.slug)
+        raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
+
+    if not session.get("id") or not session.get("url"):
+        raise HTTPException(503, "Zahlungsanbieter hat keine Zahlungsseite geliefert")
+    with db.get_cursor() as cur:
+        # Compare-and-set: only replace the session this request started from.
         cur.execute(
             """update camp_registrations
                set stripe_checkout_session_id = %s, stripe_checkout_amount_cents = %s,
                    stripe_checkout_currency = %s, stripe_checkout_account_id = %s
-               where id = %s and organization_id = %s""",
-            (session["id"], amount, currency, account, booking["id"], tenant.organization_id),
+               where id = %s and organization_id = %s
+                     and payment_status = 'open' and status in ('registered', 'confirmed')
+                     and (stripe_checkout_session_id is not distinct from %s
+                          or stripe_checkout_session_id = %s)
+               returning id""",
+            (session["id"], amount, currency, account, booking["id"], tenant.organization_id,
+             existing, session["id"]),
         )
+        if cur.fetchone() is None:
+            raise HTTPException(409, "Die Anmeldung wurde inzwischen geändert. Bitte laden Sie die Seite neu.")
     return CheckoutURL(url=session["url"])
 
 
@@ -333,7 +343,7 @@ def _handle_webhook(body: bytes, signature: str) -> dict:
             return {"received": True, "ignored": True}
         if obj.get("payment_status") != "paid":
             return {"received": True, "settled": False}
-        return _settle_checkout(client, obj, account)
+        return _settle_checkout(client, obj, account, event.get("created"))
 
     if event_type == "charge.refunded":
         _record_refund(obj, account)
@@ -355,7 +365,12 @@ def _fully_refunded(client, payment_intent: str, account: str) -> bool:
     return bool(charge.get("refunded")) and charge.get("amount_refunded") == charge.get("amount")
 
 
-def _settle_checkout(client, obj: dict, account: str) -> dict:
+# A marked session that still has no matching row after this long is not a
+# commit race any more (account changed, data removed): flag it, stop retries.
+UNMATCHED_RETRY_SECONDS = 6 * 3600
+
+
+def _settle_checkout(client, obj: dict, account: str, created=None) -> dict:
     session_id = obj.get("id")
     paid_amount = obj.get("amount_total")
     paid_currency = (obj.get("currency") or "").lower()
@@ -382,14 +397,17 @@ def _settle_checkout(client, obj: dict, account: str) -> dict:
         )
         row = cur.fetchone()
         if row is None:
-            # Our marker is set, so the row exists or is about to commit.
-            raise HTTPException(503, "Stripe-Zahlung noch nicht zuordenbar")
-        if row["stripe_checkout_amount_cents"] != paid_amount or row["stripe_checkout_currency"] != paid_currency:
+            if isinstance(created, int) and time.time() - created > UNMATCHED_RETRY_SECONDS:
+                review = "unmatched_session"
+            else:
+                # Our marker is set, so the row exists or is about to commit.
+                raise HTTPException(503, "Stripe-Zahlung noch nicht zuordenbar")
+        elif row["stripe_checkout_amount_cents"] != paid_amount or row["stripe_checkout_currency"] != paid_currency:
             # 200: a retry cannot fix a wrong amount; flag it for a human.
             review = "amount_mismatch"
+        elif row["payment_status"] in ("paid", "refunded") and row.get("stripe_payment_intent_id") == payment_intent:
+            return {"received": True, "settled": True}  # replay of an already booked payment
         elif row["payment_status"] == "paid":
-            if row.get("stripe_payment_intent_id") == payment_intent:
-                return {"received": True, "settled": True}
             # Paid by transfer or another charge: a second payment arrived.
             review = "duplicate_payment"
         elif row["status"] not in ("registered", "confirmed") or row["payment_status"] != "open":
@@ -403,7 +421,7 @@ def _settle_checkout(client, obj: dict, account: str) -> dict:
                 ("refunded" if refunded else "paid", payment_intent, row["id"]),
             )
     if review:
-        _flag_for_review(row["organization_id"], row["registration_token"], review)
+        _flag_for_review(row["organization_id"] if row else None, row["registration_token"] if row else None, review)
         return {"received": True, "settled": False}
     return {"received": True, "settled": True}
 

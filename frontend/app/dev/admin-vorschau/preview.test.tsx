@@ -133,6 +133,24 @@ describe('development-only admin preview', () => {
     }, 30_000)
   }
 
+  it('keeps exactly one primary action on unpublished configuration and multi-camp waitlist', async () => {
+    const primaries = async (screen: string) => {
+      hooks.pathname = `/dev/admin-vorschau/${screen}`
+      const document = window.document.implementation.createHTMLDocument()
+      document.body.innerHTML = renderToStaticMarkup(await page(screen))
+      return [...document.querySelectorAll('main .cp-btn-primary')].map(b => b.textContent?.trim())
+    }
+    expect(await primaries('camp-konfiguration-entwurf')).toEqual(['Camp veröffentlichen'])
+    expect(await primaries('konfiguration-entwurf')).toEqual(['Vereinsseite veröffentlichen'])
+    expect(await primaries('konfiguration')).toEqual(['Speichern'])
+    expect(await primaries('camp-konfiguration')).toEqual(['Speichern'])
+    // Several camps with free places: every "Platz vergeben" is secondary, none primary.
+    expect(await primaries('warteliste-plaetze')).toEqual([])
+    hooks.pathname = '/dev/admin-vorschau/warteliste-plaetze'
+    const html = renderToStaticMarkup(await page('warteliste-plaetze'))
+    expect(html.match(/cp-btn-secondary[^>]*>[^<]*Platz[^<]*vergeben/g)?.length ?? 0).toBeGreaterThanOrEqual(2)
+  })
+
   it('keeps logout local and preserves empty-state navigation', async () => {
     await previewLogoutAction()
     expect(getAdminToken).not.toHaveBeenCalled()

@@ -84,6 +84,33 @@ export function getPreviewFixtures(empty = false, now = new Date()) {
   }
 }
 
+/** Warteliste mit freien Plätzen in zwei Camps (je 2 Familien warten, 2 Plätze frei). */
+export function getPreviewFixturesWaitlistFreeSpots(now = new Date()) {
+  const base = getPreviewFixtures(false, now)
+  const all = makeRegistrations(now)
+  const waiting = (items: RegistrationAdmin[]) => items.map(r => ({ ...r, status: 'waitlist' as const, payment_status: 'open' as const }))
+  const active = (items: RegistrationAdmin[]) => items.map(r => ({ ...r, status: 'confirmed' as const, payment_status: 'paid' as const }))
+  return {
+    ...base,
+    // Camp 1: 14 von 16 vergeben; Camp 2: 6 von 12 vergeben.
+    registrationsByCamp: [
+      [...active(all.slice(0, 14)), ...waiting(all.slice(14, 16))],
+      [...active(all.slice(16, 22)), ...waiting(all.slice(22, 24))],
+      [],
+    ],
+  }
+}
+
+/** Konfiguration vor dem Veröffentlichen: Verein freigegeben, Seite noch nicht öffentlich; Camp im Entwurf. */
+export function getPreviewFixturesConfigDraft(now = new Date()) {
+  const base = getPreviewFixtures(false, now)
+  return {
+    ...base,
+    org: { ...base.org, site_published: false, review_status: 'approved' },
+    camps: base.camps.map((c, i) => (i === 0 ? { ...c, status: 'draft' as const } : c)),
+  }
+}
+
 /** Schritt 1 – leerer Verein ohne Pflichtangaben (kein Camp). */
 export function getPreviewFixturesDashboardStep1() {
   return {

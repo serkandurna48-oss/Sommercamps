@@ -34,6 +34,8 @@ export default function CampConfigForm({
     setConfirmedCamp(camp)
   }
   const inputValue = (field: string, fallback: string | number) => submitted?.[field] ?? fallback
+  // Unveröffentlicht: Veröffentlichen (speichert mit) ist die Hauptaktion, Speichern der Zwischenschritt.
+  const publishFirst = confirmedCamp.status !== 'published'
   const feedbackId = useId()
   const preview = useAdminPreview()
   const boundAction = preview ? previewNoopAction : updateCampConfigAction.bind(null, orgSlug, camp.slug)
@@ -177,11 +179,11 @@ export default function CampConfigForm({
       {!pending && state.saved && !state.error && <SuccessNote>{de.configPage.saved}</SuccessNote>}
 
       <div>
-        <Button type="submit" variant="primary" disabled={pending}>
+        <Button type="submit" variant={publishFirst ? 'secondary' : 'primary'} disabled={pending}>
           {pending ? de.configPage.saving : de.configPage.save}
         </Button>
       </div>
-      <CampPublicationCard orgSlug={orgSlug} org={org} camp={confirmedCamp} pending={pending} />
+      <CampPublicationCard orgSlug={orgSlug} org={org} camp={confirmedCamp} pending={pending} emphasis={publishFirst ? 'primary' : 'secondary'} />
     </form>
   )
 }

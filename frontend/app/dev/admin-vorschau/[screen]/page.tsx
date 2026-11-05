@@ -16,6 +16,8 @@ import NewRegistrationsScreen from '../../../components/saas/screens/NewRegistra
 import HilfeScreen from '../../../components/saas/screens/HilfeScreen'
 import {
   getPreviewFixtures,
+  getPreviewFixturesConfigDraft,
+  getPreviewFixturesWaitlistFreeSpots,
   getPreviewFixturesDashboardStep1,
   getPreviewFixturesDashboardStep3,
   getPreviewFixturesEinrichtung1,
@@ -69,6 +71,13 @@ export default async function AdminPreviewPage({ params, searchParams }: Props) 
     case 'warteliste': content = <OrgWaitlistScreen {...fixtures} />; break
     case 'aufgaben': content = <OrgTasksScreen {...fixtures} />; break
     case 'konfiguration': content = <OrgConfigScreen {...fixtures} />; break
+    case 'konfiguration-entwurf': content = <OrgConfigScreen {...(empty ? fixtures : getPreviewFixturesConfigDraft())} />; break
+    case 'camp-konfiguration-entwurf': {
+      const f = empty ? fixtures : getPreviewFixturesConfigDraft()
+      content = <CampConfigScreen {...campProps} org={f.org} camp={f.camps[0]} />
+      break
+    }
+    case 'warteliste-plaetze': content = <OrgWaitlistScreen {...(empty ? fixtures : getPreviewFixturesWaitlistFreeSpots())} />; break
     case 'hilfe': content = <HilfeScreen orgSlug={fixtures.orgSlug} org={fixtures.org} />; break
     case 'einrichtung': {
       const f = schritt === 2 ? getPreviewFixturesEinrichtung2()

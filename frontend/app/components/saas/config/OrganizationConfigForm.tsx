@@ -45,6 +45,9 @@ export default function OrganizationConfigForm({
     setUrlErrors({})
   }
   const inputValue = (field: string, fallback: string) => submitted?.[field] ?? fallback
+  // Eine Primäraktion: Veröffentlichen ist nur nach der Freigabe möglich (fehlendes
+  // review_status zählt wie freigegeben). Vorher ist Speichern die Hauptaktion.
+  const publishFirst = !org.site_published && (!org.review_status || org.review_status === 'approved')
   const feedbackId = useId()
   const preview = useAdminPreview()
   const boundAction = preview ? previewNoopAction : updateOrganizationConfigAction.bind(null, orgSlug)
@@ -73,7 +76,7 @@ export default function OrganizationConfigForm({
 
   return (
     <div className="flex flex-col gap-10">
-      <PublishToggle orgSlug={orgSlug} published={org.site_published} />
+      <PublishToggle orgSlug={orgSlug} published={org.site_published} emphasis={publishFirst ? 'primary' : 'secondary'} />
 
       <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-8">
         {Object.values(urlErrors).some(Boolean) && (
@@ -270,7 +273,7 @@ export default function OrganizationConfigForm({
         {!pending && state.saved && !state.error && <SuccessNote>{de.configPage.saved}</SuccessNote>}
 
         <div>
-          <Button type="submit" variant="primary" disabled={pending}>
+          <Button type="submit" variant={publishFirst ? 'secondary' : 'primary'} disabled={pending}>
             {pending ? de.configPage.saving : de.configPage.save}
           </Button>
         </div>

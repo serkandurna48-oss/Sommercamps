@@ -204,11 +204,11 @@ describe('Bestätigung', () => {
   const result: RegistrationCreated = {
     registration_token: 'tok', status: 'registered', payment_status: 'open', payment_reference: 'CP-1234', applied_price_cents: 3500,
   }
-  const render = (over: { result?: Partial<RegistrationCreated>; method?: 'bar' | 'ueberweisung'; org?: Partial<OrganizationPublic> } = {}) =>
+  const render = (over: { result?: Partial<RegistrationCreated>; method?: 'bar' | 'ueberweisung' | 'online'; org?: Partial<OrganizationPublic> } = {}) =>
     renderToStaticMarkup(
       <TrainingDoneScreen
         org={{ ...org, ...over.org }} offer={offer} session={offer.sessions[0]} result={{ ...result, ...over.result }}
-        childName="Mia" parentEmail="eva@example.de" paymentMethod={over.method ?? 'ueberweisung'} onBookAnother={() => {}}
+        sessionSlug="einzel-1" childName="Mia" parentEmail="eva@example.de" paymentMethod={over.method ?? 'ueberweisung'} onBookAnother={() => {}}
       />,
     )
 
@@ -249,6 +249,19 @@ describe('Bestätigung', () => {
     const html = render({ method: 'bar' })
     expect(html).toContain('Bitte bar beim Training bezahlen.')
     expect(html).not.toContain('DE89370400440532013000')
+  })
+
+  it('online: shows the applied price, a pay button and no bank details', () => {
+    const html = render({ method: 'online', result: { applied_price_cents: 4500 } })
+    expect(html).toContain('Jetzt 45,00 € online bezahlen')
+    expect(html).toContain('Online-Zahlung offen')
+    expect(html).not.toContain('DE89370400440532013000')
+    expect(html).not.toContain('35,00')
+  })
+
+  it('online: no pay button when the booking is no longer open', () => {
+    const html = render({ method: 'online', result: { payment_status: 'paid' } })
+    expect(html).not.toContain('online bezahlen</button>')
   })
 
   it('mentions the free cancellation and gives no membership hint', () => {

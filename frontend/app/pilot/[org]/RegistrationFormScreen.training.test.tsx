@@ -42,13 +42,13 @@ const SESSION_AS_CAMP = {
   location: 'Sportplatz', is_full: false, spots_remaining: 1,
 }
 
-function render(opts: { training?: boolean; onSubmitted?: (...args: unknown[]) => void } = {}) {
+function render(opts: { training?: boolean; online?: boolean; onSubmitted?: (...args: unknown[]) => void } = {}) {
   hooks.cursor = 0
   return walk(RegistrationFormScreen({
     orgSlug: 'testverein', orgName: 'Testverein', hasBankDetails: true,
     camp: (opts.training === false
       ? { ...SESSION_AS_CAMP, price_cents: 10000 } : SESSION_AS_CAMP) as never,
-    training: opts.training === false ? undefined : TRAINING,
+    training: opts.training === false ? undefined : { ...TRAINING, onlinePaymentAvailable: opts.online },
     onBack: vi.fn(), onSubmitted: opts.onSubmitted ?? vi.fn(),
   }))
 }
@@ -190,4 +190,21 @@ it('never sends documentation_consent in the camp flow', async () => {
   nodes = render({ training: false })
   await submit(nodes)
   expect(vi.mocked(submitRegistration).mock.calls[0][2]).not.toHaveProperty('documentation_consent')
+})
+
+it('shows no online radio unless the club has Stripe active', () => {
+  expect(walk(render({ online: false })).some((n) => n.type === 'input' && n.props.value === 'online')).toBe(false)
+  expect(walk(render()).some((n) => n.type === 'input' && n.props.value === 'online')).toBe(false)
+})
+
+it('offers Online bezahlen as third payment method when available and sends it', async () => {
+  const onSubmitted = vi.fn()
+  let nodes = render({ online: true, onSubmitted })
+  expect(text(nodes)).toContain('Online bezahlen')
+  fill(nodes)
+  change(radio(nodes, 'online'), true)
+  nodes = render({ online: true, onSubmitted })
+  await submit(nodes)
+  expect(submitRegistration).toHaveBeenCalledWith('testverein', 'einzel-30-abc', expect.objectContaining({ payment_method: 'online' }))
+  expect((onSubmitted.mock.calls[0] as unknown[])[4]).toBe('online')
 })

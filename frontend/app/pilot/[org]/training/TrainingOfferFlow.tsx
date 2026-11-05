@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { OrganizationPublic, RegistrationCreated, TrainingOfferDetail, TrainingPaymentMethod, TrainingSessionPublic } from '../../../lib/saasApi'
-import { fetchTrainingOffer } from '../../../lib/saasApi'
+import { fetchTrainingOffer, getStripePaymentAvailability } from '../../../lib/saasApi'
 import {
   findBookableSession, formatSessionDateTime, memberPriceText, sessionAsCamp, sessionAvailability, uniformSessionPriceText,
 } from '../../../lib/trainingFormat'
@@ -33,8 +33,19 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
   const [done, setDone] = useState<DoneState | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [onlineAvailable, setOnlineAvailable] = useState(false)
 
   useEffect(() => { window.scrollTo?.(0, 0) }, [screen])
+
+  // Same availability rule as camps (payment-options); only asked once a slot is chosen.
+  useEffect(() => {
+    if (screen !== 'form' || !selectedSlug) return
+    let current = true
+    void getStripePaymentAvailability(org.slug, selectedSlug).then(available => {
+      if (current) setOnlineAvailable(available)
+    })
+    return () => { current = false }
+  }, [screen, selectedSlug, org.slug])
 
   const reload = useCallback(async (bookedSlug?: string) => {
     try {
@@ -67,6 +78,7 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
         training={{
           dateTimeLabel: formatSessionDateTime(selected.local_date, selected.local_time),
           priceText: memberPriceText(selected.price_member_cents, selected.price_nonmember_cents),
+          onlinePaymentAvailable: onlineAvailable,
           onSlotTaken: (conflict) => {
             setNotice(SLOT_TAKEN_NOTICE[conflict])
             setScreen('detail')
@@ -87,7 +99,7 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
     return (
       <TrainingDoneScreen
         org={org} offer={offer} session={done.session} result={done.result}
-        childName={done.childName} parentEmail={done.parentEmail} paymentMethod={done.paymentMethod}
+        sessionSlug={done.session.slug} childName={done.childName} parentEmail={done.parentEmail} paymentMethod={done.paymentMethod}
         onBookAnother={() => {
           setDone(null)
           setSelectedSlug(null)

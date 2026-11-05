@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { OrganizationPublic, RegistrationCreated, TrainingOfferPublic, TrainingPaymentMethod, TrainingSessionPublic } from '../../../lib/saasApi'
 import { bookingPriceText, formatSessionDateTime } from '../../../lib/trainingFormat'
+import { redirectToTrainingCheckout } from '../../../lib/trainingCheckout'
 import TransferDetails from '../TransferDetails'
 
 /**
@@ -11,11 +12,13 @@ import TransferDetails from '../TransferDetails'
  * erscheint kein Hinweis auf eine Mitgliedschaft.
  */
 export default function TrainingDoneScreen({
-  org, offer, session, result, childName, parentEmail, paymentMethod, onBookAnother,
+  org, offer, session, sessionSlug, result, childName, parentEmail, paymentMethod, onBookAnother,
 }: {
   org: OrganizationPublic
   offer: Pick<TrainingOfferPublic, 'title' | 'location'>
   session: Pick<TrainingSessionPublic, 'local_date' | 'local_time'>
+  /** Slug des gebuchten Termins (Checkout-Route). */
+  sessionSlug?: string
   result: RegistrationCreated
   childName: string
   parentEmail: string
@@ -24,6 +27,26 @@ export default function TrainingDoneScreen({
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => { headingRef.current?.focus() }, [])
+  const [paying, setPaying] = useState(false)
+  const [payError, setPayError] = useState(false)
+  const autoStarted = useRef(false)
+  const canPayOnline = paymentMethod === 'online' && Boolean(sessionSlug) && result.payment_status === 'open'
+
+  async function startCheckout() {
+    if (paying || !sessionSlug) return
+    setPayError(false)
+    setPaying(true)
+    const sent = await redirectToTrainingCheckout(org.slug, sessionSlug, result.registration_token)
+    if (!sent) { setPayError(true); setPaying(false) }
+  }
+
+  // Booked online: send the parent straight to checkout once; the button is the retry.
+  useEffect(() => {
+    if (!canPayOnline || autoStarted.current) return
+    autoStarted.current = true
+    void startCheckout()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canPayOnline])
   const payTo = org.legal_name ?? org.name
   const when = formatSessionDateTime(session.local_date, session.local_time)
   const price = bookingPriceText(result)
@@ -50,7 +73,7 @@ export default function TrainingDoneScreen({
 
       <div className="assure" style={{ gap: 8 }}>
         <span className="chip ok">Termin reserviert</span>
-        <span className="chip pending">{paymentMethod === 'bar' ? 'Zahlung vor Ort' : 'Zahlung offen'}</span>
+        <span className="chip pending">{paymentMethod === 'bar' ? 'Zahlung vor Ort' : paymentMethod === 'online' ? 'Online-Zahlung offen' : 'Zahlung offen'}</span>
       </div>
 
       <div className="pad" style={{ paddingTop: 28, paddingBottom: 0 }}>
@@ -70,6 +93,21 @@ export default function TrainingDoneScreen({
           {paymentMethod === 'ueberweisung' && !org.iban && (
             <div className="note quiet">
               <p>Der Verein meldet sich zur Zahlung. Ihre Referenz: <strong>{result.payment_reference}</strong>.</p>
+            </div>
+          )}
+          {paymentMethod === 'online' && (
+            <div className="done-transfer" style={{ marginBottom: 18 }}>
+              <span className="done-transfer-label">Online bezahlen</span>
+              <p style={{ marginTop: 6, marginBottom: 12 }}>
+                Sicher per Karte über Stripe. Der Betrag{price ? ` (${price})` : ''} geht direkt an {payTo}.
+              </p>
+              {canPayOnline && (
+                <button className="btn primary btn-pill" type="button" disabled={paying}
+                  aria-busy={paying} onClick={startCheckout}>
+                  {paying ? 'Weiterleitung zu Stripe …' : price ? `Jetzt ${price} online bezahlen` : 'Jetzt online bezahlen'}
+                </button>
+              )}
+              {payError && <p role="alert" style={{ marginTop: 10 }}>Online-Zahlung ist gerade nicht möglich. Bitte wenden Sie sich an den Verein.</p>}
             </div>
           )}
           {paymentMethod === 'bar' && (

@@ -106,7 +106,7 @@ export interface RegistrationCreateInput {
   documentation_consent?: boolean
 }
 
-export type TrainingPaymentMethod = 'ueberweisung' | 'bar'
+export type TrainingPaymentMethod = 'ueberweisung' | 'bar' | 'online'
 
 export interface RegistrationCreated {
   registration_token: string

@@ -61,6 +61,8 @@ const EMPTY: FormState = {
 export interface TrainingFormConfig {
   dateTimeLabel: string
   priceText: string
+  /** Stripe des Vereins aktiv (payment-options): dann erscheint die Zahlart "Online bezahlen". */
+  onlinePaymentAvailable?: boolean
   /** Termin inzwischen voll oder vergangen: Flow lädt die Termine neu. */
   onSlotTaken?: (conflict: 'full' | 'past') => void
 }
@@ -753,7 +755,7 @@ export default function RegistrationFormScreen({
                       className={`field${submitAttempted && paymentMissing ? ' bad' : ''}`} style={{ border: 'none', padding: 0, margin: 0 }}>
                       <legend className="t-lab">Wie möchten Sie bezahlen? *</legend>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
-                        {([['ueberweisung', 'Überweisung'], ['bar', 'Bar beim Training']] as const).map(([value, label]) => (
+                        {([['ueberweisung', 'Überweisung'], ['bar', 'Bar beim Training'], ...(training.onlinePaymentAvailable ? [['online', 'Online bezahlen']] as const : [])] as readonly (readonly [TrainingPaymentMethod, string])[]).map(([value, label]) => (
                           <label key={value} htmlFor={`payment_${value}`} style={{
                             display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
                             padding: '12px 16px', borderRadius: 'var(--cp-r-chip)',

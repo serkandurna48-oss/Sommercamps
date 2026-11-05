@@ -31,16 +31,18 @@ from ..repositories.registrations import (
     ExtraAnswersInvalidError,
     OrganizationNotAvailableError,
     RegistrationWindowClosedError,
+    TrainingOnlinePaymentNotPossibleError,
     TrainingSessionFullError,
     TrainingSessionPastError,
 )
+from .payments import online_payment_available
 from ..schemas import RegistrationCreate, RegistrationCreated
 from ..tenancy import TenantContext
 
 logger = logging.getLogger(__name__)
 
-# Online payment for trainings comes later; only these two are accepted now.
-TRAINING_PAYMENT_METHODS = ("ueberweisung", "bar")
+# 'online' is additionally accepted only while the club's Stripe account is active.
+TRAINING_PAYMENT_METHODS = ("ueberweisung", "bar", "online")
 _TRAINING_PAST_MSG = "Dieser Trainingstermin liegt in der Vergangenheit und kann nicht mehr gebucht werden."
 _TRAINING_FULL_MSG = "Dieser Trainingstermin ist leider bereits belegt."
 _DUPLICATE_MSG = "Für dieses Kind liegt für dieses Camp bereits eine Anmeldung vor."
@@ -100,7 +102,12 @@ def create_registration(
         if data.payment_method not in TRAINING_PAYMENT_METHODS:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail="Zahlungsart muss 'ueberweisung' oder 'bar' sein.",
+                detail="Zahlungsart muss 'ueberweisung', 'bar' oder 'online' sein.",
+            )
+        if data.payment_method == "online" and not online_payment_available(tenant.organization_id):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Online-Zahlung ist für diesen Verein derzeit nicht verfügbar.",
             )
 
     try:
@@ -146,6 +153,11 @@ def create_registration(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=_training_conflict("training_session_past", _TRAINING_PAST_MSG),
+        ) from exc
+    except TrainingOnlinePaymentNotPossibleError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Für kostenlose Buchungen ist keine Online-Zahlung nötig. Bitte 'bar' oder 'ueberweisung' wählen.",
         ) from exc
     except ExtraAnswersInvalidError as exc:
         logger.info(

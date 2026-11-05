@@ -127,6 +127,19 @@ def _organization_payment_details(org_id):
         return cur.fetchone()
 
 
+def online_payment_available(organization_id) -> bool:
+    """Single rule for camps and trainings: service-level Stripe switches on and
+    the club's connected account is active and enabled for online payment."""
+    settings = get_settings()
+    if not (settings.stripe_checkout_enabled and settings.stripe_secret_key and settings.stripe_webhook_secret):
+        return False
+    org = _organization_payment_details(organization_id)
+    return bool(
+        org and org["online_payment_enabled"] and org["stripe_charges_enabled"]
+        and org["stripe_account_id"]
+    )
+
+
 @router.get(
     "/api/v1/organizations/{organization_slug}/camps/{camp_slug}/payment-options",
     response_model=PaymentOptions,
@@ -135,25 +148,7 @@ def get_payment_options(
     camp_slug: str,
     tenant: TenantContext = Depends(get_tenant_context),
 ) -> PaymentOptions:
-    settings = get_settings()
-    if not (settings.stripe_checkout_enabled and settings.stripe_secret_key and settings.stripe_webhook_secret):
-        return PaymentOptions(online_payment_available=False)
-    with db.get_cursor() as cur:
-        cur.execute(
-            "select offer_id from camps where organization_id = %s and slug = %s",
-            (tenant.organization_id, camp_slug),
-        )
-        camp_row = cur.fetchone()
-    if camp_row is not None and camp_row["offer_id"] is not None:
-        # Trainings are paid by transfer or cash for now.
-        return PaymentOptions(online_payment_available=False)
-    org = _organization_payment_details(tenant.organization_id)
-    return PaymentOptions(
-        online_payment_available=bool(
-            org and org["online_payment_enabled"] and org["stripe_charges_enabled"]
-            and org["stripe_account_id"]
-        )
-    )
+    return PaymentOptions(online_payment_available=online_payment_available(tenant.organization_id))
 
 
 @router.post(
@@ -218,7 +213,9 @@ def create_checkout(
         cur.execute(
             """select r.id, r.status, r.payment_status, r.stripe_checkout_session_id,
                       o.stripe_account_id, o.stripe_charges_enabled, o.online_payment_enabled,
-                      c.title, c.price_cents, c.currency, c.status as camp_status, c.offer_id
+                      c.title, c.price_cents, c.currency, c.status as camp_status, c.offer_id,
+                      r.applied_price_cents, r.payment_method,
+                      r.stripe_checkout_amount_cents
                from camp_registrations r
                join organizations o on o.id = r.organization_id
                join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
@@ -229,10 +226,10 @@ def create_checkout(
         booking = cur.fetchone()
     if not booking:
         raise HTTPException(404, "Anmeldung nicht gefunden")
-    if booking.get("offer_id") is not None:
-        # Training prices (member/non-member) live on the registration; online
-        # payment for trainings is not available yet.
-        raise HTTPException(409, "Für Trainingstermine ist keine Online-Zahlung möglich. Bitte per Überweisung oder bar zahlen.")
+    is_training = booking.get("offer_id") is not None
+    if is_training and booking.get("payment_method") != "online":
+        # Trainings are only charged when the parent chose online payment.
+        raise HTTPException(409, "Für diese Buchung wurde keine Online-Zahlung gewählt")
     if booking["status"] not in ("registered", "confirmed") or booking["payment_status"] != "open":
         raise HTTPException(409, "Für diese Anmeldung ist keine Online-Zahlung möglich")
     if booking["camp_status"] != "published":
@@ -243,7 +240,9 @@ def create_checkout(
         and booking["stripe_charges_enabled"] and booking["online_payment_enabled"]
     ):
         raise HTTPException(503, "Der Verein hat Online-Zahlung noch nicht aktiviert")
-    amount = booking["price_cents"]
+    # Training prices (member/non-member) are decided server-side at booking time
+    # and live on the registration; camps charge the camp price.
+    amount = booking["applied_price_cents"] if is_training else booking["price_cents"]
     currency = (booking["currency"] or "").lower()
     if not isinstance(amount, int) or amount < 50 or currency != "eur":
         raise HTTPException(409, "Dieser Camp-Preis ist nicht für Stripe Checkout verfügbar")
@@ -253,7 +252,16 @@ def create_checkout(
         try:
             session = _stripe_dict(client.checkout.Session.retrieve(existing, stripe_account=account))
             if session.get("status") == "open" and session.get("url"):
-                return CheckoutURL(url=session["url"])
+                stored_amount = booking.get("stripe_checkout_amount_cents")
+                if stored_amount is None or stored_amount == amount:
+                    return CheckoutURL(url=session["url"])
+                # Price changed since this session was created: never reuse it.
+                # Close it (best effort) and create a new one below.
+                try:
+                    client.checkout.Session.expire(existing, stripe_account=account)
+                except stripe.error.StripeError:
+                    raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
+                session = {"status": "expired"}
             if session.get("status") == "complete" or session.get("payment_status") == "paid":
                 # A completed Checkout can still have a pending asynchronous
                 # payment. A second Session could charge twice.

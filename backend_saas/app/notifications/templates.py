@@ -94,6 +94,11 @@ def build_registration_mail(
                 f"{amount_line}"
                 "<p>Bitte bar beim Training bezahlen.</p>"
             )
+        elif is_training and payment_method == "online":
+            payment_block = (
+                f"{amount_line}"
+                "<p>Sie zahlen online. Die Zahlung schließen Sie direkt nach der Buchung auf der Zahlungsseite ab.</p>"
+            )
         elif e_iban:
             payment_block = (
                 f"{amount_line}"

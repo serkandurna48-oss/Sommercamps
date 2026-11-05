@@ -44,6 +44,10 @@ from ..tenancy import ACTIVE_PLAN_STATUSES, TenantContext
 from ..utils import age_on_date, is_registration_open
 
 
+# Stripe Checkout refuses charges below 0.50 EUR (same bound as routers/payments.py).
+MIN_ONLINE_PAYMENT_CENTS = 50
+
+
 class RegistrationRejectedError(Exception):
     """Base class for registration-lifecycle failures — mapped to an HTTP
     error by whichever endpoint (public write-flow today; an internal/admin
@@ -73,6 +77,11 @@ class TrainingSessionFullError(RegistrationRejectedError):
 
 class TrainingSessionPastError(RegistrationRejectedError):
     """The training session has already started — maps to 409."""
+
+
+class TrainingOnlinePaymentNotPossibleError(RegistrationRejectedError):
+    """Online payment chosen for a training whose applied price cannot go
+    through Stripe Checkout (below the 0.50 EUR minimum, e.g. 0 EUR) — maps to 422."""
 
 
 class RegistrationWindowClosedError(RegistrationRejectedError):
@@ -795,6 +804,10 @@ def create_training_registration(
         applied_price = locked["price_cents"]
         if member_match and locked["price_member_cents"] is not None:
             applied_price = locked["price_member_cents"]
+        if data.payment_method == "online" and (applied_price is None or applied_price < MIN_ONLINE_PAYMENT_CENTS):
+            # Free (or sub-minimum) bookings never go to checkout: choose
+            # bar/ueberweisung instead (simplest correct rule, no auto-paid state).
+            raise TrainingOnlinePaymentNotPossibleError(camp.slug)
 
         player_id = players.find_or_create_player(
             cur, tenant.organization_id, data.child_first_name, data.child_last_name, data.child_birth_date)

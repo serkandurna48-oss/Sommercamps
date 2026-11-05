@@ -334,7 +334,7 @@ def test_classic_camp_registration_unchanged(real_db):
 
 # ---------- checkout ----------
 
-def test_checkout_rejects_training_registration(real_db, monkeypatch):
+def test_checkout_rejects_training_not_booked_online(real_db, monkeypatch):
     _, tenant, _ = real_db
     _, session = _make(real_db)
     token = _post(real_db, session).json()["registration_token"]
@@ -344,7 +344,7 @@ def test_checkout_rejects_training_registration(real_db, monkeypatch):
         payments.create_checkout(session["slug"], token if not isinstance(token, str) else __import__("uuid").UUID(token),
                                  tenant, None)
     assert err.value.status_code == 409
-    assert "Training" in err.value.detail
+    assert "Online-Zahlung" in err.value.detail
 
 
 # ---------- mail ----------
@@ -418,7 +418,7 @@ def test_export_payment_sheet_uses_applied_price(real_db):
 
 # ---------- review follow-ups ----------
 
-def test_payment_options_offline_for_training_online_for_camp(real_db, monkeypatch):
+def test_payment_options_same_rule_for_training_and_camp(real_db, monkeypatch):
     _, tenant, _ = real_db
     _, session = _make(real_db)
     monkeypatch.setattr(payments, "get_settings", lambda: SimpleNamespace(
@@ -427,7 +427,7 @@ def test_payment_options_offline_for_training_online_for_camp(real_db, monkeypat
         "online_payment_enabled": True, "stripe_charges_enabled": True, "stripe_account_id": "acct_1234567890abcdef"})
     base = f"/api/v1/organizations/{tenant.slug}/camps"
     with TestClient(app) as client:
-        assert client.get(f"{base}/{session['slug']}/payment-options").json() == {"online_payment_available": False}
+        assert client.get(f"{base}/{session['slug']}/payment-options").json() == {"online_payment_available": True}
         assert client.get(f"{base}/summer-1/payment-options").json() == {"online_payment_available": True}
 
 

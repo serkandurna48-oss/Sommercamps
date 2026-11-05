@@ -22,7 +22,7 @@ set lock_timeout = '5s';
 create or replace function public.normalize_match_part(value text)
 returns text
 language sql
-immutable
+stable  -- lower() depends on the DB collation: never use in an index
 set search_path = ''
 as $$
     select regexp_replace(
@@ -176,7 +176,7 @@ create table if not exists public.player_measurements (
         references public.players (id, organization_id) on delete restrict,
     constraint chk_player_measurements_metric check (trim(metric) <> '' and char_length(metric) <= 60),
     constraint chk_player_measurements_unit check (trim(unit) <> '' and char_length(unit) <= 20),
-    constraint chk_player_measurements_value check (value not in ('NaN'::numeric)),
+    constraint chk_player_measurements_value check (value not in ('NaN'::numeric, 'Infinity'::numeric, '-Infinity'::numeric)),
     constraint chk_player_measurements_note check (note is null or char_length(note) <= 1000)
 );
 
@@ -190,35 +190,58 @@ alter table public.player_measurements enable row level security;
 revoke all on public.player_measurements from anon, authenticated;
 
 -- ------------------------------------------------------------
--- Backfill: Spieler aus bestehenden Anmeldungen (alle Status; Stammdaten, nicht Buchungen).
--- Repraesentative Schreibweise = aelteste Anmeldung (created_at, id), getrimmt.
--- Deterministisch und idempotent: bestehende Spieler bleiben, nur player_id IS NULL wird
--- verknuepft. Der updated_at-Trigger wird nur fuer den Backfill ausgesetzt, damit die
--- Verknuepfung keine Aenderungszeit der Anmeldungen verfaelscht.
+-- Backfill / Nachverknuepfung: public.link_unlinked_registrations()
+-- Legt Spieler fuer alle Anmeldungen ohne player_id an und verknuepft sie (alle Status;
+-- Stammdaten, nicht Buchungen). Repraesentative Schreibweise = aelteste Anmeldung
+-- (created_at, id), getrimmt. Deterministisch und idempotent: bestehende Spieler bleiben,
+-- nur player_id IS NULL wird verknuepft; Rueckgabe = Anzahl neu verknuepfter Anmeldungen.
+-- Das Backend ruft sie beim Start einmal best-effort auf (schliesst das Fenster zwischen
+-- Migration und Deploy, in dem der alte Stand Anmeldungen ohne player_id schreibt).
+-- Kein SECURITY DEFINER, search_path leer, nur fuer die Backend-Rolle ausfuehrbar.
 -- ------------------------------------------------------------
-insert into public.players (organization_id, first_name, last_name, birth_date, match_key)
-select distinct on (organization_id, match_key, child_birth_date)
-       organization_id, btrim(child_first_name), btrim(child_last_name), child_birth_date, match_key
-from (
-    select r.*,
-           public.normalize_match_part(r.child_first_name) || '|'
-               || public.normalize_match_part(r.child_last_name) as match_key
-    from public.camp_registrations r
-    where r.player_id is null
-) src
-where trim(child_first_name) <> '' and trim(child_last_name) <> ''
-order by organization_id, match_key, child_birth_date, created_at, id
-on conflict (organization_id, match_key, birth_date) do nothing;
+create or replace function public.link_unlinked_registrations()
+returns integer
+language plpgsql
+set search_path = ''
+as $$
+declare
+    linked integer;
+begin
+    insert into public.players (organization_id, first_name, last_name, birth_date, match_key)
+    select distinct on (organization_id, match_key, child_birth_date)
+           organization_id, btrim(child_first_name), btrim(child_last_name), child_birth_date, match_key
+    from (
+        select r.*,
+               public.normalize_match_part(r.child_first_name) || '|'
+                   || public.normalize_match_part(r.child_last_name) as match_key
+        from public.camp_registrations r
+        where r.player_id is null
+    ) src
+    where trim(child_first_name) <> '' and trim(child_last_name) <> ''
+    order by organization_id, match_key, child_birth_date, created_at, id
+    on conflict (organization_id, match_key, birth_date) do nothing;
 
-alter table public.camp_registrations disable trigger set_updated_at;
+    update public.camp_registrations r
+       set player_id = p.id
+      from public.players p
+     where r.player_id is null
+       and p.organization_id = r.organization_id
+       and p.birth_date = r.child_birth_date
+       and p.match_key = public.normalize_match_part(r.child_first_name) || '|'
+                         || public.normalize_match_part(r.child_last_name);
+    get diagnostics linked = row_count;
+    return linked;
+end;
+$$;
 
-update public.camp_registrations r
-   set player_id = p.id
-  from public.players p
- where r.player_id is null
-   and p.organization_id = r.organization_id
-   and p.birth_date = r.child_birth_date
-   and p.match_key = public.normalize_match_part(r.child_first_name) || '|'
-                     || public.normalize_match_part(r.child_last_name);
+revoke all on function public.link_unlinked_registrations() from public, anon, authenticated;
 
-alter table public.camp_registrations enable trigger set_updated_at;
+-- Migration run: keep updated_at of the existing registrations untouched. One DO block =
+-- one atomic statement, so a failure cannot leave the trigger disabled.
+do $$
+begin
+    alter table public.camp_registrations disable trigger set_updated_at;
+    perform public.link_unlinked_registrations();
+    alter table public.camp_registrations enable trigger set_updated_at;
+end;
+$$;

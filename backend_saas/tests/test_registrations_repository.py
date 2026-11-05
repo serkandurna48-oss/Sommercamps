@@ -320,12 +320,13 @@ def test_create_registration_inserts_registered_when_capacity_available(monkeypa
     org_id = uuid4()
     camp = _target(org_id, capacity=2)
     token = uuid4()
+    player_id = uuid4()
     fake_cursor = _FakeCursor(
         results=[{"site_published": True, "plan_status": "active"},
             {"capacity": 2, "status": "published"},
             None,
             {"active_count": 1},  # 1 of 2 spots taken
-            {"id": uuid4()},  # player find-or-create (insert ... returning id)
+            {"id": player_id},  # player find-or-create (insert ... returning id)
             {"registration_token": token, "status": "registered", "payment_status": "open"},
         ]
     )
@@ -341,6 +342,7 @@ def test_create_registration_inserts_registered_when_capacity_available(monkeypa
     assert "insert into camp_registrations" in insert_query.lower()
     assert "health_data_consent" in insert_query
     assert insert_params[14] is False  # old clients without health data
+    assert insert_params[-1] == player_id  # linked to the found-or-created player
     assert insert_query.count("%s") == len(insert_params)
 
 

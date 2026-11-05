@@ -37,6 +37,19 @@ settings = get_settings()
 logging.basicConfig(level=settings.log_level)
 
 
+def _link_unlinked_registrations_best_effort() -> None:
+    """Links registrations written between the player_records migration and this deploy.
+    Never blocks startup; logs only the count or the error type (no personal data)."""
+    from .repositories import players
+
+    try:
+        linked = players.link_unlinked_registrations()
+        if linked:
+            logger.info("Linked %d registrations to player records", linked)
+    except Exception as exc:  # noqa: BLE001 - best effort
+        logger.warning("Player linking at startup skipped (%s)", type(exc).__name__)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     db.init_pool()
@@ -50,6 +63,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             settings.frontend_base_url,
             settings.app_env,
         )
+    if settings.app_env != "test":  # tests assert that no request/startup path touches the DB unmocked
+        _link_unlinked_registrations_best_effort()
     try:
         yield
     finally:

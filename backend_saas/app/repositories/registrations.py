@@ -504,7 +504,24 @@ def update_registration_details(
                 camp_id,
             ),
         )
-        return cur.fetchone()
+        row = cur.fetchone()
+        if row is not None:
+            # A corrected spelling must follow the player record (same transaction),
+            # otherwise the next booking with the right name creates a second player.
+            cur.execute(
+                "select child_birth_date from camp_registrations"
+                " where registration_token = %s and organization_id = %s",
+                (registration_token, organization_id),
+            )
+            birth_date = cur.fetchone()["child_birth_date"]
+            player_id = players.find_or_create_player(
+                cur, organization_id, child_first_name, child_last_name, birth_date)
+            cur.execute(
+                "update camp_registrations set player_id = %s"
+                " where registration_token = %s and organization_id = %s",
+                (player_id, registration_token, organization_id),
+            )
+        return row
 
 
 def update_payment_status(

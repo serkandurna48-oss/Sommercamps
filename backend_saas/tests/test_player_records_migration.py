@@ -155,6 +155,10 @@ def test_player_records_migration_applies_to_empty_schema_twice_and_revokes(pg_c
                 cur.execute(sql_text)  # second application must re-revoke and not fail
         with psycopg2.connect(**db_kw) as conn:
             with conn.cursor() as cur:
+                for fn in ("public.link_unlinked_registrations()", "public.normalize_match_part(text)"):
+                    for role in ("anon", "authenticated"):
+                        cur.execute("select has_function_privilege(%s,%s,'EXECUTE')", (role, fn))
+                        assert cur.fetchone()[0] is False, (fn, role)
                 for t in ("players", "player_notes", "player_goals", "player_measurements"):
                     for role in ("anon", "authenticated"):
                         for priv in ("SELECT", "INSERT", "UPDATE", "DELETE"):

@@ -11,7 +11,6 @@ organization and player (the API maps that to 404, never revealing foreign data)
 
 from __future__ import annotations
 
-import math
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any, Optional
@@ -127,7 +126,7 @@ def _number(value: Any) -> Decimal:
         number = Decimal(str(value).strip()) if isinstance(value, str) else Decimal(value)
     except (InvalidOperation, ValueError):
         raise PlayerValidationError("value", "must be a number") from None
-    if not number.is_finite() or (isinstance(value, float) and not math.isfinite(value)):
+    if not number.is_finite():
         raise PlayerValidationError("value", "must be finite")
     return number
 
@@ -176,6 +175,14 @@ def find_or_create_player(cur, organization_id: UUID, first_name: str, last_name
         )
         row = cur.fetchone()
     return row["id"]
+
+
+def link_unlinked_registrations() -> int:
+    """Idempotent: creates players for registrations without player_id and links them
+    (SQL function of the player_records migration). Returns the number of linked rows."""
+    with db.get_cursor() as cur:
+        cur.execute("select public.link_unlinked_registrations() as linked")
+        return cur.fetchone()["linked"]
 
 
 def find_or_create_player_id(organization_id: UUID, first_name: str, last_name: str,

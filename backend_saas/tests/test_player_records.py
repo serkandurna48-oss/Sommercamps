@@ -395,3 +395,126 @@ def test_updated_at_trigger_on_players_tables(real_db):
     with cursor() as cur:  # separate transaction: now() differs
         cur.execute("update players set first_name='Lena' where id=%s returning updated_at", (pid,))
         assert cur.fetchone()["updated_at"] > old
+
+
+# ---------- review fixes: relink function, Infinity, name correction, same-child wait ----------
+
+def _insert_unlinked(cursor, org, camp_id, first, last, birth="2016-01-01", n=0):
+    with cursor() as cur:
+        cur.execute(
+            "insert into camp_registrations(organization_id,camp_id,parent_first_name,parent_last_name,parent_email,"
+            "parent_phone,child_first_name,child_last_name,child_birth_date,terms_accepted,privacy_accepted)"
+            " values (%s,%s,'P','Q',%s,'1',%s,%s,%s,true,true) returning registration_token",
+            (org, camp_id, f"u{n}-{uuid4().hex[:6]}@example.com", first, last, birth))
+        return cur.fetchone()["registration_token"]
+
+
+def test_link_unlinked_registrations_links_and_is_idempotent(real_db):
+    cursor, tenant, camp = real_db
+    org = tenant.organization_id
+    t1 = _insert_unlinked(cursor, org, camp.id, "Jörg", "Größe")
+    t2 = _insert_unlinked(cursor, org, camp.id, "JOERG", "GROESSE", n=1)
+    assert players.link_unlinked_registrations() >= 2
+    with cursor() as cur:
+        cur.execute("select player_id from camp_registrations where registration_token in (%s,%s)", (t1, t2))
+        ids = {r["player_id"] for r in cur.fetchall()}
+    assert len(ids) == 1 and None not in ids
+    assert players.link_unlinked_registrations() == 0
+    assert len(players.list_players(org, search="joerg")) == 1
+
+
+def test_link_function_and_normaliser_are_not_callable_by_anon(real_db):
+    cursor, _, _ = real_db
+    with cursor() as cur:
+        cur.execute("select proname, provolatile, prosecdef from pg_proc "
+                    "where proname in ('link_unlinked_registrations','normalize_match_part') order by 1")
+        rows = {r["proname"]: r for r in cur.fetchall()}
+    assert rows["normalize_match_part"]["provolatile"] == "s"
+    assert not rows["link_unlinked_registrations"]["prosecdef"]
+
+
+def test_measurement_rejects_infinity(real_db):
+    cursor, tenant, _ = real_db
+    pid = _player(tenant.organization_id)
+    for v in (float("inf"), float("-inf"), Decimal("Infinity")):
+        with pytest.raises(players.PlayerValidationError):
+            players.create_measurement(tenant.organization_id, pid, measured_on=date(2027, 1, 1),
+                                       metric="sprint_10m", value=v)
+    for lit in ("Infinity", "-Infinity"):
+        with pytest.raises(psycopg2.errors.CheckViolation):
+            with cursor() as cur:
+                cur.execute("insert into player_measurements (organization_id, player_id, measured_on, metric, value, unit)"
+                            " values (%s,%s,'2027-01-01','x',%s::numeric,'s')", (tenant.organization_id, pid, lit))
+
+
+def test_name_correction_relinks_player(real_db):
+    cursor, tenant, camp = real_db
+    org = tenant.organization_id
+    r = repo.create_registration(tenant, camp, RegistrationCreate(**_valid_payload(child_first_name="Lenna")))
+    wrong = players.list_players(org)[0]["id"]
+    repo.update_registration_details(org, camp.id, r["registration_token"], "Lena", "Mustermann", None, None, None)
+    with cursor() as cur:
+        cur.execute("select player_id from camp_registrations where registration_token=%s", (r["registration_token"],))
+        fixed = cur.fetchone()["player_id"]
+    assert fixed != wrong
+    assert fixed == _player(org, "Lena", "Mustermann", date.fromisoformat("2017-05-10"))
+
+
+def test_same_child_in_other_camp_waits_for_first_transaction_then_shares_player(real_db, monkeypatch):
+    from contextlib import contextmanager
+    from threading import Event
+    from app import db
+
+    cursor, tenant, camp = real_db
+    org = tenant.organization_id
+    other = _target(organization_id=org, slug="other2")
+    with cursor() as cur:
+        cur.execute("INSERT INTO camps (id,organization_id,slug,title,start_date,end_date,age_min,age_max,capacity,"
+                    "price_cents,status) VALUES (%s,%s,'other2','Other','2027-07-05','2027-07-09',6,12,20,1000,'published')",
+                    (other.id, org))
+    inserted, release = Event(), Event()
+
+    @contextmanager
+    def held_cursor():
+        with cursor() as cur:
+            yield cur
+            if cur.query and b"insert into camp_registrations" in cur.query.lower():
+                inserted.set()
+                assert release.wait(8)
+
+    monkeypatch.setattr(db, "get_cursor", held_cursor)
+    data = RegistrationCreate(**_valid_payload())
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        first = ex.submit(repo.create_registration, tenant, camp, data)
+        try:
+            assert inserted.wait(5)
+            monkeypatch.setattr(db, "get_cursor", cursor)
+            second = ex.submit(repo.create_registration, tenant, other, data)
+            with pytest.raises(Exception):  # still waiting on the uncommitted player row
+                second.result(timeout=1)
+        finally:
+            release.set()
+        a = first.result(timeout=10)
+        b = second.result(timeout=10)
+    assert a["status"] == b["status"] == "registered"
+    with cursor() as cur:
+        cur.execute("select count(distinct player_id) n, count(player_id) c from camp_registrations where organization_id=%s", (org,))
+        row = cur.fetchone()
+    assert (row["n"], row["c"]) == (1, 2)
+
+
+def test_startup_linking_is_best_effort_and_logs_no_names(monkeypatch, caplog):
+    from app import main
+
+    monkeypatch.setattr(players, "link_unlinked_registrations", lambda: 3)
+    with caplog.at_level("INFO"):
+        main._link_unlinked_registrations_best_effort()
+    assert "Linked 3 registrations" in caplog.text
+
+    def boom():
+        raise RuntimeError("Lena Mustermann secret")
+
+    monkeypatch.setattr(players, "link_unlinked_registrations", boom)
+    caplog.clear()
+    main._link_unlinked_registrations_best_effort()  # must not raise
+    assert "RuntimeError" in caplog.text and "Lena" not in caplog.text

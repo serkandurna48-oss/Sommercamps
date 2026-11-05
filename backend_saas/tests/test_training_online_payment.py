@@ -249,9 +249,10 @@ def test_camp_payment_options_unchanged(real_db, stripe_env):
     assert _options(real_db, "summer-1") == {"online_payment_available": True}
 
 
-def test_online_confirmation_mail_has_no_transfer_block(real_db, stripe_env, fake_provider):
+def test_online_confirmation_mail_has_transfer_fallback(real_db, stripe_env, fake_provider):
     _, session = _make(real_db)
     _book_online(real_db, session)
     parent = [m for m in fake_provider.sent if m.subject.startswith("Buchungsbestätigung")]
     assert len(parent) == 1
-    assert "IBAN" not in parent[0].html_content and "Sie zahlen online" in parent[0].html_content
+    html = parent[0].html_content
+    assert "Sie zahlen online" in html and "Falls die Online-Zahlung nicht geklappt hat" in html

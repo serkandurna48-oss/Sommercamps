@@ -95,9 +95,22 @@ def build_registration_mail(
                 "<p>Bitte bar beim Training bezahlen.</p>"
             )
         elif is_training and payment_method == "online":
+            if e_iban:
+                fallback = (
+                    "<p>Falls die Online-Zahlung nicht geklappt hat:</p>"
+                    f"<p>Empfänger: <strong>{e_payee}</strong>"
+                    f"<br>IBAN: <strong>{e_iban}</strong>"
+                    f"<br>Verwendungszweck: <strong>{e_payment_ref}</strong></p>"
+                )
+            else:
+                fallback = (
+                    "<p>Falls die Online-Zahlung nicht geklappt hat, "
+                    f"wenden Sie sich bitte an {e_org_email}.</p>"
+                )
             payment_block = (
                 f"{amount_line}"
-                "<p>Sie zahlen online. Die Zahlung schließen Sie direkt nach der Buchung auf der Zahlungsseite ab.</p>"
+                "<p>Sie zahlen online. Die Zahlung schließen Sie direkt nach der Buchung auf der Zahlungsseite ab.</p>\n"
+                f"{fallback}"
             )
         elif e_iban:
             payment_block = (

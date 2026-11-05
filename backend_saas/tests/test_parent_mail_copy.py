@@ -102,11 +102,11 @@ _TRAINING_START = datetime(2027, 3, 4, 16, 0, tzinfo=timezone.utc)  # 17:00 Berl
 _IBAN = "DE89370400440532013000"
 
 
-def _training_mail(payment_method, *, promoted=False, status="registered"):
+def _training_mail(payment_method, *, promoted=False, status="registered", iban=_IBAN):
     return build_registration_mail(
         status=status, org_name="Testverein", org_email="club@example.com", org_phone=None,
         camp_title="Einzeltraining", camp_start=date(2027, 3, 4), camp_end=date(2027, 3, 4),
-        parent_email="eva.muster@example.com", payment_reference="CP-12345678", iban=_IBAN,
+        parent_email="eva.muster@example.com", payment_reference="CP-12345678", iban=iban,
         price_cents=3500, currency="EUR", starts_at=_TRAINING_START,
         payment_method=payment_method, promoted=promoted,
     )
@@ -118,6 +118,19 @@ def test_training_mail_bar_has_no_bank_details():
     assert "35,00" in html
     assert "IBAN" not in html and _IBAN not in html
     assert "Verwendungszweck" not in html
+
+
+def test_training_mail_online_has_transfer_fallback_with_iban():
+    html = _training_mail("online").html_content
+    assert "Sie zahlen online" in html
+    assert "Falls die Online-Zahlung nicht geklappt hat:" in html
+    assert _IBAN in html and "CP-12345678" in html and "35,00" in html
+
+
+def test_training_mail_online_without_iban_points_to_contact():
+    html = _training_mail("online", iban=None).html_content
+    assert "Falls die Online-Zahlung nicht geklappt hat, wenden Sie sich bitte an club@example.com." in html
+    assert "IBAN" not in html
 
 
 def test_training_mail_ueberweisung_keeps_transfer_block():

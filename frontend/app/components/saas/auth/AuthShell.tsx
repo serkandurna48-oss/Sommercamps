@@ -28,7 +28,7 @@ export default function AuthShell({ name, logoUrl, initials, product = false, ac
     ? ({ '--auth-club': accent.strong, ...(accent.on ? { '--auth-club-on': accent.on } : {}) } as React.CSSProperties)
     : undefined
   return (
-    <div className={`${archivo.variable} cp-scope cp-auth`}>
+    <div className={`${archivo.variable} cp-scope cp-admin cp-auth`}>
       <svg className="auth-pitch" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
         <rect x="80" y="380" width="1040" height="660" rx="24" />
         <line x1="600" y1="380" x2="600" y2="1040" />

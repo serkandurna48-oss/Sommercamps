@@ -3,13 +3,13 @@
  * the darker orange (--cp-accent-ink, 5,3:1) so it clears 3:1 against the
  * paper; on the dark band and the dark sign-in ground the bright orange. */
 .cp-focus:focus-visible,
-.cp-scope :is(input, textarea, select, button, a[href], summary, [tabindex]):focus-visible,
+.cp-scope:where(.cp-admin) :is(input, textarea, select, button, a[href], summary, [tabindex]):focus-visible,
 .cp-admin-login :is(input, button, a[href]):focus-visible {
   outline: 2px solid var(--cp-focus-color, currentColor);
   outline-offset: 2px;
 }
 
-.cp-scope { --cp-focus-color: var(--cp-accent-ink); }
-.cp-scope header { --cp-focus-color: var(--cp-accent); }
+.cp-scope:where(.cp-admin) { --cp-focus-color: var(--cp-accent-ink); }
+.cp-scope:where(.cp-admin) header { --cp-focus-color: var(--cp-accent); }
 
 .cp-admin-login { --cp-focus-color: var(--ink); }

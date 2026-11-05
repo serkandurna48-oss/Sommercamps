@@ -46,7 +46,7 @@ export default function SubmitReviewButton({
     <div className="mt-3">
       {reviewNote && phase === 'idle' && (
         <p className="cp-body mb-3" style={{ color: 'var(--cp-ink-2)' }}>
-          <span style={{ color: 'var(--cp-error, #b91c1c)', fontWeight: 600 }}>{de.onboarding.reviewRejectedPrefix}</span>
+          <span style={{ color: 'var(--cp-error)', fontWeight: 600 }}>{de.onboarding.reviewRejectedPrefix}</span>
           {' '}{reviewNote}
         </p>
       )}
@@ -61,7 +61,7 @@ export default function SubmitReviewButton({
             {de.onboarding.step3ActionSubmit}
           </Button>
           {phase === 'error' && (
-            <p role="alert" className="cp-body mt-2" style={{ color: 'var(--cp-error, #b91c1c)' }}>{errorMsg}</p>
+            <p role="alert" className="cp-body mt-2" style={{ color: 'var(--cp-error)' }}>{errorMsg}</p>
           )}
         </>
       )}

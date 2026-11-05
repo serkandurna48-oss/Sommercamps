@@ -91,7 +91,7 @@ function Step({ number, done, active, title, body, children }: {
         className="cp-subheading mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm leading-none"
         style={{
           background: done ? 'var(--cp-ok-bg)' : active ? 'var(--cp-ink)' : 'var(--cp-surface-2)',
-          color: done ? 'var(--cp-ok)' : active ? '#fff' : 'var(--cp-ink-2)',
+          color: done ? 'var(--cp-ok)' : active ? 'var(--cp-surface)' : 'var(--cp-ink-2)',
           border: done ? '1px solid var(--cp-ok-line)' : active ? 'none' : '1px solid var(--cp-line)',
         }}
       >

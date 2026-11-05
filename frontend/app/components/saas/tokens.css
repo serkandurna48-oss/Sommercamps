@@ -6,7 +6,7 @@
  * --cp-* vocabulary so existing components follow without edits.
  *
  * Deliberately NOT on `:root` — this file is imported only by the admin,
- * platform and sign-in screens and scoped under `.cp-scope`, so it can
+ * platform and sign-in screens and scoped under `.cp-scope:where(.cp-admin)`, so it can
  * never leak into the parent-facing /pilot/[org] flow or the legacy KSV/JK
  * site, both of which keep their own tokens (see pilot/theme.ts,
  * globals.css, publicTheme.css).
@@ -17,7 +17,7 @@
  * the club colour.
  */
 
-.cp-scope {
+.cp-scope:where(.cp-admin) {
   --cp-mobile-nav-target-height: 56px;
   --cp-safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --cp-mobile-nav-height: calc(var(--cp-mobile-nav-target-height) + var(--cp-safe-area-bottom) + 1px);
@@ -101,7 +101,7 @@
  * dieser Klassen sitzen.
  * ---------------------------------------------------------------------- */
 
-.cp-scope {
+.cp-scope:where(.cp-admin) {
   font-family: var(--font-cp), ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -207,7 +207,7 @@
   text-transform: uppercase;
   color: var(--cp-accent-ink);
 }
-.cp-scope header .cp-eyebrow { color: var(--cp-accent-strong); }
+.cp-scope:where(.cp-admin) header .cp-eyebrow { color: var(--cp-accent-strong); }
 
 /* Bereichs-Tabs im Band. Unter 768px ist die Leiste eine fixierte Fussleiste
  * mit gleich breiten Spalten — bei 390px müssen alle Ziele (bis zu sieben, Spalten
@@ -215,7 +215,7 @@
  * horizontales Scrollen sichtbar sein, dafür kleinere Schrift und Umbruch
  * statt nowrap. Die Regel steht absichtlich NACH .cp-subheading: sonst
  * gewinnt dessen 17px. Der wandernde Unterstrich ist dort ausgeblendet,
- * deshalb markiert eine Oberkante in der Vereinsfarbe den aktiven Bereich. */
+ * deshalb markiert eine Oberkante in CampsPilot-Orange den aktiven Bereich. */
 @media (max-width: 767px) {
   .cp-admin-layout {
     padding-bottom: calc(var(--cp-mobile-nav-height) + var(--cp-selection-height) + 16px);
@@ -367,10 +367,10 @@
 
 /* Abschnitt 7, "Pflicht" — ohne diesen Block ist das Feature nicht fertig. */
 @media (prefers-reduced-motion: reduce) {
-  .cp-scope,
-  .cp-scope *,
-  .cp-scope *::before,
-  .cp-scope *::after {
+  .cp-scope:where(.cp-admin),
+  .cp-scope:where(.cp-admin) *,
+  .cp-scope:where(.cp-admin) *::before,
+  .cp-scope:where(.cp-admin) *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
@@ -394,7 +394,7 @@
  * genau eine pro Ansicht. Sekundär = transparent mit 1 px Rand. */
 /* In the components layer so Tailwind utilities on a single button (px-0, min-h-[52px]) still win. */
 @layer components {
-.cp-scope .cp-btn {
+.cp-scope:where(.cp-admin) .cp-btn {
   padding: 10px 16px;
   gap: 8px;
   border-radius: var(--cp-r-field);
@@ -410,21 +410,21 @@
   cursor: pointer;
   transition: background-color 150ms var(--cp-ease), border-color 150ms var(--cp-ease), box-shadow 150ms var(--cp-ease), filter 150ms var(--cp-ease);
 }
-.cp-scope .cp-btn-primary {
+.cp-scope:where(.cp-admin) .cp-btn-primary {
   border-color: transparent;
   background: var(--cp-accent-gradient);
   color: var(--cp-on-accent);
   font-weight: 600;
   box-shadow: var(--cp-shadow-accent);
 }
-.cp-scope .cp-btn-secondary:not(:disabled):hover { background: var(--cp-surface-sunken); }
-.cp-scope .cp-btn-primary:not(:disabled):hover { background: var(--cp-accent); }
-.cp-scope .cp-btn-danger { color: var(--cp-error); border-color: var(--cp-error); }
-.cp-scope .cp-btn-danger:not(:disabled):hover { background: var(--cp-error-bg); }
-.cp-scope .cp-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
-/* On the dark band: light outline instead of the field border. */
-.cp-scope header .cp-btn-secondary { color: var(--cp-on-band); border-color: rgb(234 238 236 / 0.28); }
-.cp-scope header .cp-btn-secondary:not(:disabled):hover { background: var(--cp-band-2); }
+.cp-scope:where(.cp-admin) .cp-btn-secondary:not(:disabled):hover { background: var(--cp-surface-sunken); }
+.cp-scope:where(.cp-admin) .cp-btn-primary:not(:disabled):hover { background: var(--cp-accent); }
+.cp-scope:where(.cp-admin) .cp-btn-danger { color: var(--cp-error); border-color: var(--cp-error); }
+.cp-scope:where(.cp-admin) .cp-btn-danger:not(:disabled):hover { background: var(--cp-error-bg); }
+.cp-scope:where(.cp-admin) .cp-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+/* On the dark band: light outline instead of the field border (3,4:1 against the band, control border >= 3:1). */
+.cp-scope:where(.cp-admin) header .cp-btn-secondary { color: var(--cp-on-band); border-color: rgb(234 238 236 / 0.4); }
+.cp-scope:where(.cp-admin) header .cp-btn-secondary:not(:disabled):hover { background: var(--cp-band-2); }
 }
 
 /* ----------------------------------------------------------------------
@@ -443,12 +443,8 @@
  * Listen-Container nach Rolle, nicht einheitlich (Design-Reifung nach dem
  * ersten Praxistest): eine Teilnehmer-/Wartelisten-Aufstellung ist ein
  * Mannschaftsbogen, kein generisches SaaS-Card-Grid — flache Fläche,
- * Vereinsfarben-Spine links (raw --cp-brand, wie CapacityBar/Band-Kante),
- * kein umlaufender Rahmen, kein Radius. Farbe kommt als Inline-Style
- * (borderLeftColor) von der jeweiligen Seite, nicht aus einer CSS-Var —
- * --cp-brand ist nur auf der Style-Preview-Seite tatsächlich gesetzt,
- * überall sonst wird die Vereinsfarbe als Prop durchgereicht (Abschnitt
- * 3.3-Konvention, siehe CapacityBar/StatusChip).
+ * kein umlaufender Rahmen, kein Radius. Die Vereinsfarbe spielt hier keine
+ * Rolle mehr (Redesign: Bedienelemente nutzen CampsPilot-Orange).
  * ---------------------------------------------------------------------- */
 .cp-roster {
   background: var(--cp-surface);
@@ -486,15 +482,15 @@
  * dunkle Band würde sonst als schwarze Fläche auf Papier landen.
  * ---------------------------------------------------------------------- */
 @media print {
-  .cp-scope header:not(.cp-daylist-heading),
+  .cp-scope:where(.cp-admin) header:not(.cp-daylist-heading),
   .cp-noprint {
     display: none !important;
   }
-  .cp-scope {
+  .cp-scope:where(.cp-admin) {
     background: #ffffff;
     color: #000000;
   }
-  .cp-scope a {
+  .cp-scope:where(.cp-admin) a {
     color: #000000;
     text-decoration: none;
   }
@@ -829,14 +825,14 @@
 }
 
 /* Shared admin geometry: cards, metrics, rows and fields. */
-.cp-scope { --cp-card-padding: 20px; --cp-card-gap: 16px; }
-@media (min-width: 768px) { .cp-scope { --cp-card-padding: 24px; } }
-.cp-scope .cp-card, .cp-scope .cp-roster {
+.cp-scope:where(.cp-admin) { --cp-card-padding: 20px; --cp-card-gap: 16px; }
+@media (min-width: 768px) { .cp-scope:where(.cp-admin) { --cp-card-padding: 24px; } }
+.cp-scope:where(.cp-admin) .cp-card, .cp-scope:where(.cp-admin) .cp-roster {
   min-width: 0; border: 1px solid var(--cp-line); border-radius: var(--cp-r-card);
   padding: var(--cp-card-padding); background: var(--cp-surface);
 }
-.cp-scope .cp-card { box-shadow: var(--cp-shadow-card); }
-.cp-scope .cp-card-list, .cp-scope .cp-roster { padding: 0; overflow: clip; }
+.cp-scope:where(.cp-admin) .cp-card { box-shadow: var(--cp-shadow-card); }
+.cp-scope:where(.cp-admin) .cp-card-list, .cp-scope:where(.cp-admin) .cp-roster { padding: 0; overflow: clip; }
 .cp-stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--cp-card-gap); }
 .cp-stat-tile { container-type: inline-size; }
 .cp-stat-tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
@@ -856,8 +852,8 @@
 .cp-participant-status { display: flex; flex-wrap: wrap; gap: 8px; }
 .cp-participant-summary { grid-template-columns: minmax(0, 1fr) 20px; grid-template-areas: 'main action' 'secondary action' 'status action'; }
 .cp-participant-summary .cp-row-action { align-self: center; }
-.cp-scope .cp-participant-trigger { display: block; padding: 0; border-color: transparent; background: transparent; }
-.cp-input, .cp-scope main input:not([type='checkbox']):not([type='radio']):not([type='hidden']), .cp-scope main select {
+.cp-scope:where(.cp-admin) .cp-participant-trigger { display: block; padding: 0; border-color: transparent; background: transparent; }
+.cp-input, .cp-scope:where(.cp-admin) main input:not([type='checkbox']):not([type='radio']):not([type='hidden']), .cp-scope:where(.cp-admin) main select {
   min-height: 48px; min-width: 0; max-width: 100%; font-size: 16px; line-height: 22px;
   border-radius: var(--cp-r-field);
 }
@@ -874,7 +870,7 @@
 }
 
 /* Pitch-side lists: the same rows and actions, with phone-only geometry. */
-.cp-scope {
+.cp-scope:where(.cp-admin) {
   --cp-list-target: 44px;
   --cp-list-gap: 12px;
   --cp-list-line: 1px;
@@ -882,14 +878,14 @@
   --cp-list-sticky-layer: 5;
   --cp-list-name-weight: 700;
 }
-.cp-scope .cp-mobile-only { display: none; }
+.cp-scope:where(.cp-admin) .cp-mobile-only { display: none; }
 .cp-row-overflow, .cp-overflow-panel, .cp-mobile-actions, .cp-payment-filters { display: contents; }
 .cp-row-action:has(> .cp-mobile-only) { display: none; }
 
 /* Payment actions stack as one even column of full-width buttons. */
-.cp-scope .cp-payment-actions { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
-.cp-scope .cp-payment-actions :is(form, form > div) { width: 100%; align-items: stretch; }
-.cp-scope .cp-payment-actions .cp-btn { width: 100%; }
+.cp-scope:where(.cp-admin) .cp-payment-actions { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+.cp-scope:where(.cp-admin) .cp-payment-actions :is(form, form > div) { width: 100%; align-items: stretch; }
+.cp-scope:where(.cp-admin) .cp-payment-actions .cp-btn { width: 100%; }
 
 /* Preserve the existing desktop order: reminder, payment, waiver. */
 @media (width >= 640px) {
@@ -898,15 +894,15 @@
 }
 
 @media (width < 640px) {
-  .cp-scope .cp-mobile-only { display: block; }
-  .cp-scope .cp-desktop-only { display: none; }
-  .cp-scope .cp-roster, .cp-scope .cp-waitlist {
+  .cp-scope:where(.cp-admin) .cp-mobile-only { display: block; }
+  .cp-scope:where(.cp-admin) .cp-desktop-only { display: none; }
+  .cp-scope:where(.cp-admin) .cp-roster, .cp-scope:where(.cp-admin) .cp-waitlist {
     overflow: visible;
     background: transparent;
     border: 0;
     border-radius: 0;
   }
-  .cp-scope .cp-mobile-card {
+  .cp-scope:where(.cp-admin) .cp-mobile-card {
     min-width: 0;
     margin-block: var(--cp-list-gap);
     border: var(--cp-list-line) solid var(--cp-line);
@@ -927,14 +923,14 @@
   .cp-camp-date { font-size: inherit; font-weight: normal; color: var(--cp-muted); }
   .cp-mobile-card .cp-camp-date { margin-block: var(--cp-list-gap); }
   .cp-participant-card-top { flex-direction: column; align-items: stretch; padding: var(--cp-card-padding); }
-  .cp-scope .cp-participant-trigger { width: 100%; }
-  .cp-scope .cp-mobile-primary {
+  .cp-scope:where(.cp-admin) .cp-participant-trigger { width: 100%; }
+  .cp-scope:where(.cp-admin) .cp-mobile-primary {
     display: flex; align-items: center; justify-content: center;
     min-height: var(--cp-list-target); width: 100%; margin-top: var(--cp-list-gap);
     border: var(--cp-list-line) solid var(--cp-field-line); border-radius: var(--cp-r-field);
     background: var(--cp-surface-2); color: var(--cp-ink);
   }
-  .cp-scope .cp-mobile-actions, .cp-payment-actions { display: flex; flex-direction: column; gap: var(--cp-list-gap); width: 100%; align-items: stretch; }
+  .cp-scope:where(.cp-admin) .cp-mobile-actions, .cp-payment-actions { display: flex; flex-direction: column; gap: var(--cp-list-gap); width: 100%; align-items: stretch; }
   .cp-mobile-actions form, .cp-mobile-actions form > div, .cp-waitlist-promote,
   .cp-waitlist-promote form, .cp-waitlist-promote form > div { width: 100%; }
   .cp-mobile-actions button, .cp-mobile-actions a, .cp-waitlist-promote button,
@@ -963,7 +959,7 @@
 }
 
 /* Toolbar above lists: actions side by side, explanations as quiet hints. */
-.cp-scope .cp-toolbar {
+.cp-scope:where(.cp-admin) .cp-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
@@ -972,8 +968,8 @@
   padding-bottom: 24px;
   border-bottom: 1px solid var(--cp-line-2);
 }
-.cp-scope .cp-toolbar > * { margin-bottom: 0; }
-.cp-scope .cp-hint {
+.cp-scope:where(.cp-admin) .cp-toolbar > * { margin-bottom: 0; }
+.cp-scope:where(.cp-admin) .cp-hint {
   font-size: 13px;
   line-height: 18px;
   color: var(--cp-muted);
@@ -1022,7 +1018,7 @@
 .cp-empty-art .spot { fill: var(--cp-accent); }
 
 /* App band: dark night surface with a faint floodlight cone (brand kit). */
-.cp-scope .cp-band {
+.cp-scope:where(.cp-admin) .cp-band {
   background: var(--cp-band-glow), var(--cp-band);
   color: var(--cp-on-band);
 }

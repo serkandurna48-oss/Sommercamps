@@ -49,7 +49,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
   const organizations = await fetchOrganizationsAdmin(token)
 
   return (
-    <div className={`${archivo.variable} cp-scope min-h-screen`}>
+    <div className={`${archivo.variable} cp-scope cp-admin min-h-screen`}>
       <StagingBanner />
       <GrainOverlay />
       {/* Same band as the club admin (MatchdayBand): dark floodlight surface, CampsPilot identity left, sign-out right. */}

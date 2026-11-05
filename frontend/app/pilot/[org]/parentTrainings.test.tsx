@@ -83,3 +83,10 @@ it('zeigt Trainings auch ohne zukünftige Camps', async () => {
   expect(html).toContain('Aktuell keine Camps')
   expect(html).toContain('href="/pilot/testverein/training/torwart"')
 })
+
+it('zeigt die Angebotsart als Badge, nur wenn gesetzt', async () => {
+  vi.mocked(fetchTrainingOffers).mockResolvedValue([{ ...offer, category: 'athletik' }, groupOffer])
+  const html = await render()
+  expect(html).toContain('Athletiktraining')
+  expect(html.match(/data-testid="offer-category"/g)).toHaveLength(1)
+})

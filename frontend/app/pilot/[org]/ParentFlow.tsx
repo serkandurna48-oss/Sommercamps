@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, OrganizationPublic, RegistrationCreated, TrainingOfferListItem } from '../../lib/saasApi'
-import { offerKindLabel } from '../../components/saas/training/trainingLogic'
+import { offerCategoryLabel, offerKindLabel } from '../../components/saas/training/trainingLogic'
 import { fromPriceText } from '../../lib/trainingFormat'
 import { formatCampDateRange, formatPrice, orgShortCode } from '../../lib/parentFlowFormat'
 import { truncateIntroForHero } from './campUtils'
@@ -619,6 +619,7 @@ export default function ParentFlow({
                 <li key={offer.slug}>
                   <Link className="tr-card" href={`/pilot/${org.slug}/training/${offer.slug}`}>
                     <span className="d3">{offer.title}</span>
+                    {offerCategoryLabel(offer.category) && <span className="tr-badge" data-testid="offer-category">{offerCategoryLabel(offer.category)}</span>}
                     <span className="tr-meta">{offerKindLabel[offer.kind] ?? offer.kind} · {offer.duration_minutes} Minuten</span>
                     {fromPrice && <span className="tr-price">{fromPrice}</span>}
                   </Link>

@@ -8,6 +8,7 @@ import {
 } from '../../../lib/trainingFormat'
 import RegistrationFormScreen from '../RegistrationFormScreen'
 import TrainingDoneScreen from './TrainingDoneScreen'
+import { offerCategoryLabel } from '../../../components/saas/training/trainingLogic'
 import './trainingPages.css'
 
 type Screen = 'detail' | 'form' | 'done'
@@ -102,6 +103,7 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
     <div className="tr-col">
       <a className="back-link" href={`/pilot/${org.slug}/training`}>Alle Angebote</a>
       <h1 className="d1" lang="de" style={{ marginTop: 12 }}>{offer.title}</h1>
+      {offerCategoryLabel(offer.category) && <p style={{ margin: '8px 0 0' }}><span className="tr-badge" data-testid="offer-category">{offerCategoryLabel(offer.category)}</span></p>}
       {offer.description && <p className="tr-lead" style={{ whiteSpace: 'pre-line' }}>{offer.description}</p>}
       <dl className="facts tr-facts">
         <div className="r"><dt>Dauer</dt><dd>{offer.duration_minutes} Minuten</dd></div>

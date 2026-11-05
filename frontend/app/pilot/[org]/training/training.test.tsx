@@ -257,3 +257,20 @@ describe('Bestätigung', () => {
     expect(html).not.toContain('Mitglied')
   })
 })
+
+describe('Angebotsart als Label', () => {
+  it('zeigt das Label in der Liste und auf der Angebotsseite, ohne Art nichts', async () => {
+    vi.mocked(getPublicTrainingOffers).mockResolvedValue([
+      { ...offer, category: 'premium', from_price_member_cents: 3500, from_price_nonmember_cents: 4500 },
+      { ...offer, slug: 'ohne', title: 'Ohne Art', category: null, from_price_member_cents: null, from_price_nonmember_cents: null },
+    ])
+    const list = renderToStaticMarkup(await TrainingOffersPage({ params: listParams }))
+    expect(list).toContain('Premium-Paket')
+    expect(list.match(/data-testid="offer-category"/g)).toHaveLength(1)
+
+    const flow = renderToStaticMarkup(<TrainingOfferFlow org={org} initialOffer={{ ...offer, category: 'videoanalyse' }} />)
+    expect(flow).toContain('Videoanalyse')
+    const none = renderToStaticMarkup(<TrainingOfferFlow org={org} initialOffer={offer} />)
+    expect(none).not.toContain('offer-category')
+  })
+})

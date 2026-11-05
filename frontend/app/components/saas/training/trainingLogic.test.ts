@@ -7,6 +7,8 @@ import {
   filterMembers,
   formatSessionWhen,
   parseEuroToCents,
+  OFFER_CATEGORIES,
+  offerCategoryLabel,
   parseOfferInput,
   parseSessionInput,
   paymentMethodLabel,
@@ -96,7 +98,7 @@ describe('Angebotsformular', () => {
       ok: true,
       value: {
         slug: 'einzel-45', title: 'Einzeltraining', kind: 'einzel', description: null, duration_minutes: 45,
-        location: 'Sportplatz', price_member_cents: 3000, price_nonmember_cents: 4050, status: 'draft',
+        location: 'Sportplatz', price_member_cents: 3000, price_nonmember_cents: 4050, status: 'draft', category: null,
       },
     })
   })
@@ -190,5 +192,28 @@ describe('Mitgliedersuche im Browser', () => {
   })
   it('ein Suchbegriff, der zu leer normalisiert, filtert nicht', () => {
     expect(filterMembers(members, '-', 'alle')).toHaveLength(3)
+  })
+})
+
+describe('Angebotsart', () => {
+  it('kennt die fünf Arten mit deutschen Labels', () => {
+    expect([...OFFER_CATEGORIES]).toEqual(['fussball', 'athletik', 'mental', 'videoanalyse', 'premium'])
+    expect(offerCategoryLabel('fussball')).toBe('Fußballtraining')
+    expect(offerCategoryLabel('athletik')).toBe('Athletiktraining')
+    expect(offerCategoryLabel('mental')).toBe('Mentaltraining')
+    expect(offerCategoryLabel('videoanalyse')).toBe('Videoanalyse')
+    expect(offerCategoryLabel('premium')).toBe('Premium-Paket')
+    expect(offerCategoryLabel(null)).toBeNull()
+    expect(offerCategoryLabel(undefined)).toBeNull()
+    expect(offerCategoryLabel('unbekannt')).toBeNull()
+  })
+
+  it('übernimmt eine gültige Art, leer wird null, Unbekanntes ist ein Feldfehler', () => {
+    const ok = parseOfferInput({ ...baseOffer, category: 'premium' }, 'create')
+    expect(ok.ok && ok.value.category).toBe('premium')
+    const empty = parseOfferInput({ ...baseOffer, category: '' }, 'update')
+    expect(empty.ok && empty.value.category).toBeNull()
+    const bad = parseOfferInput({ ...baseOffer, category: 'yoga' }, 'create')
+    expect(bad.ok ? [] : Object.keys(bad.errors)).toEqual(['category'])
   })
 })

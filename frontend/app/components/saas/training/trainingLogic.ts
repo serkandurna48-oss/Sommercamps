@@ -8,11 +8,23 @@
 
 export const OFFER_KINDS = ['einzel', 'gruppe'] as const
 export const OFFER_STATUSES = ['draft', 'published', 'archived'] as const
+export const OFFER_CATEGORIES = ['fussball', 'athletik', 'mental', 'videoanalyse', 'premium'] as const
+export type OfferCategory = (typeof OFFER_CATEGORIES)[number]
 export type OfferKind = (typeof OFFER_KINDS)[number]
 export type OfferStatus = (typeof OFFER_STATUSES)[number]
 
 export const offerKindLabel: Record<OfferKind, string> = { einzel: 'Einzeltraining', gruppe: 'Gruppentraining' }
 export const offerStatusLabel: Record<OfferStatus, string> = { draft: 'Entwurf', published: 'Veröffentlicht', archived: 'Archiviert' }
+
+const OFFER_CATEGORY_LABEL: Record<OfferCategory, string> = {
+  fussball: 'Fußballtraining', athletik: 'Athletiktraining', mental: 'Mentaltraining',
+  videoanalyse: 'Videoanalyse', premium: 'Premium-Paket',
+}
+
+/** Label der Angebotsart; null ohne (oder bei unbekannter) Art. */
+export function offerCategoryLabel(category: string | null | undefined): string | null {
+  return category && category in OFFER_CATEGORY_LABEL ? OFFER_CATEGORY_LABEL[category as OfferCategory] : null
+}
 
 const PAYMENT_METHOD_LABEL: Record<string, string> = { bar: 'Bar', ueberweisung: 'Überweisung' }
 
@@ -72,6 +84,7 @@ export interface OfferValues {
   price_member_cents: number
   price_nonmember_cents: number
   status: OfferStatus
+  category: OfferCategory | null
 }
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
@@ -99,6 +112,9 @@ export function parseOfferInput(input: Record<string, string>, mode: 'create' | 
   const status = (input.status ?? '').trim()
   if (!(OFFER_STATUSES as readonly string[]).includes(status)) errors.status = 'Bitte einen Status wählen.'
 
+  const category = (input.category ?? '').trim()
+  if (category && !(OFFER_CATEGORIES as readonly string[]).includes(category)) errors.category = 'Bitte eine Art des Angebots wählen.'
+
   if (Object.keys(errors).length > 0) return { ok: false, errors }
 
   const description = (input.description ?? '').trim()
@@ -114,6 +130,7 @@ export function parseOfferInput(input: Record<string, string>, mode: 'create' | 
       price_member_cents: priceMember!,
       price_nonmember_cents: priceNonmember!,
       status: status as OfferStatus,
+      category: (category || null) as OfferCategory | null,
     },
   }
 }

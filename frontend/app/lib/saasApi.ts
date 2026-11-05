@@ -139,6 +139,7 @@ export interface TrainingOfferPublic {
   location: string | null
   price_member_cents: number
   price_nonmember_cents: number
+  category?: 'fussball' | 'athletik' | 'mental' | 'videoanalyse' | 'premium' | null
 }
 
 /** Listenzeile: price_* ist nur die Vorlage für neue Termine; berechnet wird der Terminpreis.

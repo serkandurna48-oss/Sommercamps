@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { fromPriceText } from '../../../lib/trainingFormat'
+import { offerCategoryLabel } from '../../../components/saas/training/trainingLogic'
 import LegalShell from '../LegalShell'
 import PublicLoadError from '../PublicLoadError'
 import { getPublicOrganization, getPublicTrainingOffers } from '../publicData'
@@ -49,6 +50,7 @@ export default async function TrainingOffersPage({ params }: PageProps) {
               <li key={offer.slug}>
                 <Link className="tr-card" href={`/pilot/${org.slug}/training/${offer.slug}`}>
                   <span className="d3">{offer.title}</span>
+                  {offerCategoryLabel(offer.category) && <span className="tr-badge" data-testid="offer-category">{offerCategoryLabel(offer.category)}</span>}
                   <span className="tr-meta">{offer.duration_minutes} Minuten{offer.location ? ` · ${offer.location}` : ''}</span>
                   {offer.description && <span className="tr-meta" style={{ whiteSpace: 'pre-line' }}>{offer.description}</span>}
                   {fromPrice && <span className="tr-price">{fromPrice}</span>}

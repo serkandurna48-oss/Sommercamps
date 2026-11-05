@@ -398,7 +398,7 @@ def test_public_list_only_published_offers(ctx):
     (row,) = r.json()
     assert row["slug"] == "live-offer"
     assert set(row) == {"slug", "title", "kind", "description", "duration_minutes", "location",
-                        "price_member_cents", "price_nonmember_cents",
+                        "price_member_cents", "price_nonmember_cents", "category",
                         "from_price_member_cents", "from_price_nonmember_cents"}
     assert row["from_price_member_cents"] is None and row["from_price_nonmember_cents"] is None  # no session yet
 

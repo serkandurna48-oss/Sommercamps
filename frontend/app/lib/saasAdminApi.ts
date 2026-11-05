@@ -676,6 +676,8 @@ export class MemberImportError extends AdminActionError {
   }
 }
 
+export type TrainingOfferCategory = 'fussball' | 'athletik' | 'mental' | 'videoanalyse' | 'premium'
+
 export interface TrainingOffer {
   id: string
   slug: string
@@ -687,6 +689,7 @@ export interface TrainingOffer {
   price_member_cents: number
   price_nonmember_cents: number
   status: 'draft' | 'published' | 'archived'
+  category?: TrainingOfferCategory | null
   created_at: string
   updated_at: string
 }
@@ -701,6 +704,7 @@ export interface TrainingOfferCreateInput {
   price_member_cents: number
   price_nonmember_cents: number
   status: 'draft' | 'published' | 'archived'
+  category?: TrainingOfferCategory | null
 }
 
 /** slug und kind sind unveränderlich. */

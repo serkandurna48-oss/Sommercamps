@@ -41,6 +41,7 @@ public_router = APIRouter(prefix="/api/v1/organizations/{organization_slug}/trai
 
 OfferKind = Literal["einzel", "gruppe"]
 OfferStatus = Literal["draft", "published", "archived"]
+OfferCategory = Literal["fussball", "athletik", "mental", "videoanalyse", "premium"]
 _TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
@@ -58,6 +59,7 @@ class OfferCreate(BaseModel):
     price_member_cents: int = Field(ge=0, le=10_000_000)
     price_nonmember_cents: int = Field(ge=0, le=10_000_000)
     status: OfferStatus = "draft"
+    category: Optional[OfferCategory] = None
 
     @field_validator("slug")
     @classmethod
@@ -77,6 +79,7 @@ class OfferUpdate(BaseModel):
     price_member_cents: Optional[int] = Field(default=None, ge=0, le=10_000_000)
     price_nonmember_cents: Optional[int] = Field(default=None, ge=0, le=10_000_000)
     status: Optional[OfferStatus] = None
+    category: Optional[OfferCategory] = None  # null clears
 
     @model_validator(mode="after")
     def _no_null_for_required(self) -> "OfferUpdate":
@@ -97,6 +100,7 @@ class OfferAdminOut(BaseModel):
     price_member_cents: int
     price_nonmember_cents: int
     status: str
+    category: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -110,6 +114,7 @@ class OfferPublicOut(BaseModel):
     location: Optional[str] = None
     price_member_cents: int
     price_nonmember_cents: int
+    category: Optional[str] = None
 
 
 class OfferListPublicOut(OfferPublicOut):

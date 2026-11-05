@@ -29,12 +29,12 @@ class TrainingOfferNotFoundError(Exception):
 
 
 _OFFER_FIELDS = """id, organization_id, slug, title, kind, description, duration_minutes,
-    location, price_member_cents, price_nonmember_cents, status, created_at, updated_at"""
+    location, price_member_cents, price_nonmember_cents, status, category, created_at, updated_at"""
 
 # Column names interpolated into UPDATE come only from this fixed set.
 _UPDATABLE = {
     "title", "kind", "description", "duration_minutes", "location",
-    "price_member_cents", "price_nonmember_cents", "status",
+    "price_member_cents", "price_nonmember_cents", "status", "category",
 }
 
 
@@ -50,17 +50,18 @@ def create_offer(
     description: Optional[str] = None,
     location: Optional[str] = None,
     status: str = "draft",
+    category: Optional[str] = None,
 ) -> dict:
     with db.get_cursor() as cur:
         try:
             cur.execute(
                 f"""insert into training_offers
                     (organization_id, slug, title, kind, description, duration_minutes,
-                     location, price_member_cents, price_nonmember_cents, status)
-                    values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     location, price_member_cents, price_nonmember_cents, status, category)
+                    values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     returning {_OFFER_FIELDS}""",
                 (organization_id, slug, title, kind, description, duration_minutes,
-                 location, price_member_cents, price_nonmember_cents, status),
+                 location, price_member_cents, price_nonmember_cents, status, category),
             )
         except psycopg2.errors.UniqueViolation as exc:
             raise TrainingOfferSlugConflictError(slug) from exc

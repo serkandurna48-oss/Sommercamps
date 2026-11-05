@@ -10,9 +10,11 @@ import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 import SuccessNote from '../state/SuccessNote'
 import type { TrainingOffer } from '../../../lib/saasAdminApi'
 import {
+  OFFER_CATEGORIES,
   OFFER_KINDS,
   OFFER_STATUSES,
   formatEuroInput,
+  offerCategoryLabel,
   offerKindLabel,
   offerStatusLabel,
 } from './trainingLogic'
@@ -75,6 +77,13 @@ export default function OfferForm({ orgSlug, offer, brandStrong, brandOn, backBu
             </Field>
           </>
         )}
+
+        <Field label="Art des Angebots (optional)" htmlFor="offer_category" hint="Wird Eltern als Label angezeigt. Premium-Paket ist nur ein Label; beschreiben Sie den Umfang in der Beschreibung." error={err('category')}>
+          <select id="offer_category" name="category" defaultValue={value('category', offer?.category ?? '')} className={INPUT_CLASS} style={INPUT_STYLE}>
+            <option value="">Keine Angabe</option>
+            {OFFER_CATEGORIES.map(category => <option key={category} value={category}>{offerCategoryLabel(category)}</option>)}
+          </select>
+        </Field>
 
         <Field label="Beschreibung (optional)" htmlFor="offer_description">
           <textarea id="offer_description" name="description" rows={3} defaultValue={value('description', offer?.description ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />

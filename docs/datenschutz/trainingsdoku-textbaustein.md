@@ -25,10 +25,10 @@ der Verein soll solche Angaben nicht erfassen, sofern sie nicht für das Trainin
 Bei Kindern unter [16] Jahren erteilen die Sorgeberechtigten die Einwilligung. [Altersgrenze und
 Einwilligungsfähigkeit rechtlich prüfen.]
 
-**Freiwilligkeit.** Ohne Einwilligung nimmt Ihr Kind ganz normal am Training teil; es werden dann keine
-Trainingsnotizen angelegt.
+**Freiwilligkeit.** Ohne Einwilligung nimmt Ihr Kind ganz normal am Training teil. Der Verein
+verpflichtet sich, dann keine Trainingsnotizen über Ihr Kind anzulegen.
 
-**Speicherdauer (Vorschlag).** Die Notizen werden gelöscht, sobald der Zweck entfällt, spätestens
+**Speicherdauer (Vorschlag).** Der Verein löscht die Notizen, sobald der Zweck entfällt, spätestens
 [12] Monate nach dem letzten Training Ihres Kindes beim Verein, oder früher auf Ihren Wunsch.
 [Frist vom Verein festlegen.]
 
@@ -44,5 +44,15 @@ Datenschutzaufsichtsbehörde.
 > dokumentiert (z. B. Notizen, Ziele, Messwerte). Diese Notizen sind nur für den Verein bestimmt.
 
 Die Checkbox ist freiwillig und standardmäßig nicht angekreuzt. Der Status wird je Buchung gespeichert
-(`documentation_consent`) und ist in der Spielerakte sichtbar. Löschung auf Anfrage: Notizen, Ziele und
-Messwerte des Spielers entfernen.
+(`documentation_consent`) und ist in der Spielerakte sichtbar.
+
+## Hinweise für den Verein (nicht Teil der Datenschutzerklärung)
+
+- **Einwilligung:** CampsPilot verhindert Notizen ohne Einwilligung nicht technisch. Die Spielerakte
+  zeigt nur einen Hinweis, wenn für die jüngste Buchung keine Einwilligung vorliegt (auch bei älteren
+  Buchungen, bei denen sie noch nicht abgefragt wurde). Ohne Einwilligung keine Notizen anlegen.
+- **Löschung:** Es gibt keine automatische Löschung nach Fristablauf und noch keine Funktion „ganze
+  Akte löschen“. Bei Fristablauf oder Löschwunsch Notizen, Ziele und Messwerte in der Spielerakte
+  einzeln löschen; die Löschung der Akte selbst ist derzeit nur über den Betreiber möglich.
+- **Gesundheitsangaben:** Keine Diagnosen oder Gesundheitsdaten in Notizen schreiben, sofern nicht
+  zwingend nötig.

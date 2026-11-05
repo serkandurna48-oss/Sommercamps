@@ -13,7 +13,7 @@ vi.mock('next/link', () => ({
   useLinkStatus: () => ({ pending: linkPending }),
 }))
 
-const { default: BandTabs } = await import('./BandTabs')
+const { default: BandTabs, activeTabHref } = await import('./BandTabs')
 const { orgTabs } = await import('../navTabs')
 
 const tabs = [
@@ -80,4 +80,15 @@ it('acht Bereiche (mit Spieler): acht Spalten in einer Zeile, nur Kurzbeschriftu
 it('fünf Bereiche behalten ihre Spaltenzahl ohne Kurzbeschriftung', () => {
   const html = renderToStaticMarkup(<BandTabs tabs={tabs} brandColor="#0B6E4F" />)
   expect(html).toContain('grid-template-columns:repeat(2, minmax(0, 1fr))')
+})
+
+it('markiert auf Unterseiten den übergeordneten Bereich (längster Präfix)', () => {
+  const org = orgTabs('demoverein').map(tab => tab.href)
+  expect(activeTabHref('/pilot/demoverein/trainings/abc', org)).toBe('/pilot/demoverein/trainings')
+  expect(activeTabHref('/pilot/demoverein/spieler/123', org)).toBe('/pilot/demoverein/spieler')
+  expect(activeTabHref('/pilot/demoverein/spielerliste', org)).toBeUndefined()
+  expect(activeTabHref('/pilot/demoverein/einrichtung', org)).toBeUndefined()
+  const camp = ['/pilot/v/camps/c', '/pilot/v/camps/c/zahlungen']
+  expect(activeTabHref('/pilot/v/camps/c/zahlungen', camp)).toBe('/pilot/v/camps/c/zahlungen')
+  expect(activeTabHref('/pilot/v/camps/c', camp)).toBe('/pilot/v/camps/c')
 })

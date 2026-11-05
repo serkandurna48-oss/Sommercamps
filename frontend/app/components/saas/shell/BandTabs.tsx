@@ -59,9 +59,23 @@ function TabHint() {
 }
 
 /**
+ * Active tab = the tab whose href is the longest segment-wise prefix of the
+ * current path, so sub-pages (e.g. /trainings/[offerId], /spieler/[id]) keep
+ * their parent tab marked. Exported for tests.
+ */
+export function activeTabHref(pathname: string, hrefs: string[]): string | undefined {
+  let best: string | undefined
+  for (const href of hrefs) {
+    const matches = pathname === href || pathname.startsWith(href.endsWith('/') ? href : `${href}/`)
+    if (matches && (!best || href.length > best.length)) best = href
+  }
+  return best
+}
+
+/**
  * M2 (Auftrag Abschnitt 7): Unterstrich wandert per transform (translateX +
  * scaleX), 200ms, cubic-bezier(.4,0,.2,1) — nie width/left animiert, nur
- * transform (siehe Verbote). Aktiver Tab per exaktem Pfad-Match.
+ * transform (siehe Verbote). Aktiver Tab per Präfix-Match (Unterseiten markieren ihren Bereich).
  */
 export default function BandTabs({ tabs }: { tabs: TabItem[]; /** @deprecated Active tab is CampsPilot orange. Ignored. */ brandColor?: string }) {
   const pathname = usePathname()
@@ -86,6 +100,9 @@ export default function BandTabs({ tabs }: { tabs: TabItem[]; /** @deprecated Ac
     }
   }, [pathname, tabs])
 
+  const tabPath = (href: string) => (preview ? previewHref(href, preview.empty).split('?')[0] : href)
+  const activeHref = activeTabHref(pathname, tabs.map(tab => tabPath(tab.href)))
+
   return (
     <nav
       ref={containerRef}
@@ -95,7 +112,7 @@ export default function BandTabs({ tabs }: { tabs: TabItem[]; /** @deprecated Ac
       aria-label="Bereiche"
     >
       {tabs.map(tab => {
-        const active = pathname === (preview ? previewHref(tab.href, preview.empty).split('?')[0] : tab.href)
+        const active = activeHref !== undefined && tabPath(tab.href) === activeHref
         const Icon = tab.icon ? ICONS[tab.icon] : undefined
         return (
           <Link

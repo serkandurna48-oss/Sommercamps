@@ -172,3 +172,103 @@ def list_sessions(organization_id: UUID, offer_id: UUID) -> list[dict]:
             (organization_id, offer_id),
         )
         return cur.fetchall()
+
+
+# ---------------------------------------------------------------------------
+# Task 4: admin/public read models and guarded delete/cancel
+# ---------------------------------------------------------------------------
+
+_COUNTING = ("registered", "confirmed")  # same definition as CAPACITY_COUNTING_STATUSES
+
+_SESSION_WITH_COUNT = """
+    select c.id, c.organization_id, c.offer_id, c.slug, c.status, c.starts_at, c.ends_at,
+           c.capacity, c.price_cents, c.price_member_cents, c.age_min, c.age_max, c.location,
+           (select count(*) from camp_registrations r
+             where r.camp_id = c.id and r.organization_id = c.organization_id
+               and r.status = any(%s)) as booked_count
+    from camps c
+"""
+
+
+class SessionNotFoundError(Exception):
+    """No such session under this organization and offer."""
+
+
+class SessionHasRegistrationsError(Exception):
+    """Session cannot be removed/cancelled because of registrations."""
+
+    def __init__(self, active: bool):
+        self.active = active
+        super().__init__("active registrations" if active else "registration history")
+
+
+def get_session_with_count(organization_id: UUID, offer_id: UUID, session_id: UUID) -> Optional[dict]:
+    with db.get_cursor() as cur:
+        cur.execute(
+            _SESSION_WITH_COUNT + " where c.organization_id = %s and c.offer_id = %s and c.id = %s",
+            (list(_COUNTING), organization_id, offer_id, session_id),
+        )
+        return cur.fetchone()
+
+
+def list_sessions_with_counts(organization_id: UUID, offer_id: UUID) -> list[dict]:
+    with db.get_cursor() as cur:
+        cur.execute(
+            _SESSION_WITH_COUNT
+            + " where c.organization_id = %s and c.offer_id = %s order by c.starts_at asc, c.slug asc",
+            (list(_COUNTING), organization_id, offer_id),
+        )
+        return cur.fetchall()
+
+
+def list_public_sessions(organization_id: UUID, offer_id: UUID) -> list[dict]:
+    """Published, future sessions of an offer with booked counts (no participant data)."""
+    with db.get_cursor() as cur:
+        cur.execute(
+            _SESSION_WITH_COUNT
+            + """ where c.organization_id = %s and c.offer_id = %s
+                    and c.status = 'published' and c.starts_at > now()
+                  order by c.starts_at asc, c.slug asc""",
+            (list(_COUNTING), organization_id, offer_id),
+        )
+        return cur.fetchall()
+
+
+def _lock_session_and_count(cur, organization_id: UUID, offer_id: UUID, session_id: UUID) -> tuple[dict, int, int]:
+    # Same lock the booking transaction takes (camps row FOR UPDATE), so a
+    # concurrent booking and this delete/cancel are serialized.
+    cur.execute(
+        "select id, slug from camps where organization_id = %s and offer_id = %s and id = %s for update",
+        (organization_id, offer_id, session_id),
+    )
+    row = cur.fetchone()
+    if row is None:
+        raise SessionNotFoundError(str(session_id))
+    cur.execute(
+        """select count(*) filter (where status = any(%s)) as active, count(*) as total
+           from camp_registrations where organization_id = %s and camp_id = %s""",
+        (list(_COUNTING), organization_id, session_id),
+    )
+    counts = cur.fetchone()
+    return row, counts["active"], counts["total"]
+
+
+def delete_session(organization_id: UUID, offer_id: UUID, session_id: UUID) -> None:
+    """Hard delete; only when the session never had any registration (child data is kept)."""
+    with db.get_cursor() as cur:
+        _, active, total = _lock_session_and_count(cur, organization_id, offer_id, session_id)
+        if total:
+            raise SessionHasRegistrationsError(active > 0)
+        cur.execute("delete from camps where organization_id = %s and id = %s", (organization_id, session_id))
+
+
+def cancel_session(organization_id: UUID, offer_id: UUID, session_id: UUID) -> None:
+    """Soft cancel (status archived): not public, not bookable. Blocked by active registrations."""
+    with db.get_cursor() as cur:
+        _, active, _ = _lock_session_and_count(cur, organization_id, offer_id, session_id)
+        if active:
+            raise SessionHasRegistrationsError(True)
+        cur.execute(
+            "update camps set status = 'archived' where organization_id = %s and id = %s",
+            (organization_id, session_id),
+        )

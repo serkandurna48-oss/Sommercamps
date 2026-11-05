@@ -15,7 +15,7 @@ _STATS_QUERY = """
     select
         (select count(*) from organizations where site_published) as organizations_published,
         (select count(*) from organizations where not site_published) as organizations_draft,
-        (select count(*) from camps) as camps_total,
+        (select count(*) from camps where offer_id is null) as camps_total,
         (select count(*) from camp_registrations) as registrations_total,
         (select count(*) from camp_registrations where created_at >= now() - interval '30 days')
             as registrations_last_30_days,

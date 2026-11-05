@@ -138,6 +138,16 @@ _LIST_ADMIN = f"""
     select {_ADMIN_CAMP_FIELDS}
     from camps
     where organization_id = %s
+      and offer_id is null
+    order by start_date asc, slug asc
+"""
+
+# Same as _LIST_ADMIN but including training sessions (offer_id set): for
+# exports that must cover every registration of the organization.
+_LIST_ADMIN_WITH_SESSIONS = f"""
+    select {_ADMIN_CAMP_FIELDS}
+    from camps
+    where organization_id = %s
     order by start_date asc, slug asc
 """
 
@@ -150,11 +160,19 @@ _GET_ADMIN_BY_SLUG = f"""
 
 
 def list_camps_for_organization(organization_id: UUID) -> list[dict]:
-    """Platform-admin only — every camp regardless of status (draft/
-    published/closed/archived), unlike list_published_camps. organization_id
-    must already be resolved server-side, same rule as create_camp."""
+    """Platform-admin only — every classic camp regardless of status (draft/
+    published/closed/archived), unlike list_published_camps. Training
+    sessions (offer_id set) are excluded: they have their own admin views.
+    organization_id must already be resolved server-side, same rule as create_camp."""
     with db.get_cursor() as cur:
         cur.execute(_LIST_ADMIN, (organization_id,))
+        return cur.fetchall()
+
+
+def list_camps_and_sessions_for_organization(organization_id: UUID) -> list[dict]:
+    """Platform-admin only — classic camps AND training sessions (for exports)."""
+    with db.get_cursor() as cur:
+        cur.execute(_LIST_ADMIN_WITH_SESSIONS, (organization_id,))
         return cur.fetchall()
 
 
@@ -234,6 +252,7 @@ def update_camp(organization_id: UUID, camp_slug: str, data: CampUpdate) -> Opti
         set {set_clause}
         where organization_id = %s
           and slug = %s
+          and offer_id is null
         returning {_ADMIN_CAMP_FIELDS}
     """
     with db.get_cursor() as cur:

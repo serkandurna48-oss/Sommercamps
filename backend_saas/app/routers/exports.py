@@ -234,7 +234,7 @@ def export_organization_xlsx(
     camp), so this deliberately has no `view=participants` option."""
     organization = require_organization(organization_slug)
 
-    camps = camps_repo.list_camps_for_organization(organization["id"])
+    camps = camps_repo.list_camps_and_sessions_for_organization(organization["id"])
     registrations_by_camp_id: dict = defaultdict(list)
     for row in registrations_repo.list_registrations_for_organization(organization["id"]):
         registrations_by_camp_id[row["camp_id"]].append(row)

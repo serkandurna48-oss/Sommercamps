@@ -93,7 +93,7 @@ export default function QuickNoteForm({ orgSlug, playerId, bookings, initialDate
     })
   }
 
-  const toggleStyle = (on: boolean) => (on ? { background: brandStrong, color: brandOn, borderColor: 'transparent' } : undefined)
+  const toggleStyle = (on: boolean) => (on ? { background: 'var(--cp-accent-soft)', color: 'var(--cp-accent-ink)', borderColor: 'var(--cp-accent-ink)' } : undefined)
 
   return (
     <form onSubmit={onSubmit} className="cp-card flex flex-col gap-4" aria-label={note ? 'Notiz bearbeiten' : 'Neue Notiz'} noValidate>

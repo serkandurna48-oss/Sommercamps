@@ -57,7 +57,7 @@ export default function MeasurementsSection({ orgSlug, playerId, measurements, m
             const rows = measurements.filter(m => m.metric === group.metric)
             return (
               <section key={group.metric} className="cp-card flex flex-col gap-3" aria-label={metricLabel(group.metric)}>
-                <MetricChart metric={group.metric} unit={group.unit} points={series} color={brandStrong} />
+                <MetricChart metric={group.metric} unit={group.unit} points={series} color="var(--cp-accent-ink)" />
                 <ul className="flex flex-col">
                   {rows.map(row => (
                     <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 border-t py-2" style={{ borderTopColor: 'var(--cp-line-2)' }}>

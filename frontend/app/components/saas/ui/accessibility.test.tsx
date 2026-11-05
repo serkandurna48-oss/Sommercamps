@@ -9,7 +9,7 @@ import Button, { ButtonLink } from './Button'
 import FilterButton from './FilterButton'
 import ExportBar from './ExportBar'
 import { INPUT_CLASS } from './formFieldStyles'
-import { __internal, computeBrandTokens } from '../brandPipeline'
+import { __internal } from '../brandPipeline'
 import ParticipantList from '../data/ParticipantList'
 import LogoutButton from '../shell/LogoutButton'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
@@ -44,11 +44,6 @@ const camp = { title: 'Testcamp', slug: 'camp', start_date: '2027-07-05', end_da
 function minimumTarget(element: Element) {
   expect(element.classList.contains('min-h-[44px]') || element.classList.contains('min-h-[50px]')).toBe(true)
   expect(element.classList.contains('min-w-[44px]')).toBe(true)
-}
-function rgb(hex: string) {
-  const element = document.createElement('span')
-  element.style.color = hex
-  return element.style.color
 }
 const contrast = (a: string, b: string) => __internal.contrastRatio(__internal.hexToRgb(a), __internal.hexToRgb(b))
 
@@ -115,22 +110,25 @@ describe('admin accessibility primitives', () => {
     expect(link.querySelector('button')).toBeNull()
   })
 
-  it.each(['#B8912B', '#CC0000'])('uses safe brand contrast for filters, selection actions and editing: %s', async color => {
-    const brand = computeBrandTokens(color)
+  // Redesign R1: admin controls use the CampsPilot orange, whatever the club colour.
+  it.each(['#B8912B', '#CC0000'])('uses CampsPilot accent with safe contrast for filters, selection actions and editing: %s', async color => {
     await act(() => root.render(<><FilterButton label="Alle" count={1} active brandColor={color} onClick={() => {}} />
       <ParticipantList camp={camp} registrations={[registration]} orgSlug="test" campSlug="camp" brandColor={color} /></>))
     const filter = container.querySelector('button')!
-    expect(filter.style.color).toBe(rgb(brand.brandStrong))
-    expect(filter.style.background).toBe('var(--cp-surface)')
-    expect(contrast(brand.brandStrong, '#FFFFFF')).toBeGreaterThanOrEqual(4.5)
-    expect(contrast(brand.brandStrong, '#F4F5F2')).toBeGreaterThanOrEqual(4.5)
-    expect(contrast(brand.brandStrong, brand.brandOn)).toBeGreaterThanOrEqual(4.5)
+    expect(filter.style.color).toBe('var(--cp-accent-ink)')
+    expect(filter.style.background).toBe('var(--cp-accent-soft)')
+    // Brand kit values from tokens.css: accent-ink on accent-soft/white/paper, on-accent on both gradient stops.
+    expect(contrast('#a8460f', '#fbe3d6')).toBeGreaterThanOrEqual(4.5)
+    expect(contrast('#a8460f', '#FFFFFF')).toBeGreaterThanOrEqual(4.5)
+    expect(contrast('#a8460f', '#f4f3ef')).toBeGreaterThanOrEqual(4.5)
+    expect(contrast('#1b0d06', '#e8672b')).toBeGreaterThanOrEqual(4.5)
+    expect(contrast('#1b0d06', '#f27a3d')).toBeGreaterThanOrEqual(4.5)
     const checkbox = container.querySelector('.cp-roster-row input[type="checkbox"]') as HTMLInputElement
     minimumTarget(checkbox.closest('label')!)
     await act(() => checkbox.closest('label')!.click())
     const action = container.querySelector('a[href^="mailto:?bcc"]') as HTMLAnchorElement
-    expect(action.style.background).toBe(rgb(brand.brandStrong))
-    expect(action.style.color).toBe(rgb(brand.brandOn))
+    expect(action.classList.contains('cp-btn-primary')).toBe(true)
+    expect(action.style.background).toBe('')
     expect(action.querySelector('button')).toBeNull()
     // The roster disclosure is separate from both export and selection.
     const row = container.querySelector('.cp-roster-row')!
@@ -141,8 +139,8 @@ describe('admin accessibility primitives', () => {
     minimumTarget(edit)
     await act(() => edit.click())
     const save = row.querySelector('button[type="submit"]') as HTMLButtonElement
-    expect(save.style.background).toBe(rgb(brand.brandStrong))
-    expect(save.style.color).toBe(rgb(brand.brandOn))
+    expect(save.classList.contains('cp-btn-primary')).toBe(true)
+    expect(save.style.background).toBe('')
   })
 
   it('makes closed details inert and keeps labels unique across simultaneous participant editors', async () => {

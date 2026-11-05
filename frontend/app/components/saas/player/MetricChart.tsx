@@ -30,11 +30,11 @@ export default function MetricChart({ metric, unit, points, color }: {
       <svg viewBox={`0 0 ${AREA.width} ${AREA.height}`} role="img" aria-label={summary} className="h-auto w-full max-w-[420px]">
         <line x1={AREA.pad} y1={AREA.height - 2} x2={AREA.width - AREA.pad} y2={AREA.height - 2} stroke="var(--cp-line)" strokeWidth="1" />
         {scaled.length > 1 && (
-          <polyline fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"
+          <polyline fill="none" style={{ stroke: color }} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"
             points={scaled.map(point => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ')} />
         )}
         {scaled.map((point, index) => (
-          <circle key={point.id ?? `${point.date}-${index}`} cx={point.x.toFixed(1)} cy={point.y.toFixed(1)} r={index === scaled.length - 1 ? 5 : 3.5} fill={color} />
+          <circle key={point.id ?? `${point.date}-${index}`} cx={point.x.toFixed(1)} cy={point.y.toFixed(1)} r={index === scaled.length - 1 ? 5 : 3.5} style={{ fill: color }} />
         ))}
       </svg>
       <p className="cp-chip" style={{ color: 'var(--cp-ink-2)' }}>

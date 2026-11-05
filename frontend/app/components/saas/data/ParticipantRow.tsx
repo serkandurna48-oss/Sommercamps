@@ -56,7 +56,7 @@ export default function ParticipantRow({
             checked={selected}
             onChange={onToggleSelect}
             className="cp-focus h-5 w-5 shrink-0"
-            style={{ accentColor: brand.brandStrong }}
+            style={{ accentColor: 'var(--cp-accent-ink)' }}
           />
         </label>
 

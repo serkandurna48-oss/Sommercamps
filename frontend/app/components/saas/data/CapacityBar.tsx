@@ -1,17 +1,17 @@
 /**
  * Die einzige Stelle, an der Belegung gerendert wird (Abschnitt 5). Der
- * Balken trägt IMMER die Vereinsfarbe (--cp-brand, roh — eine der fünf
- * erlaubten Stellen, Abschnitt 3.3), unabhängig davon, ob voll/fast voll —
- * das ist keine Status-, sondern eine Marken-Fläche.
+ * Balken ist der CampsPilot-Fortschrittsbalken (Orange-Verlauf, Pill),
+ * unabhängig davon, ob voll/fast voll — keine Status-, sondern eine
+ * Marken-Fläche. Die Vereinsfarbe gehört nur an das Logo im Band.
  */
 export default function CapacityBar({
   filled,
   total,
-  brandColor,
 }: {
   filled: number
   total: number
-  brandColor: string
+  /** @deprecated The bar uses the CampsPilot orange. Ignored. */
+  brandColor?: string
 }) {
   const ratio = total > 0 ? Math.max(0, Math.min(1, filled / total)) : 0
   return (
@@ -26,7 +26,7 @@ export default function CapacityBar({
       </div>
       <div
         className="h-1.5 w-full"
-        style={{ background: 'var(--cp-line-2)', borderRadius: 'var(--cp-r-bar)' }}
+        style={{ background: 'var(--cp-surface-sunken)', borderRadius: 'var(--cp-r-bar)' }}
         role="progressbar"
         aria-valuenow={filled}
         aria-valuemin={0}
@@ -34,7 +34,7 @@ export default function CapacityBar({
       >
         <div
           className="h-full"
-          style={{ width: `${ratio * 100}%`, background: brandColor, borderRadius: 'var(--cp-r-bar)' }}
+          style={{ width: `${ratio * 100}%`, background: 'var(--cp-accent-bar)', borderRadius: 'var(--cp-r-bar)' }}
         />
       </div>
     </div>

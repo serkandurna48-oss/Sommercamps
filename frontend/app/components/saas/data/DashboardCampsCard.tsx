@@ -27,7 +27,7 @@ function DashboardCampRow({ entry, orgSlug }: { entry: CampWithStats; orgSlug: s
           <p className="cp-label cp-num mb-2">{occupied}</p>
           <div
             className="h-1.5 w-full"
-            style={{ background: 'var(--cp-line-2)', borderRadius: 'var(--cp-r-bar)' }}
+            style={{ background: 'var(--cp-surface-sunken)', borderRadius: 'var(--cp-r-bar)' }}
             role="progressbar"
             aria-label={`${camp.title}: ${occupied}`}
             aria-valuemin={0}
@@ -35,7 +35,7 @@ function DashboardCampRow({ entry, orgSlug }: { entry: CampWithStats; orgSlug: s
             aria-valuemax={camp.capacity}
             aria-valuetext={occupied}
           >
-            <div className="h-full" style={{ width: `${Math.min(1, Math.max(0, ratio)) * 100}%`, background: 'var(--cp-brand)', borderRadius: 'var(--cp-r-bar)' }} />
+            <div className="h-full" style={{ width: `${Math.min(1, Math.max(0, ratio)) * 100}%`, background: 'var(--cp-accent-bar)', borderRadius: 'var(--cp-r-bar)' }} />
           </div>
           {status && <p className="cp-label mt-2" style={{ color: 'var(--cp-ink-2)' }}>{status}</p>}
           {waitlistCount > 0 && <p className="cp-label mt-2" style={{ color: 'var(--cp-muted)' }}>{de.dashboard.waitingPlaces(waitlistCount)}</p>}

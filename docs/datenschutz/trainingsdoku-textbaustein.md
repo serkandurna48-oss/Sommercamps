@@ -6,6 +6,12 @@
 
 ## Interne Dokumentation des Trainings
 
+**Teilnehmerübersicht (Spielerakte).** Für jede Anmeldung zu einem Camp oder Training führt der Verein
+eine Teilnehmerübersicht Ihres Kindes (Vorname, Nachname, Geburtsdatum und die bisherigen Anmeldungen,
+auch stornierte), damit mehrere Anmeldungen desselben Kindes zusammen verwaltet werden können. Diese
+Übersicht entsteht unabhängig von der Einwilligung zur Trainingsdokumentation; Rechtsgrundlage ist die
+Durchführung der gebuchten Leistung (Art. 6 Abs. 1 lit. b DSGVO). [Rechtsgrundlage prüfen lassen.]
+
 **Was wir dokumentieren.** Wenn Ihr Kind an einem Einzel- oder Kleingruppentraining teilnimmt und Sie
 der Dokumentation zugestimmt haben, hält der Verein intern Folgendes fest: Trainingsinhalte und
 Schwerpunkte (z. B. Technik, Athletik, Taktik, Mental), Notizen zur Entwicklung, Ziele, nächste Schritte,
@@ -51,6 +57,8 @@ Die Checkbox ist freiwillig und standardmäßig nicht angekreuzt. Der Status wir
 - **Einwilligung:** CampsPilot verhindert Notizen ohne Einwilligung nicht technisch. Die Spielerakte
   zeigt nur einen Hinweis, wenn für die jüngste Buchung keine Einwilligung vorliegt (auch bei älteren
   Buchungen, bei denen sie noch nicht abgefragt wurde). Ohne Einwilligung keine Notizen anlegen.
+- **Spielerakte:** Sie entsteht automatisch für jede Anmeldung (Camps und Trainings, auch für ältere
+  und stornierte Anmeldungen), unabhängig von der Doku-Einwilligung.
 - **Löschung:** Es gibt keine automatische Löschung nach Fristablauf und noch keine Funktion „ganze
   Akte löschen“. Bei Fristablauf oder Löschwunsch Notizen, Ziele und Messwerte in der Spielerakte
   einzeln löschen; die Löschung der Akte selbst ist derzeit nur über den Betreiber möglich.

@@ -2,10 +2,11 @@
 
 import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { CampPublic, RegistrationCreated, RegistrationQuestion } from '../../lib/saasApi'
+import type { CampPublic, RegistrationCreated, RegistrationQuestion, TrainingPaymentMethod } from '../../lib/saasApi'
 import { submitRegistration } from '../../lib/saasApi'
 import { captureSaasEvent } from '../../lib/saasAnalytics'
 import { formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
+import { trainingSubmitErrorMessage, type TrainingConflict } from '../../lib/trainingFormat'
 import ExtraQuestions from './ExtraQuestions'
 import { getClubAssets } from './clubAssets'
 import { submitErrorMessage } from './submitError'
@@ -50,6 +51,18 @@ const EMPTY: FormState = {
   extraAnswers: {},
 }
 
+/**
+ * Einzel-/Gruppentraining statt Camp: `camp` ist dann ein aus Angebot und
+ * Termin gebildeter Platzhalter (Titel, Datum, Altersfenster), Datum, Uhrzeit
+ * und Preistext kommen fertig formatiert aus dem Trainings-Flow.
+ */
+export interface TrainingFormConfig {
+  dateTimeLabel: string
+  priceText: string
+  /** Termin inzwischen voll oder vergangen: Flow lädt die Termine neu. */
+  onSlotTaken?: (conflict: Exclude<TrainingConflict, 'duplicate'>) => void
+}
+
 type FieldKey =
   | 'childFirstName'
   | 'childLastName'
@@ -63,7 +76,7 @@ type FieldKey =
   | 'healthDataConsent'
 
 // One source for blur feedback, progress and submit validation.
-function validateForm(form: FormState): Partial<Record<FieldKey, string>> {
+function validateForm(form: FormState, training = false): Partial<Record<FieldKey, string>> {
   const bad: Partial<Record<FieldKey, string>> = {}
   if (!form.childFirstName.trim()) bad.childFirstName = 'Bitte tragen Sie den Vornamen ein.'
   if (!form.childLastName.trim()) bad.childLastName = 'Bitte tragen Sie den Nachnamen ein.'
@@ -72,7 +85,9 @@ function validateForm(form: FormState): Partial<Record<FieldKey, string>> {
   if (!EMAIL_RE.test(form.parentEmail.trim())) bad.parentEmail = 'Diese Adresse ist unvollständig. Beispiel: name@beispiel.de'
   if (!form.parentPhone.trim()) bad.parentPhone = 'Bitte tragen Sie eine Telefonnummer ein.'
   else if (!PHONE_RE.test(form.parentPhone.trim())) bad.parentPhone = 'Bitte verwenden Sie nur Ziffern, Leerzeichen und ein + am Anfang.'
-  if (!form.emergencyPhone.trim()) bad.emergencyPhone = 'Ohne Notfallnummer dürfen wir Ihr Kind am ersten Tag nicht übernehmen.'
+  if (!form.emergencyPhone.trim()) bad.emergencyPhone = training
+    ? 'Bitte tragen Sie eine Notfallnummer ein, unter der wir Sie erreichen.'
+    : 'Ohne Notfallnummer dürfen wir Ihr Kind am ersten Tag nicht übernehmen.'
   else if (!PHONE_RE.test(form.emergencyPhone.trim())) bad.emergencyPhone = 'Bitte verwenden Sie nur Ziffern, Leerzeichen und ein + am Anfang.'
   if (!form.termsAccepted) bad.agb = 'Bitte akzeptieren Sie die Teilnahmebedingungen.'
   if (!form.privacyAccepted) bad.privacy = 'Bitte stimmen Sie der Datenschutzerklärung zu.'
@@ -86,11 +101,16 @@ function formatBirthDate(value: string): string {
     + digits.slice(2, 4) + (digits.length >= 4 ? '.' : '') + digits.slice(4)
 }
 
-function ageHintForCamp(value: string, camp: CampPublic): string | null {
+function ageHintForCamp(value: string, camp: CampPublic, training = false): string | null {
   const birth = parseGermanDate(value)
   if (!birth) return null
   const age = Number(camp.start_date.slice(0, 4)) - Number(birth.slice(0, 4))
     - (camp.start_date.slice(5, 10) < birth.slice(5, 10) ? 1 : 0)
+  if (training) {
+    return age < camp.age_min || age > camp.age_max
+      ? `Dieses Training ist für Kinder von ${camp.age_min} bis ${camp.age_max} Jahren vorgesehen. Bitte prüfen Sie das Geburtsdatum oder sprechen Sie mit dem Verein.`
+      : null
+  }
   return age < camp.age_min || age > camp.age_max
     ? `Dieses Camp ist für Kinder von ${camp.age_min} bis ${camp.age_max} Jahren vorgesehen. Bitte prüfen Sie das Geburtsdatum oder sprechen Sie mit dem Verein. Sie können die Anmeldung trotzdem absenden.`
     : null
@@ -110,6 +130,7 @@ export default function RegistrationFormScreen({
   onPrefillConsumed,
   siblingCamps = [],
   onCampChange,
+  training,
 }: {
   orgSlug: string
   orgName: string
@@ -120,11 +141,12 @@ export default function RegistrationFormScreen({
   camp: CampPublic
   questions?: RegistrationQuestion[]
   onBack: () => void
-  onSubmitted: (result: RegistrationCreated, childFirstName: string, parentEmail: string, parentDetails: ParentDetails) => void
+  onSubmitted: (result: RegistrationCreated, childFirstName: string, parentEmail: string, parentDetails: ParentDetails, paymentMethod?: TrainingPaymentMethod) => void
   parentPrefill?: ParentDetails | null
   onPrefillConsumed?: () => void
   siblingCamps?: CampPublic[]
   onCampChange?: (slug: string) => void
+  training?: TrainingFormConfig
 }) {
   // Hook order (slots 0–8): do not reorder — RegistrationFormScreen.test.tsx
   // mocks React hooks by a shared counter. New hooks go to the end only.
@@ -163,6 +185,8 @@ export default function RegistrationFormScreen({
   const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({})
   const [submitted, setSubmitted] = useState(false)
   const birthSelection = useRef<{ input: HTMLInputElement; start: number; end: number } | null>(null)
+  // slot 17: Zahlart (nur Training). Neue Hooks nur hinten anfügen.
+  const [paymentMethod, setPaymentMethod] = useState<TrainingPaymentMethod | null>(null)
   useEffect(() => {
     const selection = birthSelection.current
     if (selection) {
@@ -219,8 +243,8 @@ export default function RegistrationFormScreen({
     setFocusRequest((request) => request + 1)
   }
 
-  const validation = useMemo(() => validateForm(form), [form])
-  const ageHint = (submitAttempted || touched.childBirthDate) ? ageHintForCamp(form.childBirthDate, camp) : null
+  const validation = useMemo(() => validateForm(form, Boolean(training)), [form, training])
+  const ageHint = (submitAttempted || touched.childBirthDate) ? ageHintForCamp(form.childBirthDate, camp, Boolean(training)) : null
 
   const extraDone = useMemo(
     () => questions.every((q) => !q.required || (form.extraAnswers[q.key] ?? '').trim() !== ''),
@@ -232,9 +256,9 @@ export default function RegistrationFormScreen({
       1: !validation.childFirstName && !validation.childLastName && !validation.childBirthDate,
       2: !validation.parentName && !validation.parentEmail && !validation.parentPhone,
       3: !validation.emergencyPhone,
-      4: form.termsAccepted && form.privacyAccepted && !validation.healthDataConsent && extraDone,
+      4: form.termsAccepted && form.privacyAccepted && !validation.healthDataConsent && extraDone && (!training || paymentMethod !== null),
     }),
-    [form, validation, extraDone],
+    [form, validation, extraDone, training, paymentMethod],
   )
   const doneCount = Object.values(sectionDone).filter(Boolean).length
 
@@ -256,7 +280,7 @@ export default function RegistrationFormScreen({
     setErrorStatus(null)
     setServerFields({})
 
-    if (Object.keys(validation).length > 0 || !extraDone) {
+    if (Object.keys(validation).length > 0 || !extraDone || (training && !paymentMethod)) {
       captureSaasEvent('camp_registration_failed', orgSlug, camp.slug, { error_kind: 'validation' })
       focusFirstInvalid()
       return
@@ -289,11 +313,12 @@ export default function RegistrationFormScreen({
         privacy_accepted: form.privacyAccepted,
         photo_permission: form.photoPermission,
         extra_answers: Object.keys(form.extraAnswers).length > 0 ? form.extraAnswers : undefined,
+        ...(training && paymentMethod ? { payment_method: paymentMethod } : {}),
       })
       if (!outcome.ok) {
         captureSaasEvent('camp_registration_failed', orgSlug, camp.slug, { error_kind: 'api', status_code: outcome.status })
         setErrorStatus(outcome.status)
-        setServerError(submitErrorMessage(outcome.status))
+        setServerError(training ? trainingSubmitErrorMessage(outcome.status, outcome.conflict) : submitErrorMessage(outcome.status))
         const mapping = {
           child_first_name: 'childFirstName', child_last_name: 'childLastName', child_birth_date: 'childBirthDate',
           parent_first_name: 'parentName', parent_last_name: 'parentName', parent_email: 'parentEmail',
@@ -309,34 +334,41 @@ export default function RegistrationFormScreen({
         const first = Object.keys(fields)[0] as FieldKey | undefined
         if (first) focusFirstInvalid()
         else requestAnimationFrame(() => serverErrorRef.current?.focus())
+        if (training && outcome.status === 409 && (outcome.conflict === 'full' || outcome.conflict === 'past')) {
+          training.onSlotTaken?.(outcome.conflict)
+        }
         return
       }
       captureSaasEvent('camp_registration_succeeded', orgSlug, camp.slug, {
         result: outcome.data.status === 'registered' || outcome.data.status === 'waitlist' ? outcome.data.status : 'other',
       })
       setSubmitted(true)
-      onSubmitted(outcome.data, form.childFirstName.trim() || 'Ihr Kind', form.parentEmail.trim(), parentDetailsOnly(form))
+      const childName = form.childFirstName.trim() || 'Ihr Kind'
+      if (training && paymentMethod) onSubmitted(outcome.data, childName, form.parentEmail.trim(), parentDetailsOnly(form), paymentMethod)
+      else onSubmitted(outcome.data, childName, form.parentEmail.trim(), parentDetailsOnly(form))
     } catch {
       captureSaasEvent('camp_registration_failed', orgSlug, camp.slug, { error_kind: 'network', status_code: 0 })
       setErrorStatus(0)
-      setServerError(submitErrorMessage(0))
+      setServerError(training ? trainingSubmitErrorMessage(0) : submitErrorMessage(0))
     } finally {
       inFlight.current = false
       setSubmitting(false)
     }
   }
 
-  const einwilligungenStep = questions.length > 0 ? '4' : '3'
-  const totalSteps = questions.length > 0 ? 4 : 3
+  const baseSteps = questions.length > 0 ? 4 : 3
+  const totalSteps = baseSteps + (training ? 1 : 0)
+  const einwilligungenStep = String(totalSteps)
+  const paymentMissing = Boolean(training) && paymentMethod === null
   const errorCount = Object.keys(badFields).length + (submitAttempted
-    ? questions.filter((q) => q.required && !(form.extraAnswers[q.key] ?? '').trim()).length
+    ? questions.filter((q) => q.required && !(form.extraAnswers[q.key] ?? '').trim()).length + (paymentMissing ? 1 : 0)
     : 0)
 
   return (
     <section className="screen" id="s-form">
-      <h1 ref={headingRef} tabIndex={-1} className="sr">Anmeldung: {camp.title}</h1>
+      <h1 ref={headingRef} tabIndex={-1} className="sr">{training ? 'Buchung' : 'Anmeldung'}: {camp.title}</h1>
       <div className="top">
-        <button className="back" type="button" onClick={onBack} disabled={submitting} aria-label="Zurück zum Camp">
+        <button className="back" type="button" onClick={onBack} disabled={submitting} aria-label={training ? 'Zurück zu den Terminen' : 'Zurück zum Camp'}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M15 5l-7 7 7 7" />
           </svg>
@@ -344,7 +376,7 @@ export default function RegistrationFormScreen({
         <div className="who">
           <b>{camp.title}</b>
           <span className="num">
-            {orgName}, {formatCampDateRange(camp.start_date, camp.end_date)}
+            {orgName}, {training ? training.dateTimeLabel : formatCampDateRange(camp.start_date, camp.end_date)}
           </span>
         </div>
       </div>
@@ -355,7 +387,7 @@ export default function RegistrationFormScreen({
 
       <div className="form-layout d3c-layout">
         {/* Left aside — sticky on desktop, hidden on mobile */}
-        <aside className="form-aside d3c-aside" aria-label="Camp-Zusammenfassung">
+        <aside className="form-aside d3c-aside" aria-label={training ? 'Termin-Zusammenfassung' : 'Camp-Zusammenfassung'}>
           {assets?.heroImage && (
             <Image
               src={assets.heroImage}
@@ -373,8 +405,8 @@ export default function RegistrationFormScreen({
             <h2 className="d3 d3c-aside-title">{camp.title}</h2>
             <dl className="d3c-aside-facts">
               <div className="d3c-aside-row">
-                <dt>Zeitraum</dt>
-                <dd>{formatCampDateRange(camp.start_date, camp.end_date)}</dd>
+                <dt>{training ? 'Termin' : 'Zeitraum'}</dt>
+                <dd>{training ? training.dateTimeLabel : formatCampDateRange(camp.start_date, camp.end_date)}</dd>
               </div>
               {camp.location && (
                 <div className="d3c-aside-row">
@@ -382,13 +414,13 @@ export default function RegistrationFormScreen({
                   <dd>{camp.location}</dd>
                 </div>
               )}
-              <div className="d3c-aside-price num">{formatPrice(camp.price_cents, camp.currency)}</div>
-              {camp.spots_remaining != null && !camp.is_full && (
+              <div className="d3c-aside-price num">{training ? training.priceText : formatPrice(camp.price_cents, camp.currency)}</div>
+              {!training && camp.spots_remaining != null && !camp.is_full && (
                 <span className={`d3c-aside-spots${camp.spots_remaining <= 10 ? ' accent' : ''}`}>
                   {camp.spots_remaining} Plätze frei
                 </span>
               )}
-              {camp.is_full && (
+              {!training && camp.is_full && (
                 <span className="d3c-aside-spots">Warteliste</span>
               )}
             </dl>
@@ -405,16 +437,16 @@ export default function RegistrationFormScreen({
           >
             <span className="d3c-mob-bar-left">
               <b>{camp.title}</b>
-              <span>{formatCampDateRange(camp.start_date, camp.end_date)}</span>
+              <span>{training ? training.dateTimeLabel : formatCampDateRange(camp.start_date, camp.end_date)}</span>
             </span>
-            <span className="d3c-mob-bar-price num">{formatPrice(camp.price_cents, camp.currency)}</span>
+            {!training && <span className="d3c-mob-bar-price num">{formatPrice(camp.price_cents, camp.currency)}</span>}
           </button>
           {asideOpen && (
             <div className="d3c-mob-bar-body pad">
               <dl className="d3c-aside-facts">
                 <div className="d3c-aside-row">
-                  <dt>Zeitraum</dt>
-                  <dd>{formatCampDateRange(camp.start_date, camp.end_date)}</dd>
+                  <dt>{training ? 'Termin' : 'Zeitraum'}</dt>
+                  <dd>{training ? training.dateTimeLabel : formatCampDateRange(camp.start_date, camp.end_date)}</dd>
                 </div>
                 {camp.location && (
                   <div className="d3c-aside-row">
@@ -424,9 +456,9 @@ export default function RegistrationFormScreen({
                 )}
                 <div className="d3c-aside-row">
                   <dt>Preis</dt>
-                  <dd className="num">{formatPrice(camp.price_cents, camp.currency)}</dd>
+                  <dd className="num">{training ? training.priceText : formatPrice(camp.price_cents, camp.currency)}</dd>
                 </div>
-                {camp.spots_remaining != null && !camp.is_full && camp.spots_remaining <= 10 && (
+                {!training && camp.spots_remaining != null && !camp.is_full && camp.spots_remaining <= 10 && (
                   <div className="d3c-aside-row">
                     <dt>Plätze</dt>
                     <dd className="d3c-mob-spots-accent">{camp.spots_remaining} Plätze frei</dd>
@@ -548,7 +580,7 @@ export default function RegistrationFormScreen({
                       <span className="err">{badFields.childBirthDate && <span id="err-child-birth-date">{badFields.childBirthDate}</span>}</span>
                       {ageHint && <span className="hint" id="hint-child-age" role="status">{ageHint}</span>}
                     </label>
-                    <label htmlFor="jersey_size" className="field s">
+                    {!training && <label htmlFor="jersey_size" className="field s">
                       <span className="t-lab">Trikotgröße{orgSlug === 'ksv-baunatal' && <span className="opt-tag"> freiwillig</span>}</span>
                       <select
                         id="jersey_size"
@@ -562,7 +594,7 @@ export default function RegistrationFormScreen({
                         <option value="152">152</option>
                         <option value="164">164</option>
                       </select>
-                    </label>
+                    </label>}
                   </div>
                 </div>
               </section>
@@ -632,7 +664,7 @@ export default function RegistrationFormScreen({
                     <span className="err">{badFields.parentPhone && <span id="err-parent-phone">{badFields.parentPhone}</span>}</span>
                   </label>
                   <label htmlFor="emergency_phone" className={`field${badFields.emergencyPhone ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.emergencyPhone = el }}>
-                    <span className="t-lab">Notfallnummer während des Camps *</span>
+                    <span className="t-lab">Notfallnummer während {training ? 'des Trainings' : 'des Camps'} *</span>
                     <input
                       type="tel"
                       id="emergency_phone"
@@ -677,7 +709,7 @@ export default function RegistrationFormScreen({
                       />
                       <span className="txt">
                         <b>Gesundheitsangaben – ausdrückliche Einwilligung *</b>
-                        <span>Ich willige ausdrücklich ein, dass {orgName} die von mir freiwillig angegebenen Allergien, Medikamente und medizinischen Hinweise meines Kindes zur sicheren Vorbereitung und Durchführung des Camps verarbeitet. {orgSlug === 'ksv-baunatal' && 'Beim KSV werden diese Angaben 30 Tage nach Campende zur manuellen Löschung geprüft. '}Ich kann die Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen; ohne diese Angaben ist die Anmeldung weiterhin möglich.</span>
+                        <span>Ich willige ausdrücklich ein, dass {orgName} die von mir freiwillig angegebenen Allergien, Medikamente und medizinischen Hinweise meines Kindes zur sicheren Vorbereitung und Durchführung {training ? 'des Trainings' : 'des Camps'} verarbeitet. {orgSlug === 'ksv-baunatal' && !training && 'Beim KSV werden diese Angaben 30 Tage nach Campende zur manuellen Löschung geprüft. '}Ich kann die Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen; ohne diese Angaben ist die Anmeldung weiterhin möglich.</span>
                         {badFields.healthDataConsent && <span id="err-health-consent" role="alert" style={{ color: 'var(--error)' }}>{badFields.healthDataConsent}</span>}
                       </span>
                     </label>
@@ -700,11 +732,45 @@ export default function RegistrationFormScreen({
               <ExtraQuestions
                 key={camp.slug}
                 questions={questions}
-                stepLabel={orgSlug === 'ksv-baunatal' ? 'SCHRITT 3 VON 4' : undefined}
+                stepLabel={orgSlug === 'ksv-baunatal' && !training ? 'SCHRITT 3 VON 4' : undefined}
                 answers={form.extraAnswers}
                 submitAttempted={submitAttempted}
                 onChange={(key, value) => setForm((prev) => ({ ...prev, extraAnswers: { ...prev.extraAnswers, [key]: value } }))}
               />
+
+              {training && (
+                <section className="fsec sec-rise" data-section="">
+                  <div className="fsec-head">
+                    <span className="fsec-step-lbl">{`SCHRITT ${baseSteps} VON ${totalSteps}`}</span>
+                    <h2 className="d3">Zahlart</h2>
+                  </div>
+                  <div className="f">
+                    <fieldset role="radiogroup" aria-required="true" aria-invalid={submitAttempted && paymentMissing}
+                      aria-describedby={submitAttempted && paymentMissing ? 'err-payment-method' : undefined}
+                      className={`field${submitAttempted && paymentMissing ? ' bad' : ''}`} style={{ border: 'none', padding: 0, margin: 0 }}>
+                      <legend className="t-lab">Wie möchten Sie bezahlen? *</legend>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
+                        {([['ueberweisung', 'Überweisung'], ['bar', 'Bar beim Training']] as const).map(([value, label]) => (
+                          <label key={value} htmlFor={`payment_${value}`} style={{
+                            display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                            padding: '12px 16px', borderRadius: 'var(--cp-r-chip)',
+                            border: `1.5px solid ${paymentMethod === value ? 'var(--cp-brand)' : 'var(--cp-field-line)'}`,
+                            background: paymentMethod === value ? 'var(--cp-band)' : 'transparent',
+                          }}>
+                            <input id={`payment_${value}`} type="radio" name="payment_method" value={value}
+                              checked={paymentMethod === value} onChange={() => setPaymentMethod(value)} />
+                            <span>{label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {submitAttempted && paymentMissing && (
+                        <span className="err"><span id="err-payment-method" role="alert">Bitte wählen Sie eine Zahlart.</span></span>
+                      )}
+                    </fieldset>
+                    <p className="note quiet">Kostenlose Absage bis 24 h vorher – bitte direkt beim Verein melden.</p>
+                  </div>
+                </section>
+              )}
 
               {/* Section 4 (or 3 if no extra questions): Einwilligungen */}
               <section className="fsec sec-rise" data-section="">
@@ -747,7 +813,7 @@ export default function RegistrationFormScreen({
                     <span className="txt">
                       <b>Datenschutz<span className="consent-req"> Pflichtfeld *</span></b>
                       <span>
-                        Ich habe die <a href={`/pilot/${orgSlug}/datenschutz`} target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a> gelesen und stimme der Verarbeitung der Daten für die Camp-Anmeldung zu.
+                        Ich habe die <a href={`/pilot/${orgSlug}/datenschutz`} target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a> gelesen und stimme der Verarbeitung der Daten für {training ? 'die Buchung' : 'die Camp-Anmeldung'} zu.
                       </span>
                       {badFields.privacy && <span id="err-privacy" role="alert" style={{ color: 'var(--error)' }}>{badFields.privacy}</span>}
                     </span>
@@ -757,7 +823,7 @@ export default function RegistrationFormScreen({
                     <span className="txt">
                       <b>Fotos, freiwillig</b>
                       <span>
-                        Der Verein darf Fotos meines Kindes vom Camp auf seiner Website und in sozialen Netzwerken zeigen. Ohne diese Einwilligung nimmt Ihr Kind
+                        Der Verein darf Fotos meines Kindes {training ? 'vom Training' : 'vom Camp'} auf seiner Website und in sozialen Netzwerken zeigen. Ohne diese Einwilligung nimmt Ihr Kind
                         ganz normal teil.
                       </span>
                     </span>
@@ -798,11 +864,11 @@ export default function RegistrationFormScreen({
               )}
               <div className="line">
                 <span style={{ fontSize: 14, color: 'var(--ink-2)' }}>{camp.title}, 1 Kind</span>
-                <span className="sum num">{formatPrice(camp.price_cents, camp.currency)}</span>
+                <span className="sum num">{training ? training.priceText : formatPrice(camp.price_cents, camp.currency)}</span>
               </div>
               {serverError && (errorStatus === 409 || errorStatus === 404) ? (
-                <a className="btn primary btn-pill" href={errorStatus === 409 && contactEmail ? `mailto:${contactEmail}` : `/pilot/${orgSlug}`}>
-                  {errorStatus === 409 && contactEmail ? 'Kontakt aufnehmen' : 'Alle Camps ansehen'}
+                <a className="btn primary btn-pill" href={errorStatus === 409 && contactEmail ? `mailto:${contactEmail}` : training ? `/pilot/${orgSlug}/training` : `/pilot/${orgSlug}`}>
+                  {errorStatus === 409 && contactEmail ? 'Kontakt aufnehmen' : training ? 'Alle Angebote ansehen' : 'Alle Camps ansehen'}
                 </a>
               ) : <button className={`btn primary btn-pill${submitting ? ' done' : ''}`} type="submit" disabled={submitting || camp.registration_open === false}>
                 {submitting
@@ -813,10 +879,18 @@ export default function RegistrationFormScreen({
                     ? 'Erneut versuchen'
                   : camp.is_full
                     ? 'Auf die Warteliste setzen'
-                    : `Verbindlich anmelden · ${formatPrice(camp.price_cents, camp.currency)}`}
+                    : training
+                      ? 'Verbindlich buchen'
+                      : `Verbindlich anmelden · ${formatPrice(camp.price_cents, camp.currency)}`}
               </button>}
               <span className="fine">
-                {camp.is_full
+                {training
+                  ? paymentMethod === 'bar'
+                    ? 'Sie zahlen bar beim Training.'
+                    : paymentMethod === 'ueberweisung' && hasBankDetails
+                      ? `Den Betrag überweisen Sie anschließend selbst an ${orgName}. Die Bankdaten stehen auf der nächsten Seite.`
+                      : 'Den Preis bestätigen wir Ihnen auf der nächsten Seite.'
+                  : camp.is_full
                   ? 'Auf der Warteliste entstehen noch keine Kosten.'
                   : hasBankDetails
                     ? `Den Betrag überweisen Sie anschließend selbst an ${orgName}. Die Bankdaten stehen auf der nächsten Seite.`

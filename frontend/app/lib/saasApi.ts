@@ -11,6 +11,8 @@
  * client for that API, not a generic abstraction over "any camp backend".
  */
 
+import { trainingConflictKind, type TrainingConflict } from './trainingFormat'
+
 function baseUrl(): string {
   return process.env.NEXT_PUBLIC_SAAS_API_URL ?? 'http://localhost:8000'
 }
@@ -98,13 +100,49 @@ export interface RegistrationCreateInput {
   privacy_accepted: boolean
   // KV1: Antworten auf die Zusatzfragen des Vereins.
   extra_answers?: Record<string, string>
+  // Nur Trainingsbuchungen: Pflichtangabe. Bei Camps nicht senden.
+  payment_method?: TrainingPaymentMethod
 }
+
+export type TrainingPaymentMethod = 'ueberweisung' | 'bar'
 
 export interface RegistrationCreated {
   registration_token: string
   status: string
   payment_status: string
   payment_reference: string
+  // Nur Trainingsbuchungen: der vom Server berechnete Preis (Mitglied/Nichtmitglied).
+  applied_price_cents?: number
+}
+
+export interface TrainingSessionPublic {
+  slug: string
+  starts_at: string
+  ends_at: string
+  // Berliner Ortszeit, vom Server geliefert; nie aus starts_at im Browser ableiten.
+  local_date: string // YYYY-MM-DD
+  local_time: string // HH:MM
+  capacity: number
+  free_spots: number
+  price_member_cents: number
+  price_nonmember_cents: number
+  age_min: number
+  age_max: number
+}
+
+export interface TrainingOfferPublic {
+  slug: string
+  title: string
+  kind: 'einzel' | 'gruppe'
+  description: string | null
+  duration_minutes: number
+  location: string | null
+  price_member_cents: number
+  price_nonmember_cents: number
+}
+
+export interface TrainingOfferDetail extends TrainingOfferPublic {
+  sessions: TrainingSessionPublic[]
 }
 
 /** Both a 404 (unknown slug) and an inactive org are indistinguishable by
@@ -123,9 +161,26 @@ export async function fetchCamps(orgSlug: string): Promise<CampPublic[]> {
   return res.json() as Promise<CampPublic[]>
 }
 
+export async function fetchTrainingOffers(orgSlug: string): Promise<TrainingOfferPublic[]> {
+  const res = await fetch(`${baseUrl()}/api/v1/organizations/${encodeURIComponent(orgSlug)}/training-offers`, { cache: 'no-store' })
+  if (!res.ok) throw new Error(`GET training offers failed: ${res.status}`)
+  return res.json() as Promise<TrainingOfferPublic[]>
+}
+
+/** 404 (unknown, draft, archived or foreign slug) -> null; other errors throw. */
+export async function fetchTrainingOffer(orgSlug: string, offerSlug: string): Promise<TrainingOfferDetail | null> {
+  const res = await fetch(
+    `${baseUrl()}/api/v1/organizations/${encodeURIComponent(orgSlug)}/training-offers/${encodeURIComponent(offerSlug)}`,
+    { cache: 'no-store' },
+  )
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`GET training offer failed: ${res.status}`)
+  return res.json() as Promise<TrainingOfferDetail>
+}
+
 export type SubmitRegistrationResult =
   | { ok: true; data: RegistrationCreated }
-  | { ok: false; status: number; detail: string; fieldErrors?: Partial<Record<keyof RegistrationCreateInput, string>> }
+  | { ok: false; status: number; detail: string; conflict?: TrainingConflict; fieldErrors?: Partial<Record<keyof RegistrationCreateInput, string>> }
 
 export async function submitRegistration(
   orgSlug: string,
@@ -165,7 +220,10 @@ export async function submitRegistration(
         : res.status === 404 || res.status === 422
           ? 'Die Anmeldung für dieses Camp ist derzeit nicht möglich. Bitte wenden Sie sich an den Verein.'
           : 'Die Anmeldung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.'
-    return { ok: false, status: res.status, detail, fieldErrors }
+    return {
+      ok: false, status: res.status, detail, fieldErrors,
+      ...(res.status === 409 ? { conflict: trainingConflictKind(body?.detail) } : {}),
+    }
   }
   return { ok: true, data: body as RegistrationCreated }
 }

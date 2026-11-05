@@ -72,11 +72,16 @@ describe('bookingPriceText', () => {
 })
 
 describe('trainingConflictKind', () => {
-  it('maps the backend 409 texts', () => {
-    expect(trainingConflictKind('Dieser Trainingstermin ist leider bereits belegt.')).toBe('full')
-    expect(trainingConflictKind('Dieser Trainingstermin liegt in der Vergangenheit und kann nicht mehr gebucht werden.')).toBe('past')
-    expect(trainingConflictKind('Für dieses Kind liegt für dieses Camp bereits eine Anmeldung vor.')).toBe('duplicate')
-    expect(trainingConflictKind(undefined)).toBe('duplicate')
+  it('reads the stable detail.code of the backend', () => {
+    expect(trainingConflictKind({ code: 'training_session_full', message: 'x' })).toBe('full')
+    expect(trainingConflictKind({ code: 'training_session_past', message: 'x' })).toBe('past')
+    expect(trainingConflictKind({ code: 'registration_duplicate', message: 'x' })).toBe('duplicate')
+  })
+
+  it('falls back to a generic conflict and never parses text', () => {
+    expect(trainingConflictKind('Dieser Trainingstermin ist leider bereits belegt.')).toBe('unknown')
+    expect(trainingConflictKind({ code: 'something_new' })).toBe('unknown')
+    expect(trainingConflictKind(undefined)).toBe('unknown')
   })
 })
 
@@ -85,6 +90,7 @@ describe('trainingSubmitErrorMessage', () => {
     expect(trainingSubmitErrorMessage(409, 'full')).toContain('gerade vergeben')
     expect(trainingSubmitErrorMessage(409, 'past')).toContain('nicht mehr buchbar')
     expect(trainingSubmitErrorMessage(409, 'duplicate')).toContain('bereits eine Buchung')
+    expect(trainingSubmitErrorMessage(409, 'unknown')).toContain('nicht abgeschlossen werden')
     expect(trainingSubmitErrorMessage(404)).toContain('nicht mehr verfügbar')
     expect(trainingSubmitErrorMessage(0)).toContain('Verbindung')
     expect(trainingSubmitErrorMessage(429)).toContain('zu viele')

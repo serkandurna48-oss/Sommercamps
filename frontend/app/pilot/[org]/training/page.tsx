@@ -40,7 +40,7 @@ export default async function TrainingOffersPage({ params }: PageProps) {
         <h1 className="d1">Training buchen</h1>
         <p className="tr-lead">Wählen Sie ein Angebot und anschließend einen freien Termin.</p>
         {offers.length === 0 ? (
-          <p className="tr-lead">Aktuell gibt es keine buchbaren Trainingsangebote. Bei Fragen erreichen Sie den Verein unter <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>.</p>
+          <p className="tr-lead">Aktuell gibt es keine buchbaren Trainingsangebote. Bei Fragen wenden Sie sich an den Verein{org.contact_email ? <>: <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a></> : '.'}</p>
         ) : (
           <ul className="tr-list">
             {offers.map(offer => (
@@ -48,7 +48,7 @@ export default async function TrainingOffersPage({ params }: PageProps) {
                 <Link className="tr-card" href={`/pilot/${org.slug}/training/${offer.slug}`}>
                   <span className="d3">{offer.title}</span>
                   <span className="tr-meta">{offer.duration_minutes} Minuten{offer.location ? ` · ${offer.location}` : ''}</span>
-                  {offer.description && <span className="tr-meta">{offer.description}</span>}
+                  {offer.description && <span className="tr-meta" style={{ whiteSpace: 'pre-line' }}>{offer.description}</span>}
                   <span className="tr-price">{memberPriceText(offer.price_member_cents, offer.price_nonmember_cents)}</span>
                 </Link>
               </li>

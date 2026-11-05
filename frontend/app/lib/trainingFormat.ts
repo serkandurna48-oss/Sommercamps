@@ -45,14 +45,21 @@ export function bookingPriceText(result: { applied_price_cents?: number | null }
   return typeof cents === 'number' ? formatPrice(cents, 'EUR') : null
 }
 
-export type TrainingConflict = 'full' | 'past' | 'duplicate'
+export type TrainingConflict = 'full' | 'past' | 'duplicate' | 'unknown'
 
-/** Unterscheidet die 409-Antworten des Backends anhand ihres Textes. */
+const CONFLICT_CODES: Record<string, TrainingConflict> = {
+  training_session_full: 'full',
+  training_session_past: 'past',
+  registration_duplicate: 'duplicate',
+}
+
+/** Liest den stabilen `detail.code` einer 409-Antwort; Freitext wird nie ausgewertet. */
 export function trainingConflictKind(detail: unknown): TrainingConflict {
-  if (typeof detail !== 'string') return 'duplicate'
-  if (detail.includes('belegt')) return 'full'
-  if (detail.includes('Vergangenheit')) return 'past'
-  return 'duplicate'
+  if (detail && typeof detail === 'object' && 'code' in detail) {
+    const code = (detail as { code: unknown }).code
+    if (typeof code === 'string' && Object.hasOwn(CONFLICT_CODES, code)) return CONFLICT_CODES[code]
+  }
+  return 'unknown'
 }
 
 export function trainingSubmitErrorMessage(status: number, conflict?: TrainingConflict): string {
@@ -61,7 +68,8 @@ export function trainingSubmitErrorMessage(status: number, conflict?: TrainingCo
   if (status === 409) {
     if (conflict === 'full') return 'Dieser Termin wurde gerade vergeben. Bitte wählen Sie einen anderen Termin.'
     if (conflict === 'past') return 'Dieser Termin ist nicht mehr buchbar. Bitte wählen Sie einen anderen Termin.'
-    return 'Für dieses Kind liegt für diesen Termin bereits eine Buchung vor. Bitte wenden Sie sich bei Fragen an den Verein.'
+    if (conflict === 'duplicate') return 'Für dieses Kind liegt für diesen Termin bereits eine Buchung vor. Bitte wenden Sie sich bei Fragen an den Verein.'
+    return 'Die Buchung konnte nicht abgeschlossen werden. Bitte laden Sie die Seite neu oder wenden Sie sich an den Verein.'
   }
   if (status === 422) return 'Die Buchung konnte mit diesen Angaben nicht abgeschlossen werden. Bitte prüfen Sie Ihre Angaben, insbesondere das Alter Ihres Kindes.'
   if (status === 429) return 'Es wurden zu viele Buchungsversuche in kurzer Zeit gesendet. Bitte warten Sie einen Moment und versuchen Sie es erneut.'

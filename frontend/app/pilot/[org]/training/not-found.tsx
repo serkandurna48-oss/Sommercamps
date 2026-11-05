@@ -1,5 +1,5 @@
+import Link from 'next/link'
 import PublicState from '../PublicState'
-import RetryButton from '../RetryButton'
 import { publicFontClassName } from '../publicFonts'
 import '../publicTheme.css'
 
@@ -11,7 +11,7 @@ export default function TrainingNotFound() {
         message="Unter diesem Link ist kein veröffentlichtes Trainingsangebot erreichbar."
         instruction="Bitte prüfen Sie den Link oder fragen Sie beim Verein nach."
       >
-        <RetryButton />
+        <Link className="btn primary btn-pill" href="/">Zur Startseite</Link>
       </PublicState>
     </main>
   )

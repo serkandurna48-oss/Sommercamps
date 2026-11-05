@@ -6,7 +6,7 @@ import type { CampPublic, RegistrationCreated, RegistrationQuestion, TrainingPay
 import { submitRegistration } from '../../lib/saasApi'
 import { captureSaasEvent } from '../../lib/saasAnalytics'
 import { formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
-import { trainingSubmitErrorMessage, type TrainingConflict } from '../../lib/trainingFormat'
+import { trainingSubmitErrorMessage } from '../../lib/trainingFormat'
 import ExtraQuestions from './ExtraQuestions'
 import { getClubAssets } from './clubAssets'
 import { submitErrorMessage } from './submitError'
@@ -60,7 +60,7 @@ export interface TrainingFormConfig {
   dateTimeLabel: string
   priceText: string
   /** Termin inzwischen voll oder vergangen: Flow lädt die Termine neu. */
-  onSlotTaken?: (conflict: Exclude<TrainingConflict, 'duplicate'>) => void
+  onSlotTaken?: (conflict: 'full' | 'past') => void
 }
 
 type FieldKey =

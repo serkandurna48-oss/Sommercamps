@@ -188,7 +188,7 @@ export async function submitRegistration(
   payload: RegistrationCreateInput,
 ): Promise<SubmitRegistrationResult> {
   const res = await fetch(
-    `${baseUrl()}/api/v1/organizations/${orgSlug}/camps/${campSlug}/registrations`,
+    `${baseUrl()}/api/v1/organizations/${encodeURIComponent(orgSlug)}/camps/${encodeURIComponent(campSlug)}/registrations`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -107,6 +107,19 @@ describe('Angebotsdetail', () => {
     expect(html).toContain('40 €')
   })
 
+  it('renders no mailto:null link when the club has no contact email', () => {
+    const noMail = { ...org, contact_email: null } as unknown as OrganizationPublic
+    const html = renderToStaticMarkup(<TrainingOfferFlow org={noMail} initialOffer={{ ...offer, sessions: [] }} />)
+    expect(html).not.toContain('mailto')
+    expect(html).not.toContain('null')
+  })
+
+  it('keeps line breaks of the description without HTML', () => {
+    const html = renderToStaticMarkup(<TrainingOfferFlow org={org} initialOffer={{ ...offer, description: 'Zeile 1\n<b>Zeile 2</b>' }} />)
+    expect(html).toContain('white-space:pre-line')
+    expect(html).toContain('&lt;b&gt;')
+  })
+
   it('uses not-found for an unknown or unpublished offer and for an unknown organization', async () => {
     vi.mocked(getPublicTrainingOffer).mockResolvedValue(null)
     await expect(TrainingOfferPage({ params: offerParams })).rejects.toThrow('notFound')

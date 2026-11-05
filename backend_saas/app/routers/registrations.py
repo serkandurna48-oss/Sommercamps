@@ -42,6 +42,14 @@ logger = logging.getLogger(__name__)
 # Online payment for trainings comes later; only these two are accepted now.
 TRAINING_PAYMENT_METHODS = ("ueberweisung", "bar")
 _TRAINING_PAST_MSG = "Dieser Trainingstermin liegt in der Vergangenheit und kann nicht mehr gebucht werden."
+_TRAINING_FULL_MSG = "Dieser Trainingstermin ist leider bereits belegt."
+_DUPLICATE_MSG = "Für dieses Kind liegt für dieses Camp bereits eine Anmeldung vor."
+
+
+def _training_conflict(code: str, message: str) -> dict[str, str]:
+    """Stable 409 contract for trainings: the frontend reads `detail.code`, never the text."""
+    return {"code": code, "message": message}
+
 
 router = APIRouter(
     prefix="/api/v1/organizations/{organization_slug}/camps/{camp_slug}/registrations",
@@ -85,7 +93,10 @@ def create_registration(
         # Bookable check order: unknown/draft/archived -> 404 (above), already
         # started -> 409, bad payment method -> 422, then window/age -> 422.
         if camp.starts_at is not None and camp.starts_at <= datetime.now(timezone.utc):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_TRAINING_PAST_MSG)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=_training_conflict("training_session_past", _TRAINING_PAST_MSG),
+            )
         if data.payment_method not in TRAINING_PAYMENT_METHODS:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -129,10 +140,13 @@ def create_registration(
         )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Dieser Trainingstermin ist leider bereits belegt.",
+            detail=_training_conflict("training_session_full", _TRAINING_FULL_MSG),
         ) from exc
     except TrainingSessionPastError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_TRAINING_PAST_MSG) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=_training_conflict("training_session_past", _TRAINING_PAST_MSG),
+        ) from exc
     except ExtraAnswersInvalidError as exc:
         logger.info(
             "Registration rejected: extra_answers invalid (organization_slug=%s, camp_slug=%s)",
@@ -153,7 +167,10 @@ def create_registration(
         )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Für dieses Kind liegt für dieses Camp bereits eine Anmeldung vor.",
+            detail=(
+                _training_conflict("registration_duplicate", _DUPLICATE_MSG)
+                if is_training else _DUPLICATE_MSG
+            ),
         ) from exc
     except CampNotAvailableError as exc:
         # Real, reachable path (Bug, korrigiert im Security-Review vor

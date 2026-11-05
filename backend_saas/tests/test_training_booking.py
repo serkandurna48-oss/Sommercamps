@@ -206,6 +206,9 @@ def test_full_one_to_one_session_returns_409_without_waitlist(real_db):
     assert _post(real_db, session).status_code == 201
     r = _post(real_db, session, child_first_name="Tom", child_birth_date="2014-01-01")
     assert r.status_code == 409
+    # Contract with the frontend (trainingConflictKind): it reads detail.code.
+    assert r.json()["detail"]["code"] == "training_session_full"
+    assert "belegt" in r.json()["detail"]["message"]
     cursor, _, _ = real_db
     with cursor() as cur:
         cur.execute("select status from camp_registrations where camp_id=%s", (session["id"],))
@@ -216,13 +219,29 @@ def test_group_session_fills_up_then_409(real_db):
     _, session = _make(real_db, capacity=2, kind="gruppe")
     for name in ("A", "B"):
         assert _post(real_db, session, child_first_name=name).status_code == 201
-    assert _post(real_db, session, child_first_name="C").status_code == 409
+    r = _post(real_db, session, child_first_name="C")
+    assert r.status_code == 409
+    assert r.json()["detail"]["code"] == "training_session_full"
 
 
 def test_duplicate_child_409(real_db):
     _, session = _make(real_db, capacity=3, kind="gruppe")
     assert _post(real_db, session).status_code == 201
-    assert _post(real_db, session).status_code == 409
+    r = _post(real_db, session)
+    assert r.status_code == 409
+    assert r.json()["detail"]["code"] == "registration_duplicate"
+    assert "bereits eine Anmeldung" in r.json()["detail"]["message"]
+
+
+def test_classic_camp_duplicate_keeps_plain_string_detail(real_db):
+    _, tenant, _ = real_db
+    url = f"/api/v1/organizations/{tenant.slug}/camps/summer-1/registrations"
+    payload = _valid_payload(child_birth_date="2017-05-10")
+    with TestClient(app) as client:
+        assert client.post(url, json=payload).status_code == 201
+        r = client.post(url, json=payload)
+    assert r.status_code == 409
+    assert isinstance(r.json()["detail"], str)
 
 
 def test_concurrent_bookings_capacity_one_yield_exactly_one(real_db):
@@ -263,7 +282,8 @@ def test_past_session_is_409(real_db):
     _, session = _make(real_db, starts_in=-timedelta(hours=2))
     r = _post(real_db, session)
     assert r.status_code == 409
-    assert "vergangen" in r.json()["detail"].lower()
+    assert r.json()["detail"]["code"] == "training_session_past"
+    assert "Vergangenheit" in r.json()["detail"]["message"]
 
 
 def test_session_starting_between_lookup_and_lock_is_409(real_db):

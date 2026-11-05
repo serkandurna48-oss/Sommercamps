@@ -25,10 +25,25 @@ it('throws on other upstream errors so the page can show a load error', async ()
   await expect(fetchTrainingOffer('club', 'x')).rejects.toThrow()
 })
 
-it('sends payment_method with a booking and reports the conflict kind', async () => {
-  const fetchMock = vi.fn(async () => new Response(JSON.stringify({ detail: 'Dieser Trainingstermin ist leider bereits belegt.' }), { status: 409 }))
+it('sends payment_method with a booking to an encoded URL', async () => {
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify({ registration_token: 't' }), { status: 201 }))
   vi.stubGlobal('fetch', fetchMock)
-  const result = await submitRegistration('club', 'einzel-30-1', { payment_method: 'bar' } as RegistrationCreateInput)
-  expect(JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body)).toMatchObject({ payment_method: 'bar' })
-  expect(result).toMatchObject({ ok: false, status: 409, conflict: 'full' })
+  await submitRegistration('club', 'einzel 30/1', { payment_method: 'bar' } as RegistrationCreateInput)
+  const [url, init] = fetchMock.mock.calls[0] as unknown as [string, { body: string }]
+  expect(url).toMatch(/\/organizations\/club\/camps\/einzel%2030%2F1\/registrations$/)
+  expect(JSON.parse(init.body)).toMatchObject({ payment_method: 'bar' })
+})
+
+it.each([
+  ['training_session_full', 'full'],
+  ['training_session_past', 'past'],
+  ['registration_duplicate', 'duplicate'],
+])('reports conflict kind for detail.code %s', async (code, kind) => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ detail: { code, message: 'Text' } }), { status: 409 })))
+  expect(await submitRegistration('club', 's', {} as RegistrationCreateInput)).toMatchObject({ ok: false, status: 409, conflict: kind })
+})
+
+it('keeps the classic camp 409 (plain string detail) generic', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ detail: 'Für dieses Kind liegt für dieses Camp bereits eine Anmeldung vor.' }), { status: 409 })))
+  expect(await submitRegistration('club', 's', {} as RegistrationCreateInput)).toMatchObject({ ok: false, status: 409, conflict: 'unknown' })
 })

@@ -100,7 +100,7 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
     <div className="tr-col">
       <a className="back-link" href={`/pilot/${org.slug}/training`}>Alle Angebote</a>
       <h1 className="d1" lang="de" style={{ marginTop: 12 }}>{offer.title}</h1>
-      {offer.description && <p className="tr-lead">{offer.description}</p>}
+      {offer.description && <p className="tr-lead" style={{ whiteSpace: 'pre-line' }}>{offer.description}</p>}
       <dl className="facts tr-facts">
         <div className="r"><dt>Dauer</dt><dd>{offer.duration_minutes} Minuten</dd></div>
         {offer.location && <div className="r"><dt>Ort</dt><dd>{offer.location}</dd></div>}
@@ -112,7 +112,7 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
 
       <h2 className="d3" style={{ marginTop: 28 }}>Termin wählen</h2>
       {offer.sessions.length === 0 ? (
-        <p className="tr-lead">Aktuell sind keine Termine buchbar. Bitte melden Sie sich beim Verein: <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a></p>
+        <p className="tr-lead">Aktuell sind keine Termine buchbar. Bitte melden Sie sich beim Verein{org.contact_email ? <>: <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a></> : '.'}</p>
       ) : (
         <ul className="tr-sessions">
           {offer.sessions.map(item => {

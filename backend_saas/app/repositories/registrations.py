@@ -671,7 +671,7 @@ _LOCK_TRAINING_SESSION = """
     from camps c
     join training_offers o on o.id = c.offer_id and o.organization_id = c.organization_id
     where c.id = %s and c.organization_id = %s and c.offer_id is not null
-    for update of c
+    for update of c for share of o
 """
 
 _FIND_ACTIVE_MEMBER = """

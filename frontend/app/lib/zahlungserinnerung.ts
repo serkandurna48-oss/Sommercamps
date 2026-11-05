@@ -1,5 +1,5 @@
 import type { CampAdmin, OrganizationAdmin, RegistrationAdmin } from './saasAdminApi'
-import { isOpenPayment } from '../components/saas/commandCenterLogic'
+import { isOpenPayment, registrationPriceCents } from '../components/saas/commandCenterLogic'
 import { formatCampDateRange, formatPrice } from './parentFlowFormat'
 
 export type ReminderOrganization = Pick<OrganizationAdmin,
@@ -40,7 +40,7 @@ export function buildPaymentReminder(entry: ReminderEntry, org: ReminderOrganiza
     [
       `Kontoinhaber: ${accountHolder}`,
       `IBAN: ${formatIban(org.iban!)}`,
-      `Betrag: ${formatPrice(camp.price_cents, camp.currency)}`,
+      `Betrag: ${formatPrice(registrationPriceCents(camp, r), camp.currency)}`,
       `Verwendungszweck: ${r.payment_reference}`,
     ].join('\n'),
     'Falls Sie bereits überwiesen haben, betrachten Sie diese Erinnerung bitte als gegenstandslos. Vielen Dank!',
@@ -53,7 +53,7 @@ export function buildOpenPaymentList(entries: readonly ReminderEntry[]): string 
     `${r.parent_first_name} ${r.parent_last_name}`,
     `${r.child_first_name} ${r.child_last_name}`,
     camp.title,
-    formatPrice(camp.price_cents, camp.currency),
+    formatPrice(registrationPriceCents(camp, r), camp.currency),
     r.payment_reference,
   ].join(' – ')).join('\n')
 }

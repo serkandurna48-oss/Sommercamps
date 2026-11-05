@@ -12,6 +12,12 @@ export function isActiveRegistration(r: RegistrationAdmin): boolean {
   return ACTIVE_STATUSES.has(r.status)
 }
 
+/** Price owed for this registration: the applied price if set (0 is valid),
+ * otherwise the camp price (legacy registrations). */
+export function registrationPriceCents(camp: CampAdmin, r: RegistrationAdmin): number {
+  return r.applied_price_cents ?? camp.price_cents
+}
+
 /** Only active registrations carry an outstanding payment obligation. */
 export function isOpenPayment(r: RegistrationAdmin): boolean {
   return isActiveRegistration(r) && r.payment_status === 'open'
@@ -48,8 +54,8 @@ export function computeMoneyStats(camp: CampAdmin, registrations: RegistrationAd
   let openCents = 0
   for (const r of registrations) {
     if (!isActiveRegistration(r)) continue
-    if (r.payment_status === 'paid') collectedCents += camp.price_cents
-    else if (isOpenPayment(r)) openCents += camp.price_cents
+    if (r.payment_status === 'paid') collectedCents += registrationPriceCents(camp, r)
+    else if (isOpenPayment(r)) openCents += registrationPriceCents(camp, r)
   }
   return { collectedCents, openCents }
 }

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { de, formatDateRange, formatEuro, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
-import { isActiveRegistration, isOpenPayment, canReopenPayment } from '../commandCenterLogic'
+import { isActiveRegistration, isOpenPayment, canReopenPayment, registrationPriceCents } from '../commandCenterLogic'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import ActionForm from '../ui/ActionForm'
 import type { ActionFormState } from '../ui/ActionForm'
@@ -71,7 +71,7 @@ export default function PaymentRow({
           {registration.parent_first_name} {registration.parent_last_name} · {registration.parent_email}
         </p>} status={<div className="flex flex-col items-start gap-2">
           <span className="cp-num cp-subheading shrink-0" style={{ color: 'var(--cp-ink)' }}>
-            {formatEuro(camp.price_cents, camp.currency)}
+            {formatEuro(registrationPriceCents(camp, registration), camp.currency)}
           </span>
           <StatusChip
             tone={PAYMENT_STATUS_TONE[registration.payment_status] ?? 'neutral'}

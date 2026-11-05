@@ -4,6 +4,7 @@ import {
   openPaymentStats,
   birthYear,
   computeMoneyStats,
+  registrationPriceCents,
   countByFilter,
   filterRegistrations,
   hasMissingEmergencyContact,
@@ -73,6 +74,26 @@ describe('computeMoneyStats', () => {
     ])
     expect(stats.collectedCents).toBe(10000)
     expect(stats.openCents).toBe(10000)
+  })
+})
+
+describe('registrationPriceCents / Trainingspreis', () => {
+  it('nutzt applied_price_cents, 0 ist gültig, null/fehlend fällt auf den Camp-Preis zurück', () => {
+    const c = camp({ price_cents: 4500 })
+    expect(registrationPriceCents(c, reg({ applied_price_cents: 3000 }))).toBe(3000)
+    expect(registrationPriceCents(c, reg({ applied_price_cents: 0 }))).toBe(0)
+    expect(registrationPriceCents(c, reg({ applied_price_cents: null }))).toBe(4500)
+    expect(registrationPriceCents(c, reg())).toBe(4500)
+  })
+
+  it('computeMoneyStats summiert den Mitgliedspreis statt des Camp-Preises', () => {
+    const c = camp({ price_cents: 4500 })
+    const stats = computeMoneyStats(c, [
+      reg({ payment_status: 'paid', applied_price_cents: 3000 }),
+      reg({ payment_status: 'open', applied_price_cents: 0 }),
+      reg({ payment_status: 'open' }),
+    ])
+    expect(stats).toEqual({ collectedCents: 3000, openCents: 4500 })
   })
 })
 

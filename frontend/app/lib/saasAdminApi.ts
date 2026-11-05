@@ -110,6 +110,11 @@ export interface RegistrationAdmin {
   // A2: Ergebnis der letzten Eltern-Mail (Bestätigung, Warteliste, Nachrücken, Storno).
   email_sent_at?: string | null
   email_error?: string | null
+  // Trainingsbuchungen: tatsächlich vereinbarter Preis (Mitglied/Nichtmitglied).
+  // null/fehlend = Camp-Preis (Altbestand). 0 ist ein gültiger Preis.
+  applied_price_cents?: number | null
+  member_match?: boolean | null
+  payment_method?: string | null
 }
 
 export class AdminActionError extends Error {

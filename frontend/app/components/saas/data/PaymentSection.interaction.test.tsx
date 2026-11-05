@@ -235,4 +235,21 @@ describe('payment workflow', () => {
     await click('Als erstattet markieren')
     expect(vi.mocked(setPaymentStatusAction).mock.calls[0].slice(0, 4)).toEqual(['demo', 'summer', entry.registration.registration_token, 'refunded'])
   })
+
+  it('shows the applied (member) price instead of the camp price, and 0 as 0', async () => {
+    const member: PaymentEntry = { ...entry, registration: { ...entry.registration, applied_price_cents: 3000 } }
+    await render([member])
+    const text = () => container.textContent?.replace(/\s/g, ' ') ?? ''
+    expect(text()).toContain('30,00')
+    expect(text()).not.toContain('149,00')
+    await act(() => root.unmount())
+    root = createRoot(container)
+    await render([{ ...entry, registration: { ...entry.registration, applied_price_cents: 0 } }])
+    expect(text()).toContain('0,00')
+    expect(text()).not.toContain('149,00')
+    await act(() => root.unmount())
+    root = createRoot(container)
+    await render([{ ...entry, registration: { ...entry.registration, applied_price_cents: null } }])
+    expect(text()).toContain('149,00')
+  })
 })

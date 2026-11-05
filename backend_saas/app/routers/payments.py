@@ -138,6 +138,15 @@ def get_payment_options(
     settings = get_settings()
     if not (settings.stripe_checkout_enabled and settings.stripe_secret_key and settings.stripe_webhook_secret):
         return PaymentOptions(online_payment_available=False)
+    with db.get_cursor() as cur:
+        cur.execute(
+            "select offer_id from camps where organization_id = %s and slug = %s",
+            (tenant.organization_id, camp_slug),
+        )
+        camp_row = cur.fetchone()
+    if camp_row is not None and camp_row["offer_id"] is not None:
+        # Trainings are paid by transfer or cash for now.
+        return PaymentOptions(online_payment_available=False)
     org = _organization_payment_details(tenant.organization_id)
     return PaymentOptions(
         online_payment_available=bool(

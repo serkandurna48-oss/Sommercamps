@@ -368,3 +368,64 @@ def test_export_payment_sheet_uses_applied_price(real_db):
     legacy = [{**regs[0], "applied_price_cents": None}]
     _, rows = exports._payments_sheet([(camp, legacy)], include_camp_column=False)
     assert rows[0][3] == 45.0
+
+
+# ---------- review follow-ups ----------
+
+def test_payment_options_offline_for_training_online_for_camp(real_db, monkeypatch):
+    _, tenant, _ = real_db
+    _, session = _make(real_db)
+    monkeypatch.setattr(payments, "get_settings", lambda: SimpleNamespace(
+        stripe_checkout_enabled=True, stripe_secret_key="sk_test_x", stripe_webhook_secret="whsec_x"))
+    monkeypatch.setattr(payments, "_organization_payment_details", lambda _org: {
+        "online_payment_enabled": True, "stripe_charges_enabled": True, "stripe_account_id": "acct_1234567890abcdef"})
+    base = f"/api/v1/organizations/{tenant.slug}/camps"
+    with TestClient(app) as client:
+        assert client.get(f"{base}/{session['slug']}/payment-options").json() == {"online_payment_available": False}
+        assert client.get(f"{base}/summer-1/payment-options").json() == {"online_payment_available": True}
+
+
+def test_platform_stats_use_applied_price(real_db):
+    from app.repositories import platform_stats
+    _member(real_db)
+    _, session = _make(real_db)
+    _post(real_db, session)  # member: 3000 instead of camp price 4500, payment open
+    before = platform_stats.get_platform_stats()["payments_open_cents"]
+    cursor, _, _ = real_db
+    with cursor() as cur:
+        cur.execute("update camp_registrations set applied_price_cents = NULL where camp_id=%s", (session["id"],))
+    legacy = platform_stats.get_platform_stats()["payments_open_cents"]
+    assert legacy - before == 4500 - 3000
+    with cursor() as cur:
+        cur.execute("update camp_registrations set applied_price_cents = 0 where camp_id=%s", (session["id"],))
+    assert platform_stats.get_platform_stats()["payments_open_cents"] == before - 3000
+
+
+def test_archiving_offer_concurrently_blocks_booking_then_rejects(real_db, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from contextlib import contextmanager
+    from app.schemas import RegistrationCreate
+    from .test_review_postgres import wait_for_lock
+    cursor, tenant, _ = real_db
+    offer, session = _make(real_db)
+    target = repo.get_registration_target(tenant, session["slug"])
+    data = RegistrationCreate(**_valid_payload(child_birth_date=BIRTH.isoformat(), payment_method="bar"))
+    name = f"training-booking-{uuid4().hex}"
+
+    @contextmanager
+    def named_cursor():
+        with cursor() as cur:
+            cur.execute("SET LOCAL application_name = %s", (name,))
+            yield cur
+
+    monkeypatch.setattr(db, "get_cursor", named_cursor)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        with cursor() as admin:
+            admin.execute("update training_offers set status='archived' where id=%s", (offer["id"],))
+            future = executor.submit(repo.create_training_registration, tenant, target, data)
+            wait_for_lock(cursor, name)  # booking waits on the offer row
+        with pytest.raises(repo.CampNotAvailableError):
+            future.result(timeout=10)
+    with cursor() as cur:
+        cur.execute("select count(*) n from camp_registrations where camp_id=%s", (session["id"],))
+        assert cur.fetchone()["n"] == 0

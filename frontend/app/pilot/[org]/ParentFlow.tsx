@@ -1,9 +1,12 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
-import type { CampPublic, OrganizationPublic, RegistrationCreated } from '../../lib/saasApi'
+import type { CampPublic, OrganizationPublic, RegistrationCreated, TrainingOfferListItem } from '../../lib/saasApi'
+import { offerKindLabel } from '../../components/saas/training/trainingLogic'
+import { fromPriceText } from '../../lib/trainingFormat'
 import { formatCampDateRange, formatPrice, orgShortCode } from '../../lib/parentFlowFormat'
 import { truncateIntroForHero } from './campUtils'
 import {
@@ -48,12 +51,14 @@ interface DoneState {
 export default function ParentFlow({
   org,
   camps,
+  trainings = [],
   hadPastCamps = false,
   testFilter,
   initialCampSlug,
 }: {
   org: OrganizationPublic
   camps: CampPublic[]
+  trainings?: TrainingOfferListItem[]
   hadPastCamps?: boolean
   testFilter?: FilterState
   initialCampSlug?: string
@@ -598,6 +603,31 @@ export default function ParentFlow({
           )}
         </div>
       </div>
+
+      {trainings.length > 0 && (
+        <div className="pad sec" id="s-trainings">
+          <div className="sec-head">
+            <div>
+              <span className="sec-label">{trainings.length} {trainings.length === 1 ? 'Angebot' : 'Angebote'}</span>
+              <h2 className="d2">Trainings</h2>
+            </div>
+          </div>
+          <ul className="tr-list" style={{ marginTop: 0 }}>
+            {trainings.map((offer) => {
+              const fromPrice = fromPriceText(offer.from_price_member_cents, offer.from_price_nonmember_cents)
+              return (
+                <li key={offer.slug}>
+                  <Link className="tr-card" href={`/pilot/${org.slug}/training/${offer.slug}`}>
+                    <span className="d3">{offer.title}</span>
+                    <span className="tr-meta">{offerKindLabel[offer.kind] ?? offer.kind} · {offer.duration_minutes} Minuten</span>
+                    {fromPrice && <span className="tr-price">{fromPrice}</span>}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
       {clubAssets?.sponsor && (
         <section className="pad sec sponsor-section" aria-labelledby="sponsor-heading" data-section>

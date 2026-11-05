@@ -19,10 +19,10 @@ export function orgTabs(orgSlug: string): TabItem[] {
 export function campTabs(orgSlug: string, campSlug: string): TabItem[] {
   const base = `/pilot/${orgSlug}/camps/${campSlug}`
   return [
-    { label: de.command.participants, href: base, icon: 'jersey' },
-    { label: de.command.payments, href: `${base}/zahlungen`, icon: 'coin' },
-    { label: de.command.waitlist, href: `${base}/warteliste`, icon: 'hourglass' },
-    { label: de.command.tasks, href: `${base}/aufgaben`, icon: 'flag' },
-    { label: 'Einstellungen', href: `${base}/konfiguration`, icon: 'gear' },
+    { label: de.command.participants, shortLabel: 'Kinder', href: base, icon: 'jersey' },
+    { label: de.command.payments, shortLabel: 'Zahlung', href: `${base}/zahlungen`, icon: 'coin' },
+    { label: de.command.waitlist, shortLabel: 'Warten', href: `${base}/warteliste`, icon: 'hourglass' },
+    { label: de.command.tasks, shortLabel: 'Aufgabe', href: `${base}/aufgaben`, icon: 'flag' },
+    { label: 'Einstellungen', shortLabel: 'Option', href: `${base}/konfiguration`, icon: 'gear' },
   ]
 }

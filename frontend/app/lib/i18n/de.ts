@@ -381,7 +381,7 @@ export const de = {
     previewBtnExample: 'Jetzt anmelden',
   },
   configPage: {
-    orgHeading: 'Verein',
+    orgHeading: 'Vereinsseite und Angaben',
     orgHint: 'Diese Angaben erscheinen im Anmelde-Formular der Eltern und auf der Bestätigungsseite.',
     campHeading: 'Camp-Einstellungen',
     campHint: 'Änderungen wirken sich sofort auf die öffentliche Anmeldeseite dieses Camps aus.',

@@ -66,6 +66,7 @@ _LIST_PUBLISHED = f"""
     from camps c
     where c.organization_id = %s
       and c.status = 'published'
+      and c.offer_id is null
     order by c.start_date asc, c.slug asc
 """
 

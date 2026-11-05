@@ -30,6 +30,7 @@ interface FormState {
   termsAccepted: boolean
   privacyAccepted: boolean
   photoPermission: boolean
+  documentationConsent: boolean
   extraAnswers: Record<string, string>
 }
 
@@ -48,6 +49,7 @@ const EMPTY: FormState = {
   termsAccepted: false,
   privacyAccepted: false,
   photoPermission: false,
+  documentationConsent: false,
   extraAnswers: {},
 }
 
@@ -314,6 +316,7 @@ export default function RegistrationFormScreen({
         photo_permission: form.photoPermission,
         extra_answers: Object.keys(form.extraAnswers).length > 0 ? form.extraAnswers : undefined,
         ...(training && paymentMethod ? { payment_method: paymentMethod } : {}),
+        ...(training ? { documentation_consent: form.documentationConsent } : {}),
       })
       if (!outcome.ok) {
         captureSaasEvent('camp_registration_failed', orgSlug, camp.slug, { error_kind: 'api', status_code: outcome.status })
@@ -828,6 +831,17 @@ export default function RegistrationFormScreen({
                       </span>
                     </span>
                   </label>
+                  {training && (
+                    <label htmlFor="documentation_consent" className="consent">
+                      <input id="documentation_consent" type="checkbox" checked={form.documentationConsent} onChange={(e) => set('documentationConsent', e.target.checked)} />
+                      <span className="txt">
+                        <b>Trainingsdokumentation, freiwillig</b>
+                        <span>
+                          Ich bin einverstanden, dass der Verein Trainingsinhalte und die Entwicklung meines Kindes intern dokumentiert (z. B. Notizen, Ziele, Messwerte). Diese Notizen sind nur für den Verein bestimmt.
+                        </span>
+                      </span>
+                    </label>
+                  )}
                   <div className="note quiet">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ opacity: 0.5 }}>
                       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />

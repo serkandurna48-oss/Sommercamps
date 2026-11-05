@@ -711,7 +711,7 @@ _INSERT_TRAINING_REGISTRATION = """
         medical_notes, allergies, health_data_consent, jersey_size, pickup_authorized,
         photo_permission, terms_accepted, privacy_accepted,
         extra_answers,
-        applied_price_cents, member_match, payment_method, player_id
+        applied_price_cents, member_match, payment_method, player_id, documentation_consent
     ) values (
         %s, %s, %s,
         %s, %s, %s, %s,
@@ -720,7 +720,7 @@ _INSERT_TRAINING_REGISTRATION = """
         %s, %s, %s, %s, %s,
         %s, %s, %s,
         %s,
-        %s, %s, %s, %s
+        %s, %s, %s, %s, %s
     )
     returning registration_token, status, payment_status, child_first_name, child_last_name,
         applied_price_cents
@@ -810,6 +810,7 @@ def create_training_registration(
                 data.photo_permission, data.terms_accepted, data.privacy_accepted,
                 psycopg2.extras.Json(dict(data.extra_answers)),
                 applied_price, member_match, data.payment_method, player_id,
+                data.documentation_consent,
             ),
         )
         return cur.fetchone()

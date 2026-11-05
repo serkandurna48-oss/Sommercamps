@@ -196,7 +196,7 @@ def test_detail_shape_and_ordering(ctx):
                        "status", "payment_status", "documentation_consent"}
     assert bk["kind"] == "training" and bk["offer_title"] == OFFER["title"]
     assert bk["status"] in ("registered", "confirmed") and bk["payment_status"] == "open"
-    assert bk["documentation_consent"] is None
+    assert bk["documentation_consent"] is False  # Trainingsbuchung ohne Haken: false (Camps: NULL)
     assert "registration_token" not in str(d) and "parent" not in str(d)
 
 

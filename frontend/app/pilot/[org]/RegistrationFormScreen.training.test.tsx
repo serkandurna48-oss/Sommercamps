@@ -160,3 +160,34 @@ it('does not reload the slots for a duplicate booking', async () => {
   expect(TRAINING.onSlotTaken).not.toHaveBeenCalled()
   expect(text(render())).toContain('bereits eine Buchung')
 })
+
+const DOC_HEADING = 'Trainingsdokumentation, freiwillig'
+const DOC_TEXT = 'Ich bin einverstanden, dass der Verein Trainingsinhalte und die Entwicklung meines Kindes intern dokumentiert (z. B. Notizen, Ziele, Messwerte). Diese Notizen sind nur für den Verein bestimmt.'
+
+it('shows the optional documentation consent checkbox for trainings only, unchecked by default', () => {
+  const training = render()
+  expect(text(training)).toContain(DOC_TEXT)
+  expect(checkbox(training, DOC_HEADING).props.checked).toBe(false)
+  expect(checkbox(training, DOC_HEADING).props.required).toBeFalsy()
+  const camp = render({ training: false })
+  expect(text(camp)).not.toContain('Trainingsdokumentation')
+  expect(text(camp)).not.toContain('Trainingsinhalte')
+})
+
+it.each([true, false])('sends documentation_consent %s with a training booking', async (consent) => {
+  let nodes = render()
+  fill(nodes)
+  change(radio(nodes, 'bar'), true)
+  if (consent) change(checkbox(nodes, DOC_HEADING), true)
+  nodes = render()
+  await submit(nodes)
+  expect(vi.mocked(submitRegistration).mock.calls[0][2]).toHaveProperty('documentation_consent', consent)
+})
+
+it('never sends documentation_consent in the camp flow', async () => {
+  let nodes = render({ training: false })
+  fill(nodes)
+  nodes = render({ training: false })
+  await submit(nodes)
+  expect(vi.mocked(submitRegistration).mock.calls[0][2]).not.toHaveProperty('documentation_consent')
+})

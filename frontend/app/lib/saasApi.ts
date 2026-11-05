@@ -102,6 +102,8 @@ export interface RegistrationCreateInput {
   extra_answers?: Record<string, string>
   // Nur Trainingsbuchungen: Pflichtangabe. Bei Camps nicht senden.
   payment_method?: TrainingPaymentMethod
+  // Nur Trainingsbuchungen: freiwillige Einwilligung zur internen Trainingsdoku. Bei Camps nicht senden.
+  documentation_consent?: boolean
 }
 
 export type TrainingPaymentMethod = 'ueberweisung' | 'bar'

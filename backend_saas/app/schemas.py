@@ -195,6 +195,10 @@ class RegistrationCreate(BaseModel):
     # in the router); ignored for classic camps.
     payment_method: Optional[str] = None
 
+    # Nur Trainingsbuchungen: freiwillige Einwilligung zur internen Trainingsdoku.
+    # Bei Camps ignoriert (bleibt NULL).
+    documentation_consent: StrictBool = False
+
     # KV1: Antworten auf die Zusatzfragen des Vereins. Keys müssen den
     # keys der registration_questions entsprechen (serverseitig validiert
     # in repositories/registrations.py::validate_extra_answers).

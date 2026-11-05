@@ -59,3 +59,30 @@ def test_training_migration_on_populated_db_is_data_safe_and_idempotent(pg_confi
                 assert cur.fetchone()["n"] == 0
                 cur.execute("SELECT count(*) AS n FROM training_offers")
                 assert cur.fetchone()["n"] == 0
+
+
+_HARDENING = _MIGRATIONS / "20261105190000_training_hardening.sql"
+
+
+def test_training_hardening_migration_applies_twice_and_revokes(pg_config):
+    with _disposable_db(pg_config) as db_kw:
+        with psycopg2.connect(**db_kw) as conn:
+            _bootstrap(conn, _BASELINE + [_MIGRATION])
+        sql_text = _HARDENING.read_text(encoding="utf-8")
+        for _ in range(2):
+            with psycopg2.connect(**db_kw) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql_text)
+        with psycopg2.connect(**db_kw) as conn:
+            with conn.cursor() as cur:
+                def has(role, table, priv):
+                    cur.execute("SELECT has_table_privilege(%s, %s, %s)", (role, table, priv))
+                    return cur.fetchone()[0]
+
+                for priv in ("SELECT", "INSERT", "UPDATE", "DELETE"):
+                    assert not has("anon", "public.training_offers", priv)
+                    assert not has("anon", "public.organization_memberships", priv)
+                    assert not has("authenticated", "public.organization_memberships", priv)
+                assert has("authenticated", "public.training_offers", "SELECT")
+                for priv in ("INSERT", "UPDATE", "DELETE"):
+                    assert not has("authenticated", "public.training_offers", priv)

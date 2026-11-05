@@ -377,7 +377,7 @@ export const de = {
     continueSetupHint: 'Speichern Sie zuerst Ihre Camp-Angaben. Gehen Sie anschließend zurück zur Einrichtung, um die Freigabe vorzubereiten oder den Prüfstatus anzusehen.',
     vorlagenBtn: 'Vorlage einfügen',
     vorlagenHint: 'Bitte prüfen und anpassen – diese Vorlage ist kein Rechtsrat.',
-    previewLabel: 'Vorschau',
+    previewLabel: 'Vorschau der Elternseite',
     previewBtnExample: 'Jetzt anmelden',
   },
   configPage: {
@@ -419,7 +419,7 @@ export const de = {
       status: 'Status',
     },
     hint: {
-      primaryColor: 'Hex-Code, z. B. #1c6b45 – bestimmt Balken, Tabs und Buttons.',
+      primaryColor: 'Hex-Code, z. B. #1c6b45 – färbt Buttons und Akzente der Elternseiten sowie die Logo-Kachel in der Verwaltung.',
       includes: 'Erscheint als Liste auf der öffentlichen Camp-Seite.',
       slugLocked: 'Nicht änderbar – sonst brechen bestehende Links.',
     },

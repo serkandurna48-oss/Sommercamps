@@ -104,7 +104,7 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
   ]
   return (
     <div className="mb-8" aria-label={de.einrichtung.stepOf(step, total)}>
-      <p className="cp-chip mb-4" style={{ color: 'var(--cp-muted)' }}>
+      <p className="cp-eyebrow mb-4">
         {de.einrichtung.stepOf(step, total)}
       </p>
       <div className="flex items-center gap-1.5">
@@ -120,7 +120,7 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
                   className="cp-label flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs leading-none"
                   style={{
                     background: done ? 'var(--cp-ok-bg)' : active ? 'var(--cp-ink)' : 'var(--cp-surface-2)',
-                    color: done ? 'var(--cp-ok)' : active ? '#fff' : 'var(--cp-muted)',
+                    color: done ? 'var(--cp-ok)' : active ? 'var(--cp-surface)' : 'var(--cp-muted)',
                     border: done ? '1px solid var(--cp-ok-line)' : active ? 'none' : '1px solid var(--cp-line)',
                   }}
                 >
@@ -245,42 +245,44 @@ function Step1Auftritt({
   return (
     <>
       <StepHeader title={de.einrichtung.step1Title} kicker={de.einrichtung.step1Kicker} />
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <form
-          action={formAction}
-          className="flex flex-1 min-w-0 flex-col gap-4"
-          aria-describedby={!pending && state.error ? feedbackId : undefined}
-        >
-          <Field label={de.configPage.field.name} htmlFor="w-name">
-            <input
-              id="w-name" name="name" required
-              value={name} onChange={e => setName(e.target.value)}
-              className={INPUT_CLASS} style={INPUT_STYLE}
-            />
-          </Field>
-          <Field label={de.configPage.field.logoUrl} htmlFor="w-logo_url">
-            <input
-              id="w-logo_url" name="logo_url" inputMode="url"
-              value={logoUrl} onChange={e => setLogoUrl(e.target.value)}
-              className={INPUT_CLASS} style={INPUT_STYLE}
-            />
-          </Field>
-          <ColorField id="w-primary_color" value={color} onChange={setColor} />
+      <form
+        action={formAction}
+        className="flex min-w-0 flex-col"
+        aria-describedby={!pending && state.error ? feedbackId : undefined}
+      >
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          <div className="flex min-w-0 flex-1 flex-col gap-4">
+            <Field label={de.configPage.field.name} htmlFor="w-name">
+              <input
+                id="w-name" name="name" required
+                value={name} onChange={e => setName(e.target.value)}
+                className={INPUT_CLASS} style={INPUT_STYLE}
+              />
+            </Field>
+            <Field label={de.configPage.field.logoUrl} htmlFor="w-logo_url">
+              <input
+                id="w-logo_url" name="logo_url" inputMode="url"
+                value={logoUrl} onChange={e => setLogoUrl(e.target.value)}
+                className={INPUT_CLASS} style={INPUT_STYLE}
+              />
+            </Field>
+            <ColorField id="w-primary_color" value={color} onChange={setColor} />
 
-          {!pending && state.error && <ErrorBanner id={feedbackId}>{state.error}</ErrorBanner>}
+            {!pending && state.error && <ErrorBanner id={feedbackId}>{state.error}</ErrorBanner>}
+          </div>
 
-          <WizardNavButtons
-            step={1}
-            total={4}
-            pending={pending}
-            submitType
-            brandStrong={brand.brandStrong}
-            brandOn={brand.brandOn}
-          />
-        </form>
+          <BrandPreview name={name} logoUrl={logoUrl} color={color} />
+        </div>
 
-        <BrandPreview name={name} logoUrl={logoUrl} color={color} />
-      </div>
+        <WizardNavButtons
+          step={1}
+          total={4}
+          pending={pending}
+          submitType
+          brandStrong={brand.brandStrong}
+          brandOn={brand.brandOn}
+        />
+      </form>
     </>
   )
 }

@@ -740,6 +740,21 @@ export interface TrainingSessionCreateInput {
   status: 'published' | 'draft'
 }
 
+export interface TrainingSessionSeriesInput {
+  start_date: string
+  start_time: string
+  weeks: number
+  capacity?: number
+  age_min?: number
+  age_max?: number
+  status: 'published' | 'draft'
+}
+
+export interface TrainingSessionSeriesResult {
+  created: number
+  sessions: TrainingSessionAdmin[]
+}
+
 export interface ClubMember {
   id: string
   first_name: string
@@ -828,6 +843,24 @@ export async function createTrainingSessionAdmin(
   }
   if (!res.ok) throw new TrainingAdminError('Termin konnte nicht angelegt werden.')
   return res.json() as Promise<TrainingSessionAdmin>
+}
+
+/** Wöchentliche Serie: ganz oder gar nicht (409 `session_exists` = es wurde nichts angelegt). */
+export async function createTrainingSessionSeriesAdmin(
+  orgSlug: string,
+  offerId: string,
+  token: string,
+  data: TrainingSessionSeriesInput,
+): Promise<TrainingSessionSeriesResult> {
+  const res = await adminMutate(`${TRAINING_BASE(orgSlug)}/${encodeURIComponent(offerId)}/sessions/series`, token, 'POST', data)
+  if (res.status === 409) {
+    throw new TrainingAdminError('Mindestens ein Termin der Serie existiert bereits – es wurde nichts angelegt.', 'session_exists')
+  }
+  if (res.status === 422) {
+    throw new TrainingAdminError('Serie ungültig – bitte Datum, Uhrzeit, Wochen und Plätze prüfen. Fällt ein Termin in die Zeitumstellung (Uhrzeit nicht oder doppelt vorhanden), wird nichts angelegt.', 'invalid')
+  }
+  if (!res.ok) throw new TrainingAdminError('Serie konnte nicht angelegt werden.')
+  return res.json() as Promise<TrainingSessionSeriesResult>
 }
 
 export async function deleteTrainingSessionAdmin(orgSlug: string, offerId: string, sessionId: string, token: string): Promise<void> {

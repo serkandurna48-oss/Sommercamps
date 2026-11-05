@@ -531,3 +531,94 @@ def test_camp_counts_exclude_sessions(ctx):
         cur.execute("select count(*) n from camps where offer_id is null")
         classic = cur.fetchone()["n"]
     assert platform_stats.get_platform_stats()["camps_total"] == classic
+
+
+# ---------- sessions: weekly series ----------
+
+def _series(c, offer, **over):
+    body = {"start_date": "2027-03-21", "start_time": "18:00", "weeks": 3, **over}
+    return c["client"].post(f"{_admin(c)}/{offer['id']}/sessions/series", headers=c["headers"], json=body)
+
+
+def _session_count(c, offer):
+    with c["cursor"]() as cur:
+        cur.execute("select count(*) as n from camps where offer_id=%s", (offer["id"],))
+        return cur.fetchone()["n"]
+
+
+def test_series_creates_weekly_sessions_across_dst_change(ctx):
+    c = ctx
+    offer = _new_offer(c)
+    r = _series(c, offer)  # 2027-03-28 is the spring-forward day
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["created"] == 3
+    rows = body["sessions"]
+    assert [(s["local_date"], s["local_time"]) for s in rows] == [
+        ("2027-03-21", "18:00"), ("2027-03-28", "18:00"), ("2027-04-04", "18:00")]
+    assert rows[0]["starts_at"].startswith("2027-03-21T17:00:00")  # CET
+    assert rows[1]["starts_at"].startswith("2027-03-28T16:00:00")  # CEST
+    assert rows[2]["starts_at"].startswith("2027-04-04T16:00:00")
+    assert all(s["status"] == "published" and s["capacity"] == 1 for s in rows)
+    assert _session_count(c, offer) == 3
+
+
+def test_series_duplicate_slug_conflicts_and_creates_nothing(ctx):
+    c = ctx
+    offer = _new_offer(c)
+    assert _new_session(c, offer, date="2027-04-04").status_code == 201  # collides with week 3
+    r = _series(c, offer)
+    assert r.status_code == 409
+    assert r.json()["detail"] == {"code": "session_exists"}
+    assert _session_count(c, offer) == 1  # only the pre-existing one; weeks 1-2 rolled back
+
+
+def test_series_gap_time_rejected_whole_series(ctx):
+    c = ctx
+    offer = _new_offer(c)
+    # 02:30 does not exist on 2027-03-28, the second week -> 422, nothing created
+    assert _series(c, offer, start_time="02:30").status_code == 422
+    assert _session_count(c, offer) == 0
+
+
+@pytest.mark.parametrize("weeks", [0, 13, -1])
+def test_series_weeks_bounds(ctx, weeks):
+    c = ctx
+    offer = _new_offer(c)
+    assert _series(c, offer, weeks=weeks).status_code == 422
+    assert _session_count(c, offer) == 0
+
+
+def test_series_weeks_limits_accepted(ctx):
+    c = ctx
+    offer = _new_offer(c)
+    assert _series(c, offer, weeks=1).json()["created"] == 1
+    assert _series(c, offer, start_date="2028-01-03", weeks=12).json()["created"] == 12
+
+
+def test_series_capacity_rules(ctx):
+    c = ctx
+    einzel = _new_offer(c, slug="einzel")
+    group = _new_offer(c, slug="gruppe", kind="gruppe")
+    assert _series(c, einzel, capacity=3).status_code == 422
+    assert _session_count(c, einzel) == 0
+    assert _series(c, einzel, capacity=1).status_code == 201
+    assert _series(c, group).status_code == 422  # group needs capacity
+    ok = _series(c, group, capacity=6, status="draft")
+    assert ok.status_code == 201
+    assert {s["capacity"] for s in ok.json()["sessions"]} == {6}
+    assert {s["status"] for s in ok.json()["sessions"]} == {"draft"}
+
+
+def test_series_tenant_isolation_and_unknown_offer(ctx):
+    c = ctx
+    offer = _new_offer(c)
+    foreign = c["client"].post(
+        f"{_admin(c, c['other_slug'])}/{offer['id']}/sessions/series", headers=c["headers"],
+        json={"start_date": "2027-03-21", "start_time": "18:00", "weeks": 2})
+    assert foreign.status_code in (403, 404)
+    assert _session_count(c, offer) == 0
+    unknown = c["client"].post(
+        f"{_admin(c)}/{uuid4()}/sessions/series", headers=c["headers"],
+        json={"start_date": "2027-03-21", "start_time": "18:00", "weeks": 2})
+    assert unknown.status_code == 404

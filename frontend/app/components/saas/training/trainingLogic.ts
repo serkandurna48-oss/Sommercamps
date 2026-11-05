@@ -142,6 +142,8 @@ export interface SessionValues {
   age_min?: number
   age_max?: number
   status: 'published' | 'draft'
+  /** Wöchentlich wiederholen: nur gesetzt, wenn 2–12 (1 = Einzeltermin). */
+  weeks?: number
 }
 
 export function parseSessionInput(input: Record<string, string>, kind: OfferKind): ParseResult<SessionValues> {
@@ -176,6 +178,14 @@ export function parseSessionInput(input: Record<string, string>, kind: OfferKind
     errors.age_max = 'Höchstalter darf nicht unter dem Mindestalter liegen.'
   }
 
+  let weeks: number | undefined
+  const weeksText = (input.weeks ?? '').trim()
+  if (weeksText) {
+    const parsed = parseInteger(weeksText)
+    if (parsed === null || parsed < 1 || parsed > 12) errors.weeks = 'Wochen von 1 bis 12.'
+    else if (parsed > 1) weeks = parsed
+  }
+
   const status = (input.status ?? 'published').trim() === 'draft' ? 'draft' : 'published'
   if (Object.keys(errors).length > 0) return { ok: false, errors }
   return {
@@ -187,6 +197,7 @@ export function parseSessionInput(input: Record<string, string>, kind: OfferKind
       ...(ageMin !== undefined ? { age_min: ageMin } : {}),
       ...(ageMax !== undefined ? { age_max: ageMax } : {}),
       status,
+      ...(weeks !== undefined ? { weeks } : {}),
     },
   }
 }

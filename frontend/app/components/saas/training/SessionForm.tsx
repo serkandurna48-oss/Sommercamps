@@ -53,6 +53,9 @@ export default function SessionForm({ orgSlug, offerId, kind, brandStrong, brand
         <Field label="Höchstalter (optional)" htmlFor="session_age_max" suffix="Jahre" hint="Standard: 18 Jahre." error={err('age_max')}>
           <input id="session_age_max" name="age_max" type="number" inputMode="numeric" min={0} max={99} defaultValue={value('age_max')} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
+        <Field label="Wöchentlich wiederholen" htmlFor="session_weeks" suffix="Wochen" hint="1 = nur dieser Termin. Sonst jede Woche am selben Wochentag, gleiche Uhrzeit (bis 12). Existiert ein Termin schon, wird nichts angelegt." error={err('weeks')}>
+          <input id="session_weeks" name="weeks" type="number" inputMode="numeric" min={1} max={12} defaultValue={value('weeks', '1')} className={INPUT_CLASS} style={INPUT_STYLE} />
+        </Field>
         <Field label="Sichtbarkeit" htmlFor="session_status">
           <select id="session_status" name="status" defaultValue={value('status', 'published')} className={INPUT_CLASS} style={INPUT_STYLE}>
             <option value="published">Buchbar, sobald das Angebot veröffentlicht ist</option>
@@ -66,7 +69,9 @@ export default function SessionForm({ orgSlug, offerId, kind, brandStrong, brand
           {state.error}
         </p>
       )}
-      {!pending && state.saved && <SuccessNote>Termin angelegt.</SuccessNote>}
+      {!pending && state.saved && (
+        <SuccessNote>{(state.createdCount ?? 1) > 1 ? `${state.createdCount} Termine angelegt.` : 'Termin angelegt.'}</SuccessNote>
+      )}
       <div>
         <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto">
           {pending ? 'Wird angelegt …' : 'Termin anlegen'}

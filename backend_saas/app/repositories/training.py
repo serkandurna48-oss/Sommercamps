@@ -118,6 +118,42 @@ _SESSION_FIELDS = """id, organization_id, offer_id, slug, title, start_date, end
     currency, location, status"""
 
 
+def _resolve_capacity(offer: dict, capacity: Optional[int]) -> int:
+    if offer["kind"] == "einzel":
+        if capacity not in (None, 1):
+            raise ValueError("single-training offers have capacity 1")
+        return 1
+    if capacity is None:
+        raise ValueError("capacity is required for group offers")
+    return capacity
+
+
+def _insert_session(
+    cur, organization_id: UUID, offer: dict, starts_at: datetime, *,
+    capacity: int, age_min: int, age_max: int, status: str,
+) -> dict:
+    if starts_at.tzinfo is None:
+        raise ValueError("starts_at must be timezone-aware")
+    ends_at = starts_at + timedelta(minutes=offer["duration_minutes"])
+    local_start = starts_at.astimezone(BERLIN)
+    slug = f"{offer['slug']}-{local_start:%Y%m%d-%H%M}"
+    try:
+        cur.execute(
+            f"""insert into camps
+                (organization_id, offer_id, slug, title, start_date, end_date, starts_at, ends_at,
+                 age_min, age_max, capacity, price_cents, price_member_cents, location, status)
+                values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                returning {_SESSION_FIELDS}""",
+            (organization_id, offer["id"], slug, offer["title"], local_start.date(),
+             local_start.date(), starts_at, ends_at, age_min, age_max, capacity,
+             offer["price_nonmember_cents"], offer["price_member_cents"],
+             offer["location"], status),
+        )
+    except psycopg2.errors.UniqueViolation as exc:
+        raise CampSlugConflictError(organization_id, slug) from exc
+    return cur.fetchone()
+
+
 def create_session(
     organization_id: UUID,
     offer_id: UUID,
@@ -135,36 +171,36 @@ def create_session(
     starts_at in Europe/Berlin (a session spanning midnight stays one day). Capacity
     defaults to 1 for 'einzel'; 'gruppe' offers need an explicit capacity.
     """
-    if starts_at.tzinfo is None:
-        raise ValueError("starts_at must be timezone-aware")
+    return create_sessions(
+        organization_id, offer_id, [starts_at], capacity=capacity, age_min=age_min, age_max=age_max, status=status,
+    )[0]
+
+
+def create_sessions(
+    organization_id: UUID,
+    offer_id: UUID,
+    starts_ats: list[datetime],
+    *,
+    capacity: Optional[int] = None,
+    age_min: int = 4,
+    age_max: int = 18,
+    status: str = "draft",
+) -> list[dict]:
+    """Create several sessions in ONE transaction: all or none. A slug that already exists
+    raises CampSlugConflictError and nothing is created."""
+    for starts_at in starts_ats:
+        if starts_at.tzinfo is None:
+            raise ValueError("starts_at must be timezone-aware")
     offer = get_offer(organization_id, offer_id)
     if offer is None:
         raise TrainingOfferNotFoundError(str(offer_id))
-    if offer["kind"] == "einzel":
-        if capacity not in (None, 1):
-            raise ValueError("single-training offers have capacity 1")
-        capacity = 1
-    elif capacity is None:
-        raise ValueError("capacity is required for group offers")
-    ends_at = starts_at + timedelta(minutes=offer["duration_minutes"])
-    local_start = starts_at.astimezone(BERLIN)
-    slug = f"{offer['slug']}-{local_start:%Y%m%d-%H%M}"
+    capacity = _resolve_capacity(offer, capacity)
     with db.get_cursor() as cur:
-        try:
-            cur.execute(
-                f"""insert into camps
-                    (organization_id, offer_id, slug, title, start_date, end_date, starts_at, ends_at,
-                     age_min, age_max, capacity, price_cents, price_member_cents, location, status)
-                    values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    returning {_SESSION_FIELDS}""",
-                (organization_id, offer_id, slug, offer["title"], local_start.date(),
-                 local_start.date(), starts_at, ends_at, age_min, age_max, capacity,
-                 offer["price_nonmember_cents"], offer["price_member_cents"],
-                 offer["location"], status),
-            )
-        except psycopg2.errors.UniqueViolation as exc:
-            raise CampSlugConflictError(organization_id, slug) from exc
-        return cur.fetchone()
+        return [
+            _insert_session(cur, organization_id, offer, starts_at,
+                            capacity=capacity, age_min=age_min, age_max=age_max, status=status)
+            for starts_at in starts_ats
+        ]
 
 
 def list_sessions(organization_id: UUID, offer_id: UUID) -> list[dict]:

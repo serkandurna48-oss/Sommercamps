@@ -140,6 +140,24 @@ describe('Terminformular', () => {
     expect(r).toEqual({ ok: true, value: { date: '2026-11-20', start_time: '17:30', status: 'published' } })
   })
 
+  it('Wiederholung: leer oder 1 = Einzeltermin ohne weeks, 2–12 wird übernommen', () => {
+    for (const weeks of [undefined, '', '1', ' 1 ']) {
+      const r = parseSessionInput({ ...base, ...(weeks !== undefined ? { weeks } : {}) }, 'einzel')
+      expect(r.ok && 'weeks' in r.value).toBe(false)
+    }
+    for (const weeks of [2, 12]) {
+      const r = parseSessionInput({ ...base, weeks: String(weeks) }, 'einzel')
+      expect(r.ok && r.value.weeks).toBe(weeks)
+    }
+  })
+
+  it('Wiederholung: nur 1 bis 12 ganze Wochen', () => {
+    for (const weeks of ['0', '13', '-2', 'x', '2,5']) {
+      const r = parseSessionInput({ ...base, weeks }, 'einzel')
+      expect(r.ok ? [] : Object.keys(r.errors)).toEqual(['weeks'])
+    }
+  })
+
   it('Gruppe: Kapazität 1–8 Pflicht', () => {
     const ok = parseSessionInput({ ...base, capacity: '6' }, 'gruppe')
     expect(ok.ok && ok.value.capacity).toBe(6)

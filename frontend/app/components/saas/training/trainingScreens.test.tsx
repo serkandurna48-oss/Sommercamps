@@ -134,6 +134,14 @@ describe('Angebot mit Terminen und Buchungen', () => {
     expect(capacity.max).toBe('8')
   })
 
+  it('Terminformular bietet Wiederholung in Wochen (Standard 1, 1 bis 12)', () => {
+    const weeks = render([]).querySelector<HTMLInputElement>('input[name="weeks"]')!
+    expect(weeks.value).toBe('1')
+    expect(weeks.min).toBe('1')
+    expect(weeks.max).toBe('12')
+    expect(render([]).body.textContent).toContain('Wöchentlich wiederholen')
+  })
+
   it('Termin mit aktiver Buchung kann nicht gelöscht oder abgesagt werden, ein leerer schon', () => {
     const booked = render([registration({})]).body.textContent ?? ''
     expect(booked).not.toContain('Termin löschen')

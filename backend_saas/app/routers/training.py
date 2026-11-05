@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Literal, Optional
 from uuid import UUID
 
@@ -147,6 +147,38 @@ class SessionCreate(BaseModel):
         if self.age_max < self.age_min:
             raise ValueError("age_max must be >= age_min")
         return self
+
+
+class SessionSeriesCreate(BaseModel):
+    """Weekly series: `weeks` sessions on the weekday of start_date, same Berlin local time."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    start_date: date  # local calendar date of the first session, Europe/Berlin
+    start_time: str  # "HH:MM" local time, Europe/Berlin
+    weeks: int = Field(ge=1, le=12)
+    capacity: Optional[int] = Field(default=None, ge=1, le=8)
+    age_min: int = Field(default=4, ge=0, le=99)
+    age_max: int = Field(default=18, ge=0, le=99)
+    status: Literal["draft", "published"] = "published"
+
+    @field_validator("start_time")
+    @classmethod
+    def _start_time(cls, value: str) -> str:
+        if not _TIME_RE.match(value):
+            raise ValueError("start_time must be HH:MM")
+        return value
+
+    @model_validator(mode="after")
+    def _ages(self) -> "SessionSeriesCreate":
+        if self.age_max < self.age_min:
+            raise ValueError("age_max must be >= age_min")
+        return self
+
+
+class SessionSeriesOut(BaseModel):
+    created: int
+    sessions: list["SessionAdminOut"]
 
 
 class SessionAdminOut(BaseModel):
@@ -328,6 +360,35 @@ def create_session(
     _audit(auth, organization, "training_session.created", "training_session", str(row["id"]),
            {"status": row["status"]})
     return _session_admin(_session_or_404(organization, offer_id, row["id"]))
+
+
+@admin_router.post(_ADMIN + "/{offer_id}/sessions/series", response_model=SessionSeriesOut, status_code=201)
+def create_session_series(
+    organization_slug: str, offer_id: UUID, data: SessionSeriesCreate, auth: AuthContext = Depends(require_org_access)
+) -> SessionSeriesOut:
+    """Weekly series, all or none. Each week keeps the same Berlin wall-clock time (DST-correct);
+    a gap/ambiguous local time in any week rejects the whole series (422), an existing slug gives 409."""
+    organization = require_organization(organization_slug)
+    _offer_or_404(organization, offer_id)
+    starts = [_berlin_start(data.start_date + timedelta(weeks=i), data.start_time) for i in range(data.weeks)]
+    try:
+        rows = repo.create_sessions(
+            organization["id"], offer_id, starts, capacity=data.capacity,
+            age_min=data.age_min, age_max=data.age_max, status=data.status,
+        )
+    except camps_repo.CampSlugConflictError:
+        raise HTTPException(status_code=409, detail={"code": "session_exists"}) from None
+    except repo.TrainingOfferNotFoundError:
+        raise HTTPException(status_code=404, detail="Offer not found") from None
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    logger.info("Training session series created (organization_slug=%s, count=%d)", organization_slug, len(rows))
+    _audit(auth, organization, "training_session.series_created", "training_offer", str(offer_id),
+           {"count": len(rows), "status": data.status})
+    return SessionSeriesOut(
+        created=len(rows),
+        sessions=[_session_admin(_session_or_404(organization, offer_id, r["id"])) for r in rows],
+    )
 
 
 @admin_router.delete(_ADMIN + "/{offer_id}/sessions/{session_id}", status_code=204)

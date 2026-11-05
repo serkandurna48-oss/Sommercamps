@@ -13,6 +13,7 @@ import {
   createClubMemberAdmin,
   createTrainingOfferAdmin,
   createTrainingSessionAdmin,
+  createTrainingSessionSeriesAdmin,
   deleteTrainingSessionAdmin,
   importClubMembersAdmin,
   setClubMemberActiveAdmin,
@@ -30,6 +31,8 @@ export interface TrainingFormState {
   error: string | null
   fieldErrors?: FieldErrors
   saved?: boolean
+  /** Anzahl angelegter Termine (Serie), nur nach Erfolg. */
+  createdCount?: number
   redirectTo?: string
 }
 
@@ -93,13 +96,19 @@ export async function createSessionAction(
   if (!token) return { error: NO_SESSION }
   const parsed = parseSessionInput(fields(formData), kind)
   if (!parsed.ok) return { error: 'Bitte die markierten Felder prüfen.', fieldErrors: parsed.errors }
+  const { weeks, date, ...single } = parsed.value
   try {
-    await createTrainingSessionAdmin(orgSlug, offerId, token, parsed.value)
+    if (weeks !== undefined) {
+      const result = await createTrainingSessionSeriesAdmin(orgSlug, offerId, token, { ...single, start_date: date, weeks })
+      refresh(orgSlug)
+      return { error: null, saved: true, createdCount: result.created }
+    }
+    await createTrainingSessionAdmin(orgSlug, offerId, token, { ...single, date })
   } catch (error) {
     return { error: message(error, 'Termin konnte nicht angelegt werden.') }
   }
   refresh(orgSlug)
-  return { error: null, saved: true }
+  return { error: null, saved: true, createdCount: 1 }
 }
 
 export async function deleteSessionAction(orgSlug: string, offerId: string, sessionId: string, _prev: ActionFormState): Promise<ActionFormState> {

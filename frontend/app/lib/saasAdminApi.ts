@@ -646,3 +646,252 @@ export async function connectStripeAccount(orgSlug: string, token: string, strip
   if (!res.ok) throw new AdminActionError('Stripe-Konto konnte nicht verbunden werden.')
   return res.json() as Promise<StripeConnectStatus>
 }
+
+// --- Trainingsangebote, Termine und Vereinsmitglieder ---------------------
+
+/** Fehler mit festem, nutzerverständlichem deutschem Text. Die Meldung darf an
+ * den Browser durchgereicht werden; sie enthält nie Antwortinhalte. */
+export class TrainingAdminError extends AdminActionError {
+  constructor(message: string, public readonly code?: string) {
+    super(message)
+    this.name = 'TrainingAdminError'
+  }
+}
+
+export interface ImportErrorItem {
+  row: number
+  field: string
+  code: string
+}
+
+/** Import abgelehnt (422/413): nichts wurde gespeichert. Trägt bewusst nur
+ * Zeile, Feld und Code — nie Zellinhalte (Kinderdaten). */
+export class MemberImportError extends AdminActionError {
+  constructor(public readonly errors: ImportErrorItem[]) {
+    super('Import abgelehnt – es wurde nichts gespeichert.')
+    this.name = 'MemberImportError'
+  }
+}
+
+export interface TrainingOffer {
+  id: string
+  slug: string
+  title: string
+  kind: 'einzel' | 'gruppe'
+  description: string | null
+  duration_minutes: number
+  location: string | null
+  price_member_cents: number
+  price_nonmember_cents: number
+  status: 'draft' | 'published' | 'archived'
+  created_at: string
+  updated_at: string
+}
+
+export interface TrainingOfferCreateInput {
+  slug: string
+  title: string
+  kind: 'einzel' | 'gruppe'
+  description: string | null
+  duration_minutes: number
+  location: string | null
+  price_member_cents: number
+  price_nonmember_cents: number
+  status: 'draft' | 'published' | 'archived'
+}
+
+/** slug und kind sind unveränderlich. */
+export type TrainingOfferUpdateInput = Partial<Omit<TrainingOfferCreateInput, 'slug' | 'kind'>>
+
+/** Termin eines Angebots. `local_date`/`local_time` sind Berliner Ortszeit —
+ * für die Anzeige verwenden, nie aus `starts_at` (UTC) im Browser rechnen. */
+export interface TrainingSessionAdmin {
+  id: string
+  offer_id: string
+  slug: string
+  status: 'draft' | 'published' | 'closed' | 'archived'
+  starts_at: string
+  ends_at: string
+  local_date: string
+  local_time: string
+  capacity: number
+  booked_count: number
+  free_spots: number
+  price_member_cents: number
+  price_nonmember_cents: number
+  age_min: number
+  age_max: number
+  location: string | null
+}
+
+export interface TrainingSessionCreateInput {
+  date: string
+  start_time: string
+  capacity?: number
+  age_min?: number
+  age_max?: number
+  status: 'published' | 'draft'
+}
+
+export interface ClubMember {
+  id: string
+  first_name: string
+  last_name: string
+  birth_date: string
+  member_number: string | null
+  active: boolean
+  source: 'csv' | 'manual'
+  created_at: string
+}
+
+export interface ClubMemberCreateInput {
+  first_name: string
+  last_name: string
+  birth_date: string
+  member_number?: string | null
+}
+
+export interface MemberImportResult {
+  rows: number
+  created: number
+  updated: number
+  merged_in_file: number
+}
+
+const TRAINING_BASE = (orgSlug: string) => `/admin/organizations/${orgSlug}/training-offers`
+const MEMBERS_BASE = (orgSlug: string) => `/admin/organizations/${orgSlug}/club-members`
+
+async function errorCode(res: Response): Promise<string | undefined> {
+  try {
+    const body = await res.json() as { detail?: { code?: unknown } }
+    return typeof body?.detail?.code === 'string' ? body.detail.code : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const SESSION_BLOCKED: Record<string, string> = {
+  session_has_active_registrations: 'Für diesen Termin gibt es noch aktive Buchungen. Bitte zuerst die Buchungen stornieren.',
+  session_has_registration_history: 'Für diesen Termin gab es schon Buchungen. Sie können ihn nur noch absagen, nicht löschen.',
+}
+
+export async function fetchTrainingOffersAdmin(orgSlug: string, token: string): Promise<TrainingOffer[]> {
+  const res = await adminFetch(TRAINING_BASE(orgSlug), token)
+  if (!res.ok) throw new TrainingAdminError('Angebote konnten nicht geladen werden.')
+  return res.json() as Promise<TrainingOffer[]>
+}
+
+export async function fetchTrainingOfferAdmin(orgSlug: string, offerId: string, token: string): Promise<TrainingOffer | null> {
+  const res = await adminFetch(`${TRAINING_BASE(orgSlug)}/${encodeURIComponent(offerId)}`, token)
+  if (res.status === 404) return null
+  if (!res.ok) throw new TrainingAdminError('Angebot konnte nicht geladen werden.')
+  return res.json() as Promise<TrainingOffer>
+}
+
+export async function createTrainingOfferAdmin(orgSlug: string, token: string, data: TrainingOfferCreateInput): Promise<TrainingOffer> {
+  const res = await adminMutate(TRAINING_BASE(orgSlug), token, 'POST', data)
+  if (res.status === 409) throw new SlugConflictError(data.slug)
+  if (!res.ok) throw new TrainingAdminError('Angebot konnte nicht angelegt werden – Angaben prüfen.')
+  return res.json() as Promise<TrainingOffer>
+}
+
+export async function updateTrainingOfferAdmin(orgSlug: string, offerId: string, token: string, data: TrainingOfferUpdateInput): Promise<TrainingOffer> {
+  const res = await adminMutate(`${TRAINING_BASE(orgSlug)}/${encodeURIComponent(offerId)}`, token, 'PATCH', data)
+  if (!res.ok) throw new TrainingAdminError('Angebot konnte nicht gespeichert werden – Angaben prüfen.')
+  return res.json() as Promise<TrainingOffer>
+}
+
+export async function fetchTrainingSessionsAdmin(orgSlug: string, offerId: string, token: string): Promise<TrainingSessionAdmin[]> {
+  const res = await adminFetch(`${TRAINING_BASE(orgSlug)}/${encodeURIComponent(offerId)}/sessions`, token)
+  if (!res.ok) throw new TrainingAdminError('Termine konnten nicht geladen werden.')
+  return res.json() as Promise<TrainingSessionAdmin[]>
+}
+
+export async function createTrainingSessionAdmin(
+  orgSlug: string,
+  offerId: string,
+  token: string,
+  data: TrainingSessionCreateInput,
+): Promise<TrainingSessionAdmin> {
+  const res = await adminMutate(`${TRAINING_BASE(orgSlug)}/${encodeURIComponent(offerId)}/sessions`, token, 'POST', data)
+  if (res.status === 409) throw new TrainingAdminError('Zu diesem Zeitpunkt existiert bereits ein Termin für dieses Angebot.', 'session_exists')
+  if (res.status === 422) {
+    throw new TrainingAdminError('Termin ungültig – bitte Datum, Uhrzeit und Plätze prüfen. Während der Zeitumstellung gibt es Uhrzeiten, die nicht oder doppelt vorkommen.', 'invalid')
+  }
+  if (!res.ok) throw new TrainingAdminError('Termin konnte nicht angelegt werden.')
+  return res.json() as Promise<TrainingSessionAdmin>
+}
+
+export async function deleteTrainingSessionAdmin(orgSlug: string, offerId: string, sessionId: string, token: string): Promise<void> {
+  const res = await adminMutate(`${TRAINING_BASE(orgSlug)}/${encodeURIComponent(offerId)}/sessions/${encodeURIComponent(sessionId)}`, token, 'DELETE')
+  if (res.status === 409) {
+    const code = await errorCode(res)
+    throw new TrainingAdminError((code && SESSION_BLOCKED[code]) || 'Der Termin kann nicht gelöscht werden.', code)
+  }
+  if (!res.ok) throw new TrainingAdminError('Termin konnte nicht gelöscht werden.')
+}
+
+export async function cancelTrainingSessionAdmin(orgSlug: string, offerId: string, sessionId: string, token: string): Promise<TrainingSessionAdmin> {
+  const res = await adminMutate(`${TRAINING_BASE(orgSlug)}/${encodeURIComponent(offerId)}/sessions/${encodeURIComponent(sessionId)}/cancel`, token, 'POST')
+  if (res.status === 409) {
+    const code = await errorCode(res)
+    throw new TrainingAdminError((code && SESSION_BLOCKED[code]) || 'Der Termin kann nicht abgesagt werden.', code)
+  }
+  if (!res.ok) throw new TrainingAdminError('Termin konnte nicht abgesagt werden.')
+  return res.json() as Promise<TrainingSessionAdmin>
+}
+
+export async function fetchSessionRegistrationsAdmin(orgSlug: string, offerId: string, sessionId: string, token: string): Promise<RegistrationAdmin[]> {
+  const res = await adminFetch(`${TRAINING_BASE(orgSlug)}/${encodeURIComponent(offerId)}/sessions/${encodeURIComponent(sessionId)}/registrations`, token)
+  if (!res.ok) throw new TrainingAdminError('Buchungen konnten nicht geladen werden.')
+  return res.json() as Promise<RegistrationAdmin[]>
+}
+
+export async function fetchClubMembersAdmin(orgSlug: string, token: string, filter: { q?: string; active?: boolean } = {}): Promise<ClubMember[]> {
+  const params = new URLSearchParams()
+  if (filter.q?.trim()) params.set('q', filter.q.trim())
+  if (filter.active !== undefined) params.set('active', String(filter.active))
+  const query = params.toString()
+  const res = await adminFetch(`${MEMBERS_BASE(orgSlug)}${query ? `?${query}` : ''}`, token)
+  if (!res.ok) throw new TrainingAdminError('Mitglieder konnten nicht geladen werden.')
+  return res.json() as Promise<ClubMember[]>
+}
+
+export async function createClubMemberAdmin(orgSlug: string, token: string, data: ClubMemberCreateInput): Promise<ClubMember> {
+  const res = await adminMutate(MEMBERS_BASE(orgSlug), token, 'POST', data)
+  if (res.status === 409) throw new TrainingAdminError('Dieses Mitglied ist bereits eingetragen.', 'member_exists')
+  if (!res.ok) throw new TrainingAdminError('Mitglied konnte nicht gespeichert werden – Angaben prüfen.')
+  return res.json() as Promise<ClubMember>
+}
+
+export async function setClubMemberActiveAdmin(orgSlug: string, memberId: string, token: string, active: boolean): Promise<ClubMember> {
+  const res = await adminMutate(`${MEMBERS_BASE(orgSlug)}/${encodeURIComponent(memberId)}`, token, 'PATCH', { active })
+  if (!res.ok) throw new TrainingAdminError('Status konnte nicht geändert werden.')
+  return res.json() as Promise<ClubMember>
+}
+
+/** Sendet den bereits dekodierten CSV-Text. Bei Ablehnung (422/413) wird nur
+ * Zeile/Feld/Code übernommen, sonst nichts aus der Antwort. */
+export async function importClubMembersAdmin(orgSlug: string, token: string, csv: string): Promise<MemberImportResult> {
+  const res = await adminMutate(`${MEMBERS_BASE(orgSlug)}/import`, token, 'POST', { csv })
+  if (res.status === 422 || res.status === 413) {
+    let errors: ImportErrorItem[] = []
+    try {
+      const body = await res.json() as { detail?: { errors?: unknown } }
+      const raw = body?.detail?.errors
+      if (Array.isArray(raw)) {
+        errors = raw.flatMap(item => {
+          const e = item as Partial<ImportErrorItem>
+          return typeof e?.row === 'number' && typeof e.field === 'string' && typeof e.code === 'string'
+            ? [{ row: e.row, field: e.field, code: e.code }]
+            : []
+        })
+      }
+    } catch {
+      errors = []
+    }
+    throw new MemberImportError(errors)
+  }
+  if (!res.ok) throw new TrainingAdminError('Import fehlgeschlagen – es wurde nichts gespeichert.')
+  return res.json() as Promise<MemberImportResult>
+}

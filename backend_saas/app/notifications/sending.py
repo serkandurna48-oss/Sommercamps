@@ -64,8 +64,10 @@ _FETCH_REGISTRATION = """
         r.email_sent_at,
         r.email_error,
         r.camp_id,
+        r.applied_price_cents,
         c.start_date,
-        c.end_date
+        c.end_date,
+        c.starts_at
     FROM camp_registrations r
     JOIN camps c ON c.id = r.camp_id
     WHERE r.registration_token = %s
@@ -139,6 +141,12 @@ def _mark_error(registration_token: UUID, error: str, organization_id: UUID) -> 
         cur.execute(_MARK_ERROR, (error[:500], registration_token, organization_id))
 
 
+def _effective_price(ctx: dict, applied_price_cents: Optional[int]) -> Optional[int]:
+    """The price actually agreed for this registration; legacy rows (and
+    classic camps) have no applied price and keep the camp price."""
+    return applied_price_cents if applied_price_cents is not None else ctx.get("price_cents")
+
+
 def _do_send(
     *,
     registration_token: UUID,
@@ -152,6 +160,8 @@ def _do_send(
     parent_last_name: str,
     child_first_name: str,
     child_last_name: str,
+    applied_price_cents: Optional[int] = None,
+    starts_at: Optional[datetime] = None,
 ) -> None:
     ctx = _fetch_mail_context(organization_id, camp_id)
     if ctx is None:
@@ -171,8 +181,9 @@ def _do_send(
         parent_email=parent_email,
         payment_reference=payment_reference,
         iban=ctx.get("iban"),
-        price_cents=ctx.get("price_cents"),
+        price_cents=_effective_price(ctx, applied_price_cents),
         currency=ctx.get("currency"),
+        starts_at=starts_at,
     )
     msg.sender_name = f"{ctx['org_name']} über CampsPilot"
     provider = get_provider()
@@ -189,6 +200,7 @@ def _send_provider_notification(
     camp_id: UUID,
     start_date: date,
     end_date: date,
+    starts_at: Optional[datetime] = None,
 ) -> None:
     """Best-effort provider notification. Never raises, never modifies email_sent_at/email_error."""
     try:
@@ -223,6 +235,7 @@ def _send_provider_notification(
             waitlist_count=int(occupancy["waitlist_count"]),
             contact_email=contact_email,
             org_name=ctx["org_name"],
+            starts_at=starts_at,
         )
         msg.sender_name = f"{ctx['org_name']} über CampsPilot"
         provider = get_provider()
@@ -249,6 +262,8 @@ def send_registration_notification(
     child_first_name: str,
     child_last_name: str,
     notify_provider: bool = True,
+    applied_price_cents: Optional[int] = None,
+    starts_at: Optional[datetime] = None,
 ) -> None:
     """Best-effort notification after registration creation. Never raises.
 
@@ -267,6 +282,8 @@ def send_registration_notification(
             parent_last_name=parent_last_name,
             child_first_name=child_first_name,
             child_last_name=child_last_name,
+            applied_price_cents=applied_price_cents,
+            starts_at=starts_at,
         )
     except Exception as exc:
         logger.warning(
@@ -288,6 +305,7 @@ def send_registration_notification(
         camp_id=camp_id,
         start_date=start_date,
         end_date=end_date,
+        starts_at=starts_at,
     )
 
 
@@ -477,6 +495,8 @@ def retry_registration_notification(
         child_first_name=reg["child_first_name"],
         child_last_name=reg["child_last_name"],
         notify_provider=False,
+        applied_price_cents=reg.get("applied_price_cents"),
+        starts_at=reg.get("starts_at"),
     )
 
 
@@ -501,6 +521,7 @@ def _send_for_status(registration_token: UUID, organization_id: UUID, kind: str)
             camp_start=reg["start_date"],
             camp_end=reg["end_date"],
             parent_email=reg["parent_email"],
+            starts_at=reg.get("starts_at"),
         )
     else:
         msg = build_registration_mail(
@@ -515,9 +536,10 @@ def _send_for_status(registration_token: UUID, organization_id: UUID, kind: str)
             parent_email=reg["parent_email"],
             payment_reference=build_payment_reference(ctx["camp_title"], registration_token),
             iban=ctx.get("iban"),
-            price_cents=ctx.get("price_cents"),
+            price_cents=_effective_price(ctx, reg.get("applied_price_cents")),
             currency=ctx.get("currency"),
             promoted=kind == "promoted",
+            starts_at=reg.get("starts_at"),
         )
     msg.sender_name = f"{ctx['org_name']} über CampsPilot"
     provider = get_provider()

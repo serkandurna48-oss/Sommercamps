@@ -65,6 +65,15 @@ class CampNotAvailableError(RegistrationRejectedError):
     """
 
 
+class TrainingSessionFullError(RegistrationRejectedError):
+    """A training session has no free place. Trainings have no waitlist —
+    maps to 409."""
+
+
+class TrainingSessionPastError(RegistrationRejectedError):
+    """The training session has already started — maps to 409."""
+
+
 class RegistrationWindowClosedError(RegistrationRejectedError):
     """Registration isn't currently open for this camp — maps to 422."""
 
@@ -186,19 +195,27 @@ class RegistrationTarget:
     age_max: int
     capacity: int
     status: str
+    # Training sessions (offer_id set) follow different booking rules.
+    offer_id: Optional[UUID] = None
+    starts_at: Optional[datetime] = None
 
 
 _TARGET_FIELDS = """
-    id, organization_id, slug, title, start_date, end_date,
-    registration_start, registration_end, age_min, age_max, capacity, status
+    c.id, c.organization_id, c.slug, c.title, c.start_date, c.end_date,
+    c.registration_start, c.registration_end, c.age_min, c.age_max, c.capacity, c.status,
+    c.offer_id, c.starts_at
 """
 
+# A training session is only bookable while its offer is published as well
+# (archived/draft offer -> same None as an unknown slug).
 _GET_TARGET = f"""
     select {_TARGET_FIELDS}
-    from camps
-    where organization_id = %s
-      and slug = %s
-      and status = 'published'
+    from camps c
+    left join training_offers o on o.id = c.offer_id and o.organization_id = c.organization_id
+    where c.organization_id = %s
+      and c.slug = %s
+      and c.status = 'published'
+      and (c.offer_id is null or o.status = 'published')
 """
 
 _LOCK_CAMP_CAPACITY = "select capacity, status from camps where id = %s for update"
@@ -327,7 +344,8 @@ _ADMIN_REGISTRATION_FIELDS = """
     emergency_contact_name, emergency_contact_phone,
     medical_notes, allergies, jersey_size, pickup_authorized,
     photo_permission, created_at, extra_answers,
-    email_sent_at, email_error
+    email_sent_at, email_error,
+    applied_price_cents, member_match, payment_method
 """
 
 _LIST_REGISTRATIONS_FOR_CAMP = f"""
@@ -642,6 +660,132 @@ def create_registration(
                 data.terms_accepted,
                 data.privacy_accepted,
                 psycopg2.extras.Json(dict(data.extra_answers)),
+            ),
+        )
+        return cur.fetchone()
+
+
+_LOCK_TRAINING_SESSION = """
+    select c.capacity, c.status, c.price_cents, c.price_member_cents,
+           c.starts_at > now() as in_future, o.status as offer_status
+    from camps c
+    join training_offers o on o.id = c.offer_id and o.organization_id = c.organization_id
+    where c.id = %s and c.organization_id = %s and c.offer_id is not null
+    for update of c
+"""
+
+_FIND_ACTIVE_MEMBER = """
+    select 1 from organization_memberships
+    where organization_id = %s and match_key = %s and birth_date = %s and active
+    limit 1
+"""
+
+_INSERT_TRAINING_REGISTRATION = """
+    insert into camp_registrations (
+        organization_id, camp_id, status,
+        parent_first_name, parent_last_name, parent_email, parent_phone,
+        child_first_name, child_last_name, child_birth_date,
+        emergency_contact_name, emergency_contact_phone,
+        medical_notes, allergies, health_data_consent, jersey_size, pickup_authorized,
+        photo_permission, terms_accepted, privacy_accepted,
+        extra_answers,
+        applied_price_cents, member_match, payment_method
+    ) values (
+        %s, %s, %s,
+        %s, %s, %s, %s,
+        %s, %s, %s,
+        %s, %s,
+        %s, %s, %s, %s, %s,
+        %s, %s, %s,
+        %s,
+        %s, %s, %s
+    )
+    returning registration_token, status, payment_status, child_first_name, child_last_name,
+        applied_price_cents
+"""
+
+
+def create_training_registration(
+    tenant: TenantContext,
+    camp: RegistrationTarget,
+    data: RegistrationCreate,
+) -> dict:
+    """
+    Books one training session (a camps row with offer_id). Same single
+    transaction and same lock order as create_registration (organization FOR
+    SHARE, then the session row FOR UPDATE), but with training rules:
+
+    - no waitlist: a full session raises TrainingSessionFullError (409);
+    - the offer must still be published and the session still in the future
+      (rechecked under the lock; TrainingSessionPastError -> 409);
+    - the price is decided here, never by the client: member (active row in
+      organization_memberships with the same normalised name + birth date)
+      -> price_member_cents (fallback price_cents), else price_cents;
+    - applied_price_cents / member_match / payment_method are stored on the row.
+
+    `data.payment_method` must already be validated by the caller.
+    """
+    from .memberships import normalize_match_key
+
+    with db.get_cursor() as cur:
+        cur.execute(_LOCK_PUBLIC_ORGANIZATION, (tenant.organization_id,))
+        organization = cur.fetchone()
+        if (
+            organization is None
+            or not organization["site_published"]
+            or organization["plan_status"] not in ACTIVE_PLAN_STATUSES
+            or organization.get("review_status", "approved") != "approved"
+        ):
+            raise OrganizationNotAvailableError("Organization no longer available")
+
+        validate_extra_answers(organization.get("registration_questions") or [], dict(data.extra_answers))
+
+        cur.execute(_LOCK_TRAINING_SESSION, (camp.id, tenant.organization_id))
+        locked = cur.fetchone()
+        if locked is None or locked["status"] != "published" or locked["offer_status"] != "published":
+            raise CampNotAvailableError(f"Training '{camp.slug}' no longer available")
+        if not locked["in_future"]:
+            raise TrainingSessionPastError(f"Training '{camp.slug}' has already started")
+
+        cur.execute(
+            _FIND_DUPLICATE_CHILD,
+            (camp.id, tenant.organization_id, data.child_first_name, data.child_last_name, data.child_birth_date),
+        )
+        if cur.fetchone() is not None:
+            raise DuplicateRegistrationError(camp.slug)
+
+        cur.execute(
+            _COUNT_ACTIVE_REGISTRATIONS,
+            (camp.id, tenant.organization_id, list(CAPACITY_COUNTING_STATUSES)),
+        )
+        if cur.fetchone()["active_count"] >= locked["capacity"]:
+            raise TrainingSessionFullError(f"Training '{camp.slug}' is full")
+
+        cur.execute(
+            _FIND_ACTIVE_MEMBER,
+            (
+                tenant.organization_id,
+                normalize_match_key(data.child_first_name, data.child_last_name),
+                data.child_birth_date,
+            ),
+        )
+        member_match = cur.fetchone() is not None
+        applied_price = locked["price_cents"]
+        if member_match and locked["price_member_cents"] is not None:
+            applied_price = locked["price_member_cents"]
+
+        cur.execute(
+            _INSERT_TRAINING_REGISTRATION,
+            (
+                tenant.organization_id, camp.id, "registered",
+                data.parent_first_name, data.parent_last_name, str(data.parent_email), data.parent_phone,
+                data.child_first_name, data.child_last_name, data.child_birth_date,
+                data.emergency_contact_name, data.emergency_contact_phone,
+                data.medical_notes, data.allergies, data.health_data_consent,
+                data.jersey_size, data.pickup_authorized,
+                data.photo_permission, data.terms_accepted, data.privacy_accepted,
+                psycopg2.extras.Json(dict(data.extra_answers)),
+                applied_price, member_match, data.payment_method,
             ),
         )
         return cur.fetchone()

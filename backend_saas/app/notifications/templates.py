@@ -8,11 +8,15 @@ Two status values → two distinct messages:
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from html import escape
 from typing import Optional
 
+from zoneinfo import ZoneInfo
+
 from .mail import MailMessage
+
+_BERLIN = ZoneInfo("Europe/Berlin")
 
 
 def _date_range(start: date, end: date) -> str:
@@ -24,6 +28,15 @@ def _date_range(start: date, end: date) -> str:
         return f"{start.day}.–{end_text}"
     start_year = f" {start.year}" if start.year != end.year else ""
     return f"{start.day}. {months[start.month - 1]}{start_year}–{end_text}"
+
+
+def _when(start: date, end: date, starts_at: Optional[datetime]) -> str:
+    """Training sessions (starts_at set) show date and Berlin local time;
+    classic camps keep the date range."""
+    if starts_at is None:
+        return _date_range(start, end)
+    local = starts_at.astimezone(_BERLIN)
+    return f"{_date_range(local.date(), local.date())}, {local:%H:%M} Uhr"
 
 
 def build_registration_mail(
@@ -42,6 +55,7 @@ def build_registration_mail(
     price_cents: Optional[int] = None,
     currency: Optional[str] = None,
     promoted: bool = False,
+    starts_at: Optional[datetime] = None,
 ) -> MailMessage:
     """promoted=True: the registration moved up from the waitlist; same payment
     details as a direct confirmation, but the parent is told a spot opened up."""
@@ -54,7 +68,7 @@ def build_registration_mail(
     e_iban = escape(iban) if iban else None
     e_phone = escape(org_phone) if org_phone else None
 
-    dates = _date_range(camp_start, camp_end)
+    dates = _when(camp_start, camp_end, starts_at)
     phone_line = f"<br>Telefon: {e_phone}" if e_phone else ""
 
     amount_line = ""
@@ -125,6 +139,7 @@ def build_cancellation_mail(
     camp_start: date,
     camp_end: date,
     parent_email: str,
+    starts_at: Optional[datetime] = None,
 ) -> MailMessage:
     """Sent to the parent when the club cancels a registration."""
     e_org_name = escape(org_name)
@@ -132,7 +147,7 @@ def build_cancellation_mail(
     e_camp_title = escape(camp_title)
     e_phone = escape(org_phone) if org_phone else None
     phone_line = f"<br>Telefon: {e_phone}" if e_phone else ""
-    dates = _date_range(camp_start, camp_end)
+    dates = _when(camp_start, camp_end, starts_at)
     html = f"""\
 <p>Guten Tag,</p>
 <p>Ihre Anmeldung für <strong>{e_camp_title}</strong> ({dates}) wurde storniert.</p>
@@ -159,11 +174,12 @@ def build_provider_mail(
     waitlist_count: int,
     contact_email: str,
     org_name: str,
+    starts_at: Optional[datetime] = None,
 ) -> MailMessage:
     e_camp_title = escape(camp_title)
     e_payment_ref = escape(payment_reference)
     e_org_name = escape(org_name)
-    dates = _date_range(camp_start, camp_end)
+    dates = _when(camp_start, camp_end, starts_at)
 
     if status == "registered":
         subject = f"Neue Anmeldung – {camp_title}"

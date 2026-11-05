@@ -122,8 +122,11 @@ def _payments_sheet(camp_registrations: list[tuple[dict, list[dict]]], include_c
     ]
     rows = []
     for camp, registrations in camp_registrations:
-        price_eur = camp["price_cents"] / 100
         for r in registrations:
+            # Training bookings carry their own (member/non-member) price;
+            # legacy rows keep the camp price.
+            applied = r.get("applied_price_cents")
+            price_eur = (applied if applied is not None else camp["price_cents"]) / 100
             row = (
                 ([camp["title"]] if include_camp_column else [])
                 + [

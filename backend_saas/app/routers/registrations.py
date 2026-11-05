@@ -16,6 +16,7 @@ app/repositories/registrations.py::create_registration.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 
@@ -30,11 +31,17 @@ from ..repositories.registrations import (
     ExtraAnswersInvalidError,
     OrganizationNotAvailableError,
     RegistrationWindowClosedError,
+    TrainingSessionFullError,
+    TrainingSessionPastError,
 )
 from ..schemas import RegistrationCreate, RegistrationCreated
 from ..tenancy import TenantContext
 
 logger = logging.getLogger(__name__)
+
+# Online payment for trainings comes later; only these two are accepted now.
+TRAINING_PAYMENT_METHODS = ("ueberweisung", "bar")
+_TRAINING_PAST_MSG = "Dieser Trainingstermin liegt in der Vergangenheit und kann nicht mehr gebucht werden."
 
 router = APIRouter(
     prefix="/api/v1/organizations/{organization_slug}/camps/{camp_slug}/registrations",
@@ -42,7 +49,9 @@ router = APIRouter(
 )
 
 
-@router.post("", response_model=RegistrationCreated, status_code=status.HTTP_201_CREATED)
+# exclude_none: classic camps keep the exact pre-training response (no applied_price_cents key).
+@router.post("", response_model=RegistrationCreated, response_model_exclude_none=True,
+             status_code=status.HTTP_201_CREATED)
 def create_registration(
     camp_slug: str,
     data: RegistrationCreate,
@@ -71,6 +80,18 @@ def create_registration(
         # — all indistinguishable by design, same as the public read API.
         raise HTTPException(status_code=404, detail="Camp not found")
 
+    is_training = camp.offer_id is not None
+    if is_training:
+        # Bookable check order: unknown/draft/archived -> 404 (above), already
+        # started -> 409, bad payment method -> 422, then window/age -> 422.
+        if camp.starts_at is not None and camp.starts_at <= datetime.now(timezone.utc):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_TRAINING_PAST_MSG)
+        if data.payment_method not in TRAINING_PAYMENT_METHODS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Zahlungsart muss 'ueberweisung' oder 'bar' sein.",
+            )
+
     try:
         registrations_repo.validate_registration_window(camp)
         registrations_repo.validate_child_age(camp, data.child_birth_date)
@@ -96,7 +117,22 @@ def create_registration(
         ) from exc
 
     try:
-        row = registrations_repo.create_registration(tenant, camp, data)
+        if is_training:
+            row = registrations_repo.create_training_registration(tenant, camp, data)
+        else:
+            row = registrations_repo.create_registration(tenant, camp, data)
+    except TrainingSessionFullError as exc:
+        logger.info(
+            "Registration rejected: training full (organization_slug=%s, camp_slug=%s)",
+            tenant.slug,
+            camp_slug,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Dieser Trainingstermin ist leider bereits belegt.",
+        ) from exc
+    except TrainingSessionPastError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_TRAINING_PAST_MSG) from exc
     except ExtraAnswersInvalidError as exc:
         logger.info(
             "Registration rejected: extra_answers invalid (organization_slug=%s, camp_slug=%s)",
@@ -152,6 +188,11 @@ def create_registration(
         camp_slug,
         row["status"],
     )
+    training_mail_kwargs = (
+        {"applied_price_cents": row.get("applied_price_cents"), "starts_at": camp.starts_at}
+        if is_training
+        else {}
+    )
     background_tasks.add_task(
         send_registration_notification,
         registration_token=row["registration_token"],
@@ -165,5 +206,6 @@ def create_registration(
         parent_last_name=data.parent_last_name,
         child_first_name=data.child_first_name,
         child_last_name=data.child_last_name,
+        **training_mail_kwargs,
     )
     return RegistrationCreated.model_validate({**row, "camp_title": camp.title})

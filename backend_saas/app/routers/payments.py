@@ -209,7 +209,7 @@ def create_checkout(
         cur.execute(
             """select r.id, r.status, r.payment_status, r.stripe_checkout_session_id,
                       o.stripe_account_id, o.stripe_charges_enabled, o.online_payment_enabled,
-                      c.title, c.price_cents, c.currency, c.status as camp_status
+                      c.title, c.price_cents, c.currency, c.status as camp_status, c.offer_id
                from camp_registrations r
                join organizations o on o.id = r.organization_id
                join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
@@ -220,6 +220,10 @@ def create_checkout(
         booking = cur.fetchone()
     if not booking:
         raise HTTPException(404, "Anmeldung nicht gefunden")
+    if booking.get("offer_id") is not None:
+        # Training prices (member/non-member) live on the registration; online
+        # payment for trainings is not available yet.
+        raise HTTPException(409, "Für Trainingstermine ist keine Online-Zahlung möglich. Bitte per Überweisung oder bar zahlen.")
     if booking["status"] not in ("registered", "confirmed") or booking["payment_status"] != "open":
         raise HTTPException(409, "Für diese Anmeldung ist keine Online-Zahlung möglich")
     if booking["camp_status"] != "published":

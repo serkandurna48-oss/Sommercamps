@@ -483,6 +483,9 @@ class RegistrationAdminOut(RegistrationCreated):
     # A2: last parent-mail outcome, so the club sees failed mails and can resend.
     email_sent_at: Optional[datetime] = None
     email_error: Optional[str] = None
+    # Training bookings (admin only): how the price was decided and how it is paid.
+    member_match: Optional[bool] = None
+    payment_method: Optional[str] = None
 
 
 class GlobalRegistrationOut(RegistrationAdminOut):

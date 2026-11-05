@@ -76,6 +76,7 @@ _GET_PUBLISHED_BY_SLUG = f"""
     where c.organization_id = %s
       and c.slug = %s
       and c.status = 'published'
+      and c.offer_id is null
 """
 
 _CAPACITY_COUNTING_STATUSES_LIST = list(CAPACITY_COUNTING_STATUSES)

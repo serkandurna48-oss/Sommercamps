@@ -56,8 +56,12 @@ def build_registration_mail(
     currency: Optional[str] = None,
     promoted: bool = False,
     starts_at: Optional[datetime] = None,
+    payment_method: Optional[str] = None,
 ) -> MailMessage:
-    """promoted=True: the registration moved up from the waitlist; same payment
+    """payment_method is only set for training bookings ('bar' | 'ueberweisung').
+    Classic camps leave it None and keep the unchanged camp mail.
+
+    promoted=True: the registration moved up from the waitlist; same payment
     details as a direct confirmation, but the parent is told a spot opened up."""
     # Escape all user-supplied strings before interpolating into HTML.
     e_org_name = escape(org_name)
@@ -77,13 +81,20 @@ def build_registration_mail(
         formatted = f"{price_cents // 100},{price_cents % 100:02d}"
         amount_line = f"<p>Betrag: <strong>{formatted}&nbsp;{e_cur}</strong></p>\n"
 
+    is_training = starts_at is not None
     if status in ("registered", "confirmed"):
-        subject = (
-            f"Platz frei – Ihre Anmeldung ist bestätigt – {camp_title}"
-            if promoted
-            else f"Anmeldebestätigung – {camp_title}"
-        )
-        if e_iban:
+        if promoted:
+            subject = f"Platz frei – Ihre Anmeldung ist bestätigt – {camp_title}"
+        elif is_training:
+            subject = f"Buchungsbestätigung: {camp_title} am {dates}"
+        else:
+            subject = f"Anmeldebestätigung – {camp_title}"
+        if is_training and payment_method == "bar":
+            payment_block = (
+                f"{amount_line}"
+                "<p>Bitte bar beim Training bezahlen.</p>"
+            )
+        elif e_iban:
             payment_block = (
                 f"{amount_line}"
                 f"<p>Empfänger: <strong>{e_payee}</strong>"
@@ -103,11 +114,16 @@ def build_registration_mail(
             if promoted
             else f"<p>Ihre Anmeldung für <strong>{e_camp_title}</strong>\n({dates}) ist bei uns eingegangen.</p>"
         )
+        cancel_note = (
+            "<p>Kostenlose Absage bis 24 h vorher – bitte direkt beim Verein melden.</p>\n"
+            if is_training
+            else ""
+        )
         html = f"""\
 <p>Guten Tag,</p>
 {intro}
 {payment_block}
-<p>Bei Fragen wenden Sie sich direkt an {e_org_name}:<br>
+{cancel_note}<p>Bei Fragen wenden Sie sich direkt an {e_org_name}:<br>
 E-Mail: {e_org_email}{phone_line}</p>
 <p>Viele Grüße,<br>{e_org_name}</p>"""
     else:

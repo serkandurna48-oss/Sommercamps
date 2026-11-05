@@ -371,6 +371,32 @@ def test_status_change_mail_uses_applied_price(real_db, fake_provider):
     assert "45,00" in fake_provider.sent[0].html_content
 
 
+def test_bar_booking_mail_and_resend_have_no_bank_details(real_db, fake_provider):
+    _, tenant, _ = real_db
+    _, session = _make(real_db)
+    r = _post(real_db, session, payment_method="bar")
+    assert r.status_code == 201
+    first = [m for m in fake_provider.sent if m.to_email == "max@example.com"][0]
+    assert "Bitte bar beim Training bezahlen." in first.html_content
+    assert "IBAN" not in first.html_content
+    fake_provider.sent.clear()
+    sending.resend_registration_mail(__import__("uuid").UUID(r.json()["registration_token"]), tenant.organization_id)
+    assert "Bitte bar beim Training bezahlen." in fake_provider.sent[0].html_content
+    assert "IBAN" not in fake_provider.sent[0].html_content
+
+
+def test_ueberweisung_booking_mail_and_resend_keep_transfer_block(real_db, fake_provider):
+    _, tenant, _ = real_db
+    _, session = _make(real_db)
+    r = _post(real_db, session, payment_method="ueberweisung")
+    first = [m for m in fake_provider.sent if m.to_email == "max@example.com"][0]
+    assert "Verwendungszweck" in first.html_content and "bar beim Training" not in first.html_content
+    fake_provider.sent.clear()
+    sending.resend_registration_mail(__import__("uuid").UUID(r.json()["registration_token"]), tenant.organization_id)
+    assert "Verwendungszweck" in fake_provider.sent[0].html_content
+    assert "bar beim Training" not in fake_provider.sent[0].html_content
+
+
 # ---------- export ----------
 
 def test_export_payment_sheet_uses_applied_price(real_db):

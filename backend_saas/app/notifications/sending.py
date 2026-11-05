@@ -65,6 +65,7 @@ _FETCH_REGISTRATION = """
         r.email_error,
         r.camp_id,
         r.applied_price_cents,
+        r.payment_method,
         c.start_date,
         c.end_date,
         c.starts_at
@@ -162,6 +163,7 @@ def _do_send(
     child_last_name: str,
     applied_price_cents: Optional[int] = None,
     starts_at: Optional[datetime] = None,
+    payment_method: Optional[str] = None,
 ) -> None:
     ctx = _fetch_mail_context(organization_id, camp_id)
     if ctx is None:
@@ -184,6 +186,7 @@ def _do_send(
         price_cents=_effective_price(ctx, applied_price_cents),
         currency=ctx.get("currency"),
         starts_at=starts_at,
+        payment_method=payment_method,
     )
     msg.sender_name = f"{ctx['org_name']} über CampsPilot"
     provider = get_provider()
@@ -264,6 +267,7 @@ def send_registration_notification(
     notify_provider: bool = True,
     applied_price_cents: Optional[int] = None,
     starts_at: Optional[datetime] = None,
+    payment_method: Optional[str] = None,
 ) -> None:
     """Best-effort notification after registration creation. Never raises.
 
@@ -284,6 +288,7 @@ def send_registration_notification(
             child_last_name=child_last_name,
             applied_price_cents=applied_price_cents,
             starts_at=starts_at,
+            payment_method=payment_method,
         )
     except Exception as exc:
         logger.warning(
@@ -497,6 +502,7 @@ def retry_registration_notification(
         notify_provider=False,
         applied_price_cents=reg.get("applied_price_cents"),
         starts_at=reg.get("starts_at"),
+        payment_method=reg.get("payment_method"),
     )
 
 
@@ -540,6 +546,7 @@ def _send_for_status(registration_token: UUID, organization_id: UUID, kind: str)
             currency=ctx.get("currency"),
             promoted=kind == "promoted",
             starts_at=reg.get("starts_at"),
+            payment_method=reg.get("payment_method"),
         )
     msg.sender_name = f"{ctx['org_name']} über CampsPilot"
     provider = get_provider()

@@ -206,7 +206,11 @@ def create_registration(
         row["status"],
     )
     training_mail_kwargs = (
-        {"applied_price_cents": row.get("applied_price_cents"), "starts_at": camp.starts_at}
+        {
+            "applied_price_cents": row.get("applied_price_cents"),
+            "starts_at": camp.starts_at,
+            "payment_method": data.payment_method,
+        }
         if is_training
         else {}
     )

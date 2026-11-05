@@ -271,6 +271,41 @@ def test_note_missing_required_and_bad_body(ctx):
     assert r.status_code == 422 and SECRET not in r.text
 
 
+def test_unauthenticated_write_gets_401_before_body_validation(ctx):
+    """Auth runs before the JSON body is parsed: no 422 for anonymous callers."""
+    c = ctx
+    app.dependency_overrides.clear()
+    pid = _pid(c)
+    cl, b = c["client"], _base(c)
+    nid = "00000000-0000-0000-0000-000000000001"
+    targets = (("post", f"{b}/{pid}/notes"), ("post", f"{b}/{pid}/goals"), ("post", f"{b}/{pid}/measurements"),
+               ("patch", f"{b}/{pid}/notes/{nid}"), ("patch", f"{b}/{pid}/goals/{nid}"),
+               ("patch", f"{b}/{pid}/measurements/{nid}"))
+    for method, path in targets:  # anonymous first (org_admin_headers installs auth overrides)
+        for kwargs in ({"content": b"{kaputt"}, {"json": [1]}, {"json": {}}):
+            r = getattr(cl, method)(path, **kwargs)
+            assert r.status_code == 401, (method, path, r.status_code)
+    h = org_admin_headers(str(c["other"]))
+    for method, path in targets:  # admin of a foreign org: 403, not 422
+        assert getattr(cl, method)(path, headers=h, content=b"{kaputt").status_code == 403
+
+
+def test_nul_character_in_text_fields_is_422_not_500(ctx):
+    c = ctx
+    pid = _pid(c)
+    cl, b, h = c["client"], _base(c), c["headers"]
+    for path, payload, field in (
+        (f"{b}/{pid}/notes", {"note_date": "2027-01-10", "body": "a\u0000b"}, "body"),
+        (f"{b}/{pid}/notes", {"note_date": "2027-01-10", "body": "ok", "next_steps": "x\u0000"}, "next_steps"),
+        (f"{b}/{pid}/goals", {"title": "Ti\u0000tel", "area": "technik"}, "title"),
+        (f"{b}/{pid}/measurements", {"measured_on": "2027-01-10", "metric": "sprint_10m", "value": 2.1, "note": "n\u0000"}, "note"),
+    ):
+        r = cl.post(path, headers=h, json=payload)
+        assert r.status_code == 422, (path, r.status_code)
+        assert r.json()["detail"]["field"] == field and "\x00" not in r.text and "\\u0000" not in r.text
+    assert players.list_notes(c["org"], pid) == []
+
+
 def test_note_camp_id_rules(ctx):
     """camp_id: same organization required; a booking by this player is NOT required."""
     c = ctx

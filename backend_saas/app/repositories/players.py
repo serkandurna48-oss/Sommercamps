@@ -68,6 +68,8 @@ def _text(field: str, value: Any, *, max_len: int, required: bool) -> Optional[s
         return None
     if not isinstance(value, str):
         raise PlayerValidationError(field, "must be text")
+    if "\x00" in value:
+        raise PlayerValidationError(field, "invalid characters")
     value = value.strip()
     if not value:
         if required:
@@ -194,20 +196,12 @@ def find_or_create_player_id(organization_id: UUID, first_name: str, last_name: 
 _PLAYER_FIELDS = "p.id, p.organization_id, p.first_name, p.last_name, p.birth_date, p.created_at, p.updated_at"
 
 
-def list_players(organization_id: UUID, *, search: Optional[str] = None) -> list[dict]:
+def list_players(organization_id: UUID) -> list[dict]:
     """Players with summary: age (years), last booking date (latest non-cancelled
-    registration's camp/session start date), note count, open goal count. `search`
-    matches the normalised name (substring)."""
+    registration's camp/session start date), note count, open goal count. Search
+    happens client-side."""
     params: list[Any] = [organization_id]
     where = "where p.organization_id = %s"
-    if search:
-        from .memberships import _normalize_part
-
-        needle = _normalize_part(search)
-        if needle:
-            escaped = needle.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-            where += " and replace(p.match_key, '|', ' ') like %s"
-            params.append(f"%{escaped}%")
     with db.get_cursor() as cur:
         cur.execute(
             f"""select {_PLAYER_FIELDS},

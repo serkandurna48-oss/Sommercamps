@@ -258,8 +258,7 @@ _NOTE_DATES = {"note_date": False}
 
 @router.post(_BASE + "/{player_id}/notes", response_model=NoteOut, status_code=status.HTTP_201_CREATED)
 def create_note(
-    organization_slug: str, player_id: UUID, data: dict = Depends(_json_body),
-    auth: AuthContext = Depends(require_org_access),
+    organization_slug: str, player_id: UUID, auth: AuthContext = Depends(require_org_access), data: dict = Depends(_json_body),
 ) -> dict:
     organization = require_organization(organization_slug)
     _player_or_404(organization, player_id)
@@ -273,8 +272,7 @@ def create_note(
 
 @router.patch(_BASE + "/{player_id}/notes/{note_id}", response_model=NoteOut)
 def update_note(
-    organization_slug: str, player_id: UUID, note_id: UUID, data: dict = Depends(_json_body),
-    auth: AuthContext = Depends(require_org_access),
+    organization_slug: str, player_id: UUID, note_id: UUID, auth: AuthContext = Depends(require_org_access), data: dict = Depends(_json_body),
 ) -> dict:
     organization = require_organization(organization_slug)
     fields = _prepare(data, dates=_NOTE_DATES, uuids=("camp_id",))
@@ -303,8 +301,7 @@ _GOAL_DATES = {"target_date": True}
 
 @router.post(_BASE + "/{player_id}/goals", response_model=GoalOut, status_code=status.HTTP_201_CREATED)
 def create_goal(
-    organization_slug: str, player_id: UUID, data: dict = Depends(_json_body),
-    auth: AuthContext = Depends(require_org_access),
+    organization_slug: str, player_id: UUID, auth: AuthContext = Depends(require_org_access), data: dict = Depends(_json_body),
 ) -> dict:
     organization = require_organization(organization_slug)
     _player_or_404(organization, player_id)
@@ -315,8 +312,7 @@ def create_goal(
 
 @router.patch(_BASE + "/{player_id}/goals/{goal_id}", response_model=GoalOut)
 def update_goal(
-    organization_slug: str, player_id: UUID, goal_id: UUID, data: dict = Depends(_json_body),
-    auth: AuthContext = Depends(require_org_access),
+    organization_slug: str, player_id: UUID, goal_id: UUID, auth: AuthContext = Depends(require_org_access), data: dict = Depends(_json_body),
 ) -> dict:
     organization = require_organization(organization_slug)
     row = _call(repo.update_goal, organization["id"], player_id, goal_id, **_prepare(data, dates=_GOAL_DATES))
@@ -344,8 +340,7 @@ _MEASUREMENT_DATES = {"measured_on": False}
 
 @router.post(_BASE + "/{player_id}/measurements", response_model=MeasurementOut, status_code=status.HTTP_201_CREATED)
 def create_measurement(
-    organization_slug: str, player_id: UUID, data: dict = Depends(_json_body),
-    auth: AuthContext = Depends(require_org_access),
+    organization_slug: str, player_id: UUID, auth: AuthContext = Depends(require_org_access), data: dict = Depends(_json_body),
 ) -> MeasurementOut:
     organization = require_organization(organization_slug)
     _player_or_404(organization, player_id)
@@ -359,8 +354,7 @@ def create_measurement(
 
 @router.patch(_BASE + "/{player_id}/measurements/{measurement_id}", response_model=MeasurementOut)
 def update_measurement(
-    organization_slug: str, player_id: UUID, measurement_id: UUID, data: dict = Depends(_json_body),
-    auth: AuthContext = Depends(require_org_access),
+    organization_slug: str, player_id: UUID, measurement_id: UUID, auth: AuthContext = Depends(require_org_access), data: dict = Depends(_json_body),
 ) -> MeasurementOut:
     organization = require_organization(organization_slug)
     row = _call(repo.update_measurement, organization["id"], player_id, measurement_id,

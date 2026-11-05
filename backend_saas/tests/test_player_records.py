@@ -71,7 +71,7 @@ def test_find_or_create_concurrent_same_child_yields_one_player(real_db):
     with ThreadPoolExecutor(max_workers=8) as ex:
         ids = list(ex.map(lambda i: _player(org, "Conny", f"Race{i % 1}"), range(8)))
     assert len(set(ids)) == 1
-    assert len(players.list_players(org, search="race")) == 1
+    assert len(players.list_players(org)) == 1
 
 
 # ---------- registration linking ----------
@@ -140,8 +140,7 @@ def test_list_players_summary(real_db):
     assert row["last_booking_date"] == date(2027, 7, 5)
     assert row["age"] >= 8
     assert "match_key" not in row
-    assert players.list_players(org, search="MUSTER")[0]["id"] == pid
-    assert players.list_players(org, search="nobody") == []
+    assert players.list_players(org)[0]["id"] == pid
 
 
 def test_last_booking_ignores_cancelled(real_db):
@@ -420,7 +419,7 @@ def test_link_unlinked_registrations_links_and_is_idempotent(real_db):
         ids = {r["player_id"] for r in cur.fetchall()}
     assert len(ids) == 1 and None not in ids
     assert players.link_unlinked_registrations() == 0
-    assert len(players.list_players(org, search="joerg")) == 1
+    assert len(players.list_players(org)) == 1
 
 
 def test_link_function_and_normaliser_are_not_callable_by_anon(real_db):

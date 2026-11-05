@@ -37,6 +37,7 @@ from uuid import UUID
 import psycopg2.extras
 
 from .. import db
+from . import players
 from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES, validate_transition
 from ..schemas import RegistrationCreate
 from ..tenancy import ACTIVE_PLAN_STATUSES, TenantContext
@@ -255,7 +256,7 @@ _INSERT_REGISTRATION = """
         emergency_contact_name, emergency_contact_phone,
         medical_notes, allergies, health_data_consent, jersey_size, pickup_authorized,
         photo_permission, terms_accepted, privacy_accepted,
-        extra_answers
+        extra_answers, player_id
     ) values (
         %s, %s, %s,
         %s, %s, %s, %s,
@@ -263,7 +264,7 @@ _INSERT_REGISTRATION = """
         %s, %s,
         %s, %s, %s, %s, %s,
         %s, %s, %s,
-        %s
+        %s, %s
     )
     returning registration_token, status, payment_status, child_first_name, child_last_name
 """
@@ -636,6 +637,8 @@ def create_registration(
 
         new_status = "registered" if active_count < locked["capacity"] else "waitlist"
 
+        player_id = players.find_or_create_player(
+            cur, tenant.organization_id, data.child_first_name, data.child_last_name, data.child_birth_date)
         cur.execute(
             _INSERT_REGISTRATION,
             (
@@ -660,6 +663,7 @@ def create_registration(
                 data.terms_accepted,
                 data.privacy_accepted,
                 psycopg2.extras.Json(dict(data.extra_answers)),
+                player_id,
             ),
         )
         return cur.fetchone()
@@ -689,7 +693,7 @@ _INSERT_TRAINING_REGISTRATION = """
         medical_notes, allergies, health_data_consent, jersey_size, pickup_authorized,
         photo_permission, terms_accepted, privacy_accepted,
         extra_answers,
-        applied_price_cents, member_match, payment_method
+        applied_price_cents, member_match, payment_method, player_id
     ) values (
         %s, %s, %s,
         %s, %s, %s, %s,
@@ -698,7 +702,7 @@ _INSERT_TRAINING_REGISTRATION = """
         %s, %s, %s, %s, %s,
         %s, %s, %s,
         %s,
-        %s, %s, %s
+        %s, %s, %s, %s
     )
     returning registration_token, status, payment_status, child_first_name, child_last_name,
         applied_price_cents
@@ -774,6 +778,8 @@ def create_training_registration(
         if member_match and locked["price_member_cents"] is not None:
             applied_price = locked["price_member_cents"]
 
+        player_id = players.find_or_create_player(
+            cur, tenant.organization_id, data.child_first_name, data.child_last_name, data.child_birth_date)
         cur.execute(
             _INSERT_TRAINING_REGISTRATION,
             (
@@ -785,7 +791,7 @@ def create_training_registration(
                 data.jersey_size, data.pickup_authorized,
                 data.photo_permission, data.terms_accepted, data.privacy_accepted,
                 psycopg2.extras.Json(dict(data.extra_answers)),
-                applied_price, member_match, data.payment_method,
+                applied_price, member_match, data.payment_method, player_id,
             ),
         )
         return cur.fetchone()

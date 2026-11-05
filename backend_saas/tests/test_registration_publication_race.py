@@ -2,6 +2,7 @@
 
 from contextlib import contextmanager
 
+from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
@@ -41,6 +42,8 @@ def test_registration_rechecks_organization_after_tenant_resolution(
                 self.result = None
             elif "count(*)" in normalized:
                 self.result = {"active_count": 0}
+            elif "insert into players" in normalized:
+                self.result = {"id": uuid4()}
             elif "insert into camp_registrations" in normalized:
                 self.result = _fake_created_row()
             else:

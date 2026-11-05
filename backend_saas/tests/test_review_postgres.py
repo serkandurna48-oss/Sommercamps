@@ -149,7 +149,8 @@ def test_registration_lock_delays_withdrawal_but_not_other_camps(real_db, monkey
             assert inserted.wait(5)
             # Another camp can register while the first transaction is still open.
             monkeypatch.setattr(db, "get_cursor", cursor)
-            assert repo.create_registration(tenant, other, RegistrationCreate(**_valid_payload()))["status"] == "registered"
+            # a different child: the same child would wait for the first transaction's uncommitted player row
+            assert repo.create_registration(tenant, other, RegistrationCreate(**_valid_payload(child_first_name="Other")))["status"] == "registered"
 
             def withdraw():
                 with cursor() as cur:

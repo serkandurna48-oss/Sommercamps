@@ -293,7 +293,8 @@ def test_capacity_bounds_and_kind_rules(ctx):
     assert _new_session(c, group, date="2030-05-07", capacity=1).json()["capacity"] == 1
     assert _new_session(c, group, date="2030-05-08", capacity=8).json()["capacity"] == 8
     assert _new_session(c, einzel, date="2030-05-06").json()["capacity"] == 1  # einzel defaults to 1
-    assert _new_session(c, einzel, date="2030-05-07", capacity=3).json()["capacity"] == 3
+    assert _new_session(c, einzel, date="2030-05-07", capacity=3).status_code == 422  # einzel is always 1
+    assert _new_session(c, einzel, date="2030-05-08", capacity=1).json()["capacity"] == 1
 
 
 def test_session_defaults_to_published_and_draft_is_possible(ctx):

@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 import psycopg2.errors
 
 from .. import db
+from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES
 from .camps import CampSlugConflictError
 
 BERLIN = ZoneInfo("Europe/Berlin")
@@ -138,10 +139,12 @@ def create_session(
     offer = get_offer(organization_id, offer_id)
     if offer is None:
         raise TrainingOfferNotFoundError(str(offer_id))
-    if capacity is None:
-        if offer["kind"] != "einzel":
-            raise ValueError("capacity is required for group offers")
+    if offer["kind"] == "einzel":
+        if capacity not in (None, 1):
+            raise ValueError("single-training offers have capacity 1")
         capacity = 1
+    elif capacity is None:
+        raise ValueError("capacity is required for group offers")
     ends_at = starts_at + timedelta(minutes=offer["duration_minutes"])
     local_start = starts_at.astimezone(BERLIN)
     slug = f"{offer['slug']}-{local_start:%Y%m%d-%H%M}"
@@ -178,7 +181,7 @@ def list_sessions(organization_id: UUID, offer_id: UUID) -> list[dict]:
 # Task 4: admin/public read models and guarded delete/cancel
 # ---------------------------------------------------------------------------
 
-_COUNTING = ("registered", "confirmed")  # same definition as CAPACITY_COUNTING_STATUSES
+_COUNTING = sorted(CAPACITY_COUNTING_STATUSES)
 
 _SESSION_WITH_COUNT = """
     select c.id, c.organization_id, c.offer_id, c.slug, c.status, c.starts_at, c.ends_at,
@@ -206,7 +209,7 @@ def get_session_with_count(organization_id: UUID, offer_id: UUID, session_id: UU
     with db.get_cursor() as cur:
         cur.execute(
             _SESSION_WITH_COUNT + " where c.organization_id = %s and c.offer_id = %s and c.id = %s",
-            (list(_COUNTING), organization_id, offer_id, session_id),
+            (_COUNTING, organization_id, offer_id, session_id),
         )
         return cur.fetchone()
 
@@ -216,7 +219,7 @@ def list_sessions_with_counts(organization_id: UUID, offer_id: UUID) -> list[dic
         cur.execute(
             _SESSION_WITH_COUNT
             + " where c.organization_id = %s and c.offer_id = %s order by c.starts_at asc, c.slug asc",
-            (list(_COUNTING), organization_id, offer_id),
+            (_COUNTING, organization_id, offer_id),
         )
         return cur.fetchall()
 
@@ -229,7 +232,7 @@ def list_public_sessions(organization_id: UUID, offer_id: UUID) -> list[dict]:
             + """ where c.organization_id = %s and c.offer_id = %s
                     and c.status = 'published' and c.starts_at > now()
                   order by c.starts_at asc, c.slug asc""",
-            (list(_COUNTING), organization_id, offer_id),
+            (_COUNTING, organization_id, offer_id),
         )
         return cur.fetchall()
 
@@ -247,7 +250,7 @@ def _lock_session_and_count(cur, organization_id: UUID, offer_id: UUID, session_
     cur.execute(
         """select count(*) filter (where status = any(%s)) as active, count(*) as total
            from camp_registrations where organization_id = %s and camp_id = %s""",
-        (list(_COUNTING), organization_id, session_id),
+        (_COUNTING, organization_id, session_id),
     )
     counts = cur.fetchone()
     return row, counts["active"], counts["total"]

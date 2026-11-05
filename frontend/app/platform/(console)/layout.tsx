@@ -10,7 +10,7 @@ import { AdminAuthError, fetchMe, fetchOrganizationsAdmin } from '../../lib/saas
 import ReviewNavLink from './ReviewNavLink'
 import { redirect } from 'next/navigation'
 import { platformLogoutAction } from '../logoutAction'
-import BrandMark from '../../components/marketing/BrandMark'
+import CampsPilotMark from '../../components/saas/brand/CampsPilotMark'
 import Button from '../../components/saas/ui/Button'
 
 export const metadata = { title: 'CampsPilot Plattform' }
@@ -52,15 +52,13 @@ export default async function PlatformLayout({ children }: { children: React.Rea
     <div className={`${archivo.variable} cp-scope min-h-screen`}>
       <StagingBanner />
       <GrainOverlay />
-      {/* Same band as the club admin (MatchdayBand): dark surface, accent line, identity left, sign-out right. */}
-      <header className="px-4 pt-3 pb-1 md:px-6 md:pt-4 md:pb-2" style={{ background: 'var(--cp-band)', borderTop: '3px solid #c24f1a', color: 'var(--cp-on-band)', ['--accent' as string]: '#d4581f' }}>
+      {/* Same band as the club admin (MatchdayBand): dark floodlight surface, CampsPilot identity left, sign-out right. */}
+      <header className="cp-band px-4 pt-3 pb-1 md:px-6 md:pt-4 md:pb-2">
         <div className="mx-auto flex max-w-[1080px] flex-col">
           <div className="flex min-h-[44px] items-center justify-between gap-4 pb-2 md:pb-3">
             <Link href="/platform" className="cp-focus flex items-center gap-3" style={{ color: 'var(--cp-on-band)' }}>
-              <span className="grid h-9 w-9 place-items-center rounded-[10px]" style={{ background: 'var(--cp-band-2)' }} aria-hidden="true">
-                <BrandMark width={22} height={15} />
-              </span>
-              <span className="cp-subheading">CampsPilot Plattform</span>
+              <CampsPilotMark width={30} height={20} />
+              <span className="cp-lockup">CampsPilot <span className="cp-label" style={{ color: 'var(--cp-on-band-2)', fontStretch: '100%', letterSpacing: 0 }}>Plattform</span></span>
             </Link>
             <form action={platformLogoutAction}>
               <Button type="submit">Abmelden</Button>

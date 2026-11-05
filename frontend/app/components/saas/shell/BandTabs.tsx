@@ -63,19 +63,15 @@ function TabHint() {
  * scaleX), 200ms, cubic-bezier(.4,0,.2,1) — nie width/left animiert, nur
  * transform (siehe Verbote). Aktiver Tab per exaktem Pfad-Match.
  */
-export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandColor: string }) {
+export default function BandTabs({ tabs }: { tabs: TabItem[]; /** @deprecated Active tab is CampsPilot orange. Ignored. */ brandColor?: string }) {
   const pathname = usePathname()
   const preview = useAdminPreview()
   const containerRef = useRef<HTMLDivElement>(null)
   useBarHeight(containerRef, '--cp-mobile-nav-height')
   const [underline, setUnderline] = useState<{ left: number; width: number } | null>(null)
-  // --cp-tab-mark: die Vereinsfarbe für die Aktiv-Markierung der schmalen
-  // Leiste. Als Custom Property, weil die Markierung in tokens.css hinter
-  // einer Media Query sitzt und von dort nicht an ein Prop herankommt.
-  const navStyle: React.CSSProperties & Record<'--cp-tab-mark', string> = {
+  const navStyle: React.CSSProperties = {
     borderTop: '1px solid var(--cp-band-line)',
     background: 'var(--cp-band)',
-    '--cp-tab-mark': brandColor,
     // Spalten aus der Tab-Anzahl: alle Ziele nebeneinander, ohne Umbruch in eine zweite Zeile.
     // Ab md ist die Leiste flex, die Spaltenvorgabe wirkt dort nicht.
     gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
@@ -93,7 +89,7 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
   return (
     <nav
       ref={containerRef}
-      className="cp-band-tabs fixed right-0 bottom-0 left-0 z-20 grid p-1 md:relative md:flex md:gap-6 md:overflow-x-auto"
+      className="cp-band-tabs fixed right-0 bottom-0 left-0 z-20 grid p-1 md:relative md:flex md:overflow-x-auto md:p-0 md:!bg-transparent"
       style={navStyle}
       data-tab-count={tabs.length}
       aria-label="Bereiche"
@@ -108,12 +104,12 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
             prefetch={false}
             data-active={active}
             aria-current={active ? 'page' : undefined}
-            className="cp-subheading cp-band-tab inline-flex items-center justify-center gap-1.5 px-1 pt-3 pb-3 text-center md:shrink-0 md:justify-start md:px-0 md:whitespace-nowrap"
+            className="cp-focus cp-band-tab inline-flex items-center justify-center gap-1.5 px-1 pt-3 pb-3 text-center md:shrink-0 md:justify-start md:px-0 md:whitespace-nowrap"
             style={{
               color: active ? 'var(--cp-on-band)' : 'var(--cp-on-band-2)',
             }}
           >
-            {Icon && <Icon className="hidden md:inline-block" size={16} />}
+            {Icon && <Icon className="hidden shrink-0 lg:inline-block" size={16} />}
             {tab.shortLabel ? (
               <>
                 <span className="min-w-0 whitespace-nowrap md:hidden" aria-hidden="true">{tab.shortLabel}</span>
@@ -131,7 +127,7 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
           aria-hidden="true"
           className="pointer-events-none absolute bottom-0 left-0 hidden h-0.5 w-px transition-transform motion-reduce:transition-none md:block"
           style={{
-            background: brandColor,
+            background: 'var(--cp-accent)',
             transform: `translateX(${underline.left}px) scaleX(${underline.width})`,
             transformOrigin: 'left',
             transitionDuration: '200ms',

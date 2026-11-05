@@ -20,14 +20,15 @@ import { useIsPlatformOwner } from './ViewerContext'
  * Abkürzung, sondern nur, wenn er tatsächlich funktioniert. Macht zugleich
  * sichtbar, ALS WER man diesen Verein gerade sieht.
  */
-export default function OrgSwitcher({ name, logoUrl, orgSlug }: { name: string; logoUrl: string | null; orgSlug: string }) {
+/** `clubColor`: the club's own colour — in the admin area it appears only here, as a thin accent line under the logo tile. */
+export default function OrgSwitcher({ name, logoUrl, orgSlug, clubColor }: { name: string; logoUrl: string | null; orgSlug: string; clubColor?: string }) {
   const initial = name.trim().charAt(0).toUpperCase()
   const isPlatformOwner = useIsPlatformOwner()
   return (
     <div className="flex min-w-0 items-center gap-2.5">
       <span
-        className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md"
-        style={{ background: 'var(--cp-band-2)' }}
+        className="cp-org-tile relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden"
+        style={clubColor ? { '--cp-club': clubColor } as React.CSSProperties : undefined}
       >
         {logoUrl ? (
           <Image src={logoUrl} alt="" fill unoptimized className="object-contain p-1" />
@@ -38,7 +39,7 @@ export default function OrgSwitcher({ name, logoUrl, orgSlug }: { name: string; 
         )}
       </span>
       <div className="flex min-w-0 flex-col">
-        <span className="cp-subheading break-words" style={{ color: 'var(--cp-on-band)' }}>
+        <span className="cp-label break-words" style={{ color: 'var(--cp-on-band)', fontSize: 15 }}>
           {name}
         </span>
         {isPlatformOwner && (

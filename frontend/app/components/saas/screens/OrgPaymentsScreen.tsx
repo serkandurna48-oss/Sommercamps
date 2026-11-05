@@ -6,22 +6,25 @@ import StatCard from '../data/StatCard'
 import StatGrid from '../ui/StatGrid'
 import { orgTabs } from '../navTabs'
 import { de, formatEuro } from '../../../lib/i18n/de'
-import type { OrganizationScreenProps } from './types'
+import type { OrgPaymentsScreenProps } from './types'
 import { PAGE } from '../ui/pageLayout'
 
-export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsByCamp }: OrganizationScreenProps) {
-
+export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsByCamp, trainingPayments = [] }: OrgPaymentsScreenProps) {
   const brand = computeBrandTokens(org.primary_color)
 
-  const money = camps.reduce(
-    (sum, camp, i) => {
-      const m = computeMoneyStats(camp, registrationsByCamp[i])
+  const groups = [
+    ...camps.map((camp, i) => ({ camp, registrations: registrationsByCamp[i] })),
+    ...trainingPayments,
+  ]
+  const money = groups.reduce(
+    (sum, { camp, registrations }) => {
+      const m = computeMoneyStats(camp, registrations)
       return { collectedCents: sum.collectedCents + m.collectedCents, openCents: sum.openCents + m.openCents }
     },
     { collectedCents: 0, openCents: 0 },
   )
 
-  const entries: PaymentEntry[] = camps.flatMap((camp, i) => registrationsByCamp[i].map(registration => ({ registration, camp })))
+  const entries: PaymentEntry[] = groups.flatMap(({ camp, registrations }) => registrations.map(registration => ({ registration, camp })))
   const openCount = entries.filter(e => isOpenPayment(e.registration)).length
 
   return (

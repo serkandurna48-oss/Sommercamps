@@ -1,11 +1,15 @@
 import { cache } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import { getValidAccessToken } from '../../lib/supabaseServer'
+import { trainingPaymentGroup, type TrainingPaymentGroup } from './training/trainingPayments'
 import {
   AdminAuthError,
   fetchCampsAdmin,
   fetchOrganizationAdmin,
   fetchRegistrationsAdmin,
+  fetchSessionRegistrationsAdmin,
+  fetchTrainingOffersAdmin,
+  fetchTrainingSessionsAdmin,
   type CampAdmin,
   type OrganizationAdmin,
   type RegistrationAdmin,
@@ -73,6 +77,26 @@ export async function loadOrgAdminData(orgSlug: string): Promise<OrgAdminData> {
   )
 
   return { token, org, camps, registrationsByCamp }
+}
+
+/** Zahlungsseite: Camps wie bisher plus Trainingstermine mit Buchungen. Die Camp-Liste
+ * schliesst Termine absichtlich aus, deshalb werden sie über die Trainings-Endpunkte
+ * geladen. Entwürfe haben keine Buchungen und werden übersprungen. */
+export async function loadOrgPaymentsData(orgSlug: string): Promise<OrgAdminData & { trainingPayments: TrainingPaymentGroup[] }> {
+  const data = await loadOrgAdminData(orgSlug)
+  try {
+    const offers = await fetchTrainingOffersAdmin(orgSlug, data.token)
+    const perOffer = await Promise.all(offers.map(async offer => {
+      const sessions = (await fetchTrainingSessionsAdmin(orgSlug, offer.id, data.token)).filter(s => s.status !== 'draft')
+      return Promise.all(sessions.map(async session =>
+        trainingPaymentGroup(offer, session, await fetchSessionRegistrationsAdmin(orgSlug, offer.id, session.id, data.token))))
+    }))
+    const trainingPayments = perOffer.flat().filter(g => g.registrations.length > 0)
+    return { ...data, trainingPayments }
+  } catch (err) {
+    if (err instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
+    throw err
+  }
 }
 
 export interface CampAdminData {

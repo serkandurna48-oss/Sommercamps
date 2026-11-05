@@ -205,7 +205,7 @@ export const de = {
   },
   paymentsPage: {
     heading: 'Zahlungen',
-    subtitleOrg: 'Über alle Camps',
+    subtitleOrg: 'Über alle Camps und Trainings',
     collected: 'Als bezahlt markiert',
     open: 'Offen',
     breakdown: 'Nach Status',

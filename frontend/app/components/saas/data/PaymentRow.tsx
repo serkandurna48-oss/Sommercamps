@@ -11,6 +11,7 @@ import Button, { ButtonLink } from '../ui/Button'
 import ListRow from '../ui/ListRow'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from './StatusChip'
 import RowOverflow from '../ui/RowOverflow'
+import { paymentMethodLabel } from '../training/trainingLogic'
 import PaymentTextCopy, { PaymentTextFallback } from './PaymentTextCopy'
 import { buildPaymentReminder, reminderLabels, type ReminderOrganization } from '../../../lib/zahlungserinnerung'
 
@@ -69,6 +70,7 @@ export default function PaymentRow({
 
       </div>} secondary={        <p className="cp-chip mt-0.5 truncate" style={{ color: 'var(--cp-muted)' }}>
           {registration.parent_first_name} {registration.parent_last_name} · {registration.parent_email}
+          {registration.payment_method ? ` · Zahlart: ${paymentMethodLabel(registration.payment_method)}` : ''}
         </p>} status={<div className="flex flex-col items-start gap-2">
           <span className="cp-num cp-subheading shrink-0" style={{ color: 'var(--cp-ink)' }}>
             {formatEuro(registrationPriceCents(camp, registration), camp.currency)}

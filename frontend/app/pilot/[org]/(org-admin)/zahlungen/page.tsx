@@ -1,9 +1,9 @@
-import { loadOrgAdminData } from '../../../../components/saas/orgAdminData'
+import { loadOrgPaymentsData } from '../../../../components/saas/orgAdminData'
 import OrgPaymentsScreen from '../../../../components/saas/screens/OrgPaymentsScreen'
 
 export default async function OrgPaymentsPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params
-  const { org, camps, registrationsByCamp } = await loadOrgAdminData(orgSlug)
+  const { org, camps, registrationsByCamp, trainingPayments } = await loadOrgPaymentsData(orgSlug)
 
-  return <OrgPaymentsScreen orgSlug={orgSlug} org={org} camps={camps} registrationsByCamp={registrationsByCamp} />
+  return <OrgPaymentsScreen orgSlug={orgSlug} org={org} camps={camps} registrationsByCamp={registrationsByCamp} trainingPayments={trainingPayments} />
 }

@@ -10,11 +10,11 @@ import WaitlistPage from '../../pilot/[org]/(org-admin)/warteliste/page'
 import TasksPage from '../../pilot/[org]/(org-admin)/aufgaben/page'
 import ConfigPage from '../../pilot/[org]/(org-admin)/konfiguration/page'
 import { getAdminToken } from '../../lib/adminSession'
-import { getOrganizationAdmin, loadCampAdminData, loadOrgAdminData } from '../../components/saas/orgAdminData'
+import { getOrganizationAdmin, loadCampAdminData, loadOrgAdminData, loadOrgPaymentsData } from '../../components/saas/orgAdminData'
 import { getPreviewFixtures } from './fixtures'
 
 vi.mock('../../components/saas/orgAdminData', () => ({
-  loadOrgAdminData: vi.fn(), loadCampAdminData: vi.fn(), getOrganizationAdmin: vi.fn(),
+  loadOrgAdminData: vi.fn(), loadOrgPaymentsData: vi.fn(), loadCampAdminData: vi.fn(), getOrganizationAdmin: vi.fn(),
 }))
 vi.mock('../../lib/adminSession', () => ({ getAdminToken: vi.fn() }))
 vi.mock('next/navigation', () => ({
@@ -39,6 +39,7 @@ beforeEach(() => {
   vi.mocked(getAdminToken).mockResolvedValue('test-token')
   vi.mocked(getOrganizationAdmin).mockResolvedValue(fixtures.org)
   vi.mocked(loadOrgAdminData).mockResolvedValue({ ...fixtures, token: 'test-token' })
+  vi.mocked(loadOrgPaymentsData).mockResolvedValue({ ...fixtures, token: 'test-token', trainingPayments: [] })
   vi.mocked(loadCampAdminData).mockResolvedValue({
     token: 'test-token', org: fixtures.org, camp: fixtures.camps[0], registrations: fixtures.registrationsByCamp[0],
   })
@@ -56,6 +57,8 @@ for (const [name, Page] of Object.entries({ DashboardPage, CampPage, CampCreateP
       expect(getOrganizationAdmin).toHaveBeenCalledWith(fixtures.orgSlug, 'test-token')
     } else if (Page === CampPage || Page === CampConfigPage) {
       expect(loadCampAdminData).toHaveBeenCalledWith(fixtures.orgSlug, fixtures.camps[0].slug)
+    } else if (Page === PaymentsPage) {
+      expect(loadOrgPaymentsData).toHaveBeenCalledWith(fixtures.orgSlug)
     } else {
       expect(loadOrgAdminData).toHaveBeenCalledWith(fixtures.orgSlug)
     }

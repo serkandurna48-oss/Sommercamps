@@ -62,7 +62,7 @@ export default function OfferForm({ orgSlug, offer, brandStrong, brandOn, backBu
         {editing ? (
           <dl className="cp-body grid grid-cols-1 gap-2 sm:grid-cols-2" style={{ color: 'var(--cp-ink-2)' }}>
             <div><dt className="cp-label">Art</dt><dd>{offerKindLabel[offer!.kind]}</dd></div>
-            <div><dt className="cp-label">Web-Adresse</dt><dd className="font-mono break-all">{offer!.slug}</dd></div>
+            <div><dt className="cp-label">Web-Adresse</dt><dd className="cp-code break-all">{offer!.slug}</dd></div>
           </dl>
         ) : (
           <>
@@ -121,7 +121,7 @@ export default function OfferForm({ orgSlug, offer, brandStrong, brandOn, backBu
       {!pending && state.saved && editing && <SuccessNote>Gespeichert.</SuccessNote>}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto sm:order-2">
+        <Button type="submit" variant={editing ? 'secondary' : 'primary'} disabled={pending} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto sm:order-2">
           {pending ? 'Wird gespeichert …' : editing ? 'Speichern' : 'Angebot anlegen'}
         </Button>
         {backButton}

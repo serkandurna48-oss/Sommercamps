@@ -47,7 +47,7 @@ export default function TrainingOfferScreen({ orgSlug, org, offer, sessions, reg
         <section className="mb-10 flex flex-col gap-4" aria-labelledby="sessions-heading">
           <div className="flex items-center gap-3">
             <h2 id="sessions-heading" className="cp-title" style={{ color: 'var(--cp-ink)' }}>Termine</h2>
-            <StatusChip tone="info" label={`${sessions.length}`} dot />
+            <StatusChip tone="neutral" label={`${sessions.length}`} />
           </div>
           <div className="max-w-[640px]">
             <SessionForm orgSlug={orgSlug} offerId={offer.id} kind={offer.kind} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />

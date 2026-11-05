@@ -47,7 +47,7 @@ export default function MemberCreateForm({ orgSlug, brandStrong, brandOn }: { or
       )}
       {!pending && state.saved && <SuccessNote>Mitglied gespeichert.</SuccessNote>}
       <div>
-        <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto">
+        <Button type="submit" variant="secondary" disabled={pending} className="w-full sm:w-auto">
           {pending ? 'Wird gespeichert …' : 'Mitglied speichern'}
         </Button>
       </div>

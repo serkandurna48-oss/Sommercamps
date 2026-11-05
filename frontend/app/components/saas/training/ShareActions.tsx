@@ -48,7 +48,7 @@ export default function ShareActions({ orgSlug, offerSlug, title, published }: {
       {copy === 'copied' && <p role="status" className="cp-chip" style={{ color: 'var(--cp-ok)' }}>Link in der Zwischenablage.</p>}
       {copy === 'error' && (
         <p role="alert" className="cp-chip" style={{ color: 'var(--cp-error)' }}>
-          Kopieren nicht möglich. Bitte den Link markieren und kopieren: <span className="font-mono break-all">{url}</span>
+          Kopieren nicht möglich. Bitte den Link markieren und kopieren: <span className="cp-code break-all">{url}</span>
         </p>
       )}
     </div>

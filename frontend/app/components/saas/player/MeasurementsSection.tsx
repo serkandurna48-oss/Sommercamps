@@ -51,7 +51,7 @@ export default function MeasurementsSection({ orgSlug, playerId, measurements, m
       {groups.length === 0 ? (
         <EmptyState title="Noch keine Messwerte." body="Tragen Sie z. B. Sprintzeiten ein. Der Verlauf erscheint hier als Grafik." />
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className={`grid grid-cols-1 gap-4 ${groups.length > 1 ? 'md:grid-cols-2' : ''}`}>
           {groups.map(group => {
             const series = buildMetricSeries(measurements, group.metric)
             const rows = measurements.filter(m => m.metric === group.metric)
@@ -120,7 +120,7 @@ export default function MeasurementsSection({ orgSlug, playerId, measurements, m
         </div>
         {!pending && <FormError message={result?.error} />}
         <div>
-          <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto">
+          <Button type="submit" variant="secondary" disabled={pending} className="w-full sm:w-auto">
             {pending ? 'Wird gespeichert …' : 'Messwert speichern'}
           </Button>
         </div>

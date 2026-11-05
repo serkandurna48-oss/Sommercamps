@@ -73,8 +73,10 @@ export default function PlayerRecordScreen({ orgSlug, org, record, query, today 
 
         <section className="mb-10 flex flex-col gap-4" aria-labelledby="measurements-heading">
           <h2 id="measurements-heading" className="cp-title" style={{ color: 'var(--cp-ink)' }}>Messwerte</h2>
-          <MeasurementsSection orgSlug={orgSlug} playerId={player.id} measurements={measurements} metrics={metrics} today={today}
-            brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+          <div className="max-w-[720px]">
+            <MeasurementsSection orgSlug={orgSlug} playerId={player.id} measurements={measurements} metrics={metrics} today={today}
+              brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+          </div>
         </section>
 
         <section className="flex flex-col gap-4" aria-labelledby="bookings-heading">

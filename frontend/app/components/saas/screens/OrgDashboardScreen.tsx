@@ -79,9 +79,13 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
             {missingFields.length > 0 && (
               <div
                 className="cp-body mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[var(--cp-r-card)] border px-4 py-3"
-                style={{ borderColor: 'var(--cp-pending-line)', background: 'var(--cp-surface)' }}
+                style={{ borderColor: 'var(--cp-pending-line)', background: 'var(--cp-pending-bg)' }}
               >
-                <span aria-hidden style={{ color: 'var(--cp-pending)' }}>!</span>
+                <span
+                  aria-hidden
+                  className="cp-label inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border"
+                  style={{ color: 'var(--cp-pending)', borderColor: 'var(--cp-pending-line)', background: 'var(--cp-surface)' }}
+                >!</span>
                 <span>{de.onboarding.missingFieldsHint(missingFields)}</span>
                 <Link href={`/pilot/${orgSlug}/konfiguration`} className="cp-focus min-h-[44px] inline-flex items-center underline">{de.onboarding.missingFieldsAction}</Link>
               </div>
@@ -92,7 +96,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
                 {restTasks.length > 0 && (
                   <div className="flex flex-col gap-4">
                     {restTasks.map(t => (
-                      <TaskRow key={t.id} task={t} orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+                      <TaskRow key={t.id} task={t} orgSlug={orgSlug} asCard />
                     ))}
                   </div>
                 )}
@@ -116,7 +120,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
         <DashboardCampsCard camps={campsWithStats} orgSlug={orgSlug} brandColor={brand.brand} action={
             <ButtonLink
               href={`/pilot/${orgSlug}/camps/new`}
-              variant={showCard ? 'secondary' : 'primary'} brandStrong={brand.brandStrong} brandOn={brand.brandOn}
+              variant="secondary"
             >
               + Camp anlegen
             </ButtonLink>

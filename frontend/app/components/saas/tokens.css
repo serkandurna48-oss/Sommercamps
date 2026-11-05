@@ -310,6 +310,16 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Codes zum Abtippen (Verwendungszweck, Web-Adresse): Archivo statt
+ * font-mono, das im Admin auf eine Serifenschrift zurückfiel. Tabellarische
+ * Ziffern und etwas Laufweite halten Zeichen gut unterscheidbar. */
+.cp-code {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums slashed-zero;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
 /* Eine Stimme für jede hervorgehobene Zahl im Admin — Design-Reifung nach
  * dem zweiten Praxistest: vorher hatte cp-band-metric (Band, gross, breit
  * gestreckt) nichts mit dem viel leiseren cp-title auf den StatCards zu

@@ -97,7 +97,7 @@ export default function GoalsSection({ orgSlug, playerId, goals, brandStrong, br
         </div>
         {!pending && <FormError message={result?.error} />}
         <div>
-          <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto">
+          <Button type="submit" variant="secondary" disabled={pending} className="w-full sm:w-auto">
             {pending ? 'Wird gespeichert …' : 'Ziel speichern'}
           </Button>
         </div>

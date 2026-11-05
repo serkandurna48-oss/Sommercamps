@@ -105,11 +105,9 @@ describe('development-only admin preview', () => {
         for (const card of document.querySelectorAll('.cp-card:not(.cp-card-list), [class*="rounded-[var(--cp-r-card)]"]')) {
           expect(card.querySelectorAll('.cp-btn-primary').length).toBeLessThanOrEqual(1)
         }
-        if (screen === 'dashboard') {
-          for (const link of document.querySelectorAll('main a')) {
-            if (link.textContent?.trim() === 'Ansehen') expect(link.className).toContain('cp-btn-primary')
-          }
-        }
+        // Redesign R2: one primary action per view (e.g. dashboard: the first
+        // task card; task rows and "Camp anlegen" stay secondary).
+        expect(document.querySelectorAll('main .cp-btn-primary').length, screen).toBeLessThanOrEqual(1)
         // Admin-UI uses Sie-form; parent-facing hilfe additionally contains Sie/Ihnen in FAQ templates
         expect(document.body.textContent).not.toMatch(/—|\.\.\./)
         expect(html).not.toMatch(/href="\/(pilot|platform)\//)

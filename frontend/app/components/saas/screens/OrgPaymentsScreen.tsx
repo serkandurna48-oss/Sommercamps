@@ -34,6 +34,7 @@ export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsBy
         orgName={org.name}
         orgLogoUrl={org.logo_url}
         title={de.command.payments}
+        subtitle={de.paymentsPage.subtitleOrg}
         metrics={[
           { label: de.paymentsPage.collected, value: formatEuro(money.collectedCents) },
           { label: de.paymentsPage.open, value: formatEuro(money.openCents) },
@@ -43,13 +44,6 @@ export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsBy
       />
 
       <main className={PAGE}>
-        <h2 className="cp-title mb-1" style={{ color: 'var(--cp-ink)' }}>
-          {de.paymentsPage.heading}
-        </h2>
-        <p className="cp-body mb-6" style={{ color: 'var(--cp-muted)' }}>
-          {de.paymentsPage.subtitleOrg}
-        </p>
-
         {trainingPaymentsError && (
           <p role="alert" className="cp-body mb-4 rounded-[var(--cp-r-chip)] border px-3 py-2"
             style={{ color: 'var(--cp-error)', background: 'var(--cp-error-bg)', borderColor: 'var(--cp-error-line)' }}>

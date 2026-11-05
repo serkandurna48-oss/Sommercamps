@@ -53,7 +53,7 @@ export default function BookingRow({ orgSlug, sessionSlug, sessionId, registrati
           </ButtonLink>
         )}
         {isOpenPayment(registration) && (
-          <ActionForm action={markPaid} label={de.paymentsPage.markPaid} pendingLabel={de.paymentsPage.updating} variant="primary" brandStrong={brandStrong} brandOn={brandOn} />
+          <ActionForm action={markPaid} label={de.paymentsPage.markPaid} pendingLabel={de.paymentsPage.updating} variant="secondary" />
         )}
         {canReopenPayment(registration) && (
           <ActionForm action={markOpen} label={de.paymentsPage.markOpen} pendingLabel={de.paymentsPage.updating} requireConfirm={de.paymentsPage.markOpenConfirm} />

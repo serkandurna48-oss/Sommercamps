@@ -57,7 +57,7 @@ export default function PaymentRow({
     <div className="cp-ledger-row cp-mobile-card border-t" data-status={registration.payment_status} style={{ borderTopColor: 'var(--cp-line-2)' }}>
       <ListRow className="cp-list-row-padded" main={<div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono font-semibold" style={{ color: 'var(--cp-ink)' }}>{registration.payment_reference}</span>
+          <span className="cp-code" style={{ color: 'var(--cp-ink)' }}>{registration.payment_reference}</span>
           <Button className="cp-desktop-only" type="button" variant="secondary" aria-label={`Verwendungszweck ${registration.payment_reference} kopieren`} onClick={copyReference}>
             {copyState === 'copied' ? 'Kopiert' : 'Kopieren'}
           </Button>
@@ -92,9 +92,7 @@ export default function PaymentRow({
               action={markPaid}
               label={de.paymentsPage.markPaid}
               pendingLabel={de.paymentsPage.updating}
-              variant="primary"
-              brandStrong={brandStrong}
-              brandOn={brandOn}
+              variant="secondary"
             />
             <RowOverflow label={`Weitere Aktionen für ${registration.child_first_name} ${registration.child_last_name}`}>
             <Button className="cp-mobile-only" type="button" onClick={copyReference}>{copyState === 'copied' ? 'Kopiert' : 'Verwendungszweck kopieren'}</Button>

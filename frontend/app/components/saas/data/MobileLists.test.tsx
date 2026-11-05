@@ -92,7 +92,8 @@ it('keeps the reminder in the payment overflow and the payment action outside it
   const buttons = [...row.querySelectorAll('button')]
   const primary = buttons.find(button => button.textContent === 'Als bezahlt markieren')!
   expect(primary.closest('.cp-overflow-panel')).toBeNull()
-  expect(primary.className).toContain('cp-btn-primary')
+  // Redesign R2: one primary per view, so the per-row action is secondary.
+  expect(primary.className).toContain('cp-btn-secondary')
   await act(() => row.querySelector<HTMLButtonElement>('[aria-haspopup]')!.click())
   const dialog = row.querySelector('[role="dialog"]')!
   const reminder = [...dialog.querySelectorAll('button')].find(button => button.textContent === 'Erinnerung kopieren')!

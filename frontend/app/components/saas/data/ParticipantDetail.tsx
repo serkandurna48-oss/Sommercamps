@@ -265,9 +265,7 @@ export default function ParticipantDetail({
                 action={resendMail}
                 label="Mail erneut senden"
                 pendingLabel="Wird gesendet …"
-                variant="primary"
-                brandStrong={brandStrong}
-                brandOn={brandOn}
+                variant="secondary"
               />
             </>
           ) : registration.email_sent_at ? (
@@ -279,7 +277,7 @@ export default function ParticipantDetail({
 
         {isOpenPayment(registration) && (
           <div className="mt-3 flex flex-wrap gap-2">
-            <ActionForm action={markPaid} label={de.paymentsPage.markPaid} pendingLabel={de.paymentsPage.updating} variant={editing ? 'secondary' : 'primary'} brandStrong={brandStrong} brandOn={brandOn} />
+            <ActionForm action={markPaid} label={de.paymentsPage.markPaid} pendingLabel={de.paymentsPage.updating} variant="secondary" />
             <ActionForm action={markWaived} label={de.paymentsPage.markWaived} pendingLabel={de.paymentsPage.updating} variant="secondary" requireConfirm={de.paymentsPage.waivedConfirm} />
           </div>
         )}

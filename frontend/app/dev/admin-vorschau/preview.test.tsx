@@ -85,9 +85,9 @@ describe('development-only admin preview', () => {
         document.body.innerHTML = html
         const header = document.querySelector('header')!
         const campLevel = screen.startsWith('camp') && screen !== 'camp-neu' && !empty
-        expect([...header.querySelectorAll('nav a')].map(a => a.textContent)).toEqual([
-          campLevel ? 'Teilnehmer' : 'Übersicht', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Einstellungen',
-        ])
+        expect([...header.querySelectorAll('nav a')].map(a => a.textContent)).toEqual(campLevel
+          ? ['Teilnehmer', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Einstellungen']
+          : ['Übersicht', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Trainings', 'Mitglieder', 'Einstellungen'])
         const back = [...header.querySelectorAll('a')].find(a => a.textContent?.trim() === '← Zurück')
         if (screen === 'dashboard') expect(back).toBeUndefined()
         else {

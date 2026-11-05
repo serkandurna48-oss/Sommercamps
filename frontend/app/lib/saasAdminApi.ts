@@ -783,7 +783,8 @@ export async function fetchTrainingOffersAdmin(orgSlug: string, token: string): 
 
 export async function fetchTrainingOfferAdmin(orgSlug: string, offerId: string, token: string): Promise<TrainingOffer | null> {
   const res = await adminFetch(`${TRAINING_BASE(orgSlug)}/${encodeURIComponent(offerId)}`, token)
-  if (res.status === 404) return null
+  // 422: keine gültige ID in der URL, für den Nutzer ebenfalls "nicht gefunden".
+  if (res.status === 404 || res.status === 422) return null
   if (!res.ok) throw new TrainingAdminError('Angebot konnte nicht geladen werden.')
   return res.json() as Promise<TrainingOffer>
 }

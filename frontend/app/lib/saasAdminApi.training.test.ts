@@ -10,6 +10,7 @@ import {
   createTrainingSessionAdmin,
   deleteTrainingSessionAdmin,
   fetchClubMembersAdmin,
+  fetchTrainingOfferAdmin,
   fetchSessionRegistrationsAdmin,
   fetchTrainingOffersAdmin,
   fetchTrainingSessionsAdmin,
@@ -191,4 +192,15 @@ it('413 file_too_large und unerwartete 422-Formate werden als Importfehler gemel
   const failed = await importClubMembersAdmin('ksv', 'tok', 'x').catch(e => e)
   expect(failed).toBeInstanceOf(AdminActionError)
   expect(failed).not.toBeInstanceOf(MemberImportError)
+})
+
+it('ein einzelnes Angebot: 404 und ungültige ID (422) sind \"nicht gefunden\", andere Fehler nicht', async () => {
+  stubFetch(200, { id: 'o1' })
+  expect(await fetchTrainingOfferAdmin('ksv', 'o1', 'tok')).toEqual({ id: 'o1' })
+  stubFetch(404, {})
+  expect(await fetchTrainingOfferAdmin('ksv', 'o1', 'tok')).toBeNull()
+  stubFetch(422, {})
+  expect(await fetchTrainingOfferAdmin('ksv', 'kein-uuid', 'tok')).toBeNull()
+  stubFetch(500, {})
+  await expect(fetchTrainingOfferAdmin('ksv', 'o1', 'tok')).rejects.toBeInstanceOf(TrainingAdminError)
 })

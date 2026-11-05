@@ -173,3 +173,8 @@ export function parseSessionInput(input: Record<string, string>, kind: OfferKind
     },
   }
 }
+
+/** Cent -> Formularwert "30,00" (Komma, keine Währung), Gegenstück zu parseEuroToCents. */
+export function formatEuroInput(cents: number): string {
+  return (cents / 100).toFixed(2).replace('.', ',')
+}

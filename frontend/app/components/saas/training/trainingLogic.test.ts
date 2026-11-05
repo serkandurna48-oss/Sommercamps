@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildOfferUrl,
   buildWhatsAppUrl,
+  formatEuroInput,
   formatImportError,
   formatSessionWhen,
   parseEuroToCents,
@@ -48,6 +49,15 @@ describe('Euro-Eingabe', () => {
   it('rechnet ohne Gleitkomma-Fehler (19,99 und 1,15)', () => {
     expect(parseEuroToCents('19,99')).toBe(1999)
     expect(parseEuroToCents('1,15')).toBe(115)
+  })
+})
+
+describe('Euro-Anzeige im Formular', () => {
+  it('zeigt Cent als deutsche Eingabe mit Komma', () => {
+    expect(formatEuroInput(3000)).toBe('30,00')
+    expect(formatEuroInput(4050)).toBe('40,50')
+    expect(formatEuroInput(0)).toBe('0,00')
+    expect(parseEuroToCents(formatEuroInput(123499))).toBe(123499)
   })
 })
 

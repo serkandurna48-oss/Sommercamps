@@ -8,6 +8,8 @@ export function orgTabs(orgSlug: string): TabItem[] {
     { label: de.command.payments, href: `/pilot/${orgSlug}/zahlungen`, icon: 'coin' },
     { label: de.command.waitlist, href: `/pilot/${orgSlug}/warteliste`, icon: 'hourglass' },
     { label: de.command.tasks, href: `/pilot/${orgSlug}/aufgaben`, icon: 'flag' },
+    { label: 'Trainings', href: `/pilot/${orgSlug}/trainings`, icon: 'jersey' },
+    { label: 'Mitglieder', href: `/pilot/${orgSlug}/mitglieder`, icon: 'board' },
     { label: 'Einstellungen', href: `/pilot/${orgSlug}/konfiguration`, icon: 'gear' },
   ]
 }

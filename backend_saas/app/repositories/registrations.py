@@ -346,7 +346,8 @@ _ADMIN_REGISTRATION_FIELDS = """
     medical_notes, allergies, jersey_size, pickup_authorized,
     photo_permission, created_at, extra_answers,
     email_sent_at, email_error,
-    applied_price_cents, member_match, payment_method
+    applied_price_cents, member_match, payment_method,
+    player_id, documentation_consent
 """
 
 _LIST_REGISTRATIONS_FOR_CAMP = f"""

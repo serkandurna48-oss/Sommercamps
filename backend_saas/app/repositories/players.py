@@ -216,6 +216,9 @@ def list_players(organization_id: UUID, *, search: Optional[str] = None) -> list
                       join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
                      where r.player_id = p.id and r.organization_id = p.organization_id
                        and r.status <> 'cancelled') as last_booking_date,
+                   (select count(*) from camp_registrations r
+                     where r.player_id = p.id and r.organization_id = p.organization_id
+                       and r.status <> 'cancelled')::int as booking_count,
                    (select count(*) from player_notes n
                      where n.player_id = p.id and n.organization_id = p.organization_id)::int as note_count,
                    (select count(*) from player_goals g
@@ -243,11 +246,12 @@ def list_player_bookings(organization_id: UUID, player_id: UUID) -> list[dict]:
     """Bookings of a player (newest first). No tokens, no parent data."""
     with db.get_cursor() as cur:
         cur.execute(
-            """select r.id as registration_id, r.status, r.documentation_consent, r.created_at,
+            """select r.id as registration_id, r.status, r.payment_status, r.documentation_consent, r.created_at,
                       c.id as camp_id, c.title as camp_title, c.start_date, c.end_date,
-                      c.offer_id, c.starts_at
+                      c.offer_id, c.starts_at, o.title as offer_title
                from camp_registrations r
                join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
+               left join training_offers o on o.id = c.offer_id and o.organization_id = c.organization_id
                where r.player_id = %s and r.organization_id = %s
                order by c.start_date desc, r.created_at desc""",
             (player_id, organization_id),

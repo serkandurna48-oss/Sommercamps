@@ -486,6 +486,9 @@ class RegistrationAdminOut(RegistrationCreated):
     # Training bookings (admin only): how the price was decided and how it is paid.
     member_match: Optional[bool] = None
     payment_method: Optional[str] = None
+    # Spielerakte: link to the player record ("Doku schreiben"); null for unlinked legacy rows.
+    player_id: Optional[UUID] = None
+    documentation_consent: Optional[bool] = None
 
 
 class GlobalRegistrationOut(RegistrationAdminOut):

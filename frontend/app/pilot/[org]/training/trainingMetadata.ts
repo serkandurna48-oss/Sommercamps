@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import type { OrganizationPublic, TrainingOfferPublic } from '../../../lib/saasApi'
 import { pageMetadata, shortDescription } from '../../../lib/seo'
-import { memberPriceText } from '../../../lib/trainingFormat'
 import { getSiteUrl } from '../socialMetadata'
 
 /** Link-Vorschau für geteilte Trainingslinks; bewusst ohne eigenes OG-Bild (später). */
@@ -21,10 +20,10 @@ export function trainingListMetadata(org: Pick<OrganizationPublic, 'slug' | 'nam
 
 export function trainingOfferMetadata(
   org: Pick<OrganizationPublic, 'slug' | 'name'>,
-  offer: Pick<TrainingOfferPublic, 'slug' | 'title' | 'description' | 'price_member_cents' | 'price_nonmember_cents'>,
+  offer: Pick<TrainingOfferPublic, 'slug' | 'title' | 'description'>,
 ): Metadata {
   const text = offer.description?.trim()
-    || `${offer.title} bei ${org.name}. ${memberPriceText(offer.price_member_cents, offer.price_nonmember_cents)}.`
+    || `${offer.title} bei ${org.name}: Termin auswählen und online buchen.`
   return build(
     `/pilot/${encodeURIComponent(org.slug)}/training/${encodeURIComponent(offer.slug)}`,
     `${offer.title} – ${org.name} | Buchung`,

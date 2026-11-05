@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { OrganizationPublic, RegistrationCreated, TrainingOfferDetail, TrainingPaymentMethod, TrainingSessionPublic } from '../../../lib/saasApi'
 import { fetchTrainingOffer } from '../../../lib/saasApi'
 import {
-  findBookableSession, formatSessionDateTime, memberPriceText, sessionAsCamp, sessionAvailability,
+  findBookableSession, formatSessionDateTime, memberPriceText, sessionAsCamp, sessionAvailability, uniformSessionPriceText,
 } from '../../../lib/trainingFormat'
 import RegistrationFormScreen from '../RegistrationFormScreen'
 import TrainingDoneScreen from './TrainingDoneScreen'
@@ -49,6 +49,8 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
     }
   }, [org.slug, offer.slug])
 
+  // Charged prices are the sessions' frozen prices, not the offer template.
+  const uniformPrice = uniformSessionPriceText(offer.sessions)
   const selected = findBookableSession(offer.sessions, selectedSlug)
 
   if (screen === 'form' && selected) {
@@ -104,7 +106,7 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
       <dl className="facts tr-facts">
         <div className="r"><dt>Dauer</dt><dd>{offer.duration_minutes} Minuten</dd></div>
         {offer.location && <div className="r"><dt>Ort</dt><dd>{offer.location}</dd></div>}
-        <div className="r"><dt>Preis</dt><dd>{memberPriceText(offer.price_member_cents, offer.price_nonmember_cents)}</dd></div>
+        {uniformPrice && <div className="r"><dt>Preis</dt><dd>{uniformPrice}</dd></div>}
       </dl>
       <p className="note quiet tr-notice">Kostenlose Absage bis 24 h vorher – bitte direkt beim Verein melden.</p>
 
@@ -123,11 +125,13 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
                 {availability.bookable ? (
                   <button type="button" className="tr-session" onClick={() => { setSelectedSlug(item.slug); setNotice(null); setScreen('form') }}>
                     <span className="tr-session-when">{when}</span>
+                    {!uniformPrice && <span className="tr-session-price">{memberPriceText(item.price_member_cents, item.price_nonmember_cents)}</span>}
                     <span className="tr-session-spots">{availability.label}</span>
                   </button>
                 ) : (
                   <div className="tr-session full" aria-disabled="true">
                     <span className="tr-session-when">{when}</span>
+                    {!uniformPrice && <span className="tr-session-price">{memberPriceText(item.price_member_cents, item.price_nonmember_cents)}</span>}
                     <span className="tr-session-spots">{availability.label}</span>
                   </div>
                 )}

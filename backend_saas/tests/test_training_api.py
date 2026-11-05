@@ -398,7 +398,29 @@ def test_public_list_only_published_offers(ctx):
     (row,) = r.json()
     assert row["slug"] == "live-offer"
     assert set(row) == {"slug", "title", "kind", "description", "duration_minutes", "location",
-                        "price_member_cents", "price_nonmember_cents"}
+                        "price_member_cents", "price_nonmember_cents",
+                        "from_price_member_cents", "from_price_nonmember_cents"}
+    assert row["from_price_member_cents"] is None and row["from_price_nonmember_cents"] is None  # no session yet
+
+
+def test_public_prices_are_the_frozen_session_prices_not_the_changed_offer_price(ctx):
+    c = ctx
+    offer = _new_offer(c, slug="preis", status="published")  # 30,00 / 45,00
+    early = _new_session(c, offer, date="2031-02-01", start_time="10:00").json()
+    c["client"].patch(f"{_admin(c)}/{offer['id']}", headers=c["headers"],
+                      json={"price_member_cents": 2000, "price_nonmember_cents": 4000})
+    later = _new_session(c, offer, date="2031-02-02", start_time="10:00").json()
+    detail = c["client"].get(f"{_public(c)}/preis").json()
+    assert [(s["price_member_cents"], s["price_nonmember_cents"]) for s in detail["sessions"]] == [
+        (3000, 4500), (2000, 4000)]
+    assert early["slug"] != later["slug"]
+    (row,) = c["client"].get(_public(c)).json()
+    assert (row["price_member_cents"], row["price_nonmember_cents"]) == (2000, 4000)  # template only
+    assert (row["from_price_member_cents"], row["from_price_nonmember_cents"]) == (2000, 4000)
+    with c["cursor"]() as cur:  # an earlier cheaper session still counts, a draft/past one does not
+        cur.execute("update camps set price_cents=3500, price_member_cents=1500 where id=%s", (early["id"],))
+    (row,) = c["client"].get(_public(c)).json()
+    assert (row["from_price_member_cents"], row["from_price_nonmember_cents"]) == (1500, 3500)
 
 
 def test_public_detail_404_for_draft_archived_unknown_and_foreign(ctx):

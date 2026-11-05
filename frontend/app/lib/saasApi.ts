@@ -141,6 +141,13 @@ export interface TrainingOfferPublic {
   price_nonmember_cents: number
 }
 
+/** Listenzeile: price_* ist nur die Vorlage für neue Termine; berechnet wird der Terminpreis.
+ * from_price_* sind die niedrigsten Preise der buchbaren Termine (null ohne Termin). */
+export interface TrainingOfferListItem extends TrainingOfferPublic {
+  from_price_member_cents: number | null
+  from_price_nonmember_cents: number | null
+}
+
 export interface TrainingOfferDetail extends TrainingOfferPublic {
   sessions: TrainingSessionPublic[]
 }
@@ -161,10 +168,10 @@ export async function fetchCamps(orgSlug: string): Promise<CampPublic[]> {
   return res.json() as Promise<CampPublic[]>
 }
 
-export async function fetchTrainingOffers(orgSlug: string): Promise<TrainingOfferPublic[]> {
+export async function fetchTrainingOffers(orgSlug: string): Promise<TrainingOfferListItem[]> {
   const res = await fetch(`${baseUrl()}/api/v1/organizations/${encodeURIComponent(orgSlug)}/training-offers`, { cache: 'no-store' })
   if (!res.ok) throw new Error(`GET training offers failed: ${res.status}`)
-  return res.json() as Promise<TrainingOfferPublic[]>
+  return res.json() as Promise<TrainingOfferListItem[]>
 }
 
 /** 404 (unknown, draft, archived or foreign slug) -> null; other errors throw. */

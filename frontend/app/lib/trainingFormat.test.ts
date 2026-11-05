@@ -126,3 +126,20 @@ describe('sessionAsCamp', () => {
     })
   })
 })
+
+describe('fromPriceText / uniformSessionPriceText', () => {
+  it('builds an "ab" price from the lowest session prices and nothing without sessions', async () => {
+    const { fromPriceText } = await import('./trainingFormat')
+    expect(fromPriceText(3500, 4500)).toBe('ab 35 € für Mitglieder, ab 45 € sonst – geprüft bei der Buchung')
+    expect(fromPriceText(4000, 4000)).toBe('ab 40 €')
+    expect(fromPriceText(null, null)).toBeNull()
+  })
+
+  it('returns a shared session price only when all sessions agree', async () => {
+    const { uniformSessionPriceText } = await import('./trainingFormat')
+    const a = { price_member_cents: 3500, price_nonmember_cents: 4500 }
+    expect(uniformSessionPriceText([a, { ...a }])).toBe('35 € für Mitglieder, 45 € sonst – geprüft bei der Buchung')
+    expect(uniformSessionPriceText([a, { ...a, price_nonmember_cents: 4000 }])).toBeNull()
+    expect(uniformSessionPriceText([])).toBeNull()
+  })
+})

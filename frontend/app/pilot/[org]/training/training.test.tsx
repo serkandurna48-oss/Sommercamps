@@ -43,7 +43,7 @@ const offer: TrainingOfferDetail = {
 
 beforeEach(() => {
   vi.mocked(getPublicOrganization).mockReset().mockResolvedValue(org)
-  vi.mocked(getPublicTrainingOffers).mockReset().mockResolvedValue([offer])
+  vi.mocked(getPublicTrainingOffers).mockReset().mockResolvedValue([{ ...offer, from_price_member_cents: 3500, from_price_nonmember_cents: 4500 }])
   vi.mocked(getPublicTrainingOffer).mockReset().mockResolvedValue(offer)
 })
 
@@ -56,7 +56,18 @@ describe('Angebotsliste', () => {
     expect(html).toContain('href="/pilot/testverein/training/einzel-30"')
     expect(html).toContain('Einzeltraining 30 Min')
     expect(html).toContain('30 Minuten')
-    expect(html).toContain('35 € für Mitglieder, 45 € sonst – geprüft bei der Buchung')
+    expect(html).toContain('ab 35 € für Mitglieder, ab 45 € sonst – geprüft bei der Buchung')
+  })
+
+  it('shows the lowest session price (not the offer template) and no price without sessions', async () => {
+    vi.mocked(getPublicTrainingOffers).mockResolvedValue([
+      { ...offer, price_member_cents: 2000, price_nonmember_cents: 3000, from_price_member_cents: 3500, from_price_nonmember_cents: 4500 },
+      { ...offer, slug: 'leer', title: 'Ohne Termin', from_price_member_cents: null, from_price_nonmember_cents: null },
+    ])
+    const html = renderToStaticMarkup(await TrainingOffersPage({ params: listParams }))
+    expect(html).toContain('ab 35 € für Mitglieder')
+    expect(html).not.toContain('20 €')
+    expect(html.match(/tr-price/g)).toHaveLength(1)
   })
 
   it('shows a friendly empty state', async () => {
@@ -102,9 +113,29 @@ describe('Angebotsdetail', () => {
   })
 
   it('collapses to the plain price when member and non-member price are equal', () => {
-    const html = renderToStaticMarkup(<TrainingOfferFlow org={org} initialOffer={{ ...offer, price_member_cents: 4000, price_nonmember_cents: 4000 }} />)
+    const html = renderToStaticMarkup(<TrainingOfferFlow org={org} initialOffer={{ ...offer, sessions: offer.sessions.map(item => ({ ...item, price_member_cents: 4000, price_nonmember_cents: 4000 })) }} />)
     expect(html).not.toContain('Mitglieder')
     expect(html).toContain('40 €')
+  })
+
+  it('shows the sessions\' frozen price instead of a changed offer price', () => {
+    const changed = { ...offer, price_member_cents: 2000, price_nonmember_cents: 3000 }
+    const html = renderToStaticMarkup(<TrainingOfferFlow org={org} initialOffer={changed} />)
+    expect(html).toContain('35 € für Mitglieder, 45 € sonst')
+    expect(html).not.toContain('20 €')
+    expect(html).not.toContain('tr-session-price')
+  })
+
+  it('shows the price per session where the sessions differ and no single offer price', () => {
+    const mixed = {
+      ...offer,
+      sessions: [offer.sessions[0], { ...offer.sessions[1], free_spots: 1, price_member_cents: 2000, price_nonmember_cents: 4000 }],
+    }
+    const html = renderToStaticMarkup(<TrainingOfferFlow org={org} initialOffer={mixed} />)
+    expect(html).not.toContain('<dt>Preis</dt>')
+    expect(html.match(/tr-session-price/g)).toHaveLength(2)
+    expect(html).toContain('35 € für Mitglieder, 45 € sonst')
+    expect(html).toContain('20 € für Mitglieder, 40 € sonst')
   })
 
   it('renders no mailto:null link when the club has no contact email', () => {
@@ -149,10 +180,11 @@ describe('Metadaten', () => {
     expect((metadata.openGraph as { images: unknown[] }).images).toEqual([])
   })
 
-  it('falls back to the price text when the offer has no description', async () => {
+  it('falls back to a price-free text when the offer has no description (price is per session)', async () => {
     vi.mocked(getPublicTrainingOffer).mockResolvedValue({ ...offer, description: null })
     const metadata = await offerMetadata({ params: offerParams })
-    expect(metadata.description).toContain('35 € für Mitglieder, 45 € sonst')
+    expect(metadata.description).toContain('Termin auswählen')
+    expect(metadata.description).not.toContain('€')
   })
 
   it('is neutral for unknown offers and when loading fails', async () => {

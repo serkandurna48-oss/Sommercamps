@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { memberPriceText } from '../../../lib/trainingFormat'
+import { fromPriceText } from '../../../lib/trainingFormat'
 import LegalShell from '../LegalShell'
 import PublicLoadError from '../PublicLoadError'
 import { getPublicOrganization, getPublicTrainingOffers } from '../publicData'
@@ -43,16 +43,19 @@ export default async function TrainingOffersPage({ params }: PageProps) {
           <p className="tr-lead">Aktuell gibt es keine buchbaren Trainingsangebote. Bei Fragen wenden Sie sich an den Verein{org.contact_email ? <>: <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a></> : '.'}</p>
         ) : (
           <ul className="tr-list">
-            {offers.map(offer => (
+            {offers.map(offer => {
+              const fromPrice = fromPriceText(offer.from_price_member_cents, offer.from_price_nonmember_cents)
+              return (
               <li key={offer.slug}>
                 <Link className="tr-card" href={`/pilot/${org.slug}/training/${offer.slug}`}>
                   <span className="d3">{offer.title}</span>
                   <span className="tr-meta">{offer.duration_minutes} Minuten{offer.location ? ` · ${offer.location}` : ''}</span>
                   {offer.description && <span className="tr-meta" style={{ whiteSpace: 'pre-line' }}>{offer.description}</span>}
-                  <span className="tr-price">{memberPriceText(offer.price_member_cents, offer.price_nonmember_cents)}</span>
+                  {fromPrice && <span className="tr-price">{fromPrice}</span>}
                 </Link>
               </li>
-            ))}
+              )
+            })}
           </ul>
         )}
       </main>

@@ -112,6 +112,14 @@ class OfferPublicOut(BaseModel):
     price_nonmember_cents: int
 
 
+class OfferListPublicOut(OfferPublicOut):
+    # The offer prices above are only the template for NEW sessions; booking charges the
+    # frozen session prices. These are the lowest of the upcoming sessions ("ab" prices),
+    # null when the offer has no bookable session.
+    from_price_member_cents: Optional[int] = None
+    from_price_nonmember_cents: Optional[int] = None
+
+
 class SessionCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -367,9 +375,16 @@ def list_session_registrations(
 
 # ------------------------------------------------------------------- public
 
-@public_router.get("", response_model=list[OfferPublicOut])
+@public_router.get("", response_model=list[OfferListPublicOut])
 def list_public_offers(tenant: TenantContext = Depends(get_tenant_context)) -> list[dict]:
-    return repo.list_offers(tenant.organization_id, status="published")
+    offers = repo.list_offers(tenant.organization_id, status="published")
+    lowest = repo.lowest_public_session_prices(tenant.organization_id)
+    return [
+        {**offer,
+         "from_price_member_cents": lowest[offer["id"]][0] if offer["id"] in lowest else None,
+         "from_price_nonmember_cents": lowest[offer["id"]][1] if offer["id"] in lowest else None}
+        for offer in offers
+    ]
 
 
 @public_router.get("/{offer_slug}", response_model=OfferDetailPublicOut)

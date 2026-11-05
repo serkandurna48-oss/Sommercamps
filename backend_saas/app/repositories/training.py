@@ -237,6 +237,24 @@ def list_public_sessions(organization_id: UUID, offer_id: UUID) -> list[dict]:
         return cur.fetchall()
 
 
+def lowest_public_session_prices(organization_id: UUID) -> dict:
+    """offer_id -> (lowest member price, lowest non-member price) over the published,
+    future sessions, i.e. what is actually charged. Offers without such sessions are absent.
+    A session without a member price falls back to its regular price."""
+    with db.get_cursor() as cur:
+        cur.execute(
+            """select offer_id,
+                      min(coalesce(price_member_cents, price_cents)) as member_cents,
+                      min(price_cents) as nonmember_cents
+               from camps
+               where organization_id = %s and offer_id is not null
+                 and status = 'published' and starts_at > now()
+               group by offer_id""",
+            (organization_id,),
+        )
+        return {r["offer_id"]: (r["member_cents"], r["nonmember_cents"]) for r in cur.fetchall()}
+
+
 def _lock_session_and_count(cur, organization_id: UUID, offer_id: UUID, session_id: UUID) -> tuple[dict, int, int]:
     # Same lock the booking transaction takes (camps row FOR UPDATE), so a
     # concurrent booking and this delete/cancel are serialized.

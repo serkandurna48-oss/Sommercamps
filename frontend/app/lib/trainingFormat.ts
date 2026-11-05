@@ -26,6 +26,24 @@ export function memberPriceText(memberCents: number, nonMemberCents: number): st
   return `${euroText(memberCents)} für Mitglieder, ${euroText(nonMemberCents)} sonst – geprüft bei der Buchung`
 }
 
+/** Listenpreis: niedrigste Preise der buchbaren Termine als "ab"-Preis; null ohne Termin. */
+export function fromPriceText(memberCents: number | null, nonMemberCents: number | null): string | null {
+  if (memberCents === null || nonMemberCents === null) return null
+  if (memberCents === nonMemberCents) return `ab ${euroText(nonMemberCents)}`
+  return `ab ${euroText(memberCents)} für Mitglieder, ab ${euroText(nonMemberCents)} sonst – geprüft bei der Buchung`
+}
+
+/** Gemeinsamer Preis aller Termine, sonst null (dann Preis je Termin anzeigen). */
+export function uniformSessionPriceText(
+  sessions: Array<{ price_member_cents: number; price_nonmember_cents: number }>,
+): string | null {
+  if (sessions.length === 0) return null
+  const [first] = sessions
+  const same = sessions.every(s => s.price_member_cents === first.price_member_cents
+    && s.price_nonmember_cents === first.price_nonmember_cents)
+  return same ? memberPriceText(first.price_member_cents, first.price_nonmember_cents) : null
+}
+
 /** "Do., 12. Nov. 2026, 16:00 Uhr" aus Berliner Datum "YYYY-MM-DD" und Zeit "HH:MM[:SS]". */
 export function formatSessionDateTime(localDate: string, localTime: string): string {
   const [y, m, d] = localDate.split('-').map(Number)

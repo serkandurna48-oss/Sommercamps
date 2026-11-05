@@ -87,7 +87,7 @@ describe('development-only admin preview', () => {
         const campLevel = screen.startsWith('camp') && screen !== 'camp-neu' && !empty
         expect([...header.querySelectorAll('nav a')].map(a => [...a.querySelectorAll('span:not([aria-hidden])')].map(span => span.textContent).join('').trim())).toEqual(campLevel
           ? ['Teilnehmer', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Einstellungen']
-          : ['Übersicht', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Trainings', 'Mitglieder', 'Einstellungen'])
+          : ['Übersicht', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Trainings', 'Mitglieder', 'Spieler', 'Einstellungen'])
         const back = [...header.querySelectorAll('a')].find(a => a.textContent?.trim() === '← Zurück')
         if (screen === 'dashboard') expect(back).toBeUndefined()
         else {

@@ -5,14 +5,17 @@ import { setPaymentStatusAction } from '../actions/paymentActions'
 import { canReopenPayment, isActiveRegistration, isOpenPayment } from '../commandCenterLogic'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from '../data/StatusChip'
 import ActionForm from '../ui/ActionForm'
+import { ButtonLink } from '../ui/Button'
 import { paymentMethodLabel } from './trainingLogic'
 
 /** Eine Buchung eines Trainingstermins. Zahlstatus wird über denselben Weg
  * gesetzt wie in den Camp-Zahlungen; die Route nimmt den Termin-Slug. Bei
  * Barzahlung markiert der Admin die Zahlung nach Erhalt selbst als bezahlt. */
-export default function BookingRow({ orgSlug, sessionSlug, registration, brandStrong, brandOn }: {
+export default function BookingRow({ orgSlug, sessionSlug, sessionId, registration, brandStrong, brandOn }: {
   orgSlug: string
   sessionSlug: string
+  /** Termin-Id (= camp_id der Notiz); für den Link in die Spielerakte. */
+  sessionId: string
   registration: RegistrationAdmin
   brandStrong: string
   brandOn: string
@@ -44,6 +47,11 @@ export default function BookingRow({ orgSlug, sessionSlug, registration, brandSt
           <StatusChip tone={PAYMENT_STATUS_TONE[registration.payment_status] ?? 'neutral'} label={paymentStatusLabel[registration.payment_status] ?? registration.payment_status} />
           {!active && <StatusChip tone={REGISTRATION_STATUS_TONE[registration.status] ?? 'neutral'} label={registrationStatusLabel[registration.status] ?? registration.status} dot />}
         </div>
+        {registration.player_id && (
+          <ButtonLink href={`/pilot/${orgSlug}/spieler/${encodeURIComponent(registration.player_id)}?neu=1&termin=${encodeURIComponent(sessionId)}`} prefetch={false}>
+            Doku schreiben
+          </ButtonLink>
+        )}
         {isOpenPayment(registration) && (
           <ActionForm action={markPaid} label={de.paymentsPage.markPaid} pendingLabel={de.paymentsPage.updating} variant="primary" brandStrong={brandStrong} brandOn={brandOn} />
         )}

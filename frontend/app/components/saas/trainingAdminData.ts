@@ -17,7 +17,7 @@ import { getOrganizationAdmin } from './orgAdminData'
 
 /** Token + Organisation, wie in den anderen Org-Admin-Seiten: ohne Sitzung
  * oder bei 401 Weiterleitung zum Login, unbekannter Verein -> Login. */
-async function loadBase(orgSlug: string): Promise<{ token: string; org: OrganizationAdmin }> {
+export async function loadBase(orgSlug: string): Promise<{ token: string; org: OrganizationAdmin }> {
   const token = await getValidAccessToken()
   if (!token) redirect(`/pilot/${orgSlug}/login`)
   let org: OrganizationAdmin | null
@@ -31,7 +31,7 @@ async function loadBase(orgSlug: string): Promise<{ token: string; org: Organiza
   return { token, org }
 }
 
-function rethrowAuth(orgSlug: string, error: unknown): never {
+export function rethrowAuth(orgSlug: string, error: unknown): never {
   if (error instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
   throw error
 }

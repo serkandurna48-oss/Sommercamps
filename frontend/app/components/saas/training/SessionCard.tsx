@@ -60,7 +60,7 @@ export default function SessionCard({ orgSlug, offerId, session, registrations, 
           <summary className="cp-focus cp-subheading min-h-[44px] cursor-pointer px-4 py-3">Buchungen ({registrations.length})</summary>
           <ul>
             {registrations.map(registration => (
-              <BookingRow key={registration.id} orgSlug={orgSlug} sessionSlug={session.slug} registration={registration} brandStrong={brandStrong} brandOn={brandOn} />
+              <BookingRow key={registration.id} orgSlug={orgSlug} sessionSlug={session.slug} sessionId={session.id} registration={registration} brandStrong={brandStrong} brandOn={brandOn} />
             ))}
           </ul>
         </details>

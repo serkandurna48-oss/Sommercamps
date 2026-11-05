@@ -115,6 +115,9 @@ export interface RegistrationAdmin {
   applied_price_cents?: number | null
   member_match?: boolean | null
   payment_method?: string | null
+  // Spielerakte: Verknüpfung zum Spieler und Doku-Einwilligung der Buchung.
+  player_id?: string | null
+  documentation_consent?: boolean | null
 }
 
 export class AdminActionError extends Error {
@@ -895,4 +898,186 @@ export async function importClubMembersAdmin(orgSlug: string, token: string, csv
   }
   if (!res.ok) throw new TrainingAdminError('Import fehlgeschlagen – es wurde nichts gespeichert.')
   return res.json() as Promise<MemberImportResult>
+}
+
+// --- Spielerakte (nur Admin, Kinderdaten) ---------------------------------
+
+/** Fehler mit festem deutschem Text; enthält nie Antwortinhalte (Notiztexte, Namen). */
+export class PlayerRecordError extends AdminActionError {
+  constructor(message: string, public readonly field?: string) {
+    super(message)
+    this.name = 'PlayerRecordError'
+  }
+}
+
+export type PlayerFocus = 'technik' | 'athletik' | 'taktik' | 'mental' | 'video' | 'sonstiges'
+export type PlayerGoalStatus = 'offen' | 'erreicht' | 'verworfen'
+
+export interface PlayerSummary {
+  id: string
+  first_name: string
+  last_name: string
+  birth_date: string
+  age: number
+  last_booking_at: string | null
+  booking_count: number
+  note_count: number
+  open_goal_count: number
+}
+
+export interface PlayerBooking {
+  registration_id: string
+  camp_id: string
+  kind: 'training' | 'camp'
+  camp_title: string
+  offer_title: string | null
+  local_date: string
+  local_time: string | null
+  status: 'registered' | 'confirmed' | 'cancelled' | 'waitlist'
+  payment_status: 'open' | 'paid' | 'refunded' | 'waived' | 'cancelled'
+  documentation_consent: boolean | null
+}
+
+export interface PlayerNote {
+  id: string
+  player_id: string
+  camp_id: string | null
+  note_date: string
+  focus: PlayerFocus[]
+  body: string
+  rating: number | null
+  next_steps: string | null
+  video_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PlayerGoal {
+  id: string
+  player_id: string
+  title: string
+  area: PlayerFocus
+  status: PlayerGoalStatus
+  target_date: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PlayerMeasurement {
+  id: string
+  player_id: string
+  measured_on: string
+  metric: string
+  value: number
+  unit: string
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PlayerMetric {
+  metric: string
+  unit: string
+}
+
+export interface PlayerDetail {
+  player: { id: string; first_name: string; last_name: string; birth_date: string; age: number }
+  bookings: PlayerBooking[]
+  notes: PlayerNote[]
+  goals: PlayerGoal[]
+  measurements: PlayerMeasurement[]
+  metrics: PlayerMetric[]
+}
+
+/** Notiz-Eingabe; Felder wie im Backend (`video_url` nur https). */
+export interface PlayerNoteInput {
+  note_date: string
+  body: string
+  focus: PlayerFocus[]
+  rating: number | null
+  next_steps: string | null
+  video_url: string | null
+  camp_id: string | null
+}
+
+export interface PlayerGoalInput {
+  title: string
+  area: PlayerFocus
+  target_date: string | null
+}
+
+export interface PlayerMeasurementInput {
+  measured_on: string
+  metric: string
+  value: number
+  unit: string
+  note: string | null
+}
+
+const PLAYERS_BASE = (orgSlug: string) => `/admin/organizations/${encodeURIComponent(orgSlug)}/players`
+const playerPath = (orgSlug: string, playerId: string) => `${PLAYERS_BASE(orgSlug)}/${encodeURIComponent(playerId)}`
+
+/** Backend-422 nennt nur Feld und festen Grund; hier wird daraus ein Feldname ohne Werte. */
+async function validationField(res: Response): Promise<string | undefined> {
+  try {
+    const body = await res.json() as { detail?: { field?: unknown } }
+    return typeof body?.detail?.field === 'string' ? body.detail.field : undefined
+  } catch {
+    return undefined
+  }
+}
+
+async function playerWrite<T>(path: string, token: string, method: 'POST' | 'PATCH', body: unknown, failure: string): Promise<T> {
+  const res = await adminMutate(path, token, method, body)
+  if (res.status === 422) throw new PlayerRecordError(`${failure} Bitte die Eingaben prüfen.`, await validationField(res))
+  if (res.status === 404) throw new PlayerRecordError('Eintrag nicht gefunden – bitte die Seite neu laden.')
+  if (!res.ok) throw new PlayerRecordError(failure)
+  return res.json() as Promise<T>
+}
+
+async function playerDelete(path: string, token: string, failure: string): Promise<void> {
+  const res = await adminMutate(path, token, 'DELETE')
+  if (res.status === 404) throw new PlayerRecordError('Eintrag nicht gefunden – bitte die Seite neu laden.')
+  if (!res.ok) throw new PlayerRecordError(failure)
+}
+
+export async function fetchPlayersAdmin(orgSlug: string, token: string): Promise<PlayerSummary[]> {
+  const res = await adminFetch(PLAYERS_BASE(orgSlug), token)
+  if (!res.ok) throw new PlayerRecordError('Spieler konnten nicht geladen werden.')
+  return res.json() as Promise<PlayerSummary[]>
+}
+
+export async function fetchPlayerAdmin(orgSlug: string, playerId: string, token: string): Promise<PlayerDetail | null> {
+  const res = await adminFetch(playerPath(orgSlug, playerId), token)
+  if (res.status === 404 || res.status === 422) return null
+  if (!res.ok) throw new PlayerRecordError('Spielerakte konnte nicht geladen werden.')
+  return res.json() as Promise<PlayerDetail>
+}
+
+export async function createPlayerNoteAdmin(orgSlug: string, playerId: string, token: string, data: PlayerNoteInput): Promise<PlayerNote> {
+  return playerWrite(`${playerPath(orgSlug, playerId)}/notes`, token, 'POST', data, 'Notiz konnte nicht gespeichert werden.')
+}
+
+export async function updatePlayerNoteAdmin(orgSlug: string, playerId: string, noteId: string, token: string, data: Partial<PlayerNoteInput>): Promise<PlayerNote> {
+  return playerWrite(`${playerPath(orgSlug, playerId)}/notes/${encodeURIComponent(noteId)}`, token, 'PATCH', data, 'Notiz konnte nicht gespeichert werden.')
+}
+
+export async function deletePlayerNoteAdmin(orgSlug: string, playerId: string, noteId: string, token: string): Promise<void> {
+  return playerDelete(`${playerPath(orgSlug, playerId)}/notes/${encodeURIComponent(noteId)}`, token, 'Notiz konnte nicht gelöscht werden.')
+}
+
+export async function createPlayerGoalAdmin(orgSlug: string, playerId: string, token: string, data: PlayerGoalInput): Promise<PlayerGoal> {
+  return playerWrite(`${playerPath(orgSlug, playerId)}/goals`, token, 'POST', data, 'Ziel konnte nicht gespeichert werden.')
+}
+
+export async function updatePlayerGoalAdmin(orgSlug: string, playerId: string, goalId: string, token: string, data: Partial<PlayerGoalInput> & { status?: PlayerGoalStatus }): Promise<PlayerGoal> {
+  return playerWrite(`${playerPath(orgSlug, playerId)}/goals/${encodeURIComponent(goalId)}`, token, 'PATCH', data, 'Ziel konnte nicht geändert werden.')
+}
+
+export async function createPlayerMeasurementAdmin(orgSlug: string, playerId: string, token: string, data: PlayerMeasurementInput): Promise<PlayerMeasurement> {
+  return playerWrite(`${playerPath(orgSlug, playerId)}/measurements`, token, 'POST', data, 'Messwert konnte nicht gespeichert werden.')
+}
+
+export async function deletePlayerMeasurementAdmin(orgSlug: string, playerId: string, measurementId: string, token: string): Promise<void> {
+  return playerDelete(`${playerPath(orgSlug, playerId)}/measurements/${encodeURIComponent(measurementId)}`, token, 'Messwert konnte nicht gelöscht werden.')
 }

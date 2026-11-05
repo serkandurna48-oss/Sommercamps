@@ -198,6 +198,13 @@
     font-size: 11px;
     letter-spacing: 0;
   }
+  /* Acht Bereiche in einer Zeile (375 px: ~46 px je Spalte): kleinere Schrift,
+     kein Innenabstand; Kurzlabels höchstens 8 Zeichen (navTabs.test.ts). */
+  .cp-band-tabs[data-tab-count='8'] .cp-band-tab {
+    font-size: 10px;
+    letter-spacing: -0.01em;
+    padding-inline: 0;
+  }
   .cp-band-tab .cp-tab-hint {
     position: absolute;
     right: 2px;

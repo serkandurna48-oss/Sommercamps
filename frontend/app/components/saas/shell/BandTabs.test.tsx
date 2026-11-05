@@ -14,6 +14,7 @@ vi.mock('next/link', () => ({
 }))
 
 const { default: BandTabs } = await import('./BandTabs')
+const { orgTabs } = await import('../navTabs')
 
 const tabs = [
   { label: 'Übersicht', href: '/pilot/demoverein/dashboard', icon: 'board' as const },
@@ -64,6 +65,16 @@ it('sieben Bereiche: sieben gleich breite Spalten, Kurzbeschriftung unter md, vo
   expect(html).not.toContain('grid-cols-[1fr_1fr_1fr_1fr_1.3fr]')
   expect(html).toContain('aria-hidden="true">Optionen</span>')
   expect(html).toContain('>Einstellungen</span>')
+})
+
+it('acht Bereiche (mit Spieler): acht Spalten in einer Zeile, nur Kurzbeschriftungen unter md', () => {
+  const eight = orgTabs('demoverein')
+  expect(eight).toHaveLength(8)
+  const html = renderToStaticMarkup(<BandTabs tabs={eight} brandColor="#0B6E4F" />)
+  expect(html).toContain('grid-template-columns:repeat(8, minmax(0, 1fr))')
+  expect(html).toContain('data-tab-count="8"')
+  expect(html).toContain('aria-hidden="true">Spieler</span>')
+  expect(html).toContain('href="/pilot/demoverein/spieler"')
 })
 
 it('fünf Bereiche behalten ihre Spaltenzahl ohne Kurzbeschriftung', () => {

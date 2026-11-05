@@ -877,6 +877,8 @@
 .cp-row-action:has(> .cp-mobile-only) { display: none; }
 
 /* Payment actions stack as one even column of full-width buttons. */
+.cp-scope .cp-payment-actions { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+.cp-scope .cp-payment-actions :is(form, form > div) { width: 100%; align-items: stretch; }
 .cp-scope .cp-payment-actions .cp-btn { width: 100%; }
 
 /* Preserve the existing desktop order: reminder, payment, waiver. */

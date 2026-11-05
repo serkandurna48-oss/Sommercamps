@@ -71,20 +71,11 @@ export async function loadTrainingOffer(orgSlug: string, offerId: string): Promi
   }
 }
 
-export type MemberStatusFilter = 'alle' | 'aktiv' | 'inaktiv'
-
-export function parseMemberStatus(value: string | string[] | undefined): MemberStatusFilter {
-  return value === 'aktiv' || value === 'inaktiv' ? value : 'alle'
-}
-
-export async function loadClubMembers(
-  orgSlug: string,
-  filter: { q: string; status: MemberStatusFilter },
-): Promise<{ org: OrganizationAdmin; members: ClubMember[] }> {
+/** Alle Mitglieder; Suche und Statusfilter laufen im Browser (kein Suchbegriff in URL oder Server-Logs). */
+export async function loadClubMembers(orgSlug: string): Promise<{ org: OrganizationAdmin; members: ClubMember[] }> {
   const { token, org } = await loadBase(orgSlug)
   try {
-    const active = filter.status === 'alle' ? undefined : filter.status === 'aktiv'
-    return { org, members: await fetchClubMembersAdmin(orgSlug, token, { q: filter.q, active }) }
+    return { org, members: await fetchClubMembersAdmin(orgSlug, token) }
   } catch (error) {
     return rethrowAuth(orgSlug, error)
   }

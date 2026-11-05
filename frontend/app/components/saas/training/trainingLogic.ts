@@ -178,3 +178,30 @@ export function parseSessionInput(input: Record<string, string>, kind: OfferKind
 export function formatEuroInput(cents: number): string {
   return (cents / 100).toFixed(2).replace('.', ',')
 }
+
+export type MemberStatusFilter = 'alle' | 'aktiv' | 'inaktiv'
+
+function foldName(text: string): string {
+  return text.toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .normalize('NFKD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '')
+}
+
+/** Suche und Statusfilter laufen nur im Browser: der Suchbegriff kann ein
+ * Kindername sein und gehört nicht in URL, Verlauf oder Server-Logs. */
+export function filterMembers<T extends { first_name: string; last_name: string; member_number: string | null; active: boolean }>(
+  members: T[],
+  query: string,
+  status: MemberStatusFilter,
+): T[] {
+  const needle = foldName(query)
+  return members.filter(member => {
+    if (status === 'aktiv' && !member.active) return false
+    if (status === 'inaktiv' && member.active) return false
+    if (!needle) return true
+    return foldName(`${member.first_name}${member.last_name}`).includes(needle)
+      || foldName(`${member.last_name}${member.first_name}`).includes(needle)
+      || foldName(member.member_number ?? '').includes(needle)
+  })
+}

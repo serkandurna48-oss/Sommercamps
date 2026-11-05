@@ -36,11 +36,11 @@ export default function ShareActions({ orgSlug, offerSlug, title, published }: {
   return (
     <div className="flex flex-col items-start gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" onClick={copyLink} aria-label={`Link zu ${title} kopieren`}>
+        <Button type="button" onClick={copyLink} aria-label={`${copy === 'copied' ? 'Link kopiert' : 'Link kopieren'}: ${title}`}>
           {copy === 'copied' ? 'Link kopiert' : 'Link kopieren'}
         </Button>
         {origin && (
-          <ButtonLink href={buildWhatsAppUrl(title, url)} target="_blank" rel="noopener noreferrer" aria-label={`${title} per WhatsApp teilen`}>
+          <ButtonLink href={buildWhatsAppUrl(title, url)} target="_blank" rel="noopener noreferrer" aria-label={`WhatsApp: ${title}`}>
             WhatsApp
           </ButtonLink>
         )}

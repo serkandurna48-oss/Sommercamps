@@ -204,3 +204,13 @@ it('ein einzelnes Angebot: 404 und ungültige ID (422) sind \"nicht gefunden\", 
   stubFetch(500, {})
   await expect(fetchTrainingOfferAdmin('ksv', 'o1', 'tok')).rejects.toBeInstanceOf(TrainingAdminError)
 })
+
+it('kodiert Slugs und IDs in allen neuen Pfaden', async () => {
+  const fn = stubFetch(200, [])
+  await fetchTrainingOffersAdmin('a/../b', 'tok')
+  expect(lastCall(fn).url).toMatch(/\/admin\/organizations\/a%2F\.\.%2Fb\/training-offers$/)
+  await fetchClubMembersAdmin('a/b', 'tok')
+  expect(lastCall(fn).url).toMatch(/\/admin\/organizations\/a%2Fb\/club-members$/)
+  await setClubMemberActiveAdmin('ksv', 'x/y', 'tok', true)
+  expect(lastCall(fn).url).toMatch(/\/club-members\/x%2Fy$/)
+})

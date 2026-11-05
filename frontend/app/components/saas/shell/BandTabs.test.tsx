@@ -53,3 +53,20 @@ it('alle Menü-Links im Band haben prefetch={false}', () => {
   expect(capturedLinkProps.length).toBe(tabs.length)
   expect(capturedLinkProps.every(p => p.prefetch === false)).toBe(true)
 })
+
+it('sieben Bereiche: sieben gleich breite Spalten, Kurzbeschriftung unter md, volle Beschriftung für Screenreader', () => {
+  const seven = ['Übersicht', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Trainings', 'Mitglieder', 'Einstellungen'].map((label, i) => ({
+    label, shortLabel: ['Start', 'Zahlung', 'Warten', 'Aufgaben', 'Training', 'Mitglied', 'Optionen'][i], href: `/pilot/demoverein/t${i}`,
+  }))
+  const html = renderToStaticMarkup(<BandTabs tabs={seven} brandColor="#0B6E4F" />)
+  expect(html).toContain('grid-template-columns:repeat(7, minmax(0, 1fr))')
+  expect(html).toContain('data-tab-count="7"')
+  expect(html).not.toContain('grid-cols-[1fr_1fr_1fr_1fr_1.3fr]')
+  expect(html).toContain('aria-hidden="true">Optionen</span>')
+  expect(html).toContain('>Einstellungen</span>')
+})
+
+it('fünf Bereiche behalten ihre Spaltenzahl ohne Kurzbeschriftung', () => {
+  const html = renderToStaticMarkup(<BandTabs tabs={tabs} brandColor="#0B6E4F" />)
+  expect(html).toContain('grid-template-columns:repeat(2, minmax(0, 1fr))')
+})

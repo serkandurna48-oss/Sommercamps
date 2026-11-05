@@ -4,6 +4,7 @@ import {
   buildWhatsAppUrl,
   formatEuroInput,
   formatImportError,
+  filterMembers,
   formatSessionWhen,
   parseEuroToCents,
   parseOfferInput,
@@ -166,5 +167,28 @@ describe('Terminformular', () => {
       ok: true,
       value: { date: '2026-11-20', start_time: '17:30', status: 'published', age_min: 6, age_max: 12 },
     })
+  })
+})
+
+describe('Mitgliedersuche im Browser', () => {
+  const m = (id: string, first_name: string, last_name: string, active: boolean, member_number: string | null = null) => ({ id, first_name, last_name, member_number, active })
+  const members = [m('1', 'Jürgen', 'Müller', true, 'M-17'), m('2', 'Anna-Lena', 'Groß', false), m('3', 'Max', 'Mustermann', true)]
+
+  it('ohne Suchbegriff und Status alle', () => {
+    expect(filterMembers(members, '', 'alle')).toHaveLength(3)
+  })
+  it('findet Umlaute, ß und Bindestrich normalisiert, nach Name oder Nummer', () => {
+    expect(filterMembers(members, 'mueller', 'alle').map(x => x.id)).toEqual(['1'])
+    expect(filterMembers(members, 'MÜLLER', 'alle').map(x => x.id)).toEqual(['1'])
+    expect(filterMembers(members, 'gross', 'alle').map(x => x.id)).toEqual(['2'])
+    expect(filterMembers(members, 'annalena', 'alle').map(x => x.id)).toEqual(['2'])
+    expect(filterMembers(members, 'm-17', 'alle').map(x => x.id)).toEqual(['1'])
+  })
+  it('filtert nach Status', () => {
+    expect(filterMembers(members, '', 'aktiv').map(x => x.id)).toEqual(['1', '3'])
+    expect(filterMembers(members, '', 'inaktiv').map(x => x.id)).toEqual(['2'])
+  })
+  it('ein Suchbegriff, der zu leer normalisiert, filtert nicht', () => {
+    expect(filterMembers(members, '-', 'alle')).toHaveLength(3)
   })
 })

@@ -168,7 +168,8 @@
 }
 
 /* Bereichs-Tabs im Band. Unter 768px ist die Leiste eine fixierte Fussleiste
- * mit gleich breiten Spalten — bei 390px müssen alle fünf Ziele ohne
+ * mit gleich breiten Spalten — bei 390px müssen alle Ziele (bis zu sieben, Spalten
+ * aus der Tab-Anzahl, Kurzbeschriftung) ohne
  * horizontales Scrollen sichtbar sein, dafür kleinere Schrift und Umbruch
  * statt nowrap. Die Regel steht absichtlich NACH .cp-subheading: sonst
  * gewinnt dessen 17px. Der wandernde Unterstrich ist dort ausgeblendet,
@@ -191,6 +192,11 @@
     font-stretch: 100%;
     font-weight: 600;
     position: relative;
+  }
+  .cp-band-tabs[data-tab-count='6'] .cp-band-tab,
+  .cp-band-tabs[data-tab-count='7'] .cp-band-tab {
+    font-size: 11px;
+    letter-spacing: 0;
   }
   .cp-band-tab .cp-tab-hint {
     position: absolute;

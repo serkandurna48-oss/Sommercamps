@@ -30,7 +30,7 @@ export default function MemberImport({ orgSlug, brandStrong, brandOn }: { orgSlu
     document.body.append(link)
     link.click()
     link.remove()
-    URL.revokeObjectURL(url)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {

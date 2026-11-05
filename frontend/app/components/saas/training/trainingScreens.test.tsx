@@ -10,7 +10,7 @@ import TrainingOfferScreen from '../screens/TrainingOfferScreen'
 import TrainingsScreen from '../screens/TrainingsScreen'
 import MemberImport from './MemberImport'
 import ShareActions from './ShareActions'
-import { importMembersAction } from '../actions/trainingActions'
+import { importMembersAction, updateOfferAction } from '../actions/trainingActions'
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/pilot/demo/trainings' }))
 vi.mock('next/link', () => ({
@@ -117,6 +117,15 @@ describe('Angebot mit Terminen und Buchungen', () => {
     expect(row.textContent).toContain('Wieder auf Offen setzen')
   })
 
+  it('alle id-Attribute der Angebotsseite sind eindeutig und Labels zeigen auf genau ein Feld', () => {
+    const doc = render([registration({})])
+    const ids = [...doc.querySelectorAll('[id]')].map(el => el.id)
+    expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([])
+    for (const label of doc.querySelectorAll('label[for]')) {
+      expect(doc.querySelectorAll(`[id="${label.getAttribute('for')}"]`)).toHaveLength(1)
+    }
+  })
+
   it('Einzel-Termin hat kein Kapazitätsfeld, Gruppentermin schon (1 bis 8)', () => {
     expect(render([]).querySelector('input[name="capacity"]')).toBeNull()
     const group = html(<TrainingOfferScreen orgSlug="demo" org={org} offer={{ ...offer, kind: 'gruppe' }} sessions={[]} registrationsBySession={{}} />)
@@ -150,25 +159,22 @@ const member: ClubMember = {
 
 describe('Mitglieder', () => {
   it('zeigt Liste, Suche, Import und Einzeleintrag', () => {
-    const doc = html(<MembersScreen orgSlug="demo" org={org} members={[member, { ...member, id: 'm2', first_name: 'Erika', active: false, source: 'manual', member_number: null }]} q="" status="alle" />)
+    const doc = html(<MembersScreen orgSlug="demo" org={org} members={[member, { ...member, id: 'm2', first_name: 'Erika', active: false, source: 'manual', member_number: null }]} />)
     const text = doc.body.textContent ?? ''
     expect(text).toContain('Max Mustermann')
     expect(text).toContain('geboren 01.02.2015')
     expect(text).toContain('Nr. M-1')
     expect(text).toContain('Auf inaktiv setzen')
     expect(text).toContain('Auf aktiv setzen')
-    expect(doc.querySelector('form[role="search"] input[name="q"]')).not.toBeNull()
+    expect(doc.querySelector('[role="search"] input[type="search"]')).not.toBeNull()
+    expect(doc.querySelector('form[method="get"]')).toBeNull()
     expect(doc.querySelector('input[type="file"]')).not.toBeNull()
     expect(text).toContain('Vorlage herunterladen')
     expect(doc.querySelector('input[name="first_name"]')).not.toBeNull()
   })
 
-  it('leerer Zustand und Filterzustand', () => {
-    expect(html(<MembersScreen orgSlug="demo" org={org} members={[]} q="" status="alle" />).body.textContent).toContain('Noch keine Mitglieder.')
-    const filtered = html(<MembersScreen orgSlug="demo" org={org} members={[]} q="zzz" status="aktiv" />)
-    expect(filtered.body.textContent).toContain('Keine Mitglieder gefunden.')
-    expect(filtered.querySelector<HTMLInputElement>('input[name="q"]')!.defaultValue).toBe('zzz')
-    expect(filtered.querySelector('a[href="/pilot/demo/mitglieder"]')).not.toBeNull()
+  it('leerer Zustand', () => {
+    expect(html(<MembersScreen orgSlug="demo" org={org} members={[]} />).body.textContent).toContain('Noch keine Mitglieder.')
   })
 })
 
@@ -186,6 +192,35 @@ describe('interaktive Teile', () => {
     await act(() => root.unmount())
     container.remove()
     vi.unstubAllGlobals()
+  })
+
+  it('Mitgliedersuche filtert im Browser und schreibt nichts in die URL', async () => {
+    const before = window.location.href
+    const members = [member, { ...member, id: 'm2', first_name: 'Erika', last_name: 'Groß', member_number: null, active: false }]
+    await act(() => root.render(<MembersScreen orgSlug="demo" org={org} members={members} />))
+    const search = container.querySelector<HTMLInputElement>('input[type="search"]')!
+    await act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(search, 'gross')
+      search.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(container.textContent).toContain('Erika')
+    expect(container.textContent).not.toContain('Max Mustermann')
+    expect(container.textContent).toContain('1 von 2 Mitgliedern')
+    expect(window.location.href).toBe(before)
+    expect(container.querySelector('form[method="get"]')).toBeNull()
+  })
+
+  it('Gespeichert-Meldung bleibt sichtbar, auch wenn sich updated_at nach dem Speichern ändert', async () => {
+    vi.mocked(updateOfferAction).mockResolvedValue({ error: null, saved: true })
+    const screen = (o: TrainingOffer) => <TrainingOfferScreen orgSlug="demo" org={org} offer={o} sessions={[]} registrationsBySession={{}} />
+    await act(() => root.render(screen(offer)))
+    const form = container.querySelector<HTMLFormElement>('form:has(input[name="duration_minutes"]):not(:has(input[name="date"]))')!
+    await act(async () => { form.requestSubmit() })
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)) })
+    expect(container.textContent).toContain('Gespeichert.')
+    // revalidatePath delivers the new updated_at: the form must not remount.
+    await act(() => root.render(screen({ ...offer, updated_at: '2026-11-02T10:00:00Z' })))
+    expect(container.textContent).toContain('Gespeichert.')
   })
 
   it('Link kopieren schreibt die öffentliche URL, WhatsApp verlinkt Titel – URL', async () => {

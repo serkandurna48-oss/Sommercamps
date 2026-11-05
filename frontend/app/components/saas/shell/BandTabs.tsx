@@ -29,6 +29,8 @@ const ICONS: Record<TabIconName, typeof IconBoard> = {
 
 export interface TabItem {
   label: string
+  /** Kurzform für die schmale Fußleiste (unter md), wenn viele Bereiche nebeneinander passen müssen. */
+  shortLabel?: string
   href: string
   icon?: TabIconName
 }
@@ -74,6 +76,9 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
     borderTop: '1px solid var(--cp-band-line)',
     background: 'var(--cp-band)',
     '--cp-tab-mark': brandColor,
+    // Spalten aus der Tab-Anzahl: alle Ziele nebeneinander, ohne Umbruch in eine zweite Zeile.
+    // Ab md ist die Leiste flex, die Spaltenvorgabe wirkt dort nicht.
+    gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
   }
 
   useEffect(() => {
@@ -88,8 +93,9 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
   return (
     <nav
       ref={containerRef}
-      className="cp-band-tabs fixed right-0 bottom-0 left-0 z-20 grid p-1 grid-cols-[1fr_1fr_1fr_1fr_1.3fr] md:relative md:flex md:gap-6 md:overflow-x-auto"
+      className="cp-band-tabs fixed right-0 bottom-0 left-0 z-20 grid p-1 md:relative md:flex md:gap-6 md:overflow-x-auto"
       style={navStyle}
+      data-tab-count={tabs.length}
       aria-label="Bereiche"
     >
       {tabs.map(tab => {
@@ -108,7 +114,14 @@ export default function BandTabs({ tabs, brandColor }: { tabs: TabItem[]; brandC
             }}
           >
             {Icon && <Icon className="hidden md:inline-block" size={16} />}
-            <span className="min-w-0 whitespace-nowrap">{tab.label}</span>
+            {tab.shortLabel ? (
+              <>
+                <span className="min-w-0 whitespace-nowrap md:hidden" aria-hidden="true">{tab.shortLabel}</span>
+                <span className="sr-only md:not-sr-only md:whitespace-nowrap">{tab.label}</span>
+              </>
+            ) : (
+              <span className="min-w-0 whitespace-nowrap">{tab.label}</span>
+            )}
             <TabHint />
           </Link>
         )

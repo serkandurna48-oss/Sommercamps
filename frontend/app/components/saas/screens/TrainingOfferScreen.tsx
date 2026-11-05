@@ -66,7 +66,7 @@ export default function TrainingOfferScreen({ orgSlug, org, offer, sessions, reg
 
         <section className="max-w-[640px]" aria-labelledby="edit-heading">
           <h2 id="edit-heading" className="cp-title mb-4" style={{ color: 'var(--cp-ink)' }}>Angebot bearbeiten</h2>
-          <OfferForm key={offer.updated_at} orgSlug={orgSlug} offer={offer} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+          <OfferForm orgSlug={orgSlug} offer={offer} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
         </section>
       </main>
     </>

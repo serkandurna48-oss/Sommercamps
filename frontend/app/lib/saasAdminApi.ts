@@ -758,8 +758,8 @@ export interface MemberImportResult {
   merged_in_file: number
 }
 
-const TRAINING_BASE = (orgSlug: string) => `/admin/organizations/${orgSlug}/training-offers`
-const MEMBERS_BASE = (orgSlug: string) => `/admin/organizations/${orgSlug}/club-members`
+const TRAINING_BASE = (orgSlug: string) => `/admin/organizations/${encodeURIComponent(orgSlug)}/training-offers`
+const MEMBERS_BASE = (orgSlug: string) => `/admin/organizations/${encodeURIComponent(orgSlug)}/club-members`
 
 async function errorCode(res: Response): Promise<string | undefined> {
   try {

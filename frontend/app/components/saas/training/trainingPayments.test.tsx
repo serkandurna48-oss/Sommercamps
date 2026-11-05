@@ -34,6 +34,13 @@ const reg = (patch: Partial<RegistrationAdmin>): RegistrationAdmin => ({
 })
 
 describe('Trainingszahlungen', () => {
+  it('zeigt einen Hinweis, wenn Trainingszahlungen nicht geladen werden konnten', () => {
+    const html = renderToStaticMarkup(
+      <OrgPaymentsScreen orgSlug="demo" org={org} camps={[]} registrationsByCamp={[]} trainingPaymentsError />,
+    )
+    expect(html).toContain('Trainingszahlungen konnten nicht geladen werden.')
+  })
+
   it('bildet einen Termin als Zahlungsgruppe mit Berliner Ortszeit im Titel ab', () => {
     const group = trainingPaymentGroup(offer, session, [reg({})])
     expect(group.camp.slug).toBe('einzel-2026-03-29-1800')

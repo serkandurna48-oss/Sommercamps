@@ -3,7 +3,7 @@ import OrgPaymentsScreen from '../../../../components/saas/screens/OrgPaymentsSc
 
 export default async function OrgPaymentsPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params
-  const { org, camps, registrationsByCamp, trainingPayments } = await loadOrgPaymentsData(orgSlug)
+  const { org, camps, registrationsByCamp, trainingPayments, trainingPaymentsError } = await loadOrgPaymentsData(orgSlug)
 
-  return <OrgPaymentsScreen orgSlug={orgSlug} org={org} camps={camps} registrationsByCamp={registrationsByCamp} trainingPayments={trainingPayments} />
+  return <OrgPaymentsScreen orgSlug={orgSlug} org={org} camps={camps} registrationsByCamp={registrationsByCamp} trainingPayments={trainingPayments} trainingPaymentsError={trainingPaymentsError} />
 }

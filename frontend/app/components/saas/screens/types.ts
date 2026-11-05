@@ -14,6 +14,8 @@ export interface OrganizationScreenProps extends OrganizationIdentityProps {
 export interface OrgPaymentsScreenProps extends OrganizationScreenProps {
   /** Trainingstermine mit Buchungen (Zahlungen), getrennt von den Camps. */
   trainingPayments?: TrainingPaymentGroup[]
+  /** Trainingszahlungen konnten nicht geladen werden (Camps bleiben sichtbar). */
+  trainingPaymentsError?: boolean
 }
 
 export interface CampScreenProps extends OrganizationIdentityProps {

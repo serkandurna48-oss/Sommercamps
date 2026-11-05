@@ -39,7 +39,7 @@ beforeEach(() => {
   vi.mocked(getAdminToken).mockResolvedValue('test-token')
   vi.mocked(getOrganizationAdmin).mockResolvedValue(fixtures.org)
   vi.mocked(loadOrgAdminData).mockResolvedValue({ ...fixtures, token: 'test-token' })
-  vi.mocked(loadOrgPaymentsData).mockResolvedValue({ ...fixtures, token: 'test-token', trainingPayments: [] })
+  vi.mocked(loadOrgPaymentsData).mockResolvedValue({ ...fixtures, token: 'test-token', trainingPayments: [], trainingPaymentsError: false })
   vi.mocked(loadCampAdminData).mockResolvedValue({
     token: 'test-token', org: fixtures.org, camp: fixtures.camps[0], registrations: fixtures.registrationsByCamp[0],
   })

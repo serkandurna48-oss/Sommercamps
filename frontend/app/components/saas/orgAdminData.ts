@@ -79,23 +79,31 @@ export async function loadOrgAdminData(orgSlug: string): Promise<OrgAdminData> {
   return { token, org, camps, registrationsByCamp }
 }
 
+const TRAINING_FETCH_BATCH = 5
+
 /** Zahlungsseite: Camps wie bisher plus Trainingstermine mit Buchungen. Die Camp-Liste
  * schliesst Termine absichtlich aus, deshalb werden sie über die Trainings-Endpunkte
- * geladen. Entwürfe haben keine Buchungen und werden übersprungen. */
-export async function loadOrgPaymentsData(orgSlug: string): Promise<OrgAdminData & { trainingPayments: TrainingPaymentGroup[] }> {
+ * geladen. Nur Entwürfe ohne Buchungen werden übersprungen. Scheitert das Laden der
+ * Trainings (kein Auth-Fehler), bleibt die Camp-Seite nutzbar: `trainingPaymentsError`
+ * zeigt dann einen Hinweis. Anfragen laufen in kleinen Blöcken. */
+export async function loadOrgPaymentsData(orgSlug: string): Promise<OrgAdminData & { trainingPayments: TrainingPaymentGroup[]; trainingPaymentsError: boolean }> {
   const data = await loadOrgAdminData(orgSlug)
   try {
     const offers = await fetchTrainingOffersAdmin(orgSlug, data.token)
-    const perOffer = await Promise.all(offers.map(async offer => {
-      const sessions = (await fetchTrainingSessionsAdmin(orgSlug, offer.id, data.token)).filter(s => s.status !== 'draft')
-      return Promise.all(sessions.map(async session =>
-        trainingPaymentGroup(offer, session, await fetchSessionRegistrationsAdmin(orgSlug, offer.id, session.id, data.token))))
-    }))
-    const trainingPayments = perOffer.flat().filter(g => g.registrations.length > 0)
-    return { ...data, trainingPayments }
+    const perOffer = await Promise.all(offers.map(async offer =>
+      (await fetchTrainingSessionsAdmin(orgSlug, offer.id, data.token))
+        .filter(s => !(s.status === 'draft' && s.booked_count === 0))
+        .map(session => ({ offer, session }))))
+    const targets = perOffer.flat()
+    const groups: TrainingPaymentGroup[] = []
+    for (let i = 0; i < targets.length; i += TRAINING_FETCH_BATCH) {
+      groups.push(...await Promise.all(targets.slice(i, i + TRAINING_FETCH_BATCH).map(async ({ offer, session }) =>
+        trainingPaymentGroup(offer, session, await fetchSessionRegistrationsAdmin(orgSlug, offer.id, session.id, data.token)))))
+    }
+    return { ...data, trainingPayments: groups.filter(g => g.registrations.length > 0), trainingPaymentsError: false }
   } catch (err) {
     if (err instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
-    throw err
+    return { ...data, trainingPayments: [], trainingPaymentsError: true }
   }
 }
 

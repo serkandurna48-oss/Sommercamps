@@ -9,7 +9,7 @@ import { de, formatEuro } from '../../../lib/i18n/de'
 import type { OrgPaymentsScreenProps } from './types'
 import { PAGE } from '../ui/pageLayout'
 
-export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsByCamp, trainingPayments = [] }: OrgPaymentsScreenProps) {
+export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsByCamp, trainingPayments = [], trainingPaymentsError = false }: OrgPaymentsScreenProps) {
   const brand = computeBrandTokens(org.primary_color)
 
   const groups = [
@@ -50,6 +50,12 @@ export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsBy
           {de.paymentsPage.subtitleOrg}
         </p>
 
+        {trainingPaymentsError && (
+          <p role="alert" className="cp-body mb-4 rounded-[var(--cp-r-chip)] border px-3 py-2"
+            style={{ color: 'var(--cp-error)', background: 'var(--cp-error-bg)', borderColor: 'var(--cp-error-line)' }}>
+            Trainingszahlungen konnten nicht geladen werden.
+          </p>
+        )}
         <StatGrid>
           <StatCard label="Eingegangen / Offen" value={`${formatEuro(money.collectedCents)} / ${formatEuro(money.openCents)}`} wide />
           <StatCard label={de.command.filterPaymentOpen} value={String(openCount)} numericValue={openCount} tone="pending" />

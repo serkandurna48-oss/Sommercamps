@@ -54,18 +54,24 @@ def parse_membership_csv(text: str) -> list[dict]:
     text = text.lstrip("﻿")
     if not text.strip():
         raise MembershipCsvError([_err(1, "file", "empty_file")])
-    first_line = text.splitlines()[0]
+    if "\x00" in text:
+        raise MembershipCsvError([_err(1, "file", "invalid_csv")])
+    first_line = next(line for line in text.splitlines() if line.strip())
     delimiter = ";" if first_line.count(";") >= first_line.count(",") and ";" in first_line else ","
 
-    records = [r for r in csv.reader(io.StringIO(text, newline=""), delimiter=delimiter)]
+    try:
+        records = [r for r in csv.reader(io.StringIO(text, newline=""), delimiter=delimiter)]
+    except csv.Error:
+        raise MembershipCsvError([_err(1, "file", "invalid_csv")]) from None
     # Record numbers count every record incl. blank ones, so they match the file.
-    header = [h.strip().casefold() for h in records[0]]
-    errors = [_err(1, name, "missing_column") for name in _REQUIRED if name not in header]
+    head = next(i for i, r in enumerate(records) if any(c.strip() for c in r))
+    header = [h.strip().casefold() for h in records[head]]
+    errors = [_err(head + 1, name, "missing_column") for name in _REQUIRED if name not in header]
     if errors:
         raise MembershipCsvError(errors)
     idx = {name: header.index(name) for name in (*_REQUIRED, *(["mitgliedsnummer"] if "mitgliedsnummer" in header else []))}
 
-    data = [(n, r) for n, r in enumerate(records[1:], start=2) if any(c.strip() for c in r)]
+    data = [(n, r) for n, r in enumerate(records[head + 1:], start=head + 2) if any(c.strip() for c in r)]
     if not data:
         raise MembershipCsvError([_err(1, "file", "no_rows")])
     if len(data) > MAX_ROWS:

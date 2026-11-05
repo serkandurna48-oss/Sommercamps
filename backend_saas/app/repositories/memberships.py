@@ -76,7 +76,7 @@ def list_members(
         active = True
     pattern = None
     key_pattern = None
-    if search and search.strip():
+    if search and _normalize_part(search):
         escaped = search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         pattern = f"%{escaped}%"
         norm = _normalize_part(search).replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")

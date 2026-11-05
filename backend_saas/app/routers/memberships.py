@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..admin_resolve import require_organization
+from ..db import DatabaseBusy
 from ..auth_deps import AuthContext, require_org_access
 from ..membership_csv import MembershipCsvError, parse_membership_csv
 from ..repositories import memberships as memberships_repo
@@ -151,8 +152,12 @@ def import_members(
         ) from None
     try:
         result = memberships_repo.import_members(organization["id"], rows)
-    except Exception:
-        logger.exception("Member import failed unexpectedly (slug=%s)", organization_slug)
+    except DatabaseBusy:
+        raise
+    except Exception as exc:
+        # No exc_info and no message: Postgres errors can carry row data
+        # (names, birth dates) in DETAIL.
+        logger.error("Member import failed (slug=%s, error=%s)", organization_slug, type(exc).__name__)
         raise HTTPException(status_code=500, detail="Import failed, nothing was saved") from None
     logger.info("Member import done (slug=%s, rows=%d)", organization_slug, result["rows"])
     _audit(auth, organization, "memberships.imported", None, result)

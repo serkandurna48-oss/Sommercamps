@@ -80,3 +80,14 @@ def test_exactly_max_rows_ok():
 def test_field_too_long():
     errs = _errors("vorname;nachname;geburtsdatum;mitgliedsnummer\nA;B;2015-01-01;" + "9" * 60 + "\n")
     assert errs == [{"row": 2, "field": "mitgliedsnummer", "code": "too_long"}]
+
+
+def test_leading_blank_lines_before_header():
+    rows = parse_membership_csv("\n\nvorname;nachname;geburtsdatum\nAnna;Muster;05.03.2015\n")
+    assert len(rows) == 1
+    assert _errors("\n\nvorname;nachname;geburtsdatum\nA;B;kaputt\n") == [{"row": 4, "field": "geburtsdatum", "code": "invalid_date"}]
+
+
+def test_nul_byte_and_oversized_field_are_invalid_csv():
+    assert _errors("vorname;nachname;geburtsdatum\nA\x00;B;2015-01-01\n") == [{"row": 1, "field": "file", "code": "invalid_csv"}]
+    assert _errors('vorname;nachname;geburtsdatum\n"' + "x" * 200000 + '";B;2015-01-01\n') == [{"row": 1, "field": "file", "code": "invalid_csv"}]

@@ -247,3 +247,51 @@ def test_import_missing_csv_field_does_not_echo(ctx):
     c = ctx
     r = c["client"].post(_base(c) + "/import", headers=c["headers"], json={"csv": 123})
     assert r.status_code == 422
+
+
+def test_import_db_error_logs_no_personal_data(ctx, monkeypatch, caplog):
+    c = ctx
+
+    def boom(org, rows):
+        raise RuntimeError('Failing row contains (Geheimvorname, Geheimnachname, 2015-03-05)')
+
+    monkeypatch.setattr(memberships, "import_members", boom)
+    with caplog.at_level("DEBUG"):
+        r = _import(c, HEADER + "Geheimvorname;Geheimnachname;05.03.2015;1\n")
+    assert r.status_code == 500
+    assert "Geheim" not in caplog.text and "2015" not in caplog.text and "Traceback" not in caplog.text
+    assert "RuntimeError" in caplog.text
+
+
+def test_import_database_busy_stays_503(ctx, monkeypatch):
+    from app.db import DatabaseBusy
+    c = ctx
+
+    def busy(org, rows):
+        raise DatabaseBusy()
+
+    monkeypatch.setattr(memberships, "import_members", busy)
+    assert _import(c, HEADER + "A;B;05.03.2015;1\n").status_code == 503
+
+
+def test_owner_can_use_club_members(ctx):
+    from .auth_helpers import owner_headers
+    c = ctx
+    memberships.create_member(c["org"], first_name="Anna", last_name="Muster", birth_date=date(2015, 3, 5))
+    assert len(c["client"].get(_base(c), headers=owner_headers()).json()) == 1
+
+
+def test_punctuation_only_search_matches_everything_not_by_accident(ctx):
+    c = ctx
+    memberships.create_member(c["org"], first_name="Anna", last_name="Muster", birth_date=date(2015, 3, 5))
+    memberships.create_member(c["org"], first_name="Ben", last_name="Beispiel", birth_date=date(2014, 1, 1))
+    assert len(memberships.list_members(c["org"], search="-")) == 2
+    assert [m["first_name"] for m in memberships.list_members(c["org"], search="anna")] == ["Anna"]
+
+
+def test_foreign_member_patch_leaves_state_and_audit_untouched(ctx):
+    c = ctx
+    foreign = memberships.create_member(c["other"], first_name="Bea", last_name="Fremd", birth_date=date(2014, 1, 1))
+    assert c["client"].patch(f"{_base(c)}/{foreign['id']}", headers=c["headers"], json={"active": False}).status_code == 404
+    assert memberships.list_members(c["other"])[0]["active"] is True
+    assert _audit(c) == []

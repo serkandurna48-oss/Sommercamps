@@ -116,8 +116,8 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
                   aria-hidden="true"
                   className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs"
                   style={{
-                    background: step.done ? 'var(--cp-success-bg, #E3F3E9)' : 'var(--cp-line)',
-                    color: step.done ? 'var(--cp-success, #1C6B45)' : 'var(--cp-muted)',
+                    background: step.done ? 'var(--cp-ok-bg)' : 'var(--cp-surface-sunken)',
+                    color: step.done ? 'var(--cp-ok)' : 'var(--cp-muted)',
                   }}
                 >
                   {step.done ? '✓' : ''}

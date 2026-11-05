@@ -103,7 +103,7 @@ describe('admin accessibility primitives', () => {
   })
 
   it('gives navigation actions an explicit 44px minimum target', async () => {
-    await act(() => root.render(<ButtonLink href="/pilot/demo/camps/new" variant="primary" brandStrong="#116644" brandOn="#fff">Camp anlegen</ButtonLink>))
+    await act(() => root.render(<ButtonLink href="/pilot/demo/camps/new" variant="primary">Camp anlegen</ButtonLink>))
     const link = container.querySelector('a')!
     minimumTarget(link)
     expect(link.classList.contains('cp-focus')).toBe(true)
@@ -112,7 +112,7 @@ describe('admin accessibility primitives', () => {
 
   // Redesign R1: admin controls use the CampsPilot orange, whatever the club colour.
   it.each(['#B8912B', '#CC0000'])('uses CampsPilot accent with safe contrast for filters, selection actions and editing: %s', async color => {
-    await act(() => root.render(<><FilterButton label="Alle" count={1} active brandColor={color} onClick={() => {}} />
+    await act(() => root.render(<><FilterButton label="Alle" count={1} active onClick={() => {}} />
       <ParticipantList camp={camp} registrations={[registration]} orgSlug="test" campSlug="camp" brandColor={color} /></>))
     const filter = container.querySelector('button')!
     expect(filter.style.color).toBe('var(--cp-accent-ink)')

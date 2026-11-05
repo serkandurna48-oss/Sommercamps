@@ -50,7 +50,7 @@ export default function TrainingOfferScreen({ orgSlug, org, offer, sessions, reg
             <StatusChip tone="neutral" label={`${sessions.length}`} />
           </div>
           <div className="max-w-[640px]">
-            <SessionForm orgSlug={orgSlug} offerId={offer.id} kind={offer.kind} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+            <SessionForm orgSlug={orgSlug} offerId={offer.id} kind={offer.kind} />
           </div>
           {sorted.length === 0 ? (
             <EmptyState title="Noch keine Termine." body="Legen Sie oben den ersten Termin an. Zeiten gelten in Berliner Zeit." />
@@ -58,7 +58,7 @@ export default function TrainingOfferScreen({ orgSlug, org, offer, sessions, reg
             <ul className="flex flex-col gap-4">
               {sorted.map(session => (
                 <SessionCard key={session.id} orgSlug={orgSlug} offerId={offer.id} session={session}
-                  registrations={registrationsBySession[session.id] ?? []} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+                  registrations={registrationsBySession[session.id] ?? []} />
               ))}
             </ul>
           )}
@@ -66,7 +66,7 @@ export default function TrainingOfferScreen({ orgSlug, org, offer, sessions, reg
 
         <section className="max-w-[640px]" aria-labelledby="edit-heading">
           <h2 id="edit-heading" className="cp-title mb-4" style={{ color: 'var(--cp-ink)' }}>Angebot bearbeiten</h2>
-          <OfferForm orgSlug={orgSlug} offer={offer} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+          <OfferForm orgSlug={orgSlug} offer={offer} />
         </section>
       </main>
     </>

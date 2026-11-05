@@ -22,14 +22,12 @@ function metricsInUse(measurements: PlayerMeasurement[], standard: PlayerMetric[
     .filter(entry => measurements.some(m => m.metric === entry.metric))
 }
 
-export default function MeasurementsSection({ orgSlug, playerId, measurements, metrics, today, brandStrong, brandOn }: {
+export default function MeasurementsSection({ orgSlug, playerId, measurements, metrics, today }: {
   orgSlug: string
   playerId: string
   measurements: PlayerMeasurement[]
   metrics: PlayerMetric[]
   today: string
-  brandStrong: string
-  brandOn: string
 }) {
   const id = useId()
   const { pending, result, submit, clearField } = useSubmit(createMeasurementAction.bind(null, orgSlug, playerId))

@@ -120,7 +120,7 @@ describe('Schritt-Navigation bei Aktion-Fehler', () => {
 describe('OnboardingCard wizard links', () => {
   function renderCard(org: OrganizationAdmin, camps: CampAdmin[]) {
     return renderToStaticMarkup(
-      <OnboardingCard orgSlug="demo" org={org} camps={camps} brandStrong="#116644" brandOn="#fff" />
+      <OnboardingCard orgSlug="demo" org={org} camps={camps} />
     )
   }
 

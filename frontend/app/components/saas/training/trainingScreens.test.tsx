@@ -267,7 +267,7 @@ describe('interaktive Teile', () => {
 
   it('Import dekodiert Excel-CSV (windows-1252) und zeigt die Zähler', async () => {
     vi.mocked(importMembersAction).mockResolvedValue({ error: null, errors: [], result: { rows: 2, created: 1, updated: 1, merged_in_file: 0 } })
-    await act(() => root.render(<MemberImport orgSlug="demo" brandStrong="#112233" brandOn="#ffffff" />))
+    await act(() => root.render(<MemberImport orgSlug="demo" />))
     // "Müller" with a CP1252 u-umlaut (0xFC) is not valid UTF-8.
     await pickFile([new Uint8Array([0x76, 0x6f, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x3b, 0x4d, 0xfc, 0x6c, 0x6c, 0x65, 0x72])])
     await submitImport()
@@ -281,7 +281,7 @@ describe('interaktive Teile', () => {
       errors: [{ row: 3, field: 'geburtsdatum', code: 'invalid_date' }, { row: 7, field: 'nachname', code: 'required' }],
       result: null,
     })
-    await act(() => root.render(<MemberImport orgSlug="demo" brandStrong="#112233" brandOn="#ffffff" />))
+    await act(() => root.render(<MemberImport orgSlug="demo" />))
     await pickFile(['vorname;nachname;geburtsdatum\nGeheimname;Kind;kaputt\n'])
     await submitImport()
     const alert = container.querySelector('[role="alert"]')!
@@ -291,7 +291,7 @@ describe('interaktive Teile', () => {
   })
 
   it('ohne Datei wird nichts gesendet', async () => {
-    await act(() => root.render(<MemberImport orgSlug="demo" brandStrong="#112233" brandOn="#ffffff" />))
+    await act(() => root.render(<MemberImport orgSlug="demo" />))
     await submitImport()
     expect(importMembersAction).not.toHaveBeenCalled()
     expect(container.querySelector('[role="alert"]')?.textContent).toContain('CSV-Datei auswählen')
@@ -302,7 +302,7 @@ describe('interaktive Teile', () => {
     const revokeObjectURL = vi.fn()
     vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL }))
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
-    await act(() => root.render(<MemberImport orgSlug="demo" brandStrong="#112233" brandOn="#ffffff" />))
+    await act(() => root.render(<MemberImport orgSlug="demo" />))
     await act(async () => [...container.querySelectorAll('button')].find(b => b.textContent === 'Vorlage herunterladen')!.click())
     expect(createObjectURL).toHaveBeenCalledTimes(1)
     expect((createObjectURL.mock.calls[0] as unknown as [Blob])[0].type).toContain('text/csv')

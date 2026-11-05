@@ -54,7 +54,6 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
                     label: de.dashboard.spotsLabel,
                     value: `${nextCamp.registeredCount}/${nextCamp.camp.capacity}`,
                     bar: nextCamp.camp.capacity > 0 ? nextCamp.registeredCount / nextCamp.camp.capacity : 0,
-                    barColor: brand.brand,
                   },
                   { label: de.dashboard.openPaymentsLabel, value: String(nextCamp.openPaymentsCount), numericValue: nextCamp.openPaymentsCount },
                   { label: de.dashboard.waitlistLabel, value: String(nextCamp.waitlistCount), numericValue: nextCamp.waitlistCount },
@@ -71,7 +70,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
 
         {showCard ? (
           <section className="mb-12">
-            <OnboardingCard orgSlug={orgSlug} org={org} camps={camps} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+            <OnboardingCard orgSlug={orgSlug} org={org} camps={camps} />
           </section>
         ) : (
           <section className="mb-12">
@@ -92,7 +91,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
             )}
             {firstTask ? (
               <div className="flex flex-col gap-4">
-                <TaskCard task={firstTask} orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+                <TaskCard task={firstTask} orgSlug={orgSlug} />
                 {restTasks.length > 0 && (
                   <div className="flex flex-col gap-4">
                     {restTasks.map(t => (
@@ -102,13 +101,13 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
                 )}
               </div>
             ) : showLaunchSuccess ? (
-              <LaunchSuccessCard orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+              <LaunchSuccessCard orgSlug={orgSlug} />
             ) : (
               <div className="cp-card" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
                 <SuccessNote>{de.onboarding.liveLabel}</SuccessNote>
                 <p className="cp-body mt-2 break-all" style={{ color: 'var(--cp-ink-2)' }}>/pilot/{orgSlug}</p>
                 <div className="mt-4">
-                  <ButtonLink href={`/pilot/${orgSlug}`} variant="primary" brandStrong={brand.brandStrong} brandOn={brand.brandOn}>
+                  <ButtonLink href={`/pilot/${orgSlug}`} variant="primary">
                     {de.onboarding.liveOpen}
                   </ButtonLink>
                 </div>
@@ -117,7 +116,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
           </section>
         )}
 
-        <DashboardCampsCard camps={campsWithStats} orgSlug={orgSlug} brandColor={brand.brand} action={
+        <DashboardCampsCard camps={campsWithStats} orgSlug={orgSlug} action={
             <ButtonLink
               href={`/pilot/${orgSlug}/camps/new`}
               variant="secondary"

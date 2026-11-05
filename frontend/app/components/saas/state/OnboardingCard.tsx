@@ -5,12 +5,10 @@ import { de } from '../../../lib/i18n/de'
 import type { OrganizationAdmin, CampAdmin } from '../../../lib/saasAdminApi'
 import ReviewPending from './ReviewPending'
 
-export default function OnboardingCard({ orgSlug, org, camps, brandStrong, brandOn }: {
+export default function OnboardingCard({ orgSlug, org, camps }: {
   orgSlug: string
   org: OrganizationAdmin
   camps: CampAdmin[]
-  brandStrong: string
-  brandOn: string
 }) {
   const { step1Done, step2Done } = computeOnboardingSteps(org, camps)
   const activeStep = !step1Done ? 1 : !step2Done ? 2 : 3
@@ -41,14 +39,14 @@ export default function OnboardingCard({ orgSlug, org, camps, brandStrong, brand
       <ol className="mt-5 flex flex-col gap-5">
         <Step number={1} done={step1Done} active={activeStep === 1} title={de.onboarding.step1Title} body={de.onboarding.step1Body}>
           {activeStep === 1 && (
-            <ButtonLink href={wizardHref1} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
+            <ButtonLink href={wizardHref1} variant="primary">
               {de.onboarding.step1Action}
             </ButtonLink>
           )}
         </Step>
         <Step number={2} done={step2Done} active={activeStep === 2} title={de.onboarding.step2Title} body={de.onboarding.step2Body}>
           {activeStep === 2 && (
-            <ButtonLink href={wizardHref3} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
+            <ButtonLink href={wizardHref3} variant="primary">
               {de.onboarding.step2Action}
             </ButtonLink>
           )}
@@ -67,7 +65,7 @@ export default function OnboardingCard({ orgSlug, org, camps, brandStrong, brand
             </p>
           )}
           {activeStep === 3 && (
-            <ButtonLink href={needsReview ? wizardHref4 : nextPublicationHref} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
+            <ButtonLink href={needsReview ? wizardHref4 : nextPublicationHref} variant="primary">
               {needsReview ? de.onboarding.step3ActionSubmit : de.onboarding.step3Action}
             </ButtonLink>
           )}

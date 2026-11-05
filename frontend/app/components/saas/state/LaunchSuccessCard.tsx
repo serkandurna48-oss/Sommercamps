@@ -6,10 +6,8 @@ import Button, { ButtonLink } from '../ui/Button'
 import SuccessNote from './SuccessNote'
 import { useAdminPreview } from '../preview/AdminPreviewContext'
 
-export default function LaunchSuccessCard({ orgSlug, brandStrong, brandOn }: {
+export default function LaunchSuccessCard({ orgSlug }: {
   orgSlug: string
-  brandStrong: string
-  brandOn: string
 }) {
   const [copyResult, setCopyResult] = useState<'idle' | 'copied' | 'error'>('idle')
   const preview = useAdminPreview()
@@ -30,7 +28,7 @@ export default function LaunchSuccessCard({ orgSlug, brandStrong, brandOn }: {
       <p className="cp-body mt-2">{de.onboarding.liveShareHint}</p>
       <p className="cp-body mt-2 break-all" style={{ color: 'var(--cp-ink-2)' }}>/pilot/{orgSlug}</p>
       <div className="mt-4 flex flex-wrap gap-3">
-        <Button type="button" variant="primary" brandStrong={brandStrong} brandOn={brandOn} onClick={copyLink}>
+        <Button type="button" variant="primary" onClick={copyLink}>
           {de.onboarding.liveCopyLink}
         </Button>
         <ButtonLink href={registrationLink} variant="secondary">

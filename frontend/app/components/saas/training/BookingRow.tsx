@@ -11,14 +11,12 @@ import { paymentMethodLabel } from './trainingLogic'
 /** Eine Buchung eines Trainingstermins. Zahlstatus wird über denselben Weg
  * gesetzt wie in den Camp-Zahlungen; die Route nimmt den Termin-Slug. Bei
  * Barzahlung markiert der Admin die Zahlung nach Erhalt selbst als bezahlt. */
-export default function BookingRow({ orgSlug, sessionSlug, sessionId, registration, brandStrong, brandOn }: {
+export default function BookingRow({ orgSlug, sessionSlug, sessionId, registration }: {
   orgSlug: string
   sessionSlug: string
   /** Termin-Id (= camp_id der Notiz); für den Link in die Spielerakte. */
   sessionId: string
   registration: RegistrationAdmin
-  brandStrong: string
-  brandOn: string
 }) {
   const token = registration.registration_token
   const markPaid = setPaymentStatusAction.bind(null, orgSlug, sessionSlug, token, 'paid', de.paymentsPage.markPaidSuccess)

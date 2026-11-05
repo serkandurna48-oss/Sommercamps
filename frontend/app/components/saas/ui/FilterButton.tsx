@@ -9,8 +9,6 @@ export default function FilterButton({
   label: string
   count: number
   active: boolean
-  /** @deprecated Active filters use the CampsPilot tint, not the club colour. Ignored. */
-  brandColor?: string
   onClick: () => void
 }) {
   return (

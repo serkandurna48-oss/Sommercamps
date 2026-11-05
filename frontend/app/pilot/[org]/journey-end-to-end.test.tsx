@@ -301,7 +301,6 @@ describe('Admin-Camp-Seite: Zahlung markieren', () => {
           org={orgWithIban}
           entries={[entry]}
           orgSlug="reise-verein"
-          brandColor="#112233"
           emptyLabel="Keine Anmeldungen"
           csvFilename="payments.csv"
           xlsxHref="/export"

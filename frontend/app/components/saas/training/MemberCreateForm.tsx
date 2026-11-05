@@ -9,7 +9,7 @@ import SuccessNote from '../state/SuccessNote'
 
 const initialState: MemberFormState = { error: null }
 
-export default function MemberCreateForm({ orgSlug, brandStrong, brandOn }: { orgSlug: string; brandStrong: string; brandOn: string }) {
+export default function MemberCreateForm({ orgSlug }: { orgSlug: string }) {
   const feedbackId = useId()
   const [submitted, setSubmitted] = useState<Record<string, string>>({})
   const bound = createMemberAction.bind(null, orgSlug)

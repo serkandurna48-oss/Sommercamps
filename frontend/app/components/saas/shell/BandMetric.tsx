@@ -5,8 +5,6 @@ export interface BandMetricProps {
   value: string
   /** Belegungsbalken, 0-1. Immer CampsPilot-Orange. */
   bar?: number
-  /** @deprecated The bar uses the CampsPilot orange. Ignored. */
-  barColor?: string
   size?: 'band' | 'inline' | 'hero'
   /** Wenn gesetzt, zählt `value` beim Einblenden von 0 hoch — nur für
    * reine Ganzzahlen (z. B. "Tage"), nicht für "3/3"-Belegung. */

@@ -24,8 +24,6 @@ export default function WaitlistCard({
   registeredCount,
   priceCents,
   currency,
-  brandStrong,
-  brandOn,
   showCampTitle = false,
 }: {
   orgSlug: string
@@ -37,9 +35,6 @@ export default function WaitlistCard({
   registeredCount: number
   priceCents: number
   currency: string
-  brandColor: string
-  brandStrong: string
-  brandOn: string
   showCampTitle?: boolean
 }) {
   const promote = promoteWaitlistAction.bind(null, orgSlug, campSlug)
@@ -72,8 +67,6 @@ export default function WaitlistCard({
             label={de.waitlistPage.promote(childName)}
             pendingLabel={de.waitlistPage.promoting}
             variant="primary"
-            brandStrong={brandStrong}
-            brandOn={brandOn}
             requireConfirm={<>
               <p className="cp-subheading">Platz an {childName} für {campTitle} vergeben?</p>
               <p>Preis: {formatEuro(priceCents, currency)}</p>

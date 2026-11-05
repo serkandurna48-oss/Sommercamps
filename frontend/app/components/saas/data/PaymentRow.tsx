@@ -21,16 +21,12 @@ export default function PaymentRow({
   org,
   orgSlug,
   onPaid,
-  brandStrong,
-  brandOn,
 }: {
   registration: RegistrationAdmin
   camp: CampAdmin
   org: ReminderOrganization
   orgSlug: string
   onPaid: () => void
-  brandStrong: string
-  brandOn: string
 }) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle')
   const reminder = buildPaymentReminder({ registration, camp }, org)

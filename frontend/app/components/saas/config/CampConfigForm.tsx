@@ -20,14 +20,10 @@ export default function CampConfigForm({
   orgSlug,
   camp,
   org,
-  brandStrong,
-  brandOn,
 }: {
   orgSlug: string
   camp: CampAdmin
   org: PublicationOrganization
-  brandStrong: string
-  brandOn: string
 }) {
   const [submitted, setSubmitted] = useState<Record<string, string> | null>(null)
   const [previousCamp, setPreviousCamp] = useState(camp)
@@ -181,11 +177,11 @@ export default function CampConfigForm({
       {!pending && state.saved && !state.error && <SuccessNote>{de.configPage.saved}</SuccessNote>}
 
       <div>
-        <Button type="submit" variant="primary" brandStrong={brandStrong} brandOn={brandOn} disabled={pending}>
+        <Button type="submit" variant="primary" disabled={pending}>
           {pending ? de.configPage.saving : de.configPage.save}
         </Button>
       </div>
-      <CampPublicationCard orgSlug={orgSlug} org={org} camp={confirmedCamp} pending={pending} brandStrong={brandStrong} brandOn={brandOn} />
+      <CampPublicationCard orgSlug={orgSlug} org={org} camp={confirmedCamp} pending={pending} />
     </form>
   )
 }

@@ -32,7 +32,7 @@ const TOGGLE_BASE = 'min-h-[48px] px-4'
  * gehören diesem Formular und bleiben bei einem Fehler erhalten. Notiztexte
  * gelangen nie in URL, Log oder Konsole.
  */
-export default function QuickNoteForm({ orgSlug, playerId, bookings, initialDate, initialCampId = null, note, autoFocus = false, onDone, brandStrong, brandOn }: {
+export default function QuickNoteForm({ orgSlug, playerId, bookings, initialDate, initialCampId = null, note, autoFocus = false, onDone }: {
   orgSlug: string
   playerId: string
   bookings: PlayerBooking[]
@@ -42,8 +42,6 @@ export default function QuickNoteForm({ orgSlug, playerId, bookings, initialDate
   note?: PlayerNote
   autoFocus?: boolean
   onDone?: () => void
-  brandStrong: string
-  brandOn: string
 }) {
   const id = useId()
   const bodyRef = useRef<HTMLTextAreaElement>(null)
@@ -163,7 +161,7 @@ export default function QuickNoteForm({ orgSlug, playerId, bookings, initialDate
       {!pending && savedOnce && <SuccessNote>Notiz gespeichert.</SuccessNote>}
 
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn} className="w-full min-h-[52px] sm:w-auto">
+        <Button type="submit" variant="primary" disabled={pending} className="w-full min-h-[52px] sm:w-auto">
           {pending ? 'Wird gespeichert …' : note ? 'Änderungen speichern' : 'Notiz speichern'}
         </Button>
         {note && (

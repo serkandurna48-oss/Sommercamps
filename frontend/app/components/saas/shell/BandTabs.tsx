@@ -77,7 +77,7 @@ export function activeTabHref(pathname: string, hrefs: string[]): string | undef
  * scaleX), 200ms, cubic-bezier(.4,0,.2,1) — nie width/left animiert, nur
  * transform (siehe Verbote). Aktiver Tab per Präfix-Match (Unterseiten markieren ihren Bereich).
  */
-export default function BandTabs({ tabs }: { tabs: TabItem[]; /** @deprecated Active tab is CampsPilot orange. Ignored. */ brandColor?: string }) {
+export default function BandTabs({ tabs }: { tabs: TabItem[] }) {
   const pathname = usePathname()
   const preview = useAdminPreview()
   const containerRef = useRef<HTMLDivElement>(null)

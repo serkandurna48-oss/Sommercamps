@@ -64,9 +64,6 @@ export default function OrgWaitlistScreen({ orgSlug, org, camps, registrationsBy
                   priceCents={g.camp.price_cents}
                   currency={g.camp.currency}
                   waitlisted={g.waitlisted}
-                  brandColor={brand.brand}
-                  brandStrong={brand.brandStrong}
-                  brandOn={brand.brandOn}
                   showCampTitle
                 />
               ))}

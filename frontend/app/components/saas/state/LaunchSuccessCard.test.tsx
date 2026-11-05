@@ -21,7 +21,7 @@ afterEach(async () => {
 
 async function render() {
   await act(() => root.render(
-    <LaunchSuccessCard orgSlug="demo" brandStrong="#116644" brandOn="#fff" />
+    <LaunchSuccessCard orgSlug="demo" />
   ))
 }
 

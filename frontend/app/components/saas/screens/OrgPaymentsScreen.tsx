@@ -60,7 +60,6 @@ export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsBy
           org={{ name: org.name, legal_name: org.legal_name, iban: org.iban, contact_person_name: org.contact_person_name, contact_email: org.contact_email }}
           entries={entries}
           orgSlug={orgSlug}
-          brandColor={brand.brand}
           emptyLabel={de.paymentsPage.emptyOrg}
           showCampTitle
           csvFilename={`${orgSlug}-zahlungen.csv`}

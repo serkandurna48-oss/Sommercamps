@@ -27,7 +27,7 @@ export default function OrgTasksScreen({ orgSlug, org, camps, registrationsByCam
       />
 
       <main className={PAGE_READING}>
-        <TaskFilterList tasks={tasks} orgSlug={orgSlug} brandColor={brand.brand} emptyLabel={de.tasksPage.emptyOrg} />
+        <TaskFilterList tasks={tasks} orgSlug={orgSlug} emptyLabel={de.tasksPage.emptyOrg} />
       </main>
     </>
   )

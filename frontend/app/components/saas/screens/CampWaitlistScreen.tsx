@@ -58,9 +58,6 @@ export default function CampWaitlistScreen({ orgSlug, campSlug, org, camp, regis
                 priceCents={camp.price_cents}
                 currency={camp.currency}
                 waitlisted={waitlisted}
-                brandColor={brand.brand}
-                brandStrong={brand.brandStrong}
-                brandOn={brand.brandOn}
               />
             </>
           )}

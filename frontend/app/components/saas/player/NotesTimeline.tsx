@@ -10,14 +10,12 @@ import Notice, { type NoticeState } from './Notice'
 import QuickNoteForm from './QuickNoteForm'
 import { focusLabel, formatDay, isHttpsUrl, ratingDots } from './playerLogic'
 
-function NoteItem({ orgSlug, playerId, note, booking, bookings, brandStrong, brandOn, onNotice }: {
+function NoteItem({ orgSlug, playerId, note, booking, bookings, onNotice }: {
   orgSlug: string
   playerId: string
   note: PlayerNote
   booking: PlayerBooking | undefined
   bookings: PlayerBooking[]
-  brandStrong: string
-  brandOn: string
   onNotice: (notice: NoticeState) => void
 }) {
   const [editing, setEditing] = useState(false)
@@ -27,7 +25,6 @@ function NoteItem({ orgSlug, playerId, note, booking, bookings, brandStrong, bra
     return (
       <li data-note-id={note.id}>
         <QuickNoteForm orgSlug={orgSlug} playerId={playerId} bookings={bookings} initialDate={note.note_date} note={note}
-          brandStrong={brandStrong} brandOn={brandOn}
           onDone={() => { setEditing(false); onNotice({ kind: 'ok', text: 'Notiz gespeichert.' }) }} />
       </li>
     )
@@ -81,13 +78,11 @@ function NoteItem({ orgSlug, playerId, note, booking, bookings, brandStrong, bra
 }
 
 /** Notizen, neueste zuerst (Reihenfolge kommt vom Server). */
-export default function NotesTimeline({ orgSlug, playerId, notes, bookings, brandStrong, brandOn }: {
+export default function NotesTimeline({ orgSlug, playerId, notes, bookings }: {
   orgSlug: string
   playerId: string
   notes: PlayerNote[]
   bookings: PlayerBooking[]
-  brandStrong: string
-  brandOn: string
 }) {
   const [notice, setNotice] = useState<NoticeState | null>(null)
   const byCamp = new Map<string, PlayerBooking>()
@@ -102,7 +97,7 @@ export default function NotesTimeline({ orgSlug, playerId, notes, bookings, bran
         <ol className="flex flex-col gap-4">
           {notes.map(note => (
             <NoteItem key={note.id} orgSlug={orgSlug} playerId={playerId} note={note} bookings={bookings}
-              booking={note.camp_id ? byCamp.get(note.camp_id) : undefined} brandStrong={brandStrong} brandOn={brandOn} onNotice={setNotice} />
+              booking={note.camp_id ? byCamp.get(note.camp_id) : undefined} onNotice={setNotice} />
           ))}
         </ol>
       )}

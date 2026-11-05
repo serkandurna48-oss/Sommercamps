@@ -16,12 +16,10 @@ export default function CampRow({
   orgSlug,
   camp,
   registeredCount,
-  brandColor,
 }: {
   orgSlug: string
   camp: CampAdmin
   registeredCount: number
-  brandColor: string
 }) {
   return (
     <Link
@@ -38,7 +36,7 @@ export default function CampRow({
         </p>
       </div>
       <div className="w-32 shrink-0">
-        <CapacityBar filled={registeredCount} total={camp.capacity} brandColor={brandColor} />
+        <CapacityBar filled={registeredCount} total={camp.capacity} />
       </div>
       <StatusChip tone={CAMP_STATUS_TONE[camp.status] ?? 'neutral'} label={campStatusLabel[camp.status] ?? camp.status} />
     </Link>

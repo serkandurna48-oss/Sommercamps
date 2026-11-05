@@ -32,8 +32,8 @@ export default function MembersScreen({ orgSlug, org, members }: OrganizationIde
         </p>
 
         <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <MemberImport orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
-          <MemberCreateForm orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+          <MemberImport orgSlug={orgSlug} />
+          <MemberCreateForm orgSlug={orgSlug} />
         </div>
 
         <MemberList orgSlug={orgSlug} members={members} />

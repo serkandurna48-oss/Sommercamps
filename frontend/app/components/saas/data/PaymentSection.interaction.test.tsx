@@ -44,7 +44,7 @@ afterEach(async () => {
 })
 
 async function render(entries: PaymentEntry[] = [entry], organization = org) {
-  await act(() => root.render(<PaymentSection entries={entries} org={organization} orgSlug="demo" brandColor="#112233"
+  await act(() => root.render(<PaymentSection entries={entries} org={organization} orgSlug="demo"
     emptyLabel="Keine Anmeldungen" csvFilename="payments.csv" xlsxHref="/export" />))
 }
 

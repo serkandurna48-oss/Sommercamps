@@ -27,12 +27,12 @@ beforeEach(() => {
 })
 
 it('markiert den aktuellen Bereich', () => {
-  const html = renderToStaticMarkup(<BandTabs tabs={tabs} brandColor="#0B6E4F" />)
+  const html = renderToStaticMarkup(<BandTabs tabs={tabs} />)
   expect(html).toContain('aria-current="page"')
 })
 
 it('zeigt keine Klick-Rückmeldung, solange nichts lädt', () => {
-  const html = renderToStaticMarkup(<BandTabs tabs={tabs} brandColor="#0B6E4F" />)
+  const html = renderToStaticMarkup(<BandTabs tabs={tabs} />)
   expect(html).toContain('cp-tab-hint')
   expect(html).not.toContain('data-pending="true"')
 })
@@ -43,14 +43,14 @@ it('zeigt keine Klick-Rückmeldung, solange nichts lädt', () => {
  * Einblenden nichts verschiebt. */
 it('bestätigt den Klick, während die Zielseite noch lädt', () => {
   linkPending = true
-  const html = renderToStaticMarkup(<BandTabs tabs={tabs} brandColor="#0B6E4F" />)
+  const html = renderToStaticMarkup(<BandTabs tabs={tabs} />)
   expect(html).toContain('data-pending="true"')
 })
 
 /** PF1b: Prefetch auf false setzen verhindert, dass jeder Menüklick ~20
  * gleichzeitige Backend-Anfragen auslöst (Layout + alle Tabs laden /admin/me). */
 it('alle Menü-Links im Band haben prefetch={false}', () => {
-  renderToStaticMarkup(<BandTabs tabs={tabs} brandColor="#0B6E4F" />)
+  renderToStaticMarkup(<BandTabs tabs={tabs} />)
   expect(capturedLinkProps.length).toBe(tabs.length)
   expect(capturedLinkProps.every(p => p.prefetch === false)).toBe(true)
 })
@@ -59,7 +59,7 @@ it('sieben Bereiche: sieben gleich breite Spalten, Kurzbeschriftung unter md, vo
   const seven = ['Übersicht', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Trainings', 'Mitglieder', 'Einstellungen'].map((label, i) => ({
     label, shortLabel: ['Start', 'Zahlung', 'Warten', 'Aufgaben', 'Training', 'Mitglied', 'Optionen'][i], href: `/pilot/demoverein/t${i}`,
   }))
-  const html = renderToStaticMarkup(<BandTabs tabs={seven} brandColor="#0B6E4F" />)
+  const html = renderToStaticMarkup(<BandTabs tabs={seven} />)
   expect(html).toContain('grid-template-columns:repeat(7, minmax(0, 1fr))')
   expect(html).toContain('data-tab-count="7"')
   expect(html).not.toContain('grid-cols-[1fr_1fr_1fr_1fr_1.3fr]')
@@ -70,7 +70,7 @@ it('sieben Bereiche: sieben gleich breite Spalten, Kurzbeschriftung unter md, vo
 it('acht Bereiche (mit Spieler): acht Spalten in einer Zeile, nur Kurzbeschriftungen unter md', () => {
   const eight = orgTabs('demoverein')
   expect(eight).toHaveLength(8)
-  const html = renderToStaticMarkup(<BandTabs tabs={eight} brandColor="#0B6E4F" />)
+  const html = renderToStaticMarkup(<BandTabs tabs={eight} />)
   expect(html).toContain('grid-template-columns:repeat(8, minmax(0, 1fr))')
   expect(html).toContain('data-tab-count="8"')
   expect(html).toContain('aria-hidden="true">Spieler</span>')
@@ -78,7 +78,7 @@ it('acht Bereiche (mit Spieler): acht Spalten in einer Zeile, nur Kurzbeschriftu
 })
 
 it('fünf Bereiche behalten ihre Spaltenzahl ohne Kurzbeschriftung', () => {
-  const html = renderToStaticMarkup(<BandTabs tabs={tabs} brandColor="#0B6E4F" />)
+  const html = renderToStaticMarkup(<BandTabs tabs={tabs} />)
   expect(html).toContain('grid-template-columns:repeat(2, minmax(0, 1fr))')
 })
 

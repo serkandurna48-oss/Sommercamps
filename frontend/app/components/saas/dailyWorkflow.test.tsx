@@ -178,7 +178,7 @@ describe('camp navigation and task destinations', () => {
     ['payment', '/zahlungen?filter=open'], ['missing-contact', '?filter=missing-info'], ['waitlist', '/warteliste'],
   ] as const)('links both task variants to the %s work view', (kind, suffix) => {
     const task: Task = { id: kind, kind, campSlug: 'herbst', campTitle: 'Herbstcamp', count: 1, priority: 1 }
-    for (const element of [<TaskCard key="card" task={task} orgSlug="demo" brandStrong="#116644" brandOn="#fff" />, <TaskRow key="row" task={task} orgSlug="demo" />]) {
+    for (const element of [<TaskCard key="card" task={task} orgSlug="demo" />, <TaskRow key="row" task={task} orgSlug="demo" />]) {
       expect(markup(element).querySelector('a')?.getAttribute('href')).toBe(`/pilot/demo/camps/herbst${suffix}`)
     }
   })

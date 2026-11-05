@@ -9,7 +9,6 @@ import { birthYear, hasNotes } from '../commandCenterLogic'
 import ParticipantDetail from './ParticipantDetail'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from './StatusChip'
 import { IconChevronDown } from '../icons'
-import { computeBrandTokens } from '../brandPipeline'
 import { registrationDate } from '../registrationDates'
 import RowOverflow from '../ui/RowOverflow'
 
@@ -17,7 +16,6 @@ export default function ParticipantRow({
   registration,
   selected,
   onToggleSelect,
-  brandColor,
   orgSlug,
   campSlug,
   campTitle,
@@ -27,7 +25,6 @@ export default function ParticipantRow({
   registration: RegistrationAdmin
   selected: boolean
   onToggleSelect: () => void
-  brandColor: string
   orgSlug: string
   campSlug: string
   campTitle: string
@@ -43,7 +40,6 @@ export default function ParticipantRow({
   }
   const detailId = useId()
   const effective = override ?? registration
-  const brand = computeBrandTokens(brandColor)
 
   return (
     <div className="cp-roster-row cp-mobile-card cp-participant-card border-t" style={{ borderColor: 'var(--cp-line-2)' }}>
@@ -118,8 +114,6 @@ export default function ParticipantRow({
               campSlug={campSlug}
               campTitle={campTitle}
               questions={questions}
-              brandStrong={brand.brandStrong}
-              brandOn={brand.brandOn}
               onDetailsSaved={setOverride}
             />
           </div>

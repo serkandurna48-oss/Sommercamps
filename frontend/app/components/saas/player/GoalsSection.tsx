@@ -45,12 +45,10 @@ function GoalRow({ orgSlug, playerId, goal, onNotice }: { orgSlug: string; playe
   )
 }
 
-export default function GoalsSection({ orgSlug, playerId, goals, brandStrong, brandOn }: {
+export default function GoalsSection({ orgSlug, playerId, goals }: {
   orgSlug: string
   playerId: string
   goals: PlayerGoal[]
-  brandStrong: string
-  brandOn: string
 }) {
   const id = useId()
   const { pending, result, submit, clearField } = useSubmit(createGoalAction.bind(null, orgSlug, playerId))

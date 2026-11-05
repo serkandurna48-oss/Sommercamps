@@ -19,13 +19,11 @@ function registrationTime(value: string | null, fallback: string) {
 }
 
 /** Uses persisted values only. Publication submits the surrounding camp form. */
-export default function CampPublicationCard({ orgSlug, org, camp, pending, brandStrong, brandOn }: {
+export default function CampPublicationCard({ orgSlug, org, camp, pending }: {
   orgSlug: string
   org: PublicationOrganization
   camp: CampAdmin
   pending: boolean
-  brandStrong: string
-  brandOn: string
 }) {
   const [copyResult, setCopyResult] = useState<'copied' | 'error' | null>(null)
   const preview = useAdminPreview()
@@ -78,7 +76,7 @@ export default function CampPublicationCard({ orgSlug, org, camp, pending, brand
       )}
       <div className="flex flex-wrap gap-3">
         {camp.status !== 'published' ? (
-          <Button type="submit" name="publication_status" value="published" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn}>Camp veröffentlichen</Button>
+          <Button type="submit" name="publication_status" value="published" variant="primary" disabled={pending}>Camp veröffentlichen</Button>
         ) : (
           <Button type="submit" name="publication_status" value="draft" variant="danger" onClick={event => { if (!window.confirm('Camp zurückziehen? Eltern können dieses Camp dann nicht mehr buchen.')) event.preventDefault() }} disabled={pending}>Camp zurückziehen</Button>
         )}

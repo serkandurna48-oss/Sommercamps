@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import Link from '../preview/AdminLink'
 import type { CampWithStats } from '../dashboardLogic'
 import { campStatusLabel, de, formatDateRange } from '../../../lib/i18n/de'
@@ -48,10 +48,9 @@ function DashboardCampRow({ entry, orgSlug }: { entry: CampWithStats; orgSlug: s
   )
 }
 
-export default function DashboardCampsCard({ camps, orgSlug, brandColor, action }: {
+export default function DashboardCampsCard({ camps, orgSlug, action }: {
   camps: CampWithStats[]
   orgSlug: string
-  brandColor: string
   action: ReactNode
 }) {
   // Match the dashboard's existing date-only UTC comparison; a camp ending today is still current.
@@ -67,7 +66,7 @@ export default function DashboardCampsCard({ camps, orgSlug, brandColor, action 
   )
 
   return (
-    <section className="cp-card" aria-labelledby="dashboard-camps-title" style={{ '--cp-brand': brandColor } as CSSProperties}>
+    <section className="cp-card" aria-labelledby="dashboard-camps-title">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 id="dashboard-camps-title" className="cp-title">{de.dashboard.yourCamps}</h2>
         {action}

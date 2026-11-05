@@ -53,29 +53,28 @@ export default function PlayerRecordScreen({ orgSlug, org, record, query, today 
           <h2 id="new-note-heading" className="cp-title" style={{ color: 'var(--cp-ink)' }}>Neue Notiz</h2>
           <div className="max-w-[720px]">
             <QuickNoteForm orgSlug={orgSlug} playerId={player.id} bookings={bookings} initialDate={prefill.date}
-              initialCampId={prefill.campId} autoFocus={prefill.open} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+              initialCampId={prefill.campId} autoFocus={prefill.open} />
           </div>
         </section>
 
         <section className="mb-10 flex flex-col gap-4" aria-labelledby="notes-heading">
           <h2 id="notes-heading" className="cp-title" style={{ color: 'var(--cp-ink)' }}>Notizen</h2>
           <div className="max-w-[720px]">
-            <NotesTimeline orgSlug={orgSlug} playerId={player.id} notes={notes} bookings={bookings} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+            <NotesTimeline orgSlug={orgSlug} playerId={player.id} notes={notes} bookings={bookings} />
           </div>
         </section>
 
         <section className="mb-10 flex flex-col gap-4" aria-labelledby="goals-heading">
           <h2 id="goals-heading" className="cp-title" style={{ color: 'var(--cp-ink)' }}>Ziele</h2>
           <div className="max-w-[720px]">
-            <GoalsSection orgSlug={orgSlug} playerId={player.id} goals={goals} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+            <GoalsSection orgSlug={orgSlug} playerId={player.id} goals={goals} />
           </div>
         </section>
 
         <section className="mb-10 flex flex-col gap-4" aria-labelledby="measurements-heading">
           <h2 id="measurements-heading" className="cp-title" style={{ color: 'var(--cp-ink)' }}>Messwerte</h2>
           <div className="max-w-[720px]">
-            <MeasurementsSection orgSlug={orgSlug} playerId={player.id} measurements={measurements} metrics={metrics} today={today}
-              brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+            <MeasurementsSection orgSlug={orgSlug} playerId={player.id} measurements={measurements} metrics={metrics} today={today} />
           </div>
         </section>
 

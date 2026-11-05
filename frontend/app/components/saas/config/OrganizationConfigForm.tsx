@@ -24,13 +24,9 @@ const _URL_ERROR_MSG = 'Bitte eine https-Adresse oder einen Pfad wie /clubs/vere
 export default function OrganizationConfigForm({
   orgSlug,
   org,
-  brandStrong,
-  brandOn,
 }: {
   orgSlug: string
   org: OrganizationAdmin
-  brandStrong: string
-  brandOn: string
 }) {
   const [name, setName] = useState(org.name)
   const [logoUrl, setLogoUrl] = useState(org.logo_url ?? '')
@@ -77,7 +73,7 @@ export default function OrganizationConfigForm({
 
   return (
     <div className="flex flex-col gap-10">
-      <PublishToggle orgSlug={orgSlug} published={org.site_published} brandStrong={brandStrong} brandOn={brandOn} />
+      <PublishToggle orgSlug={orgSlug} published={org.site_published} />
 
       <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-8">
         {Object.values(urlErrors).some(Boolean) && (
@@ -274,7 +270,7 @@ export default function OrganizationConfigForm({
         {!pending && state.saved && !state.error && <SuccessNote>{de.configPage.saved}</SuccessNote>}
 
         <div>
-          <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn}>
+          <Button type="submit" variant="primary" disabled={pending}>
             {pending ? de.configPage.saving : de.configPage.save}
           </Button>
         </div>

@@ -10,14 +10,10 @@ const AVV_VERSION = '2026-10'
 
 export default function SubmitReviewButton({
   orgSlug,
-  brandStrong,
-  brandOn,
   reviewNote,
   submitAction,
 }: {
   orgSlug: string
-  brandStrong: string
-  brandOn: string
   reviewNote: string | null
   submitAction: SubmitAction
 }) {
@@ -60,8 +56,6 @@ export default function SubmitReviewButton({
           <Button
             type="button"
             variant="primary"
-            brandStrong={brandStrong}
-            brandOn={brandOn}
             onClick={() => { setPhase('dialog'); setAvvChecked(false); setErrorMsg('') }}
           >
             {de.onboarding.step3ActionSubmit}
@@ -99,8 +93,6 @@ export default function SubmitReviewButton({
             <Button
               type="button"
               variant="primary"
-              brandStrong={brandStrong}
-              brandOn={brandOn}
               disabled={!avvChecked || phase === 'submitting'}
               onClick={handleSubmit}
             >

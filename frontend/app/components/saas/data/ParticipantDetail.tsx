@@ -32,8 +32,6 @@ export default function ParticipantDetail({
   campSlug,
   campTitle,
   questions = [],
-  brandStrong,
-  brandOn,
   onDetailsSaved,
 }: {
   registration: RegistrationAdmin
@@ -41,8 +39,6 @@ export default function ParticipantDetail({
   campSlug: string
   campTitle: string
   questions?: RegistrationQuestion[]
-  brandStrong: string
-  brandOn: string
   onDetailsSaved?: (registration: RegistrationAdmin) => void
 }) {
   const editorId = useId()
@@ -173,7 +169,7 @@ export default function ParticipantDetail({
             )}
 
             <div className="flex gap-2">
-              <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn}>
+              <Button type="submit" variant="primary" disabled={pending}>
                 {pending ? de.command.editParticipantSaving : de.command.editParticipantSave}
               </Button>
               <Button type="button" variant="secondary" disabled={pending} onClick={() => setEditing(false)}>

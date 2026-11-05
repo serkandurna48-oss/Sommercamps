@@ -12,12 +12,10 @@ const initialState: TrainingFormState = { error: null }
 
 /** Neuer Termin: Datum und Uhrzeit in Berliner Zeit. Einzeltraining hat immer
  * genau einen Platz (kein Feld), Gruppentraining 1 bis 8. */
-export default function SessionForm({ orgSlug, offerId, kind, brandStrong, brandOn }: {
+export default function SessionForm({ orgSlug, offerId, kind }: {
   orgSlug: string
   offerId: string
   kind: OfferKind
-  brandStrong: string
-  brandOn: string
 }) {
   const feedbackId = useId()
   const [submitted, setSubmitted] = useState<Record<string, string>>({})
@@ -73,7 +71,7 @@ export default function SessionForm({ orgSlug, offerId, kind, brandStrong, brand
         <SuccessNote>{(state.createdCount ?? 1) > 1 ? `${state.createdCount} Termine angelegt.` : 'Termin angelegt.'}</SuccessNote>
       )}
       <div>
-        <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto">
+        <Button type="submit" variant="primary" disabled={pending} className="w-full sm:w-auto">
           {pending ? 'Wird angelegt …' : 'Termin anlegen'}
         </Button>
       </div>

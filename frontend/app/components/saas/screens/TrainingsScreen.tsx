@@ -36,7 +36,7 @@ export default function TrainingsScreen({ orgSlug, org, offers }: OrganizationId
             <h2 className="cp-title mb-1" style={{ color: 'var(--cp-ink)' }}>Trainingsangebote</h2>
             <p className="cp-body" style={{ color: 'var(--cp-muted)' }}>Einzel- und Gruppentrainings mit festen Terminen. Eltern buchen über einen Link.</p>
           </div>
-          <ButtonLink href={`/pilot/${orgSlug}/trainings/new`} variant="primary" brandStrong={brand.brandStrong} brandOn={brand.brandOn}>
+          <ButtonLink href={`/pilot/${orgSlug}/trainings/new`} variant="primary">
             Angebot anlegen
           </ButtonLink>
         </div>

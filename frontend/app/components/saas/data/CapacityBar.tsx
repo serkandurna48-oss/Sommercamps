@@ -10,8 +10,6 @@ export default function CapacityBar({
 }: {
   filled: number
   total: number
-  /** @deprecated The bar uses the CampsPilot orange. Ignored. */
-  brandColor?: string
 }) {
   const ratio = total > 0 ? Math.max(0, Math.min(1, filled / total)) : 0
   return (

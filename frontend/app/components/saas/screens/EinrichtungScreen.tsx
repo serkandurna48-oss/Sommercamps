@@ -2,7 +2,7 @@
 
 import { useState, useActionState, useId } from 'react'
 import type { CampAdmin, OrganizationAdmin } from '../../../lib/saasAdminApi'
-import { computeBrandTokens, type BrandTokens } from '../brandPipeline'
+import { computeBrandTokens } from '../brandPipeline'
 import { computeWizardStep } from '../onboardingSteps'
 import BrandPreview from '../brand/BrandPreview'
 import ColorField from '../brand/ColorField'
@@ -69,20 +69,19 @@ export default function EinrichtungScreen({
       <main className={PAGE_FORM}>
         <ProgressBar step={step} total={4} />
         {step === 1 && (
-          <Step1Auftritt orgSlug={orgSlug} org={org} brand={brand} onSuccess={goNext} />
+          <Step1Auftritt orgSlug={orgSlug} org={org} onSuccess={goNext} />
         )}
         {step === 2 && (
-          <Step2Rechtliches orgSlug={orgSlug} org={org} brand={brand} onSuccess={goNext} onBack={goBack} />
+          <Step2Rechtliches orgSlug={orgSlug} org={org} onSuccess={goNext} onBack={goBack} />
         )}
         {step === 3 && (
-          <Step3Camp orgSlug={orgSlug} org={org} camps={camps} brand={brand} onSuccess={goNext} onBack={goBack} />
+          <Step3Camp orgSlug={orgSlug} org={org} camps={camps} onSuccess={goNext} onBack={goBack} />
         )}
         {step === 4 && (
           <Step4Pruefen
             orgSlug={orgSlug}
             org={org}
             camps={camps}
-            brand={brand}
             onBack={goBack}
             goToStep={goToStep}
             submitAction={reviewSubmitAction}
@@ -163,8 +162,6 @@ function WizardNavButtons({
   onBack,
   submitType = false,
   onNext,
-  brandStrong,
-  brandOn,
 }: {
   step: number
   total: number
@@ -172,19 +169,17 @@ function WizardNavButtons({
   onBack?: () => void
   submitType?: boolean
   onNext?: () => void
-  brandStrong: string
-  brandOn: string
 }) {
   const isLast = step === total
   return (
     <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
       {!isLast && submitType && (
-        <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto sm:order-2">
+        <Button type="submit" variant="primary" disabled={pending} className="w-full sm:w-auto sm:order-2">
           {pending ? de.einrichtung.weiterSaving : de.einrichtung.weiter}
         </Button>
       )}
       {!isLast && !submitType && onNext && (
-        <Button type="button" variant="primary" onClick={onNext} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto sm:order-2">
+        <Button type="button" variant="primary" onClick={onNext} className="w-full sm:w-auto sm:order-2">
           {de.einrichtung.weiter}
         </Button>
       )}
@@ -215,12 +210,10 @@ function ErrorBanner({ id, children }: { id?: string; children: string }) {
 function Step1Auftritt({
   orgSlug,
   org,
-  brand,
   onSuccess,
 }: {
   orgSlug: string
   org: OrganizationAdmin
-  brand: BrandTokens
   onSuccess: () => void
 }) {
   const preview = useAdminPreview()
@@ -279,8 +272,6 @@ function Step1Auftritt({
           total={4}
           pending={pending}
           submitType
-          brandStrong={brand.brandStrong}
-          brandOn={brand.brandOn}
         />
       </form>
     </>
@@ -292,13 +283,11 @@ function Step1Auftritt({
 function Step2Rechtliches({
   orgSlug,
   org,
-  brand,
   onSuccess,
   onBack,
 }: {
   orgSlug: string
   org: OrganizationAdmin
-  brand: BrandTokens
   onSuccess: () => void
   onBack: () => void
 }) {
@@ -389,8 +378,6 @@ function Step2Rechtliches({
           pending={pending}
           onBack={onBack}
           submitType
-          brandStrong={brand.brandStrong}
-          brandOn={brand.brandOn}
         />
       </form>
     </>
@@ -403,14 +390,12 @@ function Step3Camp({
   orgSlug,
   org: _org,
   camps,
-  brand,
   onSuccess,
   onBack,
 }: {
   orgSlug: string
   org: OrganizationAdmin
   camps: CampAdmin[]
-  brand: BrandTokens
   onSuccess: () => void
   onBack: () => void
 }) {
@@ -446,8 +431,6 @@ function Step3Camp({
           total={4}
           onBack={onBack}
           onNext={onSuccess}
-          brandStrong={brand.brandStrong}
-          brandOn={brand.brandOn}
         />
       </>
     )
@@ -458,8 +441,6 @@ function Step3Camp({
       <StepHeader title={de.einrichtung.step3Title} kicker={de.einrichtung.step3Kicker} />
       <CampCreateForm
         orgSlug={orgSlug}
-        brandStrong={brand.brandStrong}
-        brandOn={brand.brandOn}
         backButton={
           <Button type="button" variant="secondary" onClick={onBack} className="sm:order-1">
             {de.einrichtung.back}
@@ -484,7 +465,6 @@ function Step4Pruefen({
   orgSlug,
   org,
   camps,
-  brand,
   onBack,
   goToStep,
   submitAction,
@@ -492,7 +472,6 @@ function Step4Pruefen({
   orgSlug: string
   org: OrganizationAdmin
   camps: CampAdmin[]
-  brand: BrandTokens
   onBack: () => void
   goToStep: (s: WizardStep) => void
   submitAction: SubmitAction
@@ -556,8 +535,6 @@ function Step4Pruefen({
         <ButtonLink
           href={`/pilot/${orgSlug}`}
           variant="secondary"
-          brandStrong={brand.brandStrong}
-          brandOn={brand.brandOn}
         >
           {de.einrichtung.previewLink}
         </ButtonLink>
@@ -573,7 +550,7 @@ function Step4Pruefen({
             {de.einrichtung.approvedBanner}
           </p>
           <div className="mb-3 flex flex-wrap gap-3">
-            {!org.site_published && <ButtonLink href={`/pilot/${orgSlug}/konfiguration#publication`} variant="primary" brandStrong={brand.brandStrong} brandOn={brand.brandOn}>
+            {!org.site_published && <ButtonLink href={`/pilot/${orgSlug}/konfiguration#publication`} variant="primary">
               {de.einrichtung.publishSite}
             </ButtonLink>}
             {camps.filter(camp => camp.status !== 'published').slice(0, 1).map(camp => (
@@ -584,9 +561,7 @@ function Step4Pruefen({
           </div>
           <ButtonLink
             href={`/pilot/${orgSlug}/dashboard`}
-            variant="primary"
-            brandStrong={brand.brandStrong}
-            brandOn={brand.brandOn}
+            variant={org.site_published ? 'primary' : 'secondary'}
           >
             {de.einrichtung.dashboardLink}
           </ButtonLink>
@@ -596,8 +571,6 @@ function Step4Pruefen({
       {(needsReview) && allDone && (
         <SubmitReviewButton
           orgSlug={orgSlug}
-          brandStrong={brand.brandStrong}
-          brandOn={brand.brandOn}
           reviewNote={reviewNote}
           submitAction={submitAction}
         />
@@ -613,8 +586,6 @@ function Step4Pruefen({
         step={4}
         total={4}
         onBack={onBack}
-        brandStrong={brand.brandStrong}
-        brandOn={brand.brandOn}
       />
     </>
   )

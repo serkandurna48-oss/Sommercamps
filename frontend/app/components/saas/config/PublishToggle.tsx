@@ -24,13 +24,9 @@ import { setOrganizationPublishedAction, type PublishActionState } from '../acti
 export default function PublishToggle({
   orgSlug,
   published,
-  brandStrong,
-  brandOn,
 }: {
   orgSlug: string
   published: boolean
-  brandStrong?: string
-  brandOn?: string
 }) {
   const feedbackId = useId()
   const hintId = `${feedbackId}-hint`
@@ -70,8 +66,6 @@ export default function PublishToggle({
           type="submit"
           variant={published ? 'danger' : 'primary'}
           disabled={pending}
-          brandStrong={brandStrong}
-          brandOn={brandOn}
         >
           {pending ? 'Wird gespeichert …' : published ? 'Vereinsseite zurückziehen' : 'Vereinsseite veröffentlichen'}
         </Button>

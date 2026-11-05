@@ -23,7 +23,7 @@ export default function TrainingOfferCreateScreen({ orgSlug, org }: Organization
         <p className="cp-body mb-8" style={{ color: 'var(--cp-muted)' }}>
           Das Angebot startet als Entwurf. Termine fügen Sie danach hinzu; öffentlich sichtbar ist es erst, wenn Sie es veröffentlichen.
         </p>
-        <OfferForm orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn}
+        <OfferForm orgSlug={orgSlug}
           backButton={<ButtonLink href={`/pilot/${orgSlug}/trainings`}>Abbrechen</ButtonLink>} />
       </main>
     </>

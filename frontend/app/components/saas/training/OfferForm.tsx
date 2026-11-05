@@ -23,11 +23,9 @@ const initialState: TrainingFormState = { error: null }
 
 /** Anlegen und Bearbeiten eines Trainingsangebots. Web-Adresse und Art sind
  * nach dem Anlegen unveränderlich (Backend: 422), im Bearbeiten nur Anzeige. */
-export default function OfferForm({ orgSlug, offer, brandStrong, brandOn, backButton }: {
+export default function OfferForm({ orgSlug, offer, backButton }: {
   orgSlug: string
   offer?: TrainingOffer
-  brandStrong: string
-  brandOn: string
   backButton?: ReactNode
 }) {
   const feedbackId = useId()
@@ -121,7 +119,7 @@ export default function OfferForm({ orgSlug, offer, brandStrong, brandOn, backBu
       {!pending && state.saved && editing && <SuccessNote>Gespeichert.</SuccessNote>}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="submit" variant={editing ? 'secondary' : 'primary'} disabled={pending} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto sm:order-2">
+        <Button type="submit" variant={editing ? 'secondary' : 'primary'} disabled={pending} className="w-full sm:w-auto sm:order-2">
           {pending ? 'Wird gespeichert …' : editing ? 'Speichern' : 'Angebot anlegen'}
         </Button>
         {backButton}

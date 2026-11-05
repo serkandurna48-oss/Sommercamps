@@ -14,7 +14,7 @@ const offer: TrainingOffer = {
 }
 const render = (o?: TrainingOffer) => {
   const doc = new DOMParser().parseFromString(
-    renderToStaticMarkup(<OfferForm orgSlug="demo" offer={o} brandStrong="#000" brandOn="#fff" />), 'text/html')
+    renderToStaticMarkup(<OfferForm orgSlug="demo" offer={o} />), 'text/html')
   return doc
 }
 

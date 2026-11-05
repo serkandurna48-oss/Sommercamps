@@ -1,6 +1,5 @@
 'use client'
 
-import { computeBrandTokens } from '../brandPipeline'
 
 import { useId, useMemo, useState } from 'react'
 import { de, formatEuro, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
@@ -41,7 +40,6 @@ export default function PaymentSection({
   entries,
   org,
   orgSlug,
-  brandColor,
   emptyLabel,
   showCampTitle = false,
   csvFilename,
@@ -51,7 +49,6 @@ export default function PaymentSection({
   entries: PaymentEntry[]
   org: ReminderOrganization
   orgSlug: string
-  brandColor: string
   emptyLabel: string
   showCampTitle?: boolean
   csvFilename: string
@@ -63,7 +60,6 @@ export default function PaymentSection({
   const [lastPaid, setLastPaid] = useState<PaymentEntry | null>(null)
   const [undoMessage, setUndoMessage] = useState<string | null>(null)
   const searchId = useId()
-  const brand = computeBrandTokens(brandColor)
 
   const counts = useMemo(
     () => ({
@@ -138,14 +134,12 @@ export default function PaymentSection({
           label={de.paymentsPage.filterOpen}
           count={counts.open}
           active={filter === 'open'}
-          brandColor={brandColor}
           onClick={() => setFilter('open')}
         />
         <FilterButton
           label={de.paymentsPage.filterPaid}
           count={counts.paid}
           active={filter === 'paid'}
-          brandColor={brandColor}
           onClick={() => setFilter(f => (f === 'paid' ? 'all' : 'paid'))}
         />
         {counts.waived > 0 && (
@@ -153,11 +147,10 @@ export default function PaymentSection({
             label={de.paymentsPage.filterWaived}
             count={counts.waived}
             active={filter === 'waived'}
-            brandColor={brandColor}
             onClick={() => setFilter(f => (f === 'waived' ? 'all' : 'waived'))}
           />
         )}
-        <FilterButton label={de.paymentsPage.filterAll} count={counts.all} active={filter === 'all'} brandColor={brandColor} onClick={() => setFilter('all')} />
+        <FilterButton label={de.paymentsPage.filterAll} count={counts.all} active={filter === 'all'} onClick={() => setFilter('all')} />
       </div>
       </div>
 
@@ -183,8 +176,6 @@ export default function PaymentSection({
               camp={e.camp}
               org={org}
               orgSlug={orgSlug}
-              brandStrong={brand.brandStrong}
-              brandOn={brand.brandOn}
               onPaid={() => { setLastPaid(e); setUndoMessage(null) }}
             />
           ))}

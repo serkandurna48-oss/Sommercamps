@@ -28,7 +28,7 @@ afterEach(async () => {
 
 it.each([false, true].flatMap(sitePublished => (['draft', 'published', 'closed', 'archived'] as const).map(status => ({ sitePublished, status }))))(
   'shows accurate publication states for $sitePublished / $status', async ({ sitePublished, status }) => {
-    await act(() => root.render(<CampPublicationCard orgSlug="review" org={{ ...org, site_published: sitePublished }} camp={{ ...camp, status }} pending={false} brandStrong="#112233" brandOn="#ffffff" />))
+    await act(() => root.render(<CampPublicationCard orgSlug="review" org={{ ...org, site_published: sitePublished }} camp={{ ...camp, status }} pending={false} />))
     const labels = { draft: 'Entwurf', published: 'Öffentlich', closed: 'Geschlossen', archived: 'Archiviert' }
     expect(container.textContent).toContain(`Vereinsseite: ${sitePublished ? 'Öffentlich' : 'Entwurf'}`)
     expect(container.textContent).toContain(`Camp: ${labels[status]}`)
@@ -48,7 +48,7 @@ it.each([false, true].flatMap(sitePublished => (['draft', 'published', 'closed',
 )
 
 it('shows completed checks and explicit registration dates', async () => {
-  await act(() => root.render(<CampPublicationCard orgSlug="review" org={{ site_published: true, contact_email: 'test@example.com', iban: 'DE123', terms_text: 'Bedingungen' }} camp={{ ...camp, location: 'Sportplatz', registration_start: '2027-06-01T08:00:00Z', registration_end: '2027-07-01T16:00:00Z' }} pending={false} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<CampPublicationCard orgSlug="review" org={{ site_published: true, contact_email: 'test@example.com', iban: 'DE123', terms_text: 'Bedingungen' }} camp={{ ...camp, location: 'Sportplatz', registration_start: '2027-06-01T08:00:00Z', registration_end: '2027-07-01T16:00:00Z' }} pending={false} />))
   expect(container.querySelectorAll('li')).toHaveLength(4)
   for (const check of container.querySelectorAll('li')) expect(check.textContent).toContain('Vorhanden')
   expect(container.textContent).toContain('01.06.2027, 10:00')
@@ -58,7 +58,7 @@ it('shows completed checks and explicit registration dates', async () => {
 it('copies the real public registration page and reports clipboard errors', async () => {
   const writeText = vi.fn().mockResolvedValue(undefined)
   vi.stubGlobal('navigator', { clipboard: { writeText } })
-  await act(() => root.render(<CampPublicationCard orgSlug="review" org={{ ...org, site_published: true }} camp={{ ...camp, status: 'published' }} pending={false} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<CampPublicationCard orgSlug="review" org={{ ...org, site_published: true }} camp={{ ...camp, status: 'published' }} pending={false} />))
   const copy = Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Anmeldelink kopieren')!
   await act(async () => copy.click())
   expect(writeText).toHaveBeenCalledWith(new URL('/pilot/review?camp=summer', window.location.origin).href)

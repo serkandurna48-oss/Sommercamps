@@ -15,7 +15,7 @@ import { formatImportError } from './trainingLogic'
 /** CSV-Import der Mitgliederliste. Die Datei wird im Browser gelesen
  * (UTF-8, bei Excel-Export windows-1252) und als Text gesendet. Nichts davon
  * wird geloggt; Fehler nennen nur Zeile, Feld und Code. */
-export default function MemberImport({ orgSlug, brandStrong, brandOn }: { orgSlug: string; brandStrong: string; brandOn: string }) {
+export default function MemberImport({ orgSlug }: { orgSlug: string }) {
   const inputId = useId()
   const input = useRef<HTMLInputElement>(null)
   const [fileName, setFileName] = useState<string | null>(null)
@@ -78,7 +78,7 @@ export default function MemberImport({ orgSlug, brandStrong, brandOn }: { orgSlu
           {fileName && <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>Ausgewählt: {fileName}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn}>
+          <Button type="submit" variant="primary" disabled={pending}>
             {pending ? 'Wird importiert …' : 'Importieren'}
           </Button>
           <Button type="button" onClick={downloadTemplate}>Vorlage herunterladen</Button>

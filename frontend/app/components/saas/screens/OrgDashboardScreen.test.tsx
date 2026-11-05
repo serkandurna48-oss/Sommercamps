@@ -5,7 +5,6 @@ import OrgDashboardScreen from './OrgDashboardScreen'
 import { camps as fixtures, organization, registrations } from '../../../dev/admin-vorschau/fixtures'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { formatDateRange } from '../../../lib/i18n/de'
-import { computeBrandTokens } from '../brandPipeline'
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/pilot/demo/dashboard' }))
 vi.mock('next/link', () => ({
@@ -59,7 +58,8 @@ describe('Ihre Camps auf dem Dashboard', () => {
   ] as const)('zeigt bei %i Prozent den richtigen Belegungsstatus', (count, status) => {
     const card = render([camp('belegung')], [Array.from({ length: count }, () => ({ ...registrations[0], status: 'confirmed' as const }))])
     expect(card.textContent).toContain(`${count} von 100 Plätzen belegt`)
-    expect(card.style.getPropertyValue('--cp-brand')).toBe(computeBrandTokens(null).brand)
+    // Redesign R2: the capacity bar uses the CampsPilot accent, no club colour on the card.
+    expect(card.style.getPropertyValue('--cp-brand')).toBe('')
     if (status) expect(card.textContent).toContain(status)
     if (status !== 'fast voll') expect(card.textContent).not.toContain('fast voll')
     if (status !== 'ausgebucht') expect(card.textContent).not.toContain('ausgebucht')

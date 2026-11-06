@@ -7,7 +7,7 @@
 -- Grenzen (max. 10 Felder je Import, Label <= 40, Wert <= 200 Zeichen) prueft das Backend.
 -- Idempotent: IF NOT EXISTS / DROP ... IF EXISTS Guards.
 
-set lock_timeout = '5s';
+set local lock_timeout = '5s';
 
 alter table public.organization_memberships
     add column if not exists extra jsonb not null default '{}'::jsonb;

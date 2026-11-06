@@ -18,6 +18,9 @@ MAX_ROWS = 2000
 MAX_NAME_LEN = 100
 MAX_NUMBER_LEN = 50
 MAX_EXTRA_FIELDS = 10
+# Distinct extra labels per organization (all members together): bounds what the
+# club keeps and the number of columns in the member list.
+MAX_ORG_EXTRA_FIELDS = 20
 MAX_EXTRA_LABEL_LEN = 40
 MAX_EXTRA_VALUE_LEN = 200
 MAX_MAPPING_KEYS = 200
@@ -155,12 +158,18 @@ _TARGETS = {"first_name": "vorname", "last_name": "nachname", "birth_date": "geb
             "member_number": "mitgliedsnummer"}
 
 
+# JS object prototype names: the admin UI reads extra[label] from plain objects.
+_RESERVED_LABELS = frozenset({"__proto__", "constructor", "prototype"})
+
+
 def clean_extra_label(value: object) -> Optional[str]:
     """Trimmed label, inner whitespace runs collapsed; None if not a usable label."""
     if not isinstance(value, str):
         return None
     label = " ".join(value.split())
     if not label or len(label) > MAX_EXTRA_LABEL_LEN or any(ord(ch) < 32 for ch in label):
+        return None
+    if label.casefold() in _RESERVED_LABELS:
         return None
     return label
 
@@ -176,15 +185,17 @@ def parse_mapping(mapping: object, width: int) -> tuple[dict[str, int], dict[int
     idx: dict[str, int] = {}
     extras: dict[int, str] = {}
     seen_labels: set[str] = set()
+    seen_cols: set[int] = set()
     for key, target in mapping.items():
-        try:
-            col = int(key)
-        except (TypeError, ValueError):
+        # Canonical decimal keys only ("3", not " 3" or "03"): one column, one target.
+        if not isinstance(key, str) or not key.isdigit() or str(int(key)) != key:
             errors.append(_err(1, "mapping", "invalid_column"))
             continue
-        if col < 0 or col >= width or str(col) != str(key).strip():
+        col = int(key)
+        if col >= width or col in seen_cols:
             errors.append(_err(1, "mapping", "invalid_column"))
             continue
+        seen_cols.add(col)
         if target is None:
             continue
         if isinstance(target, str) and target in _TARGETS:

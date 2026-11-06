@@ -22,7 +22,7 @@ from ..admin_resolve import require_organization
 from ..db import DatabaseBusy
 from ..auth_deps import AuthContext, require_org_access
 from ..membership_csv import (
-    MAX_EXTRA_FIELDS, MAX_EXTRA_VALUE_LEN, MembershipCsvError, clean_extra_label, parse_membership_csv,
+    MAX_EXTRA_VALUE_LEN, MAX_ORG_EXTRA_FIELDS, MembershipCsvError, clean_extra_label, parse_membership_csv,
 )
 from ..repositories import memberships as memberships_repo
 from ..repositories import platform_roles
@@ -55,8 +55,9 @@ class MemberCreate(BaseModel):
     member_number: Optional[str] = Field(default=None, max_length=50)
 
 
-# A single member may collect more labels than one import allows (merge on re-import).
-MAX_MEMBER_EXTRA_FIELDS = 2 * MAX_EXTRA_FIELDS
+# Same bound as the organization-wide label limit (a member cannot hold more).
+MAX_MEMBER_EXTRA_FIELDS = MAX_ORG_EXTRA_FIELDS
+_ORG_LIMIT_ERROR = {"row": 1, "field": "extra", "code": "too_many_org_extra_fields"}
 
 
 class MemberUpdate(BaseModel):
@@ -160,7 +161,12 @@ def update_member(
 ) -> dict:
     organization = require_organization(organization_slug)
     extra = _clean_extra(data.extra) if data.extra is not None else None
-    row = memberships_repo.update_member(organization["id"], member_id, active=data.active, extra=extra)
+    try:
+        row = memberships_repo.update_member(organization["id"], member_id, active=data.active, extra=extra,
+                                             max_org_labels=MAX_ORG_EXTRA_FIELDS)
+    except memberships_repo.ExtraFieldLimitError:
+        raise HTTPException(status_code=422, detail={
+            "code": "validation_error", "field": "extra", "reason": "too_many_org_extra_fields"}) from None
     if row is None:
         raise HTTPException(status_code=404, detail="Member not found")
     if data.active is not None:
@@ -191,7 +197,13 @@ def import_members(
             detail={"code": "import_invalid", "errors": exc.errors},
         ) from None
     try:
-        result = memberships_repo.import_members(organization["id"], rows)
+        result = memberships_repo.import_members(organization["id"], rows, max_org_labels=MAX_ORG_EXTRA_FIELDS)
+    except memberships_repo.ExtraFieldLimitError:
+        logger.info("Member import rejected (slug=%s, reason=org_extra_limit)", organization_slug)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "import_invalid", "errors": [_ORG_LIMIT_ERROR]},
+        ) from None
     except DatabaseBusy:
         raise
     except Exception as exc:
@@ -207,3 +219,28 @@ def import_members(
         metadata["extra_fields"] = sum(1 for t in data.mapping.values() if isinstance(t, dict))
     _audit(auth, organization, "memberships.imported", None, metadata)
     return result
+
+
+class ExtraFieldRemoveOut(BaseModel):
+    members: int
+
+
+@router.delete(
+    "/organizations/{organization_slug}/club-members/extra-fields",
+    response_model=ExtraFieldRemoveOut,
+)
+def remove_extra_field(
+    organization_slug: str,
+    label: str = Query(min_length=1, max_length=100),
+    auth: AuthContext = Depends(require_org_access),
+) -> dict:
+    """Remove one extra field from every member of the organization (e.g. a
+    column that was imported by mistake). Exact label match; audit has counts only."""
+    organization = require_organization(organization_slug)
+    cleaned = " ".join(label.split())
+    if not cleaned:
+        raise HTTPException(status_code=422, detail={"code": "validation_error", "field": "label", "reason": "invalid_label"})
+    changed = memberships_repo.remove_extra_label(organization["id"], cleaned)
+    logger.info("Member extra field removed (slug=%s, members=%d)", organization_slug, changed)
+    _audit(auth, organization, "memberships.extra_field_removed", None, {"members": changed})
+    return {"members": changed}

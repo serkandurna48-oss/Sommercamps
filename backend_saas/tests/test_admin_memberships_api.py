@@ -180,7 +180,7 @@ def test_import_db_failure_midway_rolls_back_everything(ctx, monkeypatch):
 def test_import_unexpected_failure_is_500_and_saves_nothing(ctx, monkeypatch):
     c = ctx
 
-    def boom(org, rows):
+    def boom(org, rows, **kwargs):
         raise RuntimeError("db down")
 
     monkeypatch.setattr(memberships, "import_members", boom)
@@ -252,7 +252,7 @@ def test_import_missing_csv_field_does_not_echo(ctx):
 def test_import_db_error_logs_no_personal_data(ctx, monkeypatch, caplog):
     c = ctx
 
-    def boom(org, rows):
+    def boom(org, rows, **kwargs):
         raise RuntimeError('Failing row contains (Geheimvorname, Geheimnachname, 2015-03-05)')
 
     monkeypatch.setattr(memberships, "import_members", boom)
@@ -267,7 +267,7 @@ def test_import_database_busy_stays_503(ctx, monkeypatch):
     from app.db import DatabaseBusy
     c = ctx
 
-    def busy(org, rows):
+    def busy(org, rows, **kwargs):
         raise DatabaseBusy()
 
     monkeypatch.setattr(memberships, "import_members", busy)

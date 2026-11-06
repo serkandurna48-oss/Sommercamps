@@ -301,3 +301,83 @@ def test_is_member_is_org_filtered_for_other_tenant(ctx):
     players.find_or_create_player_id(c["other"], "Tom", "Gast", born)
     memberships.create_member(c["org"], first_name="Tom", last_name="Gast", birth_date=born)
     assert _players(c, slug=c["other_slug"], headers=_as_other(c))["Tom"]["is_member"] is False
+
+
+# ---------- review fixes: org-wide label cap, remove field, key/label hardening ----------
+
+def test_non_canonical_or_repeated_column_keys_rejected():
+    text = "a;b;c;d\nA;B;01.01.2015;x\n"
+    base = {"0": "first_name", "1": "last_name", "2": "birth_date"}
+    for key in (" 3", "03", "+3", "3.0"):
+        assert {"row": 1, "field": "mapping", "code": "invalid_column"} in _errors(text, {**base, key: {"extra": "X"}})
+    # "2" and "02" would point two targets at the same column.
+    assert {"row": 1, "field": "mapping", "code": "invalid_column"} in _errors(text, {**base, "02": {"extra": "X"}})
+
+
+@pytest.mark.parametrize("label", ["__proto__", "constructor", "Prototype"])
+def test_js_prototype_labels_rejected(label):
+    errs = _errors("a;b;c;d\nA;B;01.01.2015;x\n", {"0": "first_name", "1": "last_name", "2": "birth_date", "3": {"extra": label}})
+    assert errs == [{"row": 1, "field": "extra", "code": "invalid_label"}]
+
+
+def _wide_import(c, first, labels):
+    header = ";".join(["v", "n", "g", *labels])
+    row = ";".join([first, "Muster", "05.03.2015", *["x"] * len(labels)])
+    mapping = {"0": "first_name", "1": "last_name", "2": "birth_date"}
+    mapping.update({str(i + 3): {"extra": label} for i, label in enumerate(labels)})
+    return _import(c, f"{header}\n{row}\n", mapping)
+
+
+def test_org_wide_extra_label_cap_rolls_back_whole_import(ctx):
+    c = ctx
+    assert _wide_import(c, "Anna", [f"A{i}" for i in range(10)]).status_code == 200
+    assert _wide_import(c, "Ben", [f"B{i}" for i in range(10)]).status_code == 200  # 20 labels in the org
+    r = _wide_import(c, "Cleo", ["C0"])
+    assert r.status_code == 422
+    assert r.json()["detail"] == {"code": "import_invalid", "errors": [{"row": 1, "field": "extra", "code": "too_many_org_extra_fields"}]}
+    assert set(_list(c)) == {"Anna", "Ben"}  # Cleo rolled back
+    # Known labels still import fine; other tenant has its own budget.
+    assert _wide_import(c, "Cleo", ["A1", "B1"]).status_code == 200
+    assert _import(c, "v;n;g\nX;Y;05.03.2015\n", {"0": "first_name", "1": "last_name", "2": "birth_date"},
+                   headers=_as_other(c)).status_code == 403  # admin of other org on this slug
+    other = _import(c, "v;n;g;t\nDora;D;05.03.2015;x\n", {"0": "first_name", "1": "last_name", "2": "birth_date", "3": {"extra": "Neu"}},
+                    slug=c["other_slug"], headers=_as_other(c))
+    assert other.status_code == 200
+
+
+def test_patch_respects_org_wide_cap(ctx):
+    c = ctx
+    assert _wide_import(c, "Anna", [f"A{i}" for i in range(10)]).status_code == 200
+    assert _wide_import(c, "Ben", [f"B{i}" for i in range(10)]).status_code == 200
+    anna, ben = _list(c)["Anna"], _list(c)["Ben"]
+    r = c["client"].patch(f"{_members(c)}/{anna['id']}", headers=c["headers"], json={"extra": {**anna["extra"], "Zu viel": "1"}})
+    assert r.status_code == 422 and r.json()["detail"]["reason"] == "too_many_org_extra_fields"
+    # Replacing Ben's B-labels with one new label keeps the org at 11 labels -> ok.
+    r = c["client"].patch(f"{_members(c)}/{ben['id']}", headers=c["headers"], json={"extra": {"Neu": "1"}})
+    assert r.status_code == 200 and r.json()["extra"] == {"Neu": "1"}
+    assert "Zu viel" not in _list(c)["Anna"]["extra"]
+
+
+def test_remove_extra_field_org_wide_and_isolated(ctx):
+    c = ctx
+    base = {"0": "first_name", "1": "last_name", "2": "birth_date"}
+    csv_text = "v;n;g;t;p\nAnna;Muster;05.03.2015;U10;0123\nBen;B;05.03.2015;U11;0456\nCleo;C;05.03.2015;U12;\n"
+    assert _import(c, csv_text, {**base, "3": {"extra": "Team"}, "4": {"extra": "Telefon"}}).status_code == 200
+    _as_other(c)
+    assert _import(c, csv_text, {**base, "4": {"extra": "Telefon"}}, slug=c["other_slug"], headers=_as_other(c)).status_code == 200
+    url = _members(c) + "/extra-fields"
+    # Admin of the other org cannot remove fields here.
+    assert c["client"].delete(url, params={"label": "Telefon"}, headers=_as_other(c)).status_code == 403
+    r = c["client"].delete(url, params={"label": " Telefon "}, headers=_as_admin(c))
+    assert r.status_code == 200 and r.json() == {"members": 2}
+    listed = _list(c)
+    assert {k: v["extra"] for k, v in listed.items()} == {"Anna": {"Team": "U10"}, "Ben": {"Team": "U11"}, "Cleo": {"Team": "U12"}}
+    assert c["client"].delete(url, params={"label": "Gibt es nicht"}, headers=c["headers"]).json() == {"members": 0}
+    assert c["client"].delete(url, params={"label": "   "}, headers=c["headers"]).status_code == 422
+    with c["cursor"]() as cur:
+        cur.execute("select metadata from audit_log where organization_id=%s and action='memberships.extra_field_removed' "
+                    "order by created_at", (c["org"],))
+        metas = [r["metadata"] for r in cur.fetchall()]
+    assert metas[0] == {"members": 2} and "Telefon" not in repr(metas)
+    other = _list(c, slug=c["other_slug"], headers=_as_other(c))
+    assert all(m["extra"].get("Telefon") for k, m in other.items() if k != "Cleo")

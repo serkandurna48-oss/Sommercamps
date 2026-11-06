@@ -9,6 +9,7 @@ import MembersSection from './MembersSection'
 import BillingNotesForm from './BillingNotesForm'
 import StripeConnectForm from './StripeConnectForm'
 import FeeRuleForm from './FeeRuleForm'
+import OnlinePaymentToggle from './OnlinePaymentToggle'
 import { formatFeeRule, formatStripeStatus } from './feeFormat'
 import ModulesForm from './ModulesForm'
 import { orgModules } from '../../../lib/orgModules'
@@ -216,6 +217,7 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
           <p className="cp-body mt-1" style={{ color: 'var(--cp-ink-2)' }} data-testid="stripe-status">
             Stripe: {formatStripeStatus(stripeStatus)}
           </p>
+          {stripeStatus && <OnlinePaymentToggle orgSlug={org.slug} enabled={stripeStatus.platform_enabled} />}
           {feeRules && feeRules.history.length > 0 && (
             <div className="mt-4 overflow-x-auto">
               <table className="cp-body w-full text-left">

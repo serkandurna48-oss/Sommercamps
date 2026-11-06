@@ -91,7 +91,7 @@ export interface RegistrationAdmin {
   registration_token: string
   payment_reference: string
   status: 'registered' | 'confirmed' | 'cancelled' | 'waitlist'
-  payment_status: 'open' | 'paid' | 'refunded' | 'waived' | 'cancelled'
+  payment_status: 'open' | 'paid' | 'partially_refunded' | 'refunded' | 'waived' | 'cancelled'
   parent_first_name: string
   parent_last_name: string
   parent_email: string
@@ -1035,7 +1035,7 @@ export interface PlayerBooking {
   local_date: string
   local_time: string | null
   status: 'registered' | 'confirmed' | 'cancelled' | 'waitlist'
-  payment_status: 'open' | 'paid' | 'refunded' | 'waived' | 'cancelled'
+  payment_status: 'open' | 'paid' | 'partially_refunded' | 'refunded' | 'waived' | 'cancelled'
   documentation_consent: boolean | null
 }
 
@@ -1245,7 +1245,9 @@ export async function saveBillingProfileAdmin(orgSlug: string, token: string, da
 }
 
 export interface StripePaymentStatus {
-  state: 'not_set_up' | 'incomplete' | 'active'
+  state: 'not_set_up' | 'incomplete' | 'awaiting_approval' | 'active'
+  /** Platform owner's per-club switch (online_payment_enabled). */
+  platform_enabled: boolean
   charges_enabled: boolean
   payouts_enabled: boolean
   details_submitted: boolean
@@ -1270,6 +1272,13 @@ export async function syncStripePaymentStatusAdmin(orgSlug: string, token: strin
 }
 
 /** Returns the single-use Stripe onboarding URL. */
+/** Platform owner: switch online payment for one club on or off. */
+export async function setOnlinePaymentEnabledAdmin(orgSlug: string, token: string, enabled: boolean): Promise<StripePaymentStatus> {
+  const res = await adminMutate(`/admin/platform/organizations/${encodeURIComponent(orgSlug)}/online-payment`, token, 'PATCH', { enabled })
+  if (!res.ok) throw new AdminActionError('Online-Zahlung konnte nicht umgeschaltet werden.')
+  return res.json() as Promise<StripePaymentStatus>
+}
+
 export async function startStripeOnboardingAdmin(
   orgSlug: string, token: string, businessType: 'company' | 'non_profit',
 ): Promise<string> {

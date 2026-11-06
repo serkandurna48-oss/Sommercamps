@@ -11,12 +11,14 @@ import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 const STATE_LABEL: Record<StripePaymentStatus['state'], string> = {
   not_set_up: 'Nicht eingerichtet',
   incomplete: 'Angaben fehlen',
+  awaiting_approval: 'Wartet auf Freigabe',
   active: 'Aktiv',
 }
 
 const STATE_TONE: Record<StripePaymentStatus['state'], { color: string; background: string }> = {
   not_set_up: { color: 'var(--cp-muted)', background: 'var(--cp-surface-sunken)' },
   incomplete: { color: 'var(--cp-pending)', background: 'var(--cp-pending-bg)' },
+  awaiting_approval: { color: 'var(--cp-info)', background: 'var(--cp-info-bg)' },
   active: { color: 'var(--cp-ok)', background: 'var(--cp-ok-bg)' },
 }
 
@@ -57,13 +59,18 @@ export default function PaymentSetupCard({ orgSlug, status }: { orgSlug: string;
         <p className="cp-body" style={{ color: 'var(--cp-ink-2)' }}>
           Damit Eltern direkt nach der Anmeldung online bezahlen können, richtest du einmalig ein Konto bei unserem
           Zahlungspartner Stripe ein. Halte dafür die Vereinsdaten, die IBAN und die Angaben zur vertretungsberechtigten
-          Person bereit. Das Geld geht direkt an deinen Verein; die Überweisung bleibt für Eltern immer möglich.
+          Person bereit. Das Geld geht abzüglich der vereinbarten Plattformgebühr an deinen Verein; die Überweisung bleibt für Eltern immer möglich.
         </p>
       )}
       {state === 'incomplete' && (
         <p className="cp-body" style={{ color: 'var(--cp-ink-2)' }}>
           Stripe braucht noch Angaben von dir{status.requirements_due > 0 ? ` (${status.requirements_due} offen)` : ''}.
           Setz die Einrichtung fort; danach kannst du hier den Status prüfen.
+        </p>
+      )}
+      {state === 'awaiting_approval' && (
+        <p className="cp-body" style={{ color: 'var(--cp-ink-2)' }}>
+          Bei Stripe ist alles erledigt. CampsPilot schaltet die Online-Zahlung für deinen Verein jetzt noch frei – du musst nichts weiter tun.
         </p>
       )}
       {state === 'active' && (
@@ -74,7 +81,7 @@ export default function PaymentSetupCard({ orgSlug, status }: { orgSlug: string;
 
       {status.legacy_account_linked && (
         <p className="cp-body rounded-[var(--cp-r-chip)] border px-3 py-2" style={{ borderColor: 'var(--cp-line)', color: 'var(--cp-ink-2)' }} data-testid="legacy-notice">
-          {state === 'active'
+          {state === 'active' || state === 'awaiting_approval'
             ? 'Dein bisher verbundenes Stripe-Konto wird für neue Zahlungen nicht mehr genutzt.'
             : status.legacy_active
               ? 'Zahlungen laufen derzeit noch über dein bisher verbundenes Stripe-Konto. Sobald die neue Einrichtung aktiv ist, wechseln neue Zahlungen automatisch.'
@@ -86,7 +93,7 @@ export default function PaymentSetupCard({ orgSlug, status }: { orgSlug: string;
         <p className="cp-body" style={{ color: 'var(--cp-muted)' }}>In dieser Umgebung ist die Online-Zahlung noch nicht freigeschaltet.</p>
       )}
 
-      {status.service_ready && state !== 'active' && (
+      {status.service_ready && (state === 'not_set_up' || state === 'incomplete') && (
         <form action={startAction} className="flex flex-col gap-3">
           {state === 'not_set_up' && (
             <Field label="Rechtsform" htmlFor="business_type" hint="Nur für die Einrichtung bei Stripe.">

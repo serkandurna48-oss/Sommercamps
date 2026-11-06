@@ -16,6 +16,7 @@ export const registrationStatusLabel: Record<string, string> = {
 export const paymentStatusLabel: Record<string, string> = {
   open: 'Zahlung offen',
   paid: 'Bezahlt',
+  partially_refunded: 'Teilweise erstattet',
   refunded: 'Erstattet',
   waived: 'Kostenlos',
   cancelled: 'Storniert',

@@ -1,7 +1,8 @@
 'use server'
 
 import { getValidAccessToken } from '../../../lib/supabaseServer'
-import { AdminActionError, connectStripeAccount, fetchMe } from '../../../lib/saasAdminApi'
+import { revalidatePath } from 'next/cache'
+import { AdminActionError, connectStripeAccount, fetchMe, setOnlinePaymentEnabledAdmin } from '../../../lib/saasAdminApi'
 
 export interface StripeConnectState {
   error: string | null
@@ -32,4 +33,28 @@ export async function connectStripeAccountAction(
   } catch (error) {
     return { error: error instanceof AdminActionError ? error.message : 'Stripe-Konto konnte nicht verbunden werden.', result: null }
   }
+}
+
+export interface OnlinePaymentSwitchState {
+  error: string | null
+  saved: boolean
+}
+
+/** Owner only: per-club kill switch for online payment (Express and legacy). */
+export async function setOnlinePaymentEnabledAction(
+  orgSlug: string,
+  enabled: boolean,
+  _previous: OnlinePaymentSwitchState,
+): Promise<OnlinePaymentSwitchState> {
+  const token = await getValidAccessToken()
+  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', saved: false }
+  try {
+    const me = await fetchMe(token)
+    if (!me.is_platform_owner) return { error: 'Nur Plattform-Betreiber dürfen Online-Zahlung freischalten.', saved: false }
+    await setOnlinePaymentEnabledAdmin(orgSlug, token, enabled)
+  } catch (error) {
+    return { error: error instanceof AdminActionError ? error.message : 'Online-Zahlung konnte nicht umgeschaltet werden.', saved: false }
+  }
+  revalidatePath(`/platform/${orgSlug}`)
+  return { error: null, saved: true }
 }

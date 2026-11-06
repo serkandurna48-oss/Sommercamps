@@ -9,7 +9,7 @@ import { startStripeOnboardingAction, syncStripeStatusAction } from '../actions/
 vi.mock('../actions/billingActions', () => ({ startStripeOnboardingAction: vi.fn(), syncStripeStatusAction: vi.fn() }))
 
 const status = (over: Partial<StripePaymentStatus> = {}): StripePaymentStatus => ({
-  state: 'not_set_up', charges_enabled: false, payouts_enabled: false, details_submitted: false,
+  state: 'not_set_up', platform_enabled: true, charges_enabled: false, payouts_enabled: false, details_submitted: false,
   requirements_due: 0, synced_at: null, legacy_account_linked: false, legacy_active: false,
   online_payment_mode: null, service_ready: true, ...over,
 })
@@ -91,4 +91,16 @@ it('zeigt Fehler beim Start und beim Prüfen', async () => {
 it('ohne Status: Ladefehler', async () => {
   await act(() => root.render(<PaymentSetupCard orgSlug="demo" status={null} />))
   expect(container.querySelector('[role="alert"]')!.textContent).toContain('nicht geladen')
+})
+
+it('wartet auf Freigabe: keine Einrichten-Buttons, Hinweis auf CampsPilot', async () => {
+  await act(() => root.render(<PaymentSetupCard orgSlug="demo" status={status({ state: 'awaiting_approval', platform_enabled: false, charges_enabled: true, details_submitted: true })} />))
+  expect(container.querySelector('[data-testid="payment-state"]')!.textContent).toBe('Wartet auf Freigabe')
+  expect(buttons()).toEqual(['Status prüfen'])
+  expect(container.textContent).toContain('schaltet die Online-Zahlung für deinen Verein jetzt noch frei')
+})
+
+it('nennt die Plattformgebühr im Einrichtungstext', async () => {
+  await act(() => root.render(<PaymentSetupCard orgSlug="demo" status={status()} />))
+  expect(container.textContent).toContain('abzüglich der vereinbarten Plattformgebühr')
 })

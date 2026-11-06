@@ -56,7 +56,11 @@ it('formatiert Gebühr und Stripe-Status', () => {
   expect(formatFeeRule({ plan: 'starter', percent: '6.90', fixed_cents: null, min_fee_cents: null })).toBe('Starter · 6,90 %')
   expect(formatStripeStatus(null)).toBe('Status nicht abrufbar')
   expect(formatStripeStatus({
-    state: 'active', charges_enabled: true, payouts_enabled: true, details_submitted: true, requirements_due: 0,
+    state: 'active', platform_enabled: true, charges_enabled: true, payouts_enabled: true, details_submitted: true, requirements_due: 0,
     synced_at: null, legacy_account_linked: true, legacy_active: false, online_payment_mode: 'destination', service_ready: true,
   })).toBe('Express aktiv · Altkonto verbunden, inaktiv · Zahlungen über die Plattform')
+  expect(formatStripeStatus({
+    state: 'awaiting_approval', platform_enabled: false, charges_enabled: true, payouts_enabled: true, details_submitted: true,
+    requirements_due: 0, synced_at: null, legacy_account_linked: false, legacy_active: false, online_payment_mode: null, service_ready: true,
+  })).toBe('Express bereit, wartet auf Freigabe · keine Online-Zahlung · Online-Zahlung gesperrt')
 })

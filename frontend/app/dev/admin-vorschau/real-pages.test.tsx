@@ -22,7 +22,7 @@ vi.mock('../../lib/saasAdminApi', async importOriginal => ({
   ...await importOriginal<typeof import('../../lib/saasAdminApi')>(),
   fetchBillingProfileAdmin: vi.fn(async () => null),
   fetchStripePaymentStatusAdmin: vi.fn(async () => ({
-    state: 'not_set_up', charges_enabled: false, payouts_enabled: false, details_submitted: false,
+    state: 'not_set_up', platform_enabled: false, charges_enabled: false, payouts_enabled: false, details_submitted: false,
     requirements_due: 0, synced_at: null, legacy_account_linked: false, legacy_active: false,
     online_payment_mode: null, service_ready: true,
   })),

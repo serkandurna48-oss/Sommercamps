@@ -13,10 +13,14 @@ export function formatFeeRule(rule: Pick<FeeRule, 'plan' | 'percent' | 'fixed_ce
 
 export function formatStripeStatus(status: StripePaymentStatus | null): string {
   if (!status) return 'Status nicht abrufbar'
-  const express = { not_set_up: 'Express nicht eingerichtet', incomplete: 'Express: Angaben fehlen', active: 'Express aktiv' }[status.state]
+  const express = {
+    not_set_up: 'Express nicht eingerichtet', incomplete: 'Express: Angaben fehlen',
+    awaiting_approval: 'Express bereit, wartet auf Freigabe', active: 'Express aktiv',
+  }[status.state]
   const legacy = status.legacy_account_linked ? (status.legacy_active ? ' · Altkonto (Direct Charges) aktiv' : ' · Altkonto verbunden, inaktiv') : ''
   const mode = status.online_payment_mode === 'destination'
     ? ' · Zahlungen über die Plattform'
     : status.online_payment_mode === 'direct' ? ' · Zahlungen direkt beim Verein' : ' · keine Online-Zahlung'
-  return `${express}${legacy}${mode}${status.service_ready ? '' : ' · Umgebung nicht freigeschaltet'}`
+  const switched = status.platform_enabled ? '' : ' · Online-Zahlung gesperrt'
+  return `${express}${legacy}${mode}${switched}${status.service_ready ? '' : ' · Umgebung nicht freigeschaltet'}`
 }

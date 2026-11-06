@@ -7,6 +7,7 @@ export type StatusTone = 'ok' | 'pending' | 'error' | 'info' | 'neutral'
 export const PAYMENT_STATUS_TONE: Record<string, StatusTone> = {
   open: 'pending',
   paid: 'ok',
+  partially_refunded: 'info',
   refunded: 'info',
   waived: 'info',
   cancelled: 'neutral',

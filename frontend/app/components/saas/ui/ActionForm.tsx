@@ -100,7 +100,7 @@ export default function ActionForm({
   return (
     <form action={formAction} className="flex flex-col items-start gap-2">
       {effectiveConfirming && (
-        <div id={confirmId} role="group" className="cp-body space-y-2" style={{ color: 'var(--cp-muted)' }}>
+        <div id={confirmId} role="group" aria-label={`${label}: Bestätigung`} className="cp-body space-y-2" style={{ color: 'var(--cp-muted)' }}>
           {requireConfirm}
         </div>
       )}

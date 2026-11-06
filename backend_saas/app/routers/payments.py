@@ -528,14 +528,19 @@ def close_checkout_before_delete(organization_id, camp_id, registration_token) -
         return
     with db.get_cursor() as cur:
         cur.execute(
-            """select stripe_checkout_session_id, stripe_checkout_account_id
+            """select stripe_checkout_session_id, stripe_checkout_account_id, payment_status
                from camp_registrations
                where organization_id = %s and camp_id = %s and registration_token = %s""",
             (organization_id, camp_id, registration_token),
         )
         row = cur.fetchone()
-    if not row or not row["stripe_checkout_session_id"] or not row["stripe_checkout_account_id"]:
+    # Only a still-open booking can have a payment in flight. A refunded
+    # checkout stays "complete/paid" in Stripe forever, and paid-online is
+    # already refused by the database guard; cash, transfer and waived have no checkout to close.
+    if not row or row["payment_status"] != "open":
         return
+    if not row["stripe_checkout_session_id"] or not row["stripe_checkout_account_id"]:
+        return  # legacy rows without a connected account (pre v11) cannot be asked
     session_id, account_id = row["stripe_checkout_session_id"], row["stripe_checkout_account_id"]
     try:
         client = _stripe_client()

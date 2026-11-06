@@ -317,3 +317,14 @@ def test_stripe_failure_blocks_the_delete(stripe_checkout, monkeypatch, audit, k
     assert response.status_code == 409 and response.json()["detail"]["code"] == "payment_pending"
     assert "später erneut" in response.json()["detail"]["message"]
     assert _count(cursor, tenant) == 1 and audit == []
+
+
+def test_refunded_online_booking_is_deletable_even_though_stripe_says_complete(stripe_checkout, monkeypatch, audit):
+    cursor, tenant, camp, reg, install, session_id = stripe_checkout
+    with cursor() as cur:
+        cur.execute("update camp_registrations set payment_status = 'refunded', payment_method = 'online' where registration_token = %s",
+                    (reg["registration_token"],))
+    sessions = install(session={"status": "complete", "payment_status": "paid"}, fail_retrieve=True)
+    response = _delete_via_api(monkeypatch, tenant, camp, reg, _org_row_for(tenant))
+    assert response.status_code == 200
+    assert sessions.expired == [] and _count(cursor, tenant) == 0

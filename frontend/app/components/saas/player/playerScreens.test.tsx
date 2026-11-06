@@ -236,6 +236,7 @@ describe('Spielerakte (Darstellung)', () => {
     const free = html(screen(record({ bookings: [booking({ status: 'cancelled' })] })))
     const section = free.querySelector('section[aria-label="Spielerakte löschen"]')!
     expect([...section.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Spielerakte löschen'])
+    expect(free.body.textContent).not.toContain('Stornierte Buchungen bleiben') // shown only in the confirm step
   })
 
   it('Buchungen mit Titel, lokalem Datum/Uhrzeit und Zahlstatus', () => {

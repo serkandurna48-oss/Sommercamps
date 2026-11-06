@@ -54,7 +54,7 @@ def test_delete_player_record_removes_everything_and_unlinks_cancelled_bookings(
     assert response.status_code == 204
     assert _counts(cursor, tenant) == {"players": 0, "player_notes": 0, "player_goals": 0, "player_measurements": 0}
     assert audit[0]["action"] == "player.deleted"
-    assert audit[0]["metadata"] == {"notes": 0, "goals": 1, "measurements": 1}
+    assert audit[0]["metadata"] == {"notes": 0, "goals": 1, "measurements": 1, "anonymized_bookings": 1}
     assert audit[0]["target_id"] == str(player_id)
 
 
@@ -127,3 +127,49 @@ def test_unmatched_payment_is_flagged_with_club_and_token_from_the_session(monke
     result = payments._settle_checkout(None, obj, "acct_1", created=1)
     assert result == {"received": True, "settled": False}
     assert audit[0]["organization_id"] == org and audit[0]["target_id"] == token
+
+
+def test_delete_player_record_anonymizes_child_data_in_cancelled_bookings(real_db, audit):
+    cursor, tenant, camp = real_db
+    reg = _book(tenant, camp)
+    player_id = _player(cursor, tenant, reg)
+    registrations_repo.cancel_registration_and_promote_next(tenant, camp.id, reg["registration_token"])
+    with cursor() as cur:
+        cur.execute("""update camp_registrations set allergies = 'Nüsse', medical_notes = 'Asthma', jersey_size = 'M',
+                       pickup_authorized = 'Oma', emergency_contact_name = 'Tante', emergency_contact_phone = '123',
+                       extra_answers = '{"x": "y"}'::jsonb, payment_status = 'paid', payment_method = 'online'
+                       where registration_token = %s""", (reg["registration_token"],))
+    with TestClient(app) as client:
+        assert client.delete(f"/admin/organizations/{tenant.slug}/players/{player_id}", headers=owner_headers()).status_code == 204
+    with cursor() as cur:
+        cur.execute("select * from camp_registrations where registration_token = %s", (reg["registration_token"],))
+        row = cur.fetchone()
+        cur.execute("select (child_birth_date >= current_date - interval '100 years') as plausible from camp_registrations where registration_token = %s", (reg["registration_token"],))
+        assert cur.fetchone()["plausible"] is True
+    assert (row["child_first_name"], row["child_last_name"]) == ("Gelöscht", "Gelöscht")
+    for column in ("allergies", "medical_notes", "jersey_size", "pickup_authorized", "emergency_contact_name", "emergency_contact_phone", "player_id"):
+        assert row[column] is None, column
+    assert row["extra_answers"] == {}
+    # Books stay intact.
+    assert (row["status"], row["payment_status"], row["payment_method"]) == ("cancelled", "paid", "online")
+    assert row["parent_email"] and row["registration_token"] == reg["registration_token"]
+
+
+def test_get_user_email_survives_a_non_json_answer(monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "supabase_service_role_key", "service", raising=False)
+
+    class _Response:
+        status_code = 200
+
+        def json(self):
+            raise ValueError("not json")
+
+    class _Client:
+        def get(self, *a, **k):
+            return _Response()
+
+    monkeypatch.setattr(supabase_auth, "get_client", lambda: _Client())
+    assert supabase_auth.get_user_email(str(uuid4())) is None
+    assert supabase_auth.get_user_emails([str(uuid4()), str(uuid4())]) and supabase_auth.get_user_emails([]) == {}

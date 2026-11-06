@@ -198,6 +198,7 @@ it('fokussiert beim Öffnen der Bestätigung "Abbrechen", liest die Frage mit un
   const question = container.querySelector(`#${cancel.getAttribute('aria-describedby')}`)!
   expect(question.textContent).toBe('Wirklich aufrücken?')
   expect(question.getAttribute('role')).toBe('group')
+  expect(question.getAttribute('aria-label')).toBe('Aufrücken: Bestätigung')
   await clickButton('Abbrechen')
   expect(document.activeElement).toBe([...container.querySelectorAll('button')].find(b => b.textContent === 'Aufrücken'))
 })

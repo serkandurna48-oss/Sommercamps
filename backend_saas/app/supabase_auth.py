@@ -417,5 +417,19 @@ def get_user_email(user_id: str) -> str | None:
         return None
     if response.status_code != 200:
         return None
-    email = response.json().get("email")
+    try:
+        email = response.json().get("email")
+    except (ValueError, AttributeError):
+        return None
     return email if isinstance(email, str) and email else None
+
+
+def get_user_emails(user_ids: list[str]) -> dict[str, str | None]:
+    """E-mails for a few accounts at once, fetched concurrently (bounded) so one
+    slow Supabase answer does not add up per admin."""
+    if not user_ids:
+        return {}
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=min(4, len(user_ids))) as pool:
+        return dict(zip(user_ids, pool.map(get_user_email, user_ids)))

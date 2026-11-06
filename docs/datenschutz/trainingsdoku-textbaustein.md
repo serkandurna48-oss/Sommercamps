@@ -63,8 +63,11 @@ Die Checkbox ist freiwillig und standardmäßig nicht angekreuzt. Der Status wir
   Ziele, Messwerte und der Spielerdatensatz) lässt sich in der Akte selbst über „Spielerakte
   löschen“ endgültig entfernen, solange keine Buchung des Kindes mehr aktiv ist (registriert,
   bestätigt oder Warteliste). Die Löschung wird im Änderungsverlauf nur mit Anzahlen vermerkt, ohne
-  personenbezogene Daten. Stornierte Buchungen bleiben als Buchungsdaten bestehen (ohne
-  Verknüpfung zur Akte). Wird eine einzelne Anmeldung gelöscht, entfernt das System den
+  personenbezogene Daten. Stornierte Buchungen bleiben für die Buchhaltung bestehen, werden
+  aber im selben Schritt anonymisiert: Kindername „Gelöscht“, Geburtsdatum ein neutraler
+  Platzhalter (die Spalte ist Pflicht mit Plausibilitätsprüfung, daher nicht leer), Allergien,
+  Gesundheitsnotizen, Trikotgröße, Abholberechtigte, Notfallkontakt und Zusatzantworten leer.
+  Zahlungs-, Status- und Elternkontaktdaten bleiben. Wird eine einzelne Anmeldung gelöscht, entfernt das System den
   Spielerdatensatz mit, wenn keine weitere Buchung, Notiz, kein Ziel und kein Messwert daran
   hängt; sonst bleibt die Akte bestehen und der Admin sieht den Hinweis „Die Spielerakte bleibt
   bestehen“.

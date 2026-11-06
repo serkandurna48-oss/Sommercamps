@@ -880,9 +880,10 @@ def list_organization_members(
     rows = platform_roles.list_organization_members(organization["id"])
     # E-mail per admin from Supabase Auth (best effort, None when unavailable);
     # the frontend falls back to the user id only then.
+    emails = supabase_auth.get_user_emails([str(row["user_id"]) for row in rows])
     return [
         OrganizationMemberOut.model_validate(
-            {**row, "user_id": str(row["user_id"]), "email": supabase_auth.get_user_email(str(row["user_id"]))}
+            {**row, "user_id": str(row["user_id"]), "email": emails.get(str(row["user_id"]))}
         )
         for row in rows
     ]

@@ -30,6 +30,7 @@ export default function DeletePlayerRecord({ orgSlug, playerId, name, activeBook
           requireConfirm={<>
             <p className="cp-subheading">Spielerakte von {name} endgültig löschen?</p>
             <p>Das löscht {notes} Notizen, {goals} Ziele und {measurements} Messwerte. Das lässt sich nicht rückgängig machen.</p>
+            <p>Stornierte Buchungen bleiben für die Buchhaltung, ohne Kinderdaten.</p>
           </>}
         />
       )}

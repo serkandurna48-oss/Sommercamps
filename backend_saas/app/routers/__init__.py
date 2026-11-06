@@ -9,6 +9,7 @@ from .registrations import router as registrations_router
 from .signup import router as signup_router
 from .payments import router as payments_router
 from .billing import router as billing_router
+from .invoices_admin import router as invoices_router
 
 __all__ = [
     "admin_router",
@@ -22,4 +23,5 @@ __all__ = [
     "signup_router",
     "payments_router",
     "billing_router",
+    "invoices_router",
 ]

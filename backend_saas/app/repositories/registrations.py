@@ -596,13 +596,28 @@ def update_payment_status(
             from .. import fees
 
             fees.snapshot_paid_registration(cur, row["id"], organization_id)
-            # Undoing a manual refund: the fee is owed again.
+            # Undoing a manual refund: the fee is owed again (logged as a
+            # negative refund event so the refund month stays traceable).
             cur.execute(
-                """update camp_registrations
+                """with old as (
+                       select id, refunded_cents, fee_refunded_cents from camp_registrations
+                       where id = %s and organization_id = %s and fee_collection = 'not_collected'
+                         and (refunded_cents is not null or fee_refunded_cents is not null)
+                   )
+                   update camp_registrations r
                    set refunded_cents = null, fee_refunded_cents = null, refunded_at = null
-                   where id = %s and organization_id = %s and fee_collection = 'not_collected'""",
+                   from old where r.id = old.id
+                   returning old.refunded_cents as refunded, old.fee_refunded_cents as fee""",
                 (row["id"], organization_id),
             )
+            undone = cur.fetchone()
+            if undone:
+                cur.execute(
+                    """insert into registration_refund_events
+                           (organization_id, registration_id, refunded_delta_cents, fee_delta_cents, source)
+                       values (%s, %s, %s, %s, 'manual_undo')""",
+                    (organization_id, row["id"], -(undone["refunded"] or 0), -(undone["fee"] or 0)),
+                )
         elif row is not None and payment_status == "refunded":
             # Manual refund of a transfer/cash payment: the fee was never
             # withheld and is no longer owed. Online refunds (application
@@ -612,9 +627,18 @@ def update_payment_status(
                    set refunded_cents = fee_base_cents, fee_refunded_cents = fee_cents,
                        refunded_at = coalesce(refunded_at, now())
                    where id = %s and organization_id = %s
-                     and fee_collection = 'not_collected' and fee_refunded_cents is null""",
+                     and fee_collection = 'not_collected' and fee_refunded_cents is null
+                   returning refunded_cents, fee_refunded_cents""",
                 (row["id"], organization_id),
             )
+            refunded = cur.fetchone()
+            if refunded:
+                cur.execute(
+                    """insert into registration_refund_events
+                           (organization_id, registration_id, refunded_delta_cents, fee_delta_cents, source)
+                       values (%s, %s, %s, %s, 'manual')""",
+                    (organization_id, row["id"], refunded["refunded_cents"] or 0, refunded["fee_refunded_cents"] or 0),
+                )
         return row
 
 

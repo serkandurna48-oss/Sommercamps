@@ -25,14 +25,22 @@ Non-production recipient guard (CTO 29.10.2026):
 
 from __future__ import annotations
 
+import base64
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Protocol, runtime_checkable
 
 import httpx
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class MailAttachment:
+    filename: str
+    content: bytes
+    content_type: str = "application/pdf"
 
 
 @dataclass
@@ -42,6 +50,7 @@ class MailMessage:
     html_content: str
     reply_to: Optional[str] = None
     sender_name: Optional[str] = None  # overrides provider default when set
+    attachments: list[MailAttachment] = field(default_factory=list)
 
 
 @runtime_checkable
@@ -120,6 +129,12 @@ class BrevoProvider:
         }
         if message.reply_to:
             payload["replyTo"] = {"email": message.reply_to}
+        if message.attachments:
+            # Brevo API v3: base64 content, file type derived from the name.
+            payload["attachment"] = [
+                {"name": a.filename, "content": base64.b64encode(a.content).decode("ascii")}
+                for a in message.attachments
+            ]
 
         resp = self._client.post(
             "https://api.brevo.com/v3/smtp/email",

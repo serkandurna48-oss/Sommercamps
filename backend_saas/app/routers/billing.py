@@ -16,7 +16,7 @@ from .. import db
 from ..admin_resolve import require_organization
 from ..auth_deps import AuthContext, require_org_access, require_platform_owner
 from ..billing_schemas import (
-    BillingProfileIn, BillingProfileOut, FeeBookingOut, FeeMonthOut, FeeRuleIn, FeeRuleOut, FeeRulesOut, FeeTotals,
+    BillingProfileIn, BillingProfileOut, FeeBookingOut, FeeMonthOut, FeeRuleIn, FeeRuleOut, FeeRulesOut, FeeTotals, RefundTotals,
 )
 from .. import fees
 from ..repositories import platform_roles
@@ -151,7 +151,8 @@ def fee_month(
     month: str = Query(pattern=r"^20[0-9]{2}-(0[1-9]|1[0-2])$"),
     auth: AuthContext = Depends(require_platform_owner),
 ) -> FeeMonthOut:
-    """Per-booking platform fees of one month, net of refunds."""
+    """Per-booking platform fees of bookings paid in the month (net of all
+    their refunds so far), plus refunds by the month they happened."""
     del auth
     organization = require_organization(organization_slug)
     with db.get_cursor() as cur:
@@ -169,6 +170,24 @@ def fee_month(
             (organization["id"], month),
         )
         rows = [FeeBookingOut.model_validate(row) for row in cur.fetchall()]
+        cur.execute(
+            """select r.fee_collection, sum(e.fee_delta_cents) as fee, sum(e.refunded_delta_cents) as refunded,
+                      count(*) as events
+               from registration_refund_events e
+               join camp_registrations r on r.id = e.registration_id and r.organization_id = e.organization_id
+               where e.organization_id = %s
+                 and to_char(e.created_at at time zone 'Europe/Berlin', 'YYYY-MM') = %s
+               group by r.fee_collection""",
+            (organization["id"], month),
+        )
+        refunds = RefundTotals()
+        for event in cur.fetchall():
+            if event["fee_collection"] == "application_fee":
+                refunds.collected_fee_refunded_cents += int(event["fee"] or 0)
+            else:
+                refunds.not_collected_fee_refunded_cents += int(event["fee"] or 0)
+            refunds.refunded_cents += int(event["refunded"] or 0)
+            refunds.events += int(event["events"])
     totals = {"application_fee": FeeTotals(), "not_collected": FeeTotals()}
     for row in rows:
         t = totals[row.fee_collection]
@@ -177,4 +196,4 @@ def fee_month(
         t.fee_refunded_cents += row.fee_refunded_cents
         t.fee_net_cents += row.fee_net_cents
     return FeeMonthOut(month=month, collected=totals["application_fee"],
-                       not_collected=totals["not_collected"], bookings=rows)
+                       not_collected=totals["not_collected"], bookings=rows, refunds_in_month=refunds)

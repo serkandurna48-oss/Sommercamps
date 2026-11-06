@@ -69,6 +69,7 @@ from ..admin_schemas import (
     WaitlistPromoteResponse,
 )
 from ..modules import normalize_modules
+from .. import invoices
 from ..registration_lifecycle import InvalidStatusTransitionError
 from ..notifications import sending as notifications_sending
 from ..repositories import camps as camps_repo
@@ -584,6 +585,8 @@ def cancel_registration(
         "cancelled",
     )
     background_tasks.add_task(expire_open_checkout, organization["id"], registration_token)
+    # A cancelled paid booking gets a storno invoice (no-op without an invoice).
+    background_tasks.add_task(invoices.sync_by_token, registration_token, organization["id"])
     if result["promoted"] is not None:
         background_tasks.add_task(
             notifications_sending.send_status_change_notification,
@@ -676,6 +679,9 @@ def update_registration_payment_status(
     if data.payment_status != "open":
         # Paid by transfer, free or refunded: close an open online checkout.
         background_tasks.add_task(expire_open_checkout, organization["id"], registration_token)
+    if data.payment_status in ("paid", "refunded"):
+        # Parent invoice (or storno) in the club's name, best effort after the response.
+        background_tasks.add_task(invoices.sync_by_token, registration_token, organization["id"])
     return RegistrationAdminOut.model_validate({**row, "camp_title": camp["title"]})
 
 

@@ -168,3 +168,13 @@ class FeeMonthOut(BaseModel):
     collected: FeeTotals
     not_collected: FeeTotals
     bookings: list[FeeBookingOut]
+    # Refunds booked in the month they happened (for the fee invoice, B4):
+    # fee returned this month, whatever month the booking was paid in.
+    refunds_in_month: "RefundTotals"
+
+
+class RefundTotals(BaseModel):
+    collected_fee_refunded_cents: int = 0
+    not_collected_fee_refunded_cents: int = 0
+    refunded_cents: int = 0
+    events: int = 0

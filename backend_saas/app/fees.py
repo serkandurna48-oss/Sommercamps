@@ -130,9 +130,11 @@ def write_snapshot(cur, registration_id, organization_id, quote: dict, collectio
 
 def snapshot_paid_registration(cur, registration_id, organization_id) -> None:
     """Snapshot for a registration paid without an application fee (transfer,
-    cash, legacy direct charge): rule at booking time, amount actually owed."""
+    cash, legacy direct charge): rule at booking time, amount actually owed
+    (training price, else the camp price at booking time)."""
     cur.execute(
-        """select r.created_at, coalesce(r.applied_price_cents, c.price_cents) as base_cents,
+        """select r.created_at,
+                  coalesce(r.applied_price_cents, r.booked_price_cents, c.price_cents) as base_cents,
                   r.fee_snapshot_at
            from camp_registrations r
            join camps c on c.id = r.camp_id and c.organization_id = r.organization_id

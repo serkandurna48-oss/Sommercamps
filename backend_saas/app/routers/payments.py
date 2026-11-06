@@ -31,12 +31,12 @@ from datetime import datetime
 from typing import Literal, Optional
 
 import stripe
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 from psycopg2.extras import Json
 from pydantic import BaseModel, ConfigDict, Field
 
-from .. import db, fees
+from .. import db, fees, invoices
 from ..admin_resolve import require_organization
 from ..auth_deps import AuthContext, require_org_access, require_platform_owner
 from ..config import get_settings
@@ -265,7 +265,7 @@ def create_checkout(
             f"""select r.id, r.status, r.payment_status, r.stripe_checkout_session_id,
                       {', '.join('o.' + c.strip() for c in _ORG_PAYMENT_COLUMNS.split(','))},
                       c.title, c.price_cents, c.currency, c.status as camp_status, c.offer_id,
-                      r.applied_price_cents, r.payment_method, r.created_at,
+                      r.applied_price_cents, r.booked_price_cents, r.payment_method, r.created_at,
                       r.stripe_checkout_amount_cents, r.stripe_checkout_account_id,
                       r.stripe_charge_type, r.stripe_checkout_fee
                from camp_registrations r
@@ -290,8 +290,11 @@ def create_checkout(
     if mode is None:
         raise HTTPException(503, "Der Verein hat Online-Zahlung noch nicht aktiviert")
     # Training prices (member/non-member) are decided server-side at booking time
-    # and live on the registration; camps charge the camp price.
-    amount = booking["applied_price_cents"] if is_training else booking["price_cents"]
+    # and live on the registration (admin-correctable).
+    # Camps charge the price at booking time (a later price change does not
+    # touch existing bookings); rows without it fall back to the camp price.
+    booked = booking.get("booked_price_cents")
+    amount = booking["applied_price_cents"] if is_training else (booked if booked is not None else booking["price_cents"])
     currency = (booking["currency"] or "").lower()
     if not isinstance(amount, int) or amount < 50 or currency != "eur":
         raise HTTPException(409, "Dieser Camp-Preis ist nicht für Stripe Checkout verfügbar")
@@ -408,6 +411,7 @@ def create_checkout(
 async def stripe_connect_webhook(
     request: Request,
     stripe_signature: str | None = Header(None),
+    background_tasks: BackgroundTasks = None,
 ):
     """Connect endpoint: events on connected accounts (legacy direct-charge
     payments, account.updated for Express accounts)."""
@@ -417,7 +421,8 @@ async def stripe_connect_webhook(
     # Raw body for the signature check; everything after runs in a worker
     # thread so blocking DB/Stripe calls never stall the single event loop.
     body = await request.body()
-    return await run_in_threadpool(_handle_webhook, body, stripe_signature or "")
+    result = await run_in_threadpool(_handle_webhook, body, stripe_signature or "")
+    return await _with_invoice_sync(result, background_tasks)
 
 
 def _verified_event(client, body: bytes, signature: str, secret: str) -> dict:
@@ -458,7 +463,8 @@ def _handle_webhook(body: bytes, signature: str) -> dict:
         return _settle_checkout(client, obj, account, event.get("created"))
 
     if event_type == "charge.refunded":
-        _record_refund(obj, account)
+        refunded = _record_refund(obj, account)
+        return {"received": True, **({"_sync": refunded} if refunded else {})}
     return {"received": True}
 
 
@@ -466,13 +472,28 @@ def _handle_webhook(body: bytes, signature: str) -> dict:
 async def stripe_platform_webhook(
     request: Request,
     stripe_signature: str | None = Header(None),
+    background_tasks: BackgroundTasks = None,
 ):
     """Platform endpoint: destination-charge Checkout Sessions live on the
     platform account. Own signing secret (STRIPE_PLATFORM_WEBHOOK_SECRET)."""
     if not _express_ready(get_settings()):
         raise HTTPException(503, "Stripe-Webhooks nicht konfiguriert")
     body = await request.body()
-    return await run_in_threadpool(_handle_platform_webhook, body, stripe_signature or "")
+    result = await run_in_threadpool(_handle_platform_webhook, body, stripe_signature or "")
+    return await _with_invoice_sync(result, background_tasks)
+
+
+async def _with_invoice_sync(result: dict, background_tasks: BackgroundTasks | None) -> dict:
+    """Invoices and storno invoices (PDF + parent mail) after Stripe got its
+    answer: never part of the webhook's success, never retried by Stripe.
+    The invoice code is idempotent, so a replayed event changes nothing."""
+    target = result.pop("_sync", None)
+    if target:
+        if background_tasks is not None:
+            background_tasks.add_task(invoices.sync_registration, *target)
+        else:  # direct call (tests): run inline
+            await run_in_threadpool(invoices.sync_registration, *target)
+    return result
 
 
 def _handle_platform_webhook(body: bytes, signature: str) -> dict:
@@ -491,7 +512,8 @@ def _handle_platform_webhook(body: bytes, signature: str) -> dict:
             return {"received": True, "settled": False}
         return _settle_checkout(client, obj, None, event.get("created"), mode="destination")
     if event_type in ("charge.refunded", "charge.refund.updated"):
-        _record_destination_refund(client, obj)
+        refunded = _record_destination_refund(client, obj)
+        return {"received": True, **({"_sync": refunded} if refunded else {})}
     return {"received": True}
 
 
@@ -555,6 +577,7 @@ def _settle_checkout(client, obj: dict, account: str | None, created=None, mode:
     else:
         refunded = _fully_refunded(client, payment_intent, account)
     review = None
+    settled = None
     with db.get_cursor() as cur:
         if mode == "destination":
             cur.execute(_SETTLE_DESTINATION, (session_id,))
@@ -591,10 +614,11 @@ def _settle_checkout(client, obj: dict, account: str | None, created=None, mode:
             if refund_state and refund_state["refunded_cents"] > 0:
                 # A refund that arrived before this event (retries, outages).
                 _store_refund(cur, row["id"], refund_state)
+            settled = (row["id"], row["organization_id"])
     if review:
         _flag_for_review(row["organization_id"] if row else None, row["id"] if row else None, review)
         return {"received": True, "settled": False}
-    return {"received": True, "settled": True}
+    return {"received": True, "settled": True, **({"_sync": settled} if settled else {})}
 
 
 def _snapshot_settled(cur, row: dict, mode: str) -> None:
@@ -610,7 +634,9 @@ def _snapshot_settled(cur, row: dict, mode: str) -> None:
     fees.snapshot_paid_registration(cur, row["id"], row["organization_id"])
 
 
-def _record_refund(obj: dict, account: str) -> None:
+def _record_refund(obj: dict, account: str):
+    """Legacy direct charge, full refunds only. Returns (registration_id,
+    organization_id) when a booking changed."""
     intent = obj.get("payment_intent")
     # Do not mark partially refunded payments as fully refunded.
     if not (
@@ -618,7 +644,7 @@ def _record_refund(obj: dict, account: str) -> None:
         and obj.get("refunded") is True
         and obj.get("amount_refunded") == obj.get("amount")
     ):
-        return
+        return None
     # No matching row: either not ours, or the payment is not settled yet;
     # _settle_checkout then reads the refund from Stripe itself.
     with db.get_cursor() as cur:
@@ -632,9 +658,20 @@ def _record_refund(obj: dict, account: str) -> None:
                  and r.stripe_checkout_account_id = %s
                  and r.stripe_payment_intent_id = %s
                  and r.payment_status = 'paid'
-                 and r.stripe_charge_type is distinct from 'destination'""",
+                 and r.stripe_charge_type is distinct from 'destination'
+               returning r.id, r.organization_id, r.refunded_cents, r.fee_refunded_cents""",
             (account, account, intent),
         )
+        row = cur.fetchone()
+        if row is None:
+            return None
+        cur.execute(
+            """insert into registration_refund_events
+                   (organization_id, registration_id, refunded_delta_cents, fee_delta_cents, source)
+               values (%s, %s, %s, %s, 'stripe')""",
+            (row["organization_id"], row["id"], row.get("refunded_cents") or 0, row.get("fee_refunded_cents") or 0),
+        )
+    return (row["id"], row["organization_id"])
 
 
 def _destination_refund_state(client, payment_intent: str) -> dict:
@@ -669,8 +706,19 @@ def _destination_refund_state(client, payment_intent: str) -> dict:
     return {"status": status, "refunded_cents": refunded, "fee_refunded_cents": fee_refunded}
 
 
-def _store_refund(cur, registration_id, state: dict) -> None:
-    """Never moves backwards: an older event cannot shrink a stored refund."""
+def _store_refund(cur, registration_id, state: dict) -> bool:
+    """Never moves backwards: an older event cannot shrink a stored refund.
+    Every increase is also logged as a refund event (month of the refund,
+    for the fee invoice). Returns True when something changed."""
+    cur.execute(
+        """select organization_id, coalesce(refunded_cents, 0) as refunded, coalesce(fee_refunded_cents, 0) as fee,
+                  payment_status
+           from camp_registrations where id = %s for update""",
+        (registration_id,),
+    )
+    before = cur.fetchone()
+    if before is None:
+        return False
     cur.execute(
         """update camp_registrations
            set refunded_cents = greatest(coalesce(refunded_cents, 0), %s),
@@ -685,27 +733,44 @@ def _store_refund(cur, registration_id, state: dict) -> None:
            where id = %s and payment_status in ('paid', 'partially_refunded', 'refunded')""",
         (state["refunded_cents"], state["fee_refunded_cents"], state["status"], state["status"], registration_id),
     )
+    cur.execute(
+        """select coalesce(refunded_cents, 0) as refunded, coalesce(fee_refunded_cents, 0) as fee, payment_status
+           from camp_registrations where id = %s""",
+        (registration_id,),
+    )
+    after = cur.fetchone()
+    delta, fee_delta = after["refunded"] - before["refunded"], after["fee"] - before["fee"]
+    if delta or fee_delta:
+        cur.execute(
+            """insert into registration_refund_events
+                   (organization_id, registration_id, refunded_delta_cents, fee_delta_cents, source)
+               values (%s, %s, %s, %s, 'stripe')""",
+            (before["organization_id"], registration_id, delta, fee_delta),
+        )
+    return bool(delta or fee_delta or after["payment_status"] != before["payment_status"])
 
 
-def _record_destination_refund(client, obj: dict) -> None:
+def _record_destination_refund(client, obj: dict):
+    """Returns (registration_id, organization_id) when the refund changed the booking."""
     intent = obj.get("payment_intent")
     if not isinstance(intent, str) or not PAYMENT_INTENT_ID.fullmatch(intent):
         return
     with db.get_cursor() as cur:
         cur.execute(
-            """select id from camp_registrations
+            """select id, organization_id from camp_registrations
                where stripe_charge_type = 'destination' and stripe_payment_intent_id = %s""",
             (intent,),
         )
         row = cur.fetchone()
     if row is None:
         # Not ours, or not settled yet: _settle_checkout reads the refund itself.
-        return
+        return None
     state = _destination_refund_state(client, intent)  # outside any lock
     if state["refunded_cents"] <= 0:
-        return
+        return None
     with db.get_cursor() as cur:
-        _store_refund(cur, row["id"], state)
+        changed = _store_refund(cur, row["id"], state)
+    return (row["id"], row["organization_id"]) if changed else None
 
 
 def expire_open_checkout(organization_id, registration_token) -> None:

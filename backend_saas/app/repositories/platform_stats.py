@@ -19,13 +19,15 @@ _STATS_QUERY = """
         (select count(*) from camp_registrations) as registrations_total,
         (select count(*) from camp_registrations where created_at >= now() - interval '30 days')
             as registrations_last_30_days,
-        (select coalesce(sum(coalesce(r.applied_price_cents, c.price_cents)), 0)
+        (select coalesce(sum(coalesce(r.applied_price_cents, r.booked_price_cents, c.price_cents)), 0)
             from camp_registrations r join camps c on c.id = r.camp_id
             where r.payment_status = 'open' and r.status in ('registered', 'confirmed', 'waitlist')
         ) as payments_open_cents,
-        (select coalesce(sum(coalesce(r.applied_price_cents, c.price_cents)), 0)
+        -- Net of refunds: partially refunded payments count with what was kept.
+        (select coalesce(sum(greatest(0, coalesce(r.applied_price_cents, r.booked_price_cents, c.price_cents)
+                                         - coalesce(r.refunded_cents, 0))), 0)
             from camp_registrations r join camps c on c.id = r.camp_id
-            where r.payment_status = 'paid'
+            where r.payment_status in ('paid', 'partially_refunded')
         ) as payments_paid_cents,
         (select count(*) from camp_registrations where status = 'waitlist') as waitlist_total
 """

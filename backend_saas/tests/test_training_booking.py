@@ -439,7 +439,7 @@ def test_platform_stats_use_applied_price(real_db):
     before = platform_stats.get_platform_stats()["payments_open_cents"]
     cursor, _, _ = real_db
     with cursor() as cur:
-        cur.execute("update camp_registrations set applied_price_cents = NULL where camp_id=%s", (session["id"],))
+        cur.execute("update camp_registrations set applied_price_cents = NULL, booked_price_cents = NULL where camp_id=%s", (session["id"],))
     legacy = platform_stats.get_platform_stats()["payments_open_cents"]
     assert legacy - before == 4500 - 3000
     with cursor() as cur:

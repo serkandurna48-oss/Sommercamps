@@ -61,7 +61,7 @@ it('renders camp, date, name and text status in every list without another data 
     expect(row.textContent).toContain(`${registration.child_first_name} ${registration.child_last_name}`)
     expect(row.querySelector('.cp-camp-date')?.textContent).toBe(dateLine)
     expect(row.querySelector('.cp-row-status, .cp-today-card')?.textContent).toMatch(/offen|Warteliste/i)
-    expect(row.querySelector('[aria-haspopup="dialog"]')).not.toBeNull()
+    expect(row.querySelector('[aria-haspopup="dialog"], .cp-pay-toggle')).not.toBeNull()
   }
   expect(host.querySelectorAll('.cp-mobile-filters input[type="search"]')).toHaveLength(2)
 })
@@ -82,7 +82,7 @@ it('opens the overflow from the keyboard, focuses its first action and returns f
   expect(host.querySelector('[role="dialog"]')).toBeNull()
 })
 
-it('keeps the reminder in the payment overflow and the payment action outside it', async () => {
+it('keeps the reminder in the expanded details and the payment action in the collapsed row', async () => {
   const writeText = vi.fn().mockResolvedValue(undefined)
   vi.stubGlobal('navigator', { clipboard: { writeText } })
   const entry = { camp, registration }
@@ -91,11 +91,11 @@ it('keeps the reminder in the payment overflow and the payment action outside it
   const row = host.querySelector('.cp-ledger-row')!
   const buttons = [...row.querySelectorAll('button')]
   const primary = buttons.find(button => button.textContent === 'Als bezahlt markieren')!
-  expect(primary.closest('.cp-overflow-panel')).toBeNull()
+  expect(primary.closest('.cp-pay-details')).toBeNull()
   // Redesign R2: one primary per view, so the per-row action is secondary.
   expect(primary.className).toContain('cp-btn-secondary')
-  await act(() => row.querySelector<HTMLButtonElement>('[aria-haspopup]')!.click())
-  const dialog = row.querySelector('[role="dialog"]')!
+  await act(() => row.querySelector<HTMLButtonElement>('.cp-pay-toggle')!.click())
+  const dialog = row.querySelector('[role="region"]')!
   const reminder = [...dialog.querySelectorAll('button')].find(button => button.textContent === 'Erinnerung kopieren')!
   expect(reminder).toBeDefined()
   await act(async () => reminder.click())
@@ -107,10 +107,9 @@ it('keeps the reminder in the payment overflow and the payment action outside it
   const fallback = row.querySelector('textarea')!
   expect(fallback.readOnly).toBe(true)
   expect(fallback.value).toBe(buildPaymentReminder(entry, reminderOrg))
-  expect(fallback.closest('.cp-overflow-panel')).toBeNull()
   await act(() => fallback.focus())
   expect(fallback.selectionEnd).toBe(fallback.value.length)
-  expect(row.querySelector('[aria-haspopup]')?.getAttribute('aria-expanded')).toBe('false')
+  expect(row.querySelector('.cp-pay-toggle')?.getAttribute('aria-expanded')).toBe('true')
   const bulk = [...host.querySelectorAll('button')].find(button => button.textContent === 'Alle offenen als Liste kopieren')!
   await act(async () => bulk.click())
   expect(writeText).toHaveBeenLastCalledWith(buildOpenPaymentList([entry]))

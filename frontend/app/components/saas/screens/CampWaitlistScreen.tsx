@@ -1,10 +1,9 @@
-import { computeBrandTokens } from '../brandPipeline'
-import MatchdayBand from '../shell/MatchdayBand'
+import PageHeader from '../shell/PageHeader'
 import RegistrationActionFeedback from '../ui/RegistrationActionFeedback'
 import WaitlistCard from '../data/WaitlistCard'
 import WaitlistExportBar from '../data/WaitlistExportBar'
 import EmptyState from '../state/EmptyState'
-import { campTabs } from '../navTabs'
+import { campHeader } from './campHeader'
 import { de, formatDateRange } from '../../../lib/i18n/de'
 import type { WaitlistExportRow } from '../waitlistExport'
 
@@ -16,26 +15,14 @@ export default function CampWaitlistScreen({ orgSlug, campSlug, org, camp, regis
   if (!camp) return <EmptyCampScreen orgSlug={orgSlug} org={org} />
 
   const waitlisted = registrations.filter(r => r.status === 'waitlist')
-  const brand = computeBrandTokens(org.primary_color)
   const exportRows: WaitlistExportRow[] = waitlisted.map((registration, i) => ({ camp, position: i + 1, registration }))
 
   return (
     <>
-      <MatchdayBand backHref={`/pilot/${orgSlug}/camps/${campSlug}`}
-        orgSlug={orgSlug}
-        orgName={org.name}
-        orgLogoUrl={org.logo_url}
-        title={camp.title}
-        subtitle={formatDateRange(camp.start_date, camp.end_date)}
-        metrics={[{ label: de.command.waitlist, value: String(waitlisted.length) }]}
-        tabs={campTabs(orgSlug, campSlug)}
-        brandColor={brand.brand}
-      />
+      <PageHeader {...campHeader(orgSlug, campSlug, camp, registrations)} />
 
       <main className={PAGE_READING}>
-        <h2 className="cp-title mb-6" style={{ color: 'var(--cp-ink)' }}>
-          {de.waitlistPage.heading}
-        </h2>
+        <h2 className="sr-only">{de.waitlistPage.heading}</h2>
 
         <RegistrationActionFeedback registrations={waitlisted} waitlistHref={`/pilot/${orgSlug}/camps/${campSlug}/warteliste`}>
           {waitlisted.length === 0 ? (

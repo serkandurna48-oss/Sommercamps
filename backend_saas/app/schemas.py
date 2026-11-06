@@ -92,6 +92,16 @@ class OrganizationPublic(BaseModel):
     # KV1: Verein-konfigurierbare Zusatzfragen. Öffentlich, damit der
     # Eltern-Flow die Fragen rendern kann, ohne Admin-Login zu erfordern.
     registration_questions: list[RegistrationQuestion] = Field(default_factory=list)
+    # Enabled modules (camps always). Public so the club page can hide the
+    # training section; the API gates the module routes server-side anyway.
+    modules: list[str] = Field(default_factory=lambda: ["camps"])
+
+    @field_validator("modules", mode="before")
+    @classmethod
+    def _modules(cls, value):
+        from .modules import normalize_modules
+
+        return normalize_modules(value)
 
 
 class CampPublic(BaseModel):

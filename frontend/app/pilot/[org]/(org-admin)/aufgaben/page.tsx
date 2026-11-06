@@ -1,5 +1,8 @@
 import { loadOrgAdminData } from '../../../../components/saas/orgAdminData'
 import OrgTasksScreen from '../../../../components/saas/screens/OrgTasksScreen'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Aufgaben' }
 
 export default async function OrgTasksPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params

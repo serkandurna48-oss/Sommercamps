@@ -13,6 +13,7 @@ from typing import Optional
 from uuid import UUID
 
 import psycopg2.errors
+from psycopg2.extras import Json
 
 from .. import db
 
@@ -38,8 +39,37 @@ class MembershipConflictError(Exception):
     """Same normalised name and birth date already exists for this organization."""
 
 
+class ExtraFieldLimitError(Exception):
+    """The organization would keep more distinct extra labels than allowed."""
+
+
+def _check_org_extra_labels(cur, organization_id: UUID, limit: int) -> None:
+    """Raise inside the open transaction (caller rolls back) when the organization
+    has more than `limit` distinct extra labels."""
+    cur.execute(
+        """select count(distinct k) as n from organization_memberships m,
+                  lateral jsonb_object_keys(m.extra) k
+            where m.organization_id = %s""",
+        (organization_id,),
+    )
+    if cur.fetchone()["n"] > limit:
+        raise ExtraFieldLimitError(str(organization_id))
+
+
+def remove_extra_label(organization_id: UUID, label: str) -> int:
+    """Remove one extra field (by exact label) from every member of the
+    organization. Returns the number of members changed."""
+    with db.get_cursor() as cur:
+        cur.execute(
+            """update organization_memberships set extra = extra - %s
+                where organization_id = %s and extra ? %s""",
+            (label, organization_id, label),
+        )
+        return cur.rowcount
+
+
 _FIELDS = """id, organization_id, first_name, last_name, birth_date, member_number,
-    active, source, match_key, created_at, updated_at"""
+    active, source, match_key, extra, created_at, updated_at"""
 
 
 def create_member(
@@ -105,37 +135,65 @@ def set_member_active(organization_id: UUID, member_id: UUID, active: bool) -> O
         return cur.fetchone()
 
 
-def import_members(organization_id: UUID, rows: list[dict]) -> dict:
+def update_member(organization_id: UUID, member_id: UUID, *, active: Optional[bool] = None,
+                  extra: Optional[dict[str, str]] = None, max_org_labels: Optional[int] = None) -> Optional[dict]:
+    """Partial update: `active` and/or `extra` (replaces all extra fields; the
+    caller validates labels and values). With `max_org_labels` the update is
+    rolled back (ExtraFieldLimitError) if the organization ends up above it."""
+    with db.get_cursor() as cur:
+        cur.execute(
+            f"""update organization_memberships
+                   set active = coalesce(%s::boolean, active),
+                       extra = coalesce(%s::jsonb, extra)
+                where organization_id = %s and id = %s returning {_FIELDS}""",
+            (active, Json(extra) if extra is not None else None, organization_id, member_id),
+        )
+        row = cur.fetchone()
+        if row is not None and extra is not None and max_org_labels is not None:
+            _check_org_extra_labels(cur, organization_id, max_org_labels)
+        return row
+
+
+def import_members(organization_id: UUID, rows: list[dict], *, max_org_labels: Optional[int] = None) -> dict:
     """Atomic bulk upsert in ONE transaction (any DB error rolls everything
     back). Rows are dicts with first_name, last_name, birth_date,
     member_number (may be None). Duplicates inside `rows` (same match_key +
     birth date) are merged, the later row winning; existing rows are
-    updated (member_number if given, active=true), never duplicated."""
+    updated (member_number if given, active=true), never duplicated. Optional
+    `extra` ({label: value}) is merged into the stored extra fields: new values
+    overwrite the same label, other labels stay. With `max_org_labels` the whole
+    import is rolled back (ExtraFieldLimitError) if the organization would keep
+    more distinct labels than that."""
     merged: dict[tuple, dict] = {}
     for row in rows:
         key = (normalize_match_key(row["first_name"], row["last_name"]), row["birth_date"])
         previous = merged.get(key)
-        if previous is not None and row.get("member_number") is None:
-            row = {**row, "member_number": previous.get("member_number")}
+        if previous is not None:
+            row = {**row, "extra": {**(previous.get("extra") or {}), **(row.get("extra") or {})}}
+            if row.get("member_number") is None:
+                row["member_number"] = previous.get("member_number")
         merged[key] = row
     created = updated = 0
     with db.get_cursor() as cur:
         for (match_key, birth_date), row in merged.items():
             cur.execute(
                 """insert into organization_memberships
-                    (organization_id, first_name, last_name, birth_date, member_number, source, match_key)
-                   values (%s, %s, %s, %s, %s, 'csv', %s)
+                    (organization_id, first_name, last_name, birth_date, member_number, source, match_key, extra)
+                   values (%s, %s, %s, %s, %s, 'csv', %s, %s)
                    on conflict (organization_id, match_key, birth_date) do update
                      set member_number = coalesce(excluded.member_number, organization_memberships.member_number),
-                         active = true
+                         active = true,
+                         extra = organization_memberships.extra || excluded.extra
                    returning (xmax = 0) as inserted""",
                 (organization_id, row["first_name"].strip(), row["last_name"].strip(), birth_date,
-                 row.get("member_number"), match_key),
+                 row.get("member_number"), match_key, Json(row.get("extra") or {})),
             )
             if cur.fetchone()["inserted"]:
                 created += 1
             else:
                 updated += 1
+        if max_org_labels is not None and any(row.get("extra") for row in merged.values()):
+            _check_org_extra_labels(cur, organization_id, max_org_labels)
     return {"rows": len(rows), "created": created, "updated": updated, "merged_in_file": len(rows) - len(merged)}
 
 

@@ -69,7 +69,7 @@ def create_offer(
 
 
 def get_offer(organization_id: UUID, offer_id: UUID) -> Optional[dict]:
-    with db.get_cursor() as cur:
+    with db.get_read_cursor() as cur:
         cur.execute(
             f"select {_OFFER_FIELDS} from training_offers where organization_id = %s and id = %s",
             (organization_id, offer_id),
@@ -87,7 +87,7 @@ def get_offer_by_slug(organization_id: UUID, slug: str) -> Optional[dict]:
 
 
 def list_offers(organization_id: UUID, *, status: Optional[str] = None) -> list[dict]:
-    with db.get_cursor() as cur:
+    with db.get_read_cursor() as cur:
         cur.execute(
             f"""select {_OFFER_FIELDS} from training_offers
                 where organization_id = %s and (%s::text is null or status = %s)
@@ -243,7 +243,7 @@ class SessionHasRegistrationsError(Exception):
 
 
 def get_session_with_count(organization_id: UUID, offer_id: UUID, session_id: UUID) -> Optional[dict]:
-    with db.get_cursor() as cur:
+    with db.get_read_cursor() as cur:
         cur.execute(
             _SESSION_WITH_COUNT + " where c.organization_id = %s and c.offer_id = %s and c.id = %s",
             (_COUNTING, organization_id, offer_id, session_id),
@@ -252,7 +252,7 @@ def get_session_with_count(organization_id: UUID, offer_id: UUID, session_id: UU
 
 
 def list_sessions_with_counts(organization_id: UUID, offer_id: UUID) -> list[dict]:
-    with db.get_cursor() as cur:
+    with db.get_read_cursor() as cur:
         cur.execute(
             _SESSION_WITH_COUNT
             + " where c.organization_id = %s and c.offer_id = %s order by c.starts_at asc, c.slug asc",
@@ -330,3 +330,29 @@ def cancel_session(organization_id: UUID, offer_id: UUID, session_id: UUID) -> N
             "update camps set status = 'archived' where organization_id = %s and id = %s",
             (organization_id, session_id),
         )
+
+
+_TRAINING_PAYMENT_ROWS = """
+    select t.id as offer_id, t.title as offer_title, t.kind as offer_kind, t.status as offer_status,
+           c.id as session_id, c.slug as session_slug, c.status as session_status, c.title as camp_title,
+           c.starts_at, c.ends_at, c.capacity, c.price_cents, c.price_member_cents,
+           c.age_min, c.age_max, c.location,
+           r.id, r.registration_token, r.status, r.payment_status, r.payment_method, r.member_match,
+           r.applied_price_cents, r.parent_first_name, r.parent_last_name, r.parent_email,
+           r.child_first_name, r.child_last_name, r.created_at
+    from camp_registrations r
+    join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
+    join training_offers t on t.id = c.offer_id and t.organization_id = c.organization_id
+    where r.organization_id = %s
+    order by t.title, t.slug, c.starts_at, c.slug, r.created_at, r.id
+"""
+
+
+def list_training_payment_rows(organization_id: UUID) -> list[dict]:
+    """One row per training-session registration of this organization (all
+    statuses) with its session and offer fields — the payments view in one
+    query instead of 1 + offers + sessions requests. Payment-relevant
+    registration fields only (no medical/emergency/birth-date data)."""
+    with db.get_read_cursor() as cur:
+        cur.execute(_TRAINING_PAYMENT_ROWS, (organization_id,))
+        return cur.fetchall()

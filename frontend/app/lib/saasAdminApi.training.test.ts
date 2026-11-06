@@ -15,6 +15,7 @@ import {
   fetchTrainingOffersAdmin,
   fetchTrainingSessionsAdmin,
   importClubMembersAdmin,
+  removeClubMemberExtraFieldAdmin,
   setClubMemberActiveAdmin,
   updateTrainingOfferAdmin,
 } from './saasAdminApi'
@@ -162,6 +163,19 @@ it('importiert CSV als JSON {csv} und liefert die Zähler', async () => {
   expect(result).toEqual({ rows: 2, created: 1, updated: 1, merged_in_file: 0 })
   expect(lastCall(fn).url).toMatch(/\/club-members\/import$/)
   expect(lastCall(fn).body).toEqual({ csv: 'vorname;nachname\n' })
+})
+
+it('sendet die Spaltenzuordnung mit, wenn vorhanden', async () => {
+  const fn = stubFetch(200, { rows: 1, created: 1, updated: 0, merged_in_file: 0 })
+  await importClubMembersAdmin('ksv', 'tok', 'Name;Vorname\n', { 0: 'last_name', 1: { extra: 'Team' }, 2: null })
+  expect(lastCall(fn).body).toEqual({ csv: 'Name;Vorname\n', mapping: { 0: 'last_name', 1: { extra: 'Team' }, 2: null } })
+})
+
+it('entfernt ein Zusatzfeld per DELETE mit kodiertem Label', async () => {
+  const fn = stubFetch(200, { members: 3 })
+  expect(await removeClubMemberExtraFieldAdmin('ksv', 'tok', 'Tel/Nr & Co')).toEqual({ members: 3 })
+  expect(lastCall(fn).url).toMatch(/\/club-members\/extra-fields\?label=Tel%2FNr%20%26%20Co$/)
+  expect(lastCall(fn).init.method).toBe('DELETE')
 })
 
 it('Importfehler (422) tragen nur Zeile/Feld/Code, nie Inhalte', async () => {

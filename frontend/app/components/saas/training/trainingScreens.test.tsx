@@ -10,7 +10,9 @@ import TrainingOfferScreen from '../screens/TrainingOfferScreen'
 import TrainingsScreen from '../screens/TrainingsScreen'
 import MemberImport from './MemberImport'
 import ShareActions from './ShareActions'
-import { importMembersAction, updateOfferAction } from '../actions/trainingActions'
+import { importMembersAction, removeMemberExtraFieldAction, updateOfferAction } from '../actions/trainingActions'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/pilot/demo/trainings' }))
 vi.mock('next/link', () => ({
@@ -24,6 +26,7 @@ vi.mock('../shell/logoutAction', () => ({ logoutAction: vi.fn() }))
 vi.mock('../actions/trainingActions', () => ({
   createOfferAction: vi.fn(), updateOfferAction: vi.fn(), createSessionAction: vi.fn(), deleteSessionAction: vi.fn(),
   cancelSessionAction: vi.fn(), createMemberAction: vi.fn(), setMemberActiveAction: vi.fn(), importMembersAction: vi.fn(),
+  removeMemberExtraFieldAction: vi.fn(),
 }))
 vi.mock('../actions/waitlistActions', () => ({ cancelRegistrationAction: vi.fn() }))
 vi.mock('../actions/paymentActions', () => ({ setPaymentStatusAction: vi.fn() }))
@@ -68,10 +71,17 @@ describe('Trainingsangebote', () => {
     expect(doc.querySelector('a[href="/pilot/demo/trainings/new"]')?.textContent).toBe('Angebot anlegen')
   })
 
-  it('hat die Navigation zu Trainings und Mitgliedern', () => {
+  it('ohne Mitglieder-Modul nur ein Preis in der Angebotsliste', () => {
+    const text = html(<TrainingsScreen orgSlug="demo" org={{ ...org, modules: ['camps', 'trainings'] }} offers={[offer]} />).body.textContent ?? ''
+    expect(text).not.toContain('Mitglieder')
+    expect(text).toContain('40,50')
+  })
+
+  // Launch-UX: Trainings/Mitglieder are reached through the sidebar in the layout (AdminSidebar.test.tsx).
+  it('zeigt die Primäraktion im Seitenkopf und einen Leerzustand', () => {
     const doc = html(<TrainingsScreen orgSlug="demo" org={org} offers={[]} />)
-    expect(doc.querySelector('a[href="/pilot/demo/trainings"]')).not.toBeNull()
-    expect(doc.querySelector('a[href="/pilot/demo/mitglieder"]')).not.toBeNull()
+    expect(doc.querySelector('header.cp-page-head a[href="/pilot/demo/trainings/new"]')?.className).toContain('cp-btn-primary')
+    expect(doc.querySelector('header a.cp-back-link')).toBeNull()
     expect(doc.body.textContent).toContain('Noch kein Trainingsangebot.')
   })
 
@@ -105,6 +115,13 @@ describe('Angebot mit Terminen und Buchungen', () => {
     expect(row.textContent).toContain('Zahlung offen')
     expect(row.textContent).toContain('Barzahlung vor Ort')
     expect(row.textContent).toContain('Als bezahlt markieren')
+  })
+
+  it('ohne Mitglieder-Modul kein Mitglied-/Nichtmitglied-Label', () => {
+    const doc = html(<TrainingOfferScreen orgSlug="demo" org={{ ...org, modules: ['camps', 'trainings'] }} offer={offer}
+      sessions={[session]} registrationsBySession={{ [session.id]: [registration({ member_match: false })] }} />)
+    const row = doc.querySelector('li[data-payment-status="open"]')!
+    expect(row.textContent).not.toContain('Mitglied')
   })
 
   it('Nichtmitglied, Preis 0 und Überweisung', () => {
@@ -265,14 +282,146 @@ describe('interaktive Teile', () => {
     })
   }
 
-  it('Import dekodiert Excel-CSV (windows-1252) und zeigt die Zähler', async () => {
+  it('Import dekodiert Excel-CSV (windows-1252), sendet die Zuordnung und zeigt die Zähler', async () => {
     vi.mocked(importMembersAction).mockResolvedValue({ error: null, errors: [], result: { rows: 2, created: 1, updated: 1, merged_in_file: 0 } })
     await act(() => root.render(<MemberImport orgSlug="demo" />))
     // "Müller" with a CP1252 u-umlaut (0xFC) is not valid UTF-8.
-    await pickFile([new Uint8Array([0x76, 0x6f, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x3b, 0x4d, 0xfc, 0x6c, 0x6c, 0x65, 0x72])])
+    const head = new TextEncoder().encode('vorname;nachname;geburtsdatum\nAnna;')
+    await pickFile([head, new Uint8Array([0x4d, 0xfc, 0x6c, 0x6c, 0x65, 0x72]), ';01.02.2015'])
     await submitImport()
-    expect(importMembersAction).toHaveBeenCalledWith('demo', 'vorname;Müller')
+    expect(importMembersAction).toHaveBeenCalledWith('demo', 'vorname;nachname;geburtsdatum\nAnna;Müller;01.02.2015',
+      { 0: 'first_name', 1: 'last_name', 2: 'birth_date' })
     expect(container.textContent).toContain('2 Zeilen gelesen, 1 neu, 1 aktualisiert')
+  })
+
+  const CLUB_EXPORT = [
+    'Mitgl.-Nr.;Name;Vorname;Geb.-Datum;Mannschaft;Telefon;Allergien',
+    ...Array.from({ length: 7 }, (_, i) => `M-${i};Muster${i};Kind${i};0${i + 1}.02.2015;U10;0123;Nuss`),
+  ].join('\n')
+
+  function select(column: number) {
+    return container.querySelector<HTMLSelectElement>(`select[data-column="${column}"]`)!
+  }
+  async function setValue(element: HTMLSelectElement | HTMLInputElement, value: string) {
+    const proto = element instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(proto, 'value')!.set!.call(element, value)
+      element.dispatchEvent(new Event(element instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }))
+    })
+  }
+  async function waitForPreview() {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)) })
+  }
+
+  it('Zuordnung: senkrechte Liste mit Beispielwerten, Alias-Vorschlägen, Datenschutzhinweis, Warnung und Übersicht', async () => {
+    await act(() => root.render(<MemberImport orgSlug="demo" />))
+    await pickFile([CLUB_EXPORT])
+    await waitForPreview()
+    expect(container.querySelector('[data-testid="privacy-hint"]')?.textContent)
+      .toBe('Nur Felder übernehmen, die Sie für Training und Preis brauchen. Keine Gesundheitsdaten, Adressen oder Telefonnummern.')
+    // One row per CSV column, no preview table that needs horizontal scrolling.
+    expect(container.querySelectorAll('[data-mapping-row]')).toHaveLength(7)
+    expect(container.querySelector('table')).toBeNull()
+    expect(container.querySelector('[data-samples="2"]')?.textContent).toBe('z. B. Kind0 · Kind1 · Kind2')
+    expect(container.textContent).toContain('7 Zeilen, 7 Spalten')
+    expect([0, 1, 2, 3, 4, 5, 6].map(i => select(i).value))
+      .toEqual(['member_number', 'last_name', 'first_name', 'birth_date', 'skip', 'skip', 'skip'])
+    expect([...container.querySelectorAll('[data-sensitive]')].map(el => el.getAttribute('data-sensitive'))).toEqual(['5', '6'])
+    expect([...select(0).options].map(o => o.textContent)).toEqual(['Vorname', 'Nachname', 'Geburtsdatum', 'Mitgliedsnummer', 'Zusatzfeld', 'Nicht importieren'])
+    expect(container.querySelector('[data-testid="mapping-summary"]')?.textContent).toContain(
+      'Vorname ← Vorname, Nachname ← Name, Geburtsdatum ← Geb.-Datum, Mitgliedsnummer ← Mitgl.-Nr. · 3 ignoriert')
+    expect(container.querySelector('[data-testid="mapping-missing"]')).toBeNull()
+    // Missing required field and an imported sensitive column are visible right away.
+    await setValue(select(3), 'skip')
+    await setValue(select(5), 'extra')
+    const summary = container.querySelector('[data-testid="mapping-summary"]')!.textContent
+    expect(summary).toContain('Fehlt noch: Geburtsdatum')
+    expect(summary).toContain('1 Zusatzfeld · 3 ignoriert')
+    expect(summary).toContain('1 möglicherweise sensible Spalte wird importiert.')
+  })
+
+  it('Zuordnung: Zusatzfeld mit eigener Bezeichnung wird gesendet, sensible Spalte nicht', async () => {
+    vi.mocked(importMembersAction).mockResolvedValue({ error: null, errors: [], result: { rows: 7, created: 7, updated: 0, merged_in_file: 0 } })
+    await act(() => root.render(<MemberImport orgSlug="demo" />))
+    await pickFile([CLUB_EXPORT])
+    await waitForPreview()
+    await setValue(select(4), 'extra')
+    const label = container.querySelector<HTMLInputElement>('input[data-label-for="4"]')!
+    expect(label.value).toBe('Mannschaft')
+    await setValue(label, 'Team')
+    await submitImport()
+    expect(importMembersAction).toHaveBeenCalledWith('demo', CLUB_EXPORT, {
+      0: 'member_number', 1: 'last_name', 2: 'first_name', 3: 'birth_date', 4: { extra: 'Team' }, 5: null, 6: null,
+    })
+  })
+
+  it('Zuordnung: fehlendes Pflichtfeld oder doppelte Zuordnung sendet nichts', async () => {
+    await act(() => root.render(<MemberImport orgSlug="demo" />))
+    await pickFile([CLUB_EXPORT])
+    await waitForPreview()
+    await setValue(select(3), 'skip')
+    await submitImport()
+    expect(importMembersAction).not.toHaveBeenCalled()
+    expect(container.querySelector('[data-testid="mapping-errors"]')?.textContent).toContain('Bitte eine Spalte als Geburtsdatum zuordnen.')
+    await setValue(select(3), 'first_name')
+    await submitImport()
+    expect(importMembersAction).not.toHaveBeenCalled()
+    expect(container.querySelector('[data-testid="mapping-errors"]')?.textContent).toContain('Vorname ist mehreren Spalten zugeordnet')
+  })
+
+  it('Mitgliederliste zeigt Zusatzfelder als Spalten (alphabetisch) und sucht darin', async () => {
+    const members: ClubMember[] = [
+      { ...member, extra: { Mannschaft: 'U10', Beitrag: 'Familie' } },
+      { ...member, id: 'm2', first_name: 'Erika', last_name: 'Beispiel', member_number: null, extra: { Mannschaft: 'U12' } },
+    ]
+    await act(() => root.render(<MembersScreen orgSlug="demo" org={org} members={members} />))
+    const head = container.querySelector('.cp-table-head')!
+    expect([...head.querySelectorAll('[data-extra-head]')].map(el => el.getAttribute('data-extra-head'))).toEqual(['Beitrag', 'Mannschaft'])
+    expect(container.querySelector('.cp-member-scroll')).not.toBeNull()
+    const rows = container.querySelectorAll('li.cp-table-row')
+    const empty = rows[1].querySelector('[data-extra="Beitrag"]')!
+    expect(empty.textContent).toBe('Beitrag: –')
+    expect(empty.className).toContain('max-lg:hidden')  // phones: no empty extra lines
+    expect(rows[0].querySelector('[data-extra="Mannschaft"]')?.textContent).toBe('Mannschaft: U10')
+    expect(rows[0].querySelector('[data-extra="Mannschaft"]')?.className).not.toContain('max-lg:hidden')
+    const search = container.querySelector<HTMLInputElement>('input[type="search"]')!
+    await setValue(search, 'u12')
+    expect(container.textContent).toContain('Erika')
+    expect(container.textContent).not.toContain('Max Mustermann')
+  })
+
+  it('Zusatzfeld "constructor" liest nicht den Prototyp', async () => {
+    const members: ClubMember[] = [{ ...member, extra: { Team: 'A' } }, { ...member, id: 'm2', first_name: 'Eva', extra: { constructor: 'x' } }]
+    await act(() => root.render(<MembersScreen orgSlug="demo" org={org} members={members} />))
+    const rows = container.querySelectorAll('li.cp-table-row')
+    expect(rows[0].querySelector('[data-extra="constructor"]')?.textContent).toBe('constructor: –')
+    expect(rows[1].querySelector('[data-extra="constructor"]')?.textContent).toBe('constructor: x')
+  })
+
+  it('Zusatzfeld entfernen: erst bestätigen, dann Aktion mit dem Label', async () => {
+    vi.mocked(removeMemberExtraFieldAction).mockReset().mockResolvedValue({ error: null, members: 1 })
+    const members: ClubMember[] = [{ ...member, extra: { Telefon: '0123', Team: 'U10' } }]
+    await act(() => root.render(<MembersScreen orgSlug="demo" org={org} members={members} />))
+    const head = container.querySelector('.cp-table-head')!
+    await act(async () => head.querySelector<HTMLButtonElement>('[data-remove-extra="Telefon"]')!.click())
+    expect(removeMemberExtraFieldAction).not.toHaveBeenCalled()
+    expect(head.textContent).toContain('Bei allen Mitgliedern löschen?')
+    await act(async () => { head.querySelector<HTMLButtonElement>('[data-confirm-remove="Telefon"]')!.click() })
+    expect(removeMemberExtraFieldAction).toHaveBeenCalledWith('demo', 'Telefon')
+    // Phones get the same controls outside the (hidden) table head.
+    expect(container.querySelector('[data-extra-fields-mobile] [data-remove-extra="Team"]')).not.toBeNull()
+  })
+
+  it('Scrollbox der breiten Mitgliederliste ist positioniert (sr-only-Präfixe bleiben drin, keine Seitenbreite)', () => {
+    const css = readFileSync(join(process.cwd(), 'app/components/saas/tokens.css'), 'utf8')
+    const rule = css.match(/\.cp-member-scroll\s*\{([^}]*)\}/)
+    expect(rule?.[1]).toMatch(/position:\s*relative/)
+  })
+
+  it('Mitgliederliste ohne Zusatzfelder bleibt beim kompakten Layout', async () => {
+    await act(() => root.render(<MembersScreen orgSlug="demo" org={org} members={[member]} />))
+    expect(container.querySelector('.cp-member-scroll')).toBeNull()
+    expect(container.querySelectorAll('.cp-table-head span')).toHaveLength(5)
   })
 
   it('Importfehler erscheinen als "Zeile X: Feld Y (code)" ohne Inhalte', async () => {

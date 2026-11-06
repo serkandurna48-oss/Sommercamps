@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CampAdmin, RegistrationAdmin } from '../../lib/saasAdminApi'
 import { loadCampAdminData, loadOrgAdminData } from './orgAdminData'
 import { berlinDay, registrationTime, todayRegistrations } from './registrationDates'
-import { campTabs, orgTabs } from './navTabs'
+import { adminNavFooter, campTabs } from './navTabs'
 import type { Task } from './dashboardLogic'
 import ParticipantList from './data/ParticipantList'
 import TodayRegistrations from './data/TodayRegistrations'
@@ -20,11 +20,10 @@ import TasksPage from '../../pilot/[org]/(org-admin)/camps/[campSlug]/aufgaben/p
 import ConfigPage from '../../pilot/[org]/(org-admin)/camps/[campSlug]/konfiguration/page'
 import NewRegistrationsPage from '../../pilot/[org]/(org-admin)/anmeldungen/page'
 
-vi.mock('./orgAdminData', () => ({ loadOrgAdminData: vi.fn(), loadCampAdminData: vi.fn() }))
+vi.mock('./orgAdminData', () => ({ loadOrgAdminData: vi.fn(), loadCampAdminData: vi.fn(), loadTrainingPayments: vi.fn(async () => ({ trainingPayments: [], trainingPaymentsError: false })) }))
 vi.mock('next/navigation', () => ({ usePathname: () => '/pilot/demo/dashboard' }))
 vi.mock('next/link', () => ({ default: ({ children, ...props }: { children: React.ReactNode }) => <a {...props}>{children}</a>, useLinkStatus: () => ({ pending: false }) }))
-vi.mock('./shell/OrgSwitcher', () => ({ default: () => <span>Testverein</span> }))
-vi.mock('./shell/LogoutButton', () => ({ default: () => <button>Abmelden</button> }))
+vi.mock('./trainingAdminData', () => ({ isModuleDisabled: vi.fn(async () => false), loadTrainingOverview: vi.fn(async () => ({ offers: [], upcoming: [], error: false })) }))
 vi.mock('./data/ParticipantDetail', () => ({ default: () => null }))
 vi.mock('./actions/paymentActions', () => ({ setPaymentStatusAction: vi.fn() }))
 vi.mock('./actions/waitlistActions', () => ({ promoteWaitlistAction: vi.fn() }))
@@ -86,12 +85,15 @@ describe('daily overview', () => {
     expect(registrationTime('2026-10-25T00:30:00Z')).toBe('02:30')
     expect(registrationTime('2026-10-25T01:30:00Z')).toBe('02:30')
   })
-  it('renders the count and last three arrivals directly before tasks', async () => {
+  it('renders the count and last three arrivals on the dashboard', async () => {
     const dom = markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) }))
-    const block = dom.querySelector('main > section')!
+    const block = dom.querySelector('section[aria-labelledby="today-registrations"]')!
     expect(block.textContent).toContain('Heute neu: 4 Anmeldungen')
     expect(block.querySelectorAll('li')).toHaveLength(3)
-    expect(block.textContent).toContain('Berta Kind · Herbstcamp · heute, 10:42')
+    // Compact rows: child as label, camp and arrival time as hint, one link per row.
+    const berta = [...block.querySelectorAll('li')].find(li => li.textContent?.startsWith('Berta Kind'))!
+    expect(berta.textContent).toContain('Herbstcamp · heute, 10:42')
+    expect(berta.querySelectorAll('a')).toHaveLength(1)
     expect(block.textContent).not.toContain('Mitternacht')
     expect(block.querySelector('a[href="/pilot/demo/anmeldungen"]')).not.toBeNull()
   })
@@ -131,8 +133,9 @@ describe('daily overview', () => {
     expect(campLink!.className).not.toContain('cp-btn-primary')
   })
 
-  // Redesign R2: one primary action per view. "Jetzt dran" always carries it
-  // (task, launch card or live card), so "Camp anlegen" stays secondary.
+  // Redesign R2: at most one primary action per view. "Jetzt dran" carries it
+  // when there is something to do (task or launch card); quick actions and
+  // "Camp anlegen" stay secondary.
   it('keeps "Camp anlegen" secondary once onboarding is complete', async () => {
     // org has site_published+required fields, camp is published → step3Done → showCard=false
     const dom = markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) }))
@@ -140,7 +143,7 @@ describe('daily overview', () => {
       .find(a => a.textContent?.trim() === '+ Camp anlegen')
     expect(campLink).not.toBeNull()
     expect(campLink!.className).toContain('cp-btn-secondary')
-    expect(dom.querySelectorAll('.cp-btn-primary')).toHaveLength(1)
+    expect(dom.querySelectorAll('.cp-btn-primary').length).toBeLessThanOrEqual(1)
   })
 
   it('shows launch success card with copy-link button when first camp just published and no registrations', async () => {
@@ -163,15 +166,17 @@ describe('daily overview', () => {
 describe('camp navigation and task destinations', () => {
   it.each([CampPage, PaymentsPage, WaitlistPage, TasksPage, ConfigPage])('offers the parent backlink above the title on every camp page (%#)', async Page => {
     const dom = markup(await Page({ params: Promise.resolve({ org: 'demo', campSlug: 'herbst' }), searchParams: Promise.resolve({}) }))
-    const link = [...dom.querySelectorAll('header a')].find(a => a.textContent === '← Zurück')!
-    expect(link.getAttribute('href')).toBe(Page === CampPage ? '/pilot/demo/dashboard' : '/pilot/demo/camps/herbst')
-    expect(link.className).toContain('min-h-[44px]')
+    // Launch-UX: every camp tab shares one header; the back link leads to the camp list.
+    const link = dom.querySelector('header a.cp-back-link')!
+    expect(link.textContent).toBe('← Alle Camps')
+    expect(link.getAttribute('href')).toBe('/pilot/demo/camps')
     const heading = dom.querySelector('h1')!
-    expect(heading.textContent).toBe(Page === ConfigPage ? 'Camp-Einstellungen' : 'Herbstcamp')
+    expect(heading.textContent).toBe('Herbstcamp')
+    expect([...dom.querySelectorAll('header nav[aria-label="Camp-Bereiche"] a')].map(a => a.getAttribute('href'))).toContain('/pilot/demo/camps/herbst/zahlungen')
     expect(link.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
   it('names the two settings destinations explicitly', () => {
-    expect(orgTabs('demo').at(-1)?.label).toBe('Einstellungen')
+    expect(adminNavFooter('demo')[0]?.label).toBe('Einstellungen')
     expect(campTabs('demo', 'herbst').at(-1)?.label).toBe('Einstellungen')
   })
   it.each([

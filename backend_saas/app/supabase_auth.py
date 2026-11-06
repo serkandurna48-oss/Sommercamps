@@ -9,7 +9,10 @@ Deliberately verifies tokens by calling Supabase's own `/auth/v1/user`
 endpoint rather than decoding the JWT locally: Supabase does the signature
 check, expiry check, and revocation check for us. Successful verifications
 are cached in this process for at most 60 seconds, never beyond JWT exp.
-Revocations can therefore take up to 60 seconds to propagate. Roles are
+Revocations can therefore take up to 60 seconds to propagate. Concurrent
+cache misses for the same token share one in-flight Supabase call
+(single-flight); failures are never cached — only callers already waiting
+on that same call see its failure. Roles are
 not cached here: auth_deps still resolves authorization for every request.
 """
 
@@ -37,6 +40,27 @@ _TOKEN_CACHE_MAX_SIZE = 512
 # fields plus monotonic TTL and wall-clock exp boundaries.
 _token_cache: OrderedDict[str, tuple[str, str | None, float, float]] = OrderedDict()
 _token_cache_lock = threading.Lock()
+
+
+class _Flight:
+    """One in-flight Supabase verification that concurrent callers wait on."""
+
+    __slots__ = ("done", "result", "error")
+
+    def __init__(self) -> None:
+        self.done = threading.Event()
+        self.result: tuple[str, str | None] | None = None
+        self.error: BaseException | None = None
+
+
+# cache_key -> in-flight verification (guarded by _token_cache_lock). Removed
+# as soon as the verification finishes, success or failure.
+_inflight: dict[str, _Flight] = {}
+# httpx applies timeout=5.0 per phase (connect, write, read, pool), so the
+# leader's call is bounded by 4 x 5 s; waiters wait slightly longer than that
+# and therefore never give up while the leader can still succeed. The leader
+# always sets the event (finally), so this is only a safety net.
+_FLIGHT_WAIT_SECONDS = 21.0
 
 
 def _token_expiry(access_token: str) -> float | None:
@@ -110,6 +134,34 @@ def verify_access_token(access_token: str) -> SupabaseUser:
                 _token_cache.move_to_end(cache_key)
                 return SupabaseUser(id=user_id, email=email)
             del _token_cache[cache_key]
+        flight = _inflight.get(cache_key)
+        leader = flight is None
+        if leader:
+            flight = _inflight[cache_key] = _Flight()
+    if not leader:
+        # Single-flight: a page load sends 2-5 parallel requests with the same
+        # new token; they share one Supabase round trip. A failure is shared
+        # only with requests that were already waiting — it is never cached.
+        if not flight.done.wait(_FLIGHT_WAIT_SECONDS):
+            raise SupabaseAuthError("Supabase Auth verification timed out")
+        if flight.error is not None:
+            raise SupabaseAuthError(str(flight.error))
+        user_id, email = flight.result
+        return SupabaseUser(id=user_id, email=email)
+    try:
+        user = _verify_with_supabase(settings, access_token, cache_key)
+        flight.result = (user.id, user.email)
+        return user
+    except BaseException as exc:
+        flight.error = exc if isinstance(exc, SupabaseAuthError) else SupabaseAuthError("Supabase Auth verification failed")
+        raise
+    finally:
+        with _token_cache_lock:
+            _inflight.pop(cache_key, None)
+        flight.done.set()
+
+
+def _verify_with_supabase(settings, access_token: str, cache_key: str) -> SupabaseUser:
     verification_started = time.monotonic()
     try:
         response = get_client().get(

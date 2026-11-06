@@ -9,17 +9,19 @@ vi.mock('next/navigation', () => ({ usePathname: () => pathname }))
 vi.mock('next/link', () => ({ default: ({ children, ...props }: { children: React.ReactNode }) => <a {...props}>{children}</a>, useLinkStatus: () => ({ pending: false }) }))
 vi.mock('../shell/logoutAction', () => ({ logoutAction: vi.fn() }))
 
-it.each(['dashboard', 'zahlungen', 'warteliste', 'aufgaben', 'konfiguration', 'anmeldungen', 'camps/new', 'camps/sommer', 'camps/sommer/zahlungen', 'camps/sommer/warteliste', 'camps/sommer/aufgaben', 'camps/sommer/konfiguration'])('keeps identity and correct parent navigation while loading or failing on %s', path => {
+it.each(['dashboard', 'zahlungen', 'warteliste', 'aufgaben', 'konfiguration', 'anmeldungen', 'camps', 'camps/new', 'camps/sommer', 'camps/sommer/zahlungen', 'camps/sommer/warteliste', 'camps/sommer/aufgaben', 'camps/sommer/konfiguration'])('keeps the page title and correct parent navigation while loading or failing on %s', path => {
   pathname = `/pilot/demo/${path}`
   for (const reset of [undefined, vi.fn()]) {
     const container = document.createElement('div')
     container.innerHTML = renderToStaticMarkup(<OrganizationProvider org={{ name: 'Testverein', logo_url: null, primary_color: '#116644' }}><AdminRouteState reset={reset} /></OrganizationProvider>)
-    expect(container.querySelector('header')?.textContent).toContain('Testverein')
-    expect(container.querySelector('header button')?.textContent).toBe('Abmelden')
-    const back = [...container.querySelectorAll('header a')].find(a => a.textContent?.trim() === '← Zurück')
-    if (path === 'dashboard') expect(back).toBeUndefined()
-    else expect(back?.getAttribute('href')).toBe(path.startsWith('camps/sommer/') ? '/pilot/demo/camps/sommer' : '/pilot/demo/dashboard')
-    expect(container.querySelector('nav a span:not([aria-hidden])')?.textContent).toBe(path.startsWith('camps/sommer') ? 'Teilnehmer' : 'Übersicht')
+    // Club identity and the sidebar stay in the layout around this fallback.
+    expect(container.querySelector('header.cp-page-head h1')?.textContent).toBeTruthy()
+    const back = container.querySelector('header a.cp-back-link')
+    const campLevel = path.startsWith('camps/sommer')
+    if (campLevel || path === 'camps/new') expect(back?.getAttribute('href')).toBe('/pilot/demo/camps')
+    else expect(back).toBeNull()
+    const tabs = [...container.querySelectorAll('header nav a')].map(a => a.firstChild?.textContent)
+    expect(tabs).toEqual(campLevel ? ['Teilnehmer', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Einstellungen'] : [])
     expect(container.querySelector(reset ? 'main button' : '[role="status"]')).not.toBeNull()
   }
 })

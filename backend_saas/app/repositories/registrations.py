@@ -236,7 +236,7 @@ _LOCK_CAMP_CAPACITY = "select capacity, status from camps where id = %s for upda
 # KV1: registration_questions fetched here to validate extra_answers inside
 # the same locked transaction (no extra round-trip to the DB).
 _LOCK_PUBLIC_ORGANIZATION = """
-    select site_published, plan_status, registration_questions, review_status
+    select site_published, plan_status, registration_questions, review_status, modules
     from organizations
     where id = %s
     for share
@@ -386,8 +386,31 @@ def list_registrations_for_camp(organization_id: UUID, camp_id: UUID) -> list[di
     info, allergies, medical_notes) — callers must apply the same no-PII-
     in-logs discipline as app/routers/registrations.py.
     """
-    with db.get_cursor() as cur:
+    with db.get_read_cursor() as cur:
         cur.execute(_LIST_REGISTRATIONS_FOR_CAMP, (organization_id, camp_id))
+        return cur.fetchall()
+
+
+_LIST_REGISTRATIONS_FOR_OFFER = f"""
+    select r.camp_id, c.title as camp_title,
+        {', '.join('r.' + f.strip() for f in _ADMIN_REGISTRATION_FIELDS.strip().split(',') if f.strip())}
+    from camp_registrations r
+    join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
+    where r.organization_id = %s
+      and c.offer_id = %s
+    order by r.created_at asc, r.id asc
+"""
+
+
+def list_registrations_for_offer(organization_id: UUID, offer_id: UUID) -> list[dict]:
+    """
+    Every registration of every session of one training offer, in one query
+    (each row carries `camp_id` = session id for grouping). Same rows and
+    PII rules as list_registrations_for_camp; both ids must already be
+    resolved within this organization.
+    """
+    with db.get_read_cursor() as cur:
+        cur.execute(_LIST_REGISTRATIONS_FOR_OFFER, (organization_id, offer_id))
         return cur.fetchall()
 
 
@@ -751,7 +774,9 @@ def create_training_registration(
       (rechecked under the lock; TrainingSessionPastError -> 409);
     - the price is decided here, never by the client: member (active row in
       organization_memberships with the same normalised name + birth date)
-      -> price_member_cents (fallback price_cents), else price_cents;
+      -> price_member_cents (fallback price_cents), else price_cents; the
+      member lookup only runs when the organization has the members module;
+    - the trainings module must be on (rechecked under the organization lock);
     - applied_price_cents / member_match / payment_method are stored on the row.
 
     `data.payment_method` must already be validated by the caller.
@@ -768,6 +793,10 @@ def create_training_registration(
             or organization.get("review_status", "approved") != "approved"
         ):
             raise OrganizationNotAvailableError("Organization no longer available")
+        modules = set(organization.get("modules") or ())
+        if "trainings" not in modules:
+            # Module switched off between the lookup and this lock: same as a withdrawn session.
+            raise CampNotAvailableError(f"Training '{camp.slug}' no longer available")
 
         validate_extra_answers(organization.get("registration_questions") or [], dict(data.extra_answers))
 
@@ -792,15 +821,19 @@ def create_training_registration(
         if cur.fetchone()["active_count"] >= locked["capacity"]:
             raise TrainingSessionFullError(f"Training '{camp.slug}' is full")
 
-        cur.execute(
-            _FIND_ACTIVE_MEMBER,
-            (
-                tenant.organization_id,
-                normalize_match_key(data.child_first_name, data.child_last_name),
-                data.child_birth_date,
-            ),
-        )
-        member_match = cur.fetchone() is not None
+        # Member price only with the members module; otherwise no lookup,
+        # member_match stays NULL ("not checked") and the non-member price applies.
+        member_match = None
+        if "members" in modules:
+            cur.execute(
+                _FIND_ACTIVE_MEMBER,
+                (
+                    tenant.organization_id,
+                    normalize_match_key(data.child_first_name, data.child_last_name),
+                    data.child_birth_date,
+                ),
+            )
+            member_match = cur.fetchone() is not None
         applied_price = locked["price_cents"]
         if member_match and locked["price_member_cents"] is not None:
             applied_price = locked["price_member_cents"]

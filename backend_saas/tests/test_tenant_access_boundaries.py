@@ -22,8 +22,7 @@ def test_real_auth_chain_denies_foreign_admin_routes(monkeypatch, method, path, 
         return supabase_auth.SupabaseUser(token, None)
 
     monkeypatch.setattr(supabase_auth, "verify_access_token", verify)
-    monkeypatch.setattr(platform_roles, "is_platform_owner", lambda user: False)
-    monkeypatch.setattr(platform_roles, "get_admin_organization_ids", lambda user: [str(ORG_A)] if user == "admin-a" else [])
+    monkeypatch.setattr(platform_roles, "get_user_roles", lambda user: (False, [str(ORG_A)] if user == "admin-a" else []))
     monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: _org_row(slug, id=ORG_B))
 
     def no_business_query():
@@ -40,8 +39,7 @@ def test_real_auth_chain_denies_foreign_admin_routes(monkeypatch, method, path, 
 def test_demo_shaped_me_and_immediate_membership_revocation(monkeypatch):
     memberships = [str(ORG_A)]
     monkeypatch.setattr(supabase_auth, "verify_access_token", lambda token: supabase_auth.SupabaseUser("synthetic-demo", "demo@example.com"))
-    monkeypatch.setattr(platform_roles, "is_platform_owner", lambda user: False)
-    monkeypatch.setattr(platform_roles, "get_admin_organization_ids", lambda user: memberships.copy())
+    monkeypatch.setattr(platform_roles, "get_user_roles", lambda user: (False, memberships.copy()))
     monkeypatch.setattr(organizations, "get_organization_by_id", lambda org_id: _org_row("synthetic-demo", id=ORG_A))
     monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: _org_row(slug, id=ORG_A))
     with TestClient(app) as client:

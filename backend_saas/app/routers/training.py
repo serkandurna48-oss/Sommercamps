@@ -26,8 +26,11 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from ..admin_resolve import require_organization
 from ..admin_schemas import RegistrationAdminOut, _validate_slug
+from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES
+from ..schemas import RegistrationCreated
 from ..auth_deps import AuthContext, require_org_access
 from ..deps import get_tenant_context
+from ..modules import require_module, require_public_module
 from ..repositories import camps as camps_repo
 from ..repositories import platform_roles
 from ..repositories import registrations as registrations_repo
@@ -36,8 +39,14 @@ from ..tenancy import TenantContext
 
 logger = logging.getLogger(__name__)
 
-admin_router = APIRouter(prefix="/admin", tags=["Admin Training"])
-public_router = APIRouter(prefix="/api/v1/organizations/{organization_slug}/training-offers", tags=["Training"])
+# Every route here belongs to the trainings module (admin 403 module_disabled, public 404).
+admin_router = APIRouter(
+    prefix="/admin", tags=["Admin Training"], dependencies=[Depends(require_module("trainings"))]
+)
+public_router = APIRouter(
+    prefix="/api/v1/organizations/{organization_slug}/training-offers", tags=["Training"],
+    dependencies=[Depends(require_public_module("trainings"))],
+)
 
 OfferKind = Literal["einzel", "gruppe"]
 OfferStatus = Literal["draft", "published", "archived"]
@@ -198,6 +207,47 @@ class SessionAdminOut(BaseModel):
     age_min: int
     age_max: int
     location: Optional[str] = None
+
+
+class SessionWithRegistrationsOut(SessionAdminOut):
+    registrations: list[RegistrationAdminOut]
+
+
+class OfferOverviewOut(BaseModel):
+    """Offer detail page in one request: offer, its sessions with counts, and
+    each session's registrations (same rows/shape as the per-session list)."""
+
+    offer: OfferAdminOut
+    sessions: list[SessionWithRegistrationsOut]
+
+
+class TrainingPaymentOfferOut(BaseModel):
+    id: UUID
+    title: str
+    kind: str
+    status: str
+
+
+class TrainingPaymentRegistrationOut(RegistrationCreated):
+    """Payment-relevant subset of RegistrationAdminOut (no medical, emergency,
+    birth-date or free-text answers). payment_reference is computed from the
+    session title exactly as on the per-session list."""
+
+    id: UUID
+    payment_method: Optional[str] = None
+    member_match: Optional[bool] = None
+    parent_first_name: str
+    parent_last_name: str
+    parent_email: str
+    child_first_name: str
+    child_last_name: str
+    created_at: datetime
+
+
+class TrainingPaymentGroupOut(BaseModel):
+    offer: TrainingPaymentOfferOut
+    session: SessionAdminOut
+    registrations: list[TrainingPaymentRegistrationOut]
 
 
 class SessionPublicOut(BaseModel):
@@ -439,18 +489,94 @@ def list_session_registrations(
     return [RegistrationAdminOut.model_validate(r) for r in rows]
 
 
+# ------------------------------------------------------- admin: aggregates
+
+@admin_router.get(_ADMIN + "/{offer_id}/overview", response_model=OfferOverviewOut)
+def get_offer_overview(
+    organization_slug: str, offer_id: UUID, auth: AuthContext = Depends(require_org_access)
+) -> OfferOverviewOut:
+    """Replaces offer + sessions + one registrations request per session
+    (2 + N requests) with one. Child data: never logged."""
+    organization = require_organization(organization_slug)
+    offer = _offer_or_404(organization, offer_id)
+    sessions = repo.list_sessions_with_counts(organization["id"], offer_id)
+    by_session: dict = {s["id"]: [] for s in sessions}
+    for row in registrations_repo.list_registrations_for_offer(organization["id"], offer_id):
+        # A registration for a session created between the two queries is
+        # skipped; the next load shows it.
+        if row["camp_id"] in by_session:
+            by_session[row["camp_id"]].append(RegistrationAdminOut.model_validate(row))
+    return OfferOverviewOut(
+        offer=OfferAdminOut.model_validate(offer),
+        sessions=[
+            SessionWithRegistrationsOut(**_session_admin(s).model_dump(), registrations=by_session[s["id"]])
+            for s in sessions
+        ],
+    )
+
+
+@admin_router.get("/organizations/{organization_slug}/training-payments", response_model=list[TrainingPaymentGroupOut])
+def list_training_payments(
+    organization_slug: str, auth: AuthContext = Depends(require_org_access)
+) -> list[TrainingPaymentGroupOut]:
+    """Every training session of the organization that has registrations,
+    with those registrations (payment fields only), in one query. Groups are
+    ordered by offer title, then session start. Draft sessions without an
+    active booking are left out (same rule as the payments page had).
+    booked_count/free_spots count registered/confirmed rows, as on
+    GET .../sessions. Child data: never logged."""
+    organization = require_organization(organization_slug)
+    groups: dict = {}
+    for row in repo.list_training_payment_rows(organization["id"]):
+        group = groups.get(row["session_id"])
+        if group is None:
+            group = groups[row["session_id"]] = {"row": row, "registrations": []}
+        group["registrations"].append(row)
+    out = []
+    for group in groups.values():
+        first = group["row"]
+        booked = sum(1 for r in group["registrations"] if r["status"] in CAPACITY_COUNTING_STATUSES)
+        if first["session_status"] == "draft" and booked == 0:
+            continue
+        session = _session_admin({
+            "id": first["session_id"], "offer_id": first["offer_id"], "slug": first["session_slug"],
+            "status": first["session_status"], "capacity": first["capacity"], "booked_count": booked,
+            "price_member_cents": first["price_member_cents"], "price_cents": first["price_cents"],
+            "age_min": first["age_min"], "age_max": first["age_max"], "location": first["location"],
+            "starts_at": first["starts_at"], "ends_at": first["ends_at"],
+        })
+        out.append(TrainingPaymentGroupOut(
+            offer=TrainingPaymentOfferOut(
+                id=first["offer_id"], title=first["offer_title"], kind=first["offer_kind"], status=first["offer_status"],
+            ),
+            session=session,
+            registrations=[TrainingPaymentRegistrationOut.model_validate(r) for r in group["registrations"]],
+        ))
+    return out
+
+
 # ------------------------------------------------------------------- public
+
+def _single_price(row: dict, member: str, nonmember: str) -> dict:
+    """Members module off: booking never applies a member price, so the public
+    API shows the non-member price in both fields (the page then shows one price)."""
+    return {**row, member: row[nonmember]}
+
 
 @public_router.get("", response_model=list[OfferListPublicOut])
 def list_public_offers(tenant: TenantContext = Depends(get_tenant_context)) -> list[dict]:
     offers = repo.list_offers(tenant.organization_id, status="published")
     lowest = repo.lowest_public_session_prices(tenant.organization_id)
-    return [
+    out = [
         {**offer,
          "from_price_member_cents": lowest[offer["id"]][0] if offer["id"] in lowest else None,
          "from_price_nonmember_cents": lowest[offer["id"]][1] if offer["id"] in lowest else None}
         for offer in offers
     ]
+    if "members" not in tenant.modules:
+        out = [_single_price(_single_price(o, "price_member_cents", "price_nonmember_cents"),
+                             "from_price_member_cents", "from_price_nonmember_cents") for o in out]
+    return out
 
 
 @public_router.get("/{offer_slug}", response_model=OfferDetailPublicOut)
@@ -459,5 +585,8 @@ def get_public_offer(offer_slug: str, tenant: TenantContext = Depends(get_tenant
     if offer is None or offer["status"] != "published":
         # unknown, draft, archived and other organizations' slugs are indistinguishable
         raise HTTPException(status_code=404, detail="Offer not found")
-    sessions = repo.list_public_sessions(tenant.organization_id, offer["id"])
-    return {**offer, "sessions": [_session_public(s) for s in sessions]}
+    sessions = [_session_public(s) for s in repo.list_public_sessions(tenant.organization_id, offer["id"])]
+    if "members" not in tenant.modules:
+        offer = _single_price(offer, "price_member_cents", "price_nonmember_cents")
+        sessions = [s.model_copy(update={"price_member_cents": s.price_nonmember_cents}) for s in sessions]
+    return {**offer, "sessions": sessions}

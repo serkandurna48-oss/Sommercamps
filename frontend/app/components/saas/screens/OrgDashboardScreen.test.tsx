@@ -132,3 +132,63 @@ describe('Ihre Camps auf dem Dashboard', () => {
     expect(card.textContent).toContain('ausgebucht')
   })
 })
+
+describe('Kennzahl offene Zahlungen', () => {
+  const org = { ...organization, name: 'Testverein', slug: 'demo', logo_url: null, primary_color: null }
+  const open = { ...registrations[0], status: 'registered' as const, payment_status: 'open' as const, applied_price_cents: null }
+  const trainingGroup = {
+    camp: { ...camp('training'), price_cents: 4050 },
+    registrations: [{ ...open, id: 't1', applied_price_cents: 3000 }, { ...open, id: 't2', payment_status: 'paid' as const, applied_price_cents: 3000 }],
+  }
+  function kpi(props: Partial<React.ComponentProps<typeof OrgDashboardScreen>>) {
+    const doc = document.implementation.createHTMLDocument()
+    doc.body.innerHTML = renderToStaticMarkup(<OrgDashboardScreen orgSlug="demo" org={org} camps={[{ ...camp('c'), price_cents: 10000 }]} registrationsByCamp={[[open]]} {...props} />)
+    return [...doc.querySelectorAll('.cp-kpi-tile')].find(t => t.textContent?.includes('Offene Zahlungen'))!.textContent!.replace(/ /g, ' ')
+  }
+
+  it('zählt offene Trainingsbuchungen mit (angewandter Preis)', () => {
+    const text = kpi({ trainingPayments: [trainingGroup] })
+    expect(text).toContain('130,00')
+    expect(text).toContain('2 Anmeldungen · Camps und Trainings')
+  })
+
+  it('sagt ehrlich, wenn Trainingszahlungen fehlen', () => {
+    const text = kpi({ trainingPaymentsError: true })
+    expect(text).toContain('100,00')
+    expect(text).toContain('nur Camps, Trainings nicht geladen')
+  })
+})
+
+describe('Kennzahl Belegte Plätze', () => {
+  it('nennt laufende und anstehende Camps "aktiv", nicht "laufend"', () => {
+    const camps = [camp('anstehend', '2027-02-01', '2027-02-05'), camp('später', '2027-03-01', '2027-03-05'), camp('vorbei', '2026-09-01', '2026-09-05')]
+    const html = renderToStaticMarkup(<OrgDashboardScreen orgSlug="demo" org={{ ...organization, name: 'Testverein', slug: 'demo', logo_url: null, primary_color: null }} camps={camps} registrationsByCamp={camps.map(() => [])} />)
+    expect(html).toContain('in 2 aktiven Camps')
+    expect(html).not.toContain('laufenden')
+  })
+})
+
+describe('Module auf dem Dashboard', () => {
+  function page(modules: string[] | undefined) {
+    const doc = document.implementation.createHTMLDocument()
+    doc.body.innerHTML = renderToStaticMarkup(<OrgDashboardScreen orgSlug="demo"
+      org={{ ...organization, name: 'Testverein', slug: 'demo', logo_url: null, primary_color: null, modules }}
+      camps={[camp('herbst')]} registrationsByCamp={[[]]} training={{ offers: [], upcoming: [], error: false }} />)
+    return doc.body
+  }
+
+  it('blendet Trainings-Kennzahl und nächste Termine ohne Trainings-Modul aus', () => {
+    const body = page(['camps'])
+    expect(body.textContent).not.toContain('Trainings 7 Tage')
+    expect(body.querySelector('#dashboard-sessions')).toBeNull()
+    expect(body.textContent).not.toContain('Termin anlegen')
+    expect(body.textContent).toContain('Camps')
+    expect(body.textContent).not.toContain('Camps und Trainings')
+  })
+
+  it('zeigt Trainings-Teile mit Trainings-Modul', () => {
+    const body = page(['camps', 'trainings'])
+    expect(body.textContent).toContain('Trainings 7 Tage')
+    expect(body.querySelector('#dashboard-sessions')).not.toBeNull()
+  })
+})

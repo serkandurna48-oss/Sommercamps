@@ -30,13 +30,16 @@ from pydantic import BaseModel
 
 from ..admin_resolve import require_organization
 from ..auth_deps import AuthContext, require_org_access
+from ..modules import has_module, require_module
 from ..repositories import platform_roles
 from ..repositories import players as repo
 from ..repositories.training import BERLIN
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/admin", tags=["Admin Players"])
+# Players module only (403 module_disabled when off). Player rows themselves are still
+# created for every registration (linking), only this API is gated.
+router = APIRouter(prefix="/admin", tags=["Admin Players"], dependencies=[Depends(require_module("players"))])
 
 _BASE = "/organizations/{organization_slug}/players"
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -54,6 +57,8 @@ class PlayerSummaryOut(BaseModel):
     booking_count: int
     note_count: int
     open_goal_count: int
+    # Active club member (same match_key + birth date); None when the members module is off.
+    is_member: Optional[bool] = None
 
 
 class PlayerOut(BaseModel):
@@ -62,6 +67,8 @@ class PlayerOut(BaseModel):
     last_name: str
     birth_date: date
     age: int
+    # Active club member (same match_key + birth date); None when the members module is off.
+    is_member: Optional[bool] = None
 
 
 class BookingOut(BaseModel):
@@ -228,8 +235,10 @@ def _measurement(row: dict) -> MeasurementOut:
 def list_players(organization_slug: str, auth: AuthContext = Depends(require_org_access)) -> list[PlayerSummaryOut]:
     """All players of the organization, ordered by last/first name. No server-side search (client filters)."""
     organization = require_organization(organization_slug)
+    members = has_module(organization, "members")
     return [
-        PlayerSummaryOut(**{**r, "last_booking_at": r["last_booking_date"]})
+        PlayerSummaryOut(**{**r, "last_booking_at": r["last_booking_date"],
+                            "is_member": r["is_member"] if members else None})
         for r in repo.list_players(organization["id"])
     ]
 
@@ -242,7 +251,7 @@ def get_player(organization_slug: str, player_id: UUID, auth: AuthContext = Depe
     bookings = sorted((_booking(r) for r in repo.list_player_bookings(org_id, player_id)),
                       key=_booking_sort_key, reverse=True)
     return PlayerDetailOut(
-        player=PlayerOut(**player),
+        player=PlayerOut(**{**player, "is_member": player["is_member"] if has_module(organization, "members") else None}),
         bookings=bookings,
         notes=[NoteOut(**r) for r in repo.list_notes(org_id, player_id)],
         goals=[GoalOut(**r) for r in repo.list_goals(org_id, player_id)],

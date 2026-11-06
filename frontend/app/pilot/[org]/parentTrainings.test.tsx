@@ -19,6 +19,7 @@ vi.mock('../../lib/saasApi', async (original) => ({
 }))
 
 const org: OrganizationPublic = {
+  modules: ['camps', 'trainings', 'members'],
   slug: 'testverein', name: 'Testverein', theme: 'akademie', primary_color: '#e1b650',
   logo_url: '/test-logo.svg', contact_email: 'camps@example.org', contact_phone: null,
   legal_name: null, legal_address: null, contact_person_name: null, intro_heading: null,
@@ -89,4 +90,13 @@ it('zeigt die Angebotsart als Badge, nur wenn gesetzt', async () => {
   const html = await render()
   expect(html).toContain('Athletiktraining')
   expect(html.match(/data-testid="offer-category"/g)).toHaveLength(1)
+})
+
+it('blendet den Trainingsbereich aus, wenn das Trainings-Modul nicht freigeschaltet ist', async () => {
+  vi.mocked(fetchOrganization).mockResolvedValue({ ...org, modules: ['camps'] })
+  vi.mocked(fetchTrainingOffers).mockResolvedValue([offer])
+  const html = await render()
+  expect(html).not.toContain('id="s-trainings"')
+  expect(html).not.toContain('/training/torwart')
+  expect(html).toContain('Sommercamp')
 })

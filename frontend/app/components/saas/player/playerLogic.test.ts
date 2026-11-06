@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { PlayerBooking, PlayerMeasurement, PlayerSummary } from '../../../lib/saasAdminApi'
 import {
   FOCUS_OPTIONS, ageFromBirthDate, buildMetricSeries, filterPlayers, focusLabel, formatDay, formatMeasurement,
-  hasDocumentationConsent, isLowerBetter, metricLabel, parseGoalInput, parseMeasurementInput, parseNoteInput,
+  formatDelta, goalsOpenFirst, hasDocumentationConsent, isLowerBetter, lastTrainingDate, metricLabel, metricTrend, parseGoalInput, parseMeasurementInput, parseNoteInput,
   parseQuickPrefill, ratingDots, scaleSeries, validateVideoUrl,
 } from './playerLogic'
 
@@ -117,6 +117,39 @@ describe('Messwert-Verlauf', () => {
     expect(formatMeasurement(2.14, 's')).toBe('2,14 s')
     expect(formatMeasurement(150, 'cm')).toBe('150 cm')
     expect(formatMeasurement(32, 'Anzahl')).toBe('32 Anzahl')
+  })
+})
+
+describe('Trend und Kopfzahlen', () => {
+  const pt = (date: string, value: number) => ({ date, value })
+  it('bewertet die Richtung: Sprint sinkend = besser, Sprung sinkend = schlechter', () => {
+    expect(metricTrend('sprint_10m', [pt('2027-01-01', 2.4), pt('2027-03-01', 2.14)])).toMatchObject({ delta: -0.26, direction: 'better' })
+    expect(metricTrend('sprint_10m', [pt('2027-01-01', 2.1), pt('2027-03-01', 2.2)])).toMatchObject({ delta: 0.1, direction: 'worse' })
+    expect(metricTrend('standweitsprung', [pt('2027-01-01', 150), pt('2027-03-01', 158)])).toMatchObject({ delta: 8, direction: 'better' })
+    expect(metricTrend('standweitsprung', [pt('2027-01-01', 150), pt('2027-03-01', 140)])).toMatchObject({ direction: 'worse' })
+    expect(metricTrend('jonglieren', [pt('2027-01-01', 5), pt('2027-03-01', 5)])).toMatchObject({ delta: 0, direction: 'same' })
+  })
+  it('einzelne Messung: kein Vergleich; leere Reihe: null', () => {
+    expect(metricTrend('sprint_10m', [pt('2027-01-01', 2.4)])).toMatchObject({ previous: null, delta: null, direction: null })
+    expect(metricTrend('sprint_10m', [])).toBeNull()
+  })
+  it('formatiert die Differenz mit Vorzeichen', () => {
+    expect(formatDelta(-0.26, 's')).toBe('\u22120,26 s')
+    expect(formatDelta(8, 'cm')).toBe('+8 cm')
+    expect(formatDelta(0, 's')).toBe('0 s')
+  })
+  it('letztes Training: jüngster nicht stornierter Termin bis heute', () => {
+    const list = [
+      booking({ local_date: '2027-03-01' }), booking({ local_date: '2027-03-20', status: 'cancelled' }),
+      booking({ local_date: '2027-03-10', status: 'registered' }), booking({ local_date: '2027-05-01' }), booking({ local_date: '2027-03-15', status: 'waitlist' }),
+    ]
+    expect(lastTrainingDate(list, '2027-04-02')).toBe('2027-03-10')
+    expect(lastTrainingDate([booking({ local_date: '2027-05-01' })], '2027-04-02')).toBeNull()
+    expect(lastTrainingDate([], '2027-04-02')).toBeNull()
+  })
+  it('Ziele: offene zuerst, Reihenfolge sonst stabil', () => {
+    const goals = [{ id: 'a', status: 'erreicht' }, { id: 'b', status: 'verworfen' }, { id: 'c', status: 'offen' }, { id: 'd', status: 'offen' }]
+    expect(goalsOpenFirst(goals).map(g => g.id)).toEqual(['c', 'd', 'a', 'b'])
   })
 })
 

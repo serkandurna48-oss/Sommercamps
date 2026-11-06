@@ -78,40 +78,44 @@ describe('development-only admin preview', () => {
         hooks.pathname = `/dev/admin-vorschau/${screen}`
         const html = renderToStaticMarkup(await page(screen, empty))
         expect(html).toContain('JK Performance Academy')
-        expect(html).toContain('aria-label="Bereiche"')
+        expect(html).toContain('aria-label="Verwaltung"')
         if (!screen.startsWith('einrichtung-1')) expect(html).toContain('/jk/logo.jpg')
         expect(html).toContain('cp-scope')
         const document = window.document.implementation.createHTMLDocument()
         document.body.innerHTML = html
-        const header = document.querySelector('header')!
-        const campLevel = screen.startsWith('camp') && screen !== 'camp-neu' && !empty
-        expect([...header.querySelectorAll('nav a')].map(a => [...a.querySelectorAll('span:not([aria-hidden])')].map(span => span.textContent).join('').trim())).toEqual(campLevel
+        // Launch-UX: sidebar navigation (grouped) instead of the band tab bar.
+        const sidebar = document.querySelector('aside.cp-sidebar')!
+        const label = (a: Element) => [...a.querySelectorAll('span:not([aria-hidden])')].map(span => span.textContent).join('').trim()
+        expect([...sidebar.querySelectorAll('nav a')].map(label))
+          .toEqual(['Übersicht', 'Camps', 'Trainings', 'Anmeldungen', 'Warteliste', 'Spieler', 'Mitglieder', 'Zahlungen', 'Aufgaben'])
+        expect([...sidebar.querySelectorAll('.cp-nav-foot a')].map(label)).toEqual(['Einstellungen', 'Hilfe'])
+        const header = document.querySelector('header.cp-page-head')!
+        const campLevel = screen.startsWith('camp-') && screen !== 'camp-neu' && !empty || screen === 'camp' && !empty
+        expect([...header.querySelectorAll('nav a')].map(a => a.firstChild?.textContent?.trim())).toEqual(campLevel
           ? ['Teilnehmer', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Einstellungen']
-          : ['Übersicht', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Trainings', 'Mitglieder', 'Spieler', 'Einstellungen'])
-        const back = [...header.querySelectorAll('a')].find(a => a.textContent?.trim() === '← Zurück')
-        if (screen === 'dashboard') expect(back).toBeUndefined()
-        else {
-          const target = campLevel && screen !== 'camp' ? '/dev/admin-vorschau/camp' : '/dev/admin-vorschau/dashboard'
-          const query = empty ? '?leer=1' : campLevel && screen !== 'camp' ? `?camp=${getPreviewFixtures().camps[0].slug}` : ''
-          expect(back?.getAttribute('href')).toBe(`${target}${query}`)
+          : [])
+        const back = header.querySelector('a.cp-back-link')
+        if (screen.startsWith('camp') && screen !== 'camps') {
+          expect(back?.getAttribute('href')).toBe(`/dev/admin-vorschau/camps${empty ? '?leer=1' : ''}`)
+        } else if (!screen.startsWith('einrichtung')) {
+          expect(back).toBeNull()
         }
         expect(header.querySelectorAll('h1')).toHaveLength(1)
-        expect(header.querySelectorAll('.cp-num').length).toBeLessThanOrEqual(3)
-        expect(header.className).toContain('md:sticky')
-        expect(header.className.split(' ')).not.toContain('sticky')
+        expect(document.querySelectorAll('h1')).toHaveLength(1)
         if (screen === 'konfiguration') expect(header.querySelector('h1')?.textContent).toBe('Vereinseinstellungen')
-        if (screen === 'camp-konfiguration' && !empty) expect(header.querySelector('h1')?.textContent).toBe('Camp-Einstellungen')
-        for (const button of document.querySelectorAll('button')) expect(button.className).toMatch(/cp-btn-(primary|secondary|danger)\b/)
+        if (screen === 'camp-konfiguration' && !empty) expect(header.querySelector('[aria-current="page"]')?.firstChild?.textContent).toBe('Einstellungen')
+        // Navigation chrome (menu, collapse, group heads, logout) has its own styles; page actions use the shared Button.
+        for (const button of document.querySelectorAll('main button, header.cp-page-head button')) expect(button.className).toMatch(/cp-btn-(primary|secondary|danger)\b/)
         for (const card of document.querySelectorAll('.cp-card:not(.cp-card-list), [class*="rounded-[var(--cp-r-card)]"]')) {
           expect(card.querySelectorAll('.cp-btn-primary').length).toBeLessThanOrEqual(1)
         }
-        // Redesign R2: one primary action per view (e.g. dashboard: the first
-        // task card; task rows and "Camp anlegen" stay secondary).
-        expect(document.querySelectorAll('main .cp-btn-primary').length, screen).toBeLessThanOrEqual(1)
+        // Redesign R2: one primary action per view, page header included (e.g.
+        // dashboard: the first task; quick actions and "Camp anlegen" stay secondary).
+        expect(document.querySelectorAll('.cp-btn-primary').length, screen).toBeLessThanOrEqual(1)
         // Admin-UI uses Sie-form; parent-facing hilfe additionally contains Sie/Ihnen in FAQ templates
         expect(document.body.textContent).not.toMatch(/—|\.\.\./)
         expect(html).not.toMatch(/href="\/(pilot|platform)\//)
-        if (['dashboard', 'camp', 'zahlungen', 'warteliste', 'aufgaben', 'konfiguration', 'camp-konfiguration', 'camp-zahlungen', 'camp-warteliste', 'camp-aufgaben'].includes(screen) && !(empty && screen.startsWith('camp'))) {
+        if (['dashboard', 'camps', 'camp', 'zahlungen', 'warteliste', 'aufgaben', 'konfiguration', 'camp-konfiguration', 'camp-zahlungen', 'camp-warteliste', 'camp-aufgaben'].includes(screen) && !(empty && screen.startsWith('camp'))) {
           expect(html).toContain('aria-current="page"')
         }
         if (empty) expect(html).not.toContain('familie1@campspilot.example')
@@ -232,7 +236,7 @@ it('preserves task filters and camp selection inside the preview', async () => {
     params: Promise.resolve({ screen: 'camp' }),
     searchParams: Promise.resolve({ camp: 'wintercamp', sort: 'newest' }),
   }))
-  expect(winter).toContain('<h1 class="cp-band-title break-words">Wintercamp Ballgefühl</h1>')
+  expect(winter).toContain('<h1 class="cp-page-title break-words">Wintercamp Ballgefühl</h1>')
   expect(winter).toContain('Eingang:')
   expect(winter).not.toMatch(/href="\/(pilot|platform)\//)
 })

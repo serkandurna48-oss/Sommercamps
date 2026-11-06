@@ -41,6 +41,14 @@ describe('Trainingszahlungen', () => {
     expect(html).toContain('Trainingszahlungen konnten nicht geladen werden.')
   })
 
+  it('ohne Trainings-Modul kein Trainings-Fehlerhinweis und Camp-Text', () => {
+    const html = renderToStaticMarkup(
+      <OrgPaymentsScreen orgSlug="demo" org={{ ...org, modules: ['camps'] }} camps={[]} registrationsByCamp={[]} trainingPaymentsError />,
+    )
+    expect(html).not.toContain('Trainingszahlungen konnten nicht geladen werden.')
+    expect(html).not.toContain('Trainingspreis')
+  })
+
   it('bildet einen Termin als Zahlungsgruppe mit Berliner Ortszeit im Titel ab', () => {
     const group = trainingPaymentGroup(offer, session, [reg({})])
     expect(group.camp.slug).toBe('einzel-2026-03-29-1800')
@@ -59,8 +67,7 @@ describe('Trainingszahlungen', () => {
       <OrgPaymentsScreen orgSlug="demo" org={org} camps={[]} registrationsByCamp={[]} trainingPayments={groups} />,
     )
     expect(html).toContain('Einzeltraining Technik · 29.03.2026, 18:00 Uhr')
-    expect(html).toContain('Zahlart: Bar')
-    expect(html).toContain('Zahlart: Überweisung')
+    expect(html).not.toContain('Zahlart')
     expect(html).toContain('Über alle Camps und Trainings')
     expect(html.replace(/ /g, ' ')).toContain('40,50')
     expect(html.replace(/ /g, ' ')).toContain('30,00')

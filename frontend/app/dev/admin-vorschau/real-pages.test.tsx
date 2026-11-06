@@ -14,9 +14,11 @@ import { getOrganizationAdmin, loadCampAdminData, loadOrgAdminData, loadOrgPayme
 import { getPreviewFixtures } from './fixtures'
 
 vi.mock('../../components/saas/orgAdminData', () => ({
+  loadTrainingPayments: vi.fn(async () => ({ trainingPayments: [], trainingPaymentsError: false })),
   loadOrgAdminData: vi.fn(), loadOrgPaymentsData: vi.fn(), loadCampAdminData: vi.fn(), getOrganizationAdmin: vi.fn(),
 }))
 vi.mock('../../lib/adminSession', () => ({ getAdminToken: vi.fn() }))
+vi.mock('../../components/saas/trainingAdminData', () => ({ isModuleDisabled: vi.fn(async () => false), loadTrainingOverview: vi.fn(async () => ({ offers: [], upcoming: [], error: false })) }))
 vi.mock('next/navigation', () => ({
   notFound: () => { throw new Error('notFound') },
   redirect: (path: string) => { throw new Error(`redirect:${path}`) },
@@ -48,9 +50,10 @@ beforeEach(() => {
 for (const [name, Page] of Object.entries({ DashboardPage, CampPage, CampCreatePage, CampConfigPage, PaymentsPage, WaitlistPage, TasksPage, ConfigPage })) {
   it(`${name} renders the shared screen with its authenticated data`, async () => {
     const html = renderToStaticMarkup(await (Page as (props: { params: typeof params; searchParams: Promise<{ created?: string }> }) => Promise<React.ReactElement>)({ params, searchParams: Promise.resolve({}) }))
-    expect(html).toContain('JK Performance Academy')
-    expect(html).toContain('aria-label="Bereiche"')
-    expect(html).toContain('href="/pilot/jk-performance-academy/')
+    // Club identity and the sidebar live in the layout (layout.test.tsx); every page renders its slim header.
+    expect(html).toContain('class="cp-page-head"')
+    // Payments has no in-page link left (no back link on top-level pages); the others link within the club.
+    if (Page !== PaymentsPage) expect(html).toContain('href="/pilot/jk-performance-academy/')
     expect(html).not.toContain('/dev/admin-vorschau')
     expect(html).not.toContain('Vorschau ·')
     if (Page === CampCreatePage || Page === ConfigPage) {
@@ -58,7 +61,7 @@ for (const [name, Page] of Object.entries({ DashboardPage, CampPage, CampCreateP
     } else if (Page === CampPage || Page === CampConfigPage) {
       expect(loadCampAdminData).toHaveBeenCalledWith(fixtures.orgSlug, fixtures.camps[0].slug)
     } else if (Page === PaymentsPage) {
-      expect(loadOrgPaymentsData).toHaveBeenCalledWith(fixtures.orgSlug)
+      expect(loadOrgPaymentsData).toHaveBeenCalledWith(fixtures.orgSlug, { trainings: true })
     } else {
       expect(loadOrgAdminData).toHaveBeenCalledWith(fixtures.orgSlug)
     }

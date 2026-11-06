@@ -16,9 +16,11 @@ import {
   createTrainingSessionSeriesAdmin,
   deleteTrainingSessionAdmin,
   importClubMembersAdmin,
+  removeClubMemberExtraFieldAdmin,
   setClubMemberActiveAdmin,
   updateTrainingOfferAdmin,
   type ImportErrorItem,
+  type MemberImportMapping,
   type MemberImportResult,
 } from '../../../lib/saasAdminApi'
 import type { ActionFormState } from '../ui/ActionForm'
@@ -194,9 +196,18 @@ export interface ImportActionState {
   result: MemberImportResult | null
 }
 
+/** Grobe Formprüfung der Zuordnung (der Server prüft vollständig). */
+function isMapping(value: unknown): value is MemberImportMapping {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  const entries = Object.entries(value as Record<string, unknown>)
+  return entries.length <= 200 && entries.every(([key, target]) => /^\d{1,3}$/.test(key) && (
+    target === null || ['first_name', 'last_name', 'birth_date', 'member_number'].includes(target as string)
+    || (typeof target === 'object' && target !== null && typeof (target as { extra?: unknown }).extra === 'string')))
+}
+
 /** Der CSV-Text wird im Browser gelesen und dekodiert und hier nur
  * weitergereicht — er wird nicht geloggt oder gespeichert. */
-export async function importMembersAction(orgSlug: string, csv: string): Promise<ImportActionState> {
+export async function importMembersAction(orgSlug: string, csv: string, mapping?: MemberImportMapping): Promise<ImportActionState> {
   const token = await getValidAccessToken()
   if (!token) return { error: NO_SESSION, errors: [], result: null }
   if (typeof csv !== 'string' || csv.trim() === '') {
@@ -206,7 +217,10 @@ export async function importMembersAction(orgSlug: string, csv: string): Promise
     return { error: 'Die Datei ist zu groß (höchstens 1.000.000 Zeichen).', errors: [{ row: 1, field: 'file', code: 'file_too_large' }], result: null }
   }
   try {
-    const result = await importClubMembersAdmin(orgSlug, token, csv)
+    if (mapping !== undefined && !isMapping(mapping)) {
+      return { error: 'Die Spaltenzuordnung ist ungültig. Bitte erneut auswählen.', errors: [], result: null }
+    }
+    const result = mapping ? await importClubMembersAdmin(orgSlug, token, csv, mapping) : await importClubMembersAdmin(orgSlug, token, csv)
     refresh(orgSlug)
     return { error: null, errors: [], result }
   } catch (error) {
@@ -214,5 +228,19 @@ export async function importMembersAction(orgSlug: string, csv: string): Promise
       return { error: error.message, errors: error.errors, result: null }
     }
     return { error: message(error, 'Import fehlgeschlagen – es wurde nichts gespeichert.'), errors: [], result: null }
+  }
+}
+
+/** Entfernt ein Zusatzfeld bei allen Mitgliedern des Vereins (z. B. Fehlzuordnung beim Import). */
+export async function removeMemberExtraFieldAction(orgSlug: string, label: string): Promise<{ error: string | null; members?: number }> {
+  const token = await getValidAccessToken()
+  if (!token) return { error: NO_SESSION }
+  if (typeof label !== 'string' || label.trim() === '' || label.length > 100) return { error: 'Zusatzfeld unbekannt.' }
+  try {
+    const { members } = await removeClubMemberExtraFieldAdmin(orgSlug, token, label)
+    refresh(orgSlug)
+    return { error: null, members }
+  } catch (error) {
+    return { error: message(error, 'Zusatzfeld konnte nicht entfernt werden.') }
   }
 }

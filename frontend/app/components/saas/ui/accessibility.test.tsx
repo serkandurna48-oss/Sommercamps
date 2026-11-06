@@ -11,7 +11,6 @@ import ExportBar from './ExportBar'
 import { INPUT_CLASS } from './formFieldStyles'
 import { __internal } from '../brandPipeline'
 import ParticipantList from '../data/ParticipantList'
-import LogoutButton from '../shell/LogoutButton'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
 
 vi.mock('../actions/waitlistActions', () => ({ resendRegistrationMailAction: vi.fn(),
@@ -57,9 +56,13 @@ describe('admin accessibility primitives', () => {
     expect(css).toContain('.cp-scope:where(.cp-admin) :is(input, textarea, select, button, a[href], summary, [tabindex]):focus-visible')
     expect(css).toContain('outline: 2px solid')
     expect(css).toContain('outline-offset: 2px')
-    expect(css).toContain('.cp-scope:where(.cp-admin) header')
+    expect(css).toContain('.cp-scope:where(.cp-admin) .cp-band')
     const tokens = readFileSync(resolve('app/components/saas/tokens.css'), 'utf8')
-    expect(tokens).toMatch(/\.cp-band-tabs\s*\{\s*padding-bottom: calc\(var\(--cp-safe-area-bottom\) \+ 4px\);/)
+    // Launch-UX: no bottom tab bar; the fixed selection bar keeps the safe area.
+    expect(tokens).toMatch(/\.cp-selection-bar\s*\{\s*bottom: 0;\s*padding-bottom: calc\(16px \+ var\(--cp-safe-area-bottom\)\);/)
+    // Sidebar entries and drawer controls keep the 44 px target.
+    expect(tokens).toMatch(/\.cp-nav-item \{[^}]*min-height: 44px;/)
+    expect(tokens).toMatch(/\.cp-icon-btn \{[^}]*width: 44px;\s*height: 44px;/)
   })
 
   it('connects hints and errors to a wrapped input and preserves external descriptions', async () => {
@@ -85,11 +88,10 @@ describe('admin accessibility primitives', () => {
     expect(container.querySelector(tag)!.getAttribute('aria-invalid')).toBe('true')
   })
 
-  it('gives export and logout 44px targets and restores focus when export closes with Escape', async () => {
-    await act(() => root.render(<><ExportBar rows={[registration]} columns={[]} csvFilename="test.csv" xlsxHref="/test.xlsx" /><LogoutButton orgSlug="test" /></>))
+  it('gives export a 44px target and restores focus when export closes with Escape', async () => {
+    await act(() => root.render(<ExportBar rows={[registration]} columns={[]} csvFilename="test.csv" xlsxHref="/test.xlsx" />))
     const trigger = container.querySelector('button')!
     minimumTarget(trigger)
-    minimumTarget([...container.querySelectorAll('button')].find(button => button.textContent === 'Abmelden')!)
     await act(() => trigger.click())
     const group = container.querySelector('[role="group"]')!
     expect(group.id).toBe(trigger.getAttribute('aria-controls'))

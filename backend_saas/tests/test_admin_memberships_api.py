@@ -25,7 +25,8 @@ def ctx(real_db):
     with cursor() as cur:
         cur.execute("INSERT INTO auth.users(id) VALUES (%s)", (actor,))  # audit_log.actor_user_id FK
         cur.execute(
-            "INSERT INTO organizations(id,slug,name,contact_email) VALUES (%s,%s,'Other','o@example.com')",
+            "INSERT INTO organizations(id,slug,name,contact_email,modules) "
+            "VALUES (%s,%s,'Other','o@example.com','{camps,members}')",
             (other, f"other-{other.hex}"),
         )
     with TestClient(app) as client:
@@ -100,7 +101,7 @@ def test_create_list_search_toggle(ctx):
     r = cl.post(_base(c), headers=c["headers"], json={"first_name": "Anna", "last_name": "Müller", "birth_date": "2015-03-05", "member_number": "7"})
     assert r.status_code == 201
     body = r.json()
-    assert set(body) == {"id", "first_name", "last_name", "birth_date", "member_number", "active", "source", "created_at"}
+    assert set(body) == {"id", "first_name", "last_name", "birth_date", "member_number", "active", "source", "extra", "created_at"}
     assert body["source"] == "manual" and body["active"] is True
     cl.post(_base(c), headers=c["headers"], json={"first_name": "Ben", "last_name": "Beispiel", "birth_date": "2014-01-01"})
     assert len(cl.get(_base(c), headers=c["headers"]).json()) == 2
@@ -180,7 +181,7 @@ def test_import_db_failure_midway_rolls_back_everything(ctx, monkeypatch):
 def test_import_unexpected_failure_is_500_and_saves_nothing(ctx, monkeypatch):
     c = ctx
 
-    def boom(org, rows):
+    def boom(org, rows, **kwargs):
         raise RuntimeError("db down")
 
     monkeypatch.setattr(memberships, "import_members", boom)
@@ -252,7 +253,7 @@ def test_import_missing_csv_field_does_not_echo(ctx):
 def test_import_db_error_logs_no_personal_data(ctx, monkeypatch, caplog):
     c = ctx
 
-    def boom(org, rows):
+    def boom(org, rows, **kwargs):
         raise RuntimeError('Failing row contains (Geheimvorname, Geheimnachname, 2015-03-05)')
 
     monkeypatch.setattr(memberships, "import_members", boom)
@@ -267,7 +268,7 @@ def test_import_database_busy_stays_503(ctx, monkeypatch):
     from app.db import DatabaseBusy
     c = ctx
 
-    def busy(org, rows):
+    def busy(org, rows, **kwargs):
         raise DatabaseBusy()
 
     monkeypatch.setattr(memberships, "import_members", busy)

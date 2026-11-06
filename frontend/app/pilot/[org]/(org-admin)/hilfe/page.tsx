@@ -3,6 +3,9 @@ import HilfeScreen from '../../../../components/saas/screens/HilfeScreen'
 import { getOrganizationAdmin } from '../../../../components/saas/orgAdminData'
 import { getValidAccessToken } from '../../../../lib/supabaseServer'
 import { AdminAuthError } from '../../../../lib/saasAdminApi'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Hilfe' }
 
 export default async function HilfePage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params

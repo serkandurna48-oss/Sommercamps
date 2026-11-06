@@ -1,12 +1,12 @@
-import type { CampAdmin, OrganizationAdmin, RegistrationAdmin } from './saasAdminApi'
-import { isOpenPayment, registrationPriceCents } from '../components/saas/commandCenterLogic'
+import type { CampAdmin, OrganizationAdmin } from './saasAdminApi'
+import { isOpenPayment, registrationPriceCents, type PaymentRegistration } from '../components/saas/commandCenterLogic'
 import { formatCampDateRange, formatPrice } from './parentFlowFormat'
 
 export type ReminderOrganization = Pick<OrganizationAdmin,
   'name' | 'legal_name' | 'iban' | 'contact_person_name' | 'contact_email'>
 
 export interface ReminderEntry {
-  registration: RegistrationAdmin
+  registration: PaymentRegistration
   camp: CampAdmin
 }
 

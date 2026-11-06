@@ -2,7 +2,6 @@
 
 import { useState, useActionState, useId } from 'react'
 import type { CampAdmin, OrganizationAdmin } from '../../../lib/saasAdminApi'
-import { computeBrandTokens } from '../brandPipeline'
 import { computeWizardStep } from '../onboardingSteps'
 import BrandPreview from '../brand/BrandPreview'
 import ColorField from '../brand/ColorField'
@@ -11,7 +10,7 @@ import { saveAuftrittAction, saveRechtlichesAction } from '../actions/wizardActi
 import { submitReviewAction } from '../state/reviewActions'
 import { useAdminPreview } from '../preview/AdminPreviewContext'
 import { de } from '../../../lib/i18n/de'
-import MatchdayBand from '../shell/MatchdayBand'
+import PageHeader from '../shell/PageHeader'
 import CampCreateForm from '../config/CampCreateForm'
 import SubmitReviewButton from '../state/SubmitReviewButton'
 import ReviewPending from '../state/ReviewPending'
@@ -19,7 +18,6 @@ import Button, { ButtonLink } from '../ui/Button'
 import Field from '../ui/Field'
 import Link from '../preview/AdminLink'
 import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
-import { orgTabs } from '../navTabs'
 import { PAGE_FORM } from '../ui/pageLayout'
 
 type WizardStep = 1 | 2 | 3 | 4
@@ -42,9 +40,6 @@ export default function EinrichtungScreen({
 }) {
   const auto = computeWizardStep(org, camps)
   const [step, setStep] = useState<WizardStep>(isValidStep(requestedStep) ? requestedStep : auto)
-
-  const brand = computeBrandTokens(org.primary_color)
-  const tabs = orgTabs(orgSlug)
   const preview = useAdminPreview()
 
   function goBack() { setStep(s => (s > 1 ? (s - 1) as WizardStep : s)) }
@@ -57,14 +52,9 @@ export default function EinrichtungScreen({
 
   return (
     <>
-      <MatchdayBand
+      <PageHeader
         backHref={`/pilot/${orgSlug}/dashboard`}
-        orgSlug={orgSlug}
-        orgName={org.name}
-        orgLogoUrl={org.logo_url}
         title={de.einrichtung.title}
-        tabs={tabs}
-        brandColor={brand.brand}
       />
       <main className={PAGE_FORM}>
         <ProgressBar step={step} total={4} />

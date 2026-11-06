@@ -82,6 +82,8 @@ export interface OrganizationAdmin {
   avv_accepted_at?: string | null
   review_note?: string | null
   approved_at?: string | null
+  /** Freigeschaltete Module (camps immer); fehlt das Feld: nur camps. Siehe lib/orgModules.ts. */
+  modules?: string[]
 }
 
 export interface RegistrationAdmin {
@@ -374,6 +376,12 @@ export async function updateOrganizationAdmin(
   await mutateOrThrow(`/admin/organizations/${orgSlug}`, token, 'PATCH', data)
 }
 
+/** Platform owner only: the full set of enabled modules (camps is always kept by the
+ * backend). PATCH /admin/platform/organizations/{slug}/modules, audit-logged there. */
+export async function updateOrganizationModulesAdmin(orgSlug: string, token: string, modules: string[]): Promise<void> {
+  await mutateOrThrow(`/admin/platform/organizations/${orgSlug}/modules`, token, 'PATCH', { modules })
+}
+
 export async function updateCampAdmin(
   orgSlug: string,
   campSlug: string,
@@ -488,6 +496,8 @@ export interface Me {
   email: string | null
   is_platform_owner: boolean
   admin_organization_slugs: string[]
+  /** Module je verwaltetem Verein (nur org_admin). */
+  organization_modules?: Record<string, string[]>
 }
 
 /** Dedupliziert innerhalb eines Server-Requests: Layout und Seite teilen
@@ -755,6 +765,27 @@ export interface TrainingSessionSeriesResult {
   sessions: TrainingSessionAdmin[]
 }
 
+/** Buchung aus `GET …/training-payments`: nur die Felder, die die Zahlungsseite braucht
+ * (keine Gesundheits-, Notfall- oder Telefonangaben). */
+export type TrainingPaymentRegistration = Pick<RegistrationAdmin,
+  | 'id' | 'registration_token' | 'status' | 'payment_status' | 'payment_reference'
+  | 'parent_first_name' | 'parent_last_name' | 'parent_email'
+  | 'child_first_name' | 'child_last_name' | 'created_at'
+  | 'payment_method' | 'member_match' | 'applied_price_cents'>
+
+/** Ein Termin mit mindestens einer Buchung (jeder Status), sortiert nach Angebot und Beginn. */
+export interface TrainingPaymentSessionGroup {
+  offer: Pick<TrainingOffer, 'id' | 'title' | 'kind' | 'status'>
+  session: TrainingSessionAdmin
+  registrations: TrainingPaymentRegistration[]
+}
+
+/** `GET …/training-offers/{id}/overview`: Angebot, Termine und je Termin die vollen Buchungen. */
+export interface TrainingOfferOverview {
+  offer: TrainingOffer
+  sessions: (TrainingSessionAdmin & { registrations: RegistrationAdmin[] })[]
+}
+
 export interface ClubMember {
   id: string
   first_name: string
@@ -763,8 +794,16 @@ export interface ClubMember {
   member_number: string | null
   active: boolean
   source: 'csv' | 'manual'
+  /** Zusatzfelder aus dem CSV-Import ({Label: Wert}); ältere Antworten ohne Feld. */
+  extra?: Record<string, string>
   created_at: string
 }
+
+/** Ziel einer CSV-Spalte im Import; null = nicht importieren. */
+export type MemberMappingTarget = 'first_name' | 'last_name' | 'birth_date' | 'member_number' | { extra: string } | null
+
+/** Spaltenindex (als String) -> Ziel. */
+export type MemberImportMapping = Record<string, MemberMappingTarget>
 
 export interface ClubMemberCreateInput {
   first_name: string
@@ -888,6 +927,22 @@ export async function fetchSessionRegistrationsAdmin(orgSlug: string, offerId: s
   return res.json() as Promise<RegistrationAdmin[]>
 }
 
+/** Alle Trainingsbuchungen des Vereins für die Zahlungsseite, eine Anfrage statt Angebote → Termine → Buchungen. */
+export async function fetchTrainingPaymentsAdmin(orgSlug: string, token: string): Promise<TrainingPaymentSessionGroup[]> {
+  const res = await adminFetch(`/admin/organizations/${encodeURIComponent(orgSlug)}/training-payments`, token)
+  if (!res.ok) throw new TrainingAdminError('Trainingszahlungen konnten nicht geladen werden.')
+  return res.json() as Promise<TrainingPaymentSessionGroup[]>
+}
+
+/** Angebot samt Terminen und Buchungen in einer Anfrage; `null` bei unbekanntem Angebot. */
+export async function fetchTrainingOfferOverviewAdmin(orgSlug: string, offerId: string, token: string): Promise<TrainingOfferOverview | null> {
+  const res = await adminFetch(`${TRAINING_BASE(orgSlug)}/${encodeURIComponent(offerId)}/overview`, token)
+  // 422: keine gültige ID in der URL, für den Nutzer ebenfalls "nicht gefunden".
+  if (res.status === 404 || res.status === 422) return null
+  if (!res.ok) throw new TrainingAdminError('Angebot konnte nicht geladen werden.')
+  return res.json() as Promise<TrainingOfferOverview>
+}
+
 export async function fetchClubMembersAdmin(orgSlug: string, token: string, filter: { q?: string; active?: boolean } = {}): Promise<ClubMember[]> {
   const params = new URLSearchParams()
   if (filter.q?.trim()) params.set('q', filter.q.trim())
@@ -913,8 +968,8 @@ export async function setClubMemberActiveAdmin(orgSlug: string, memberId: string
 
 /** Sendet den bereits dekodierten CSV-Text. Bei Ablehnung (422/413) wird nur
  * Zeile/Feld/Code übernommen, sonst nichts aus der Antwort. */
-export async function importClubMembersAdmin(orgSlug: string, token: string, csv: string): Promise<MemberImportResult> {
-  const res = await adminMutate(`${MEMBERS_BASE(orgSlug)}/import`, token, 'POST', { csv })
+export async function importClubMembersAdmin(orgSlug: string, token: string, csv: string, mapping?: MemberImportMapping): Promise<MemberImportResult> {
+  const res = await adminMutate(`${MEMBERS_BASE(orgSlug)}/import`, token, 'POST', mapping ? { csv, mapping } : { csv })
   if (res.status === 422 || res.status === 413) {
     let errors: ImportErrorItem[] = []
     try {
@@ -935,6 +990,13 @@ export async function importClubMembersAdmin(orgSlug: string, token: string, csv
   }
   if (!res.ok) throw new TrainingAdminError('Import fehlgeschlagen – es wurde nichts gespeichert.')
   return res.json() as Promise<MemberImportResult>
+}
+
+/** Entfernt ein Zusatzfeld (exaktes Label) bei allen Mitgliedern des Vereins. */
+export async function removeClubMemberExtraFieldAdmin(orgSlug: string, token: string, label: string): Promise<{ members: number }> {
+  const res = await adminMutate(`${MEMBERS_BASE(orgSlug)}/extra-fields?label=${encodeURIComponent(label)}`, token, 'DELETE')
+  if (!res.ok) throw new TrainingAdminError('Zusatzfeld konnte nicht entfernt werden.')
+  return res.json() as Promise<{ members: number }>
 }
 
 // --- Spielerakte (nur Admin, Kinderdaten) ---------------------------------
@@ -960,6 +1022,8 @@ export interface PlayerSummary {
   booking_count: number
   note_count: number
   open_goal_count: number
+  /** Aktives Vereinsmitglied (gleicher Name + Geburtsdatum). */
+  is_member?: boolean | null  // null when the members module is off
 }
 
 export interface PlayerBooking {
@@ -1018,7 +1082,7 @@ export interface PlayerMetric {
 }
 
 export interface PlayerDetail {
-  player: { id: string; first_name: string; last_name: string; birth_date: string; age: number }
+  player: { id: string; first_name: string; last_name: string; birth_date: string; age: number; is_member?: boolean | null }
   bookings: PlayerBooking[]
   notes: PlayerNote[]
   goals: PlayerGoal[]

@@ -2,6 +2,9 @@ import { notFound, redirect } from 'next/navigation'
 import { getValidAccessToken } from '../../../../lib/supabaseServer'
 import { getOrganizationAdmin } from '../../../../components/saas/orgAdminData'
 import OrgConfigScreen from '../../../../components/saas/screens/OrgConfigScreen'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Einstellungen' }
 
 export default async function OrgConfigPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params

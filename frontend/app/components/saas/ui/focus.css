@@ -10,6 +10,6 @@
 }
 
 .cp-scope:where(.cp-admin) { --cp-focus-color: var(--cp-accent-ink); }
-.cp-scope:where(.cp-admin) header { --cp-focus-color: var(--cp-accent); }
+.cp-scope:where(.cp-admin) .cp-band { --cp-focus-color: var(--cp-accent); }
 
 .cp-admin-login { --cp-focus-color: var(--ink); }

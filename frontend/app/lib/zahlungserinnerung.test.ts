@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildOpenPaymentList, buildPaymentReminder, canCopyReminder, formatIban, reminderLabels, type ReminderEntry, type ReminderOrganization } from './zahlungserinnerung'
+import type { RegistrationAdmin } from './saasAdminApi'
 
 const org: ReminderOrganization = {
   name: 'Beispielverein', legal_name: 'Beispiel Sportverein e. V.', iban: 'DE89370400440532013000',
@@ -13,7 +14,7 @@ const entry: ReminderEntry = {
     child_first_name: 'Mia', child_last_name: 'Muster', child_birth_date: '2018-05-10',
     emergency_contact_name: null, emergency_contact_phone: null, medical_notes: null, allergies: null,
     jersey_size: null, pickup_authorized: null, photo_permission: false, created_at: '2027-01-01T00:00:00Z',
-  },
+  } satisfies RegistrationAdmin as RegistrationAdmin,
   camp: {
     id: 'camp', organization_id: 'org', slug: 'sommer', title: 'Sommercamp',
     start_date: '2027-07-05', end_date: '2027-07-09', registration_start: null, registration_end: null,

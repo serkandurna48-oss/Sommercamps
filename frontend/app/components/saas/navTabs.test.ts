@@ -1,21 +1,53 @@
-import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import { orgTabs } from './navTabs'
+import { activeTabHref, adminNav, adminNavFooter, adminNavItems, campTabs } from './navTabs'
 
-/** Auf 375 px bekommt jeder der acht Bereiche ~46 px (Spalten aus tabs.length, kein Scrollen).
- * Gemessen mit Inter SemiBold 10 px (breiter als Archivo): Training/Mitglied/Zahlung ~ 40 px,
- * Aufgabe ~ 42 px, alle unter den ~44 px Inhaltsbreite bei 360 px; deshalb höchstens 8 Zeichen. */
-it('hat acht Org-Bereiche, darunter Spieler, mit eindeutigen kurzen Labels', () => {
-  const tabs = orgTabs('demo')
-  expect(tabs.map(tab => tab.label)).toEqual(['Übersicht', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Trainings', 'Mitglieder', 'Spieler', 'Einstellungen'])
-  expect(tabs.find(tab => tab.label === 'Spieler')?.href).toBe('/pilot/demo/spieler')
-  const short = tabs.map(tab => tab.shortLabel ?? tab.label)
-  expect(new Set(short).size).toBe(8)
-  for (const label of short) expect(label.length, label).toBeLessThanOrEqual(8)
-  expect(new Set(tabs.map(tab => tab.href)).size).toBe(8)
+/** Launch-UX: grouped sidebar instead of eight band tabs. */
+it('gruppiert die Seitenleiste wie im Brief: Übersicht, Angebote, Teilnehmer, Zahlungen/Aufgaben', () => {
+  const groups = adminNav('demo')
+  expect(groups.map(group => group.label ?? null)).toEqual([null, 'Angebote', 'Teilnehmer', null])
+  expect(groups.map(group => group.items.map(item => item.label))).toEqual([
+    ['Übersicht'],
+    ['Camps', 'Trainings'],
+    ['Anmeldungen', 'Warteliste', 'Spieler', 'Mitglieder'],
+    ['Zahlungen', 'Aufgaben'],
+  ])
+  expect(adminNavFooter('demo').map(item => item.label)).toEqual(['Einstellungen', 'Hilfe'])
+  const hrefs = adminNavItems('demo').map(item => item.href)
+  expect(new Set(hrefs).size).toBe(hrefs.length)
+  expect(hrefs.every(href => href.startsWith('/pilot/demo/'))).toBe(true)
+  expect(groups.every(group => !group.label || group.id)).toBe(true)
 })
 
-it('setzt für acht Bereiche kleinere Schrift ohne Innenabstand (CSS-Regel vorhanden)', () => {
-  const css = readFileSync('app/components/saas/tokens.css', 'utf8')
-  expect(css).toMatch(/\.cp-band-tabs\[data-tab-count='8'\] \.cp-band-tab\s*\{[^}]*font-size:\s*10px[^}]*padding-inline:\s*0/)
+it('behält alle bisherigen Bereichs-URLs und ergänzt die Campliste', () => {
+  const hrefs = adminNavItems('demo').map(item => item.href)
+  for (const path of ['dashboard', 'zahlungen', 'warteliste', 'aufgaben', 'trainings', 'mitglieder', 'spieler', 'konfiguration', 'anmeldungen', 'hilfe', 'camps']) {
+    expect(hrefs).toContain(`/pilot/demo/${path}`)
+  }
+})
+
+it('Camp-Reiter bleiben fünf Ziele mit den Einstellungen zuletzt', () => {
+  expect(campTabs('demo', 'herbst').map(tab => tab.label)).toEqual(['Teilnehmer', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Einstellungen'])
+})
+
+it('markiert auf Unterseiten den übergeordneten Bereich (längster Präfix)', () => {
+  const org = adminNavItems('demoverein').map(tab => tab.href)
+  expect(activeTabHref('/pilot/demoverein/trainings/abc', org)).toBe('/pilot/demoverein/trainings')
+  expect(activeTabHref('/pilot/demoverein/spieler/123', org)).toBe('/pilot/demoverein/spieler')
+  expect(activeTabHref('/pilot/demoverein/camps/sommer/zahlungen', org)).toBe('/pilot/demoverein/camps')
+  expect(activeTabHref('/pilot/demoverein/camps/new', org)).toBe('/pilot/demoverein/camps')
+  expect(activeTabHref('/pilot/demoverein/spielerliste', org)).toBeUndefined()
+  expect(activeTabHref('/pilot/demoverein/einrichtung', org)).toBeUndefined()
+  const camp = ['/pilot/v/camps/c', '/pilot/v/camps/c/zahlungen']
+  expect(activeTabHref('/pilot/v/camps/c/zahlungen', camp)).toBe('/pilot/v/camps/c/zahlungen')
+  expect(activeTabHref('/pilot/v/camps/c', camp)).toBe('/pilot/v/camps/c')
+})
+
+it('blendet Trainings, Spieler und Mitglieder aus, wenn das Modul nicht freigeschaltet ist', () => {
+  const labels = (modules: Parameters<typeof adminNav>[1]) =>
+    adminNav('demo', modules).flatMap(group => group.items.map(item => item.label))
+  expect(labels(['camps'])).toEqual(['Übersicht', 'Camps', 'Anmeldungen', 'Warteliste', 'Zahlungen', 'Aufgaben'])
+  expect(labels(['camps', 'players'])).toContain('Spieler')
+  expect(labels(['camps', 'players'])).not.toContain('Mitglieder')
+  expect(labels(['camps', 'trainings'])).toContain('Trainings')
+  expect(adminNavItems('demo', ['camps']).map(i => i.href)).not.toContain('/pilot/demo/trainings')
 })

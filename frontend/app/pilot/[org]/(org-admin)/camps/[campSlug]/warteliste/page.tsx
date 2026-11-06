@@ -1,5 +1,8 @@
 import { loadCampAdminData } from '../../../../../../components/saas/orgAdminData'
 import CampWaitlistScreen from '../../../../../../components/saas/screens/CampWaitlistScreen'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Camp-Warteliste' }
 
 export default async function CampWaitlistPage({ params }: { params: Promise<{ org: string; campSlug: string }> }) {
   const { org: orgSlug, campSlug } = await params

@@ -1,20 +1,21 @@
 import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import OrgAdminLayout, { generateMetadata } from '../pilot/[org]/(org-admin)/layout'
+import OrgAdminLayout, { metadata as orgAdminMetadata } from '../pilot/[org]/(org-admin)/layout'
 import PlatformLayout from '../platform/(console)/layout'
-import OrgSwitcher from '../components/saas/shell/OrgSwitcher'
 import { getAdminToken } from './adminSession'
 import { AdminAuthError, fetchMe, fetchOrganizationAdmin, fetchOrganizationsAdmin, type OrganizationAdmin } from './saasAdminApi'
 import { reviewOrg } from '../platform/reviewFixtures'
 
+vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }))
 vi.mock('./adminSession', () => ({ getAdminToken: vi.fn() }))
 vi.mock('./saasAdminApi', async () => ({ ...await vi.importActual<typeof import('./saasAdminApi')>('./saasAdminApi'), fetchMe: vi.fn(), fetchOrganizationAdmin: vi.fn(), fetchOrganizationsAdmin: vi.fn() }))
 vi.mock('../components/saas/fonts', () => ({ archivo: { variable: 'test-font' } }))
 vi.mock('../components/saas/GrainOverlay', () => ({ default: () => null }))
 vi.mock('../platform/logoutAction', () => ({ platformLogoutAction: vi.fn() }))
-vi.mock('next/navigation', () => ({ redirect: (path: string) => { throw new Error(`redirect:${path}`) } }))
-vi.mock('next/link', () => ({ default: ({ children, ...props }: { children: ReactNode; href: string }) => <a {...props}>{children}</a> }))
+vi.mock('next/navigation', () => ({ redirect: (path: string) => { throw new Error(`redirect:${path}`) }, usePathname: () => '/pilot/club-a/dashboard' }))
+vi.mock('next/link', () => ({ default: ({ children, prefetch: _prefetch, ...props }: { children: ReactNode; href: string; prefetch?: boolean }) => <a {...props}>{children}</a>, useLinkStatus: () => ({ pending: false }) }))
+vi.mock('../components/saas/shell/logoutAction', () => ({ logoutAction: vi.fn() }))
 
 beforeEach(() => {
   vi.resetAllMocks()
@@ -30,7 +31,7 @@ beforeEach(() => {
 
 const orgLayout = (slug: string) => OrgAdminLayout({
   params: Promise.resolve({ org: slug }),
-  children: <OrgSwitcher name="Unpublished club" orgSlug={slug} logoUrl={null} />,
+  children: <p>Seiteninhalt</p>,
 })
 
 describe('admin navigation and role context', () => {
@@ -71,10 +72,8 @@ describe('admin navigation and role context', () => {
     await expect(orgLayout('club-a')).rejects.toThrow('redirect:/pilot/club-a/login')
   })
 
-  it('loads draft metadata through the authenticated admin endpoint', async () => {
-    vi.mocked(fetchOrganizationAdmin).mockResolvedValue({ name: 'Draft club', site_published: false } as OrganizationAdmin)
-    const metadata = await generateMetadata({ params: Promise.resolve({ org: 'draft-club' }) })
-    expect(metadata.title).toBe('Draft club – Verwaltung')
-    expect(fetchOrganizationAdmin).toHaveBeenCalledWith('draft-club', 'local-test-token')
+  it('uses a static admin title so link prefetches never call the admin API', () => {
+    // Prefetches resolve metadata per visible link; a backend call here cost one admin request each.
+    expect(orgAdminMetadata.title).toEqual({ default: 'CampsPilot – Verwaltung', template: '%s – CampsPilot' })
   })
 })

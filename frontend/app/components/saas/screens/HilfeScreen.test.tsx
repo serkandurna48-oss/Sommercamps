@@ -91,14 +91,12 @@ it('verwendet im gesamten Hilfetext einschließlich Vorlagen keine informelle An
   expect(text.match(/\b(?:du|dein(?:e|en|em|er|es)?)\b/giu)).toBeNull()
 })
 
-it('zeigt den Hilfelink in der Kopfleiste', () => {
-  const html = renderToStaticMarkup(<HilfeScreen orgSlug="demo" org={org} />)
-  const doc = window.document.implementation.createHTMLDocument()
-  doc.body.innerHTML = html
-  const header = doc.querySelector('header')!
-  const hilfeLink = [...header.querySelectorAll('a')].find(a => a.textContent?.trim() === 'Hilfe')
-  expect(hilfeLink).not.toBeUndefined()
-  expect(hilfeLink?.getAttribute('href')).toBe('/pilot/demo/hilfe')
+// Launch-UX: the Hilfe link moved from the band into the sidebar footer (AdminSidebar.test.tsx).
+it('zeigt einen schlanken Seitenkopf ohne Zurück-Link', () => {
+  const doc = helpDocument()
+  const header = doc.querySelector('header.cp-page-head')!
+  expect(header.querySelector('h1')?.textContent).toBe('Hilfe')
+  expect(header.querySelector('a.cp-back-link')).toBeNull()
 })
 
 it('spricht Eltern in den Vorlagen mit Sie an', () => {

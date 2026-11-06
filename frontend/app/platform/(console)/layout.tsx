@@ -52,7 +52,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
     <div className={`${archivo.variable} cp-scope cp-admin min-h-screen`}>
       <StagingBanner />
       <GrainOverlay />
-      {/* Same band as the club admin (MatchdayBand): dark floodlight surface, CampsPilot identity left, sign-out right. */}
+      {/* Same dark band surface as the club admin sidebar: dark floodlight surface, CampsPilot identity left, sign-out right. */}
       <header className="cp-band px-4 pt-3 pb-1 md:px-6 md:pt-4 md:pb-2">
         <div className="mx-auto flex max-w-[1080px] flex-col">
           <div className="flex min-h-[44px] items-center justify-between gap-4 pb-2 md:pb-3">

@@ -23,10 +23,12 @@ const initialState: TrainingFormState = { error: null }
 
 /** Anlegen und Bearbeiten eines Trainingsangebots. Web-Adresse und Art sind
  * nach dem Anlegen unveränderlich (Backend: 422), im Bearbeiten nur Anzeige. */
-export default function OfferForm({ orgSlug, offer, backButton }: {
+export default function OfferForm({ orgSlug, offer, backButton, memberPrice = true }: {
   orgSlug: string
   offer?: TrainingOffer
   backButton?: ReactNode
+  /** Members module on: separate member price. Off: one price for everyone. */
+  memberPrice?: boolean
 }) {
   const feedbackId = useId()
   const editing = Boolean(offer)
@@ -52,7 +54,8 @@ export default function OfferForm({ orgSlug, offer, backButton }: {
 
   return (
     <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-4">
-      <section className="cp-card flex flex-col gap-4">
+      {/* From 1024 px: two columns (identity left, scheduling and prices right). */}
+      <section className="cp-card flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-6">
         <Field label="Titel" htmlFor="offer_title" error={err('title')}>
           <input id="offer_title" name="title" required value={title} onChange={event => setTitle(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
@@ -83,11 +86,13 @@ export default function OfferForm({ orgSlug, offer, backButton }: {
           </select>
         </Field>
 
+        <div className="lg:col-span-2">
         <Field label="Beschreibung (optional)" htmlFor="offer_description">
           <textarea id="offer_description" name="description" rows={3} defaultValue={value('description', offer?.description ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
+        </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-2 lg:grid-cols-4">
           <Field label="Dauer" htmlFor="offer_duration_minutes" suffix="Minuten" error={err('duration_minutes')}>
             <input id="offer_duration_minutes" name="duration_minutes" type="number" inputMode="numeric" min={1} max={600} required
               defaultValue={value('duration_minutes', String(offer?.duration_minutes ?? 45))} className={INPUT_CLASS} style={INPUT_STYLE} />
@@ -95,10 +100,12 @@ export default function OfferForm({ orgSlug, offer, backButton }: {
           <Field label="Ort (optional)" htmlFor="offer_location">
             <input id="offer_location" name="location" defaultValue={value('location', offer?.location ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
-          <Field label="Preis für Vereinsmitglieder" htmlFor="offer_price_member_euros" suffix="€" hint="Zum Beispiel 30,00. 0 ist erlaubt." error={err('price_member_euros')}>
-            <PriceInput id="offer_price_member_euros" name="price_member_euros" required defaultValue={value('price_member_euros', offer ? formatEuroInput(offer.price_member_cents) : '')} />
-          </Field>
-          <Field label="Preis für Nichtmitglieder" htmlFor="offer_price_nonmember_euros" suffix="€" hint="Zum Beispiel 40,00." error={err('price_nonmember_euros')}>
+          {memberPrice ? (
+            <Field label="Preis für Vereinsmitglieder" htmlFor="offer_price_member_euros" suffix="€" hint="Zum Beispiel 30,00. 0 ist erlaubt." error={err('price_member_euros')}>
+              <PriceInput id="offer_price_member_euros" name="price_member_euros" required defaultValue={value('price_member_euros', offer ? formatEuroInput(offer.price_member_cents) : '')} />
+            </Field>
+          ) : <input type="hidden" name="single_price" value="1" />}
+          <Field label={memberPrice ? 'Preis für Nichtmitglieder' : 'Preis'} htmlFor="offer_price_nonmember_euros" suffix="€" hint="Zum Beispiel 40,00." error={err('price_nonmember_euros')}>
             <PriceInput id="offer_price_nonmember_euros" name="price_nonmember_euros" required defaultValue={value('price_nonmember_euros', offer ? formatEuroInput(offer.price_nonmember_cents) : '')} />
           </Field>
         </div>

@@ -25,8 +25,8 @@ def ctx(real_db):
     with cursor() as cur:
         cur.execute("INSERT INTO auth.users(id) VALUES (%s)", (actor,))
         cur.execute(
-            "INSERT INTO organizations(id,slug,name,contact_email,site_published,plan_status) "
-            "VALUES (%s,%s,'Other','o@example.com',true,'active')",
+            "INSERT INTO organizations(id,slug,name,contact_email,site_published,plan_status,modules) "
+            "VALUES (%s,%s,'Other','o@example.com',true,'active','{camps,players}')",
             (other, f"other-{other.hex}"),
         )
     with TestClient(app) as client:
@@ -141,7 +141,7 @@ def test_list_shape_and_counts(ctx):
     rows = cl.get(b, headers=h).json()
     assert [r["last_name"] for r in rows] == ["Anders", "Mustermann"]
     assert set(rows[0]) == {"id", "first_name", "last_name", "birth_date", "age", "last_booking_at",
-                            "booking_count", "note_count", "open_goal_count"}
+                            "booking_count", "note_count", "open_goal_count", "is_member"}
     z, l = rows
     assert z["id"] == other and (z["booking_count"], z["note_count"], z["open_goal_count"], z["last_booking_at"]) == (0, 0, 0, None)
     assert l["id"] == pid and l["birth_date"] == BIRTH
@@ -180,7 +180,7 @@ def test_detail_shape_and_ordering(ctx):
     cl.post(f"{b}/{pid}/goals", headers=h, json={"title": "Ziel", "area": "athletik", "target_date": "2027-06-01"})
     d = cl.get(f"{b}/{pid}", headers=h).json()
     assert set(d) == {"player", "bookings", "notes", "goals", "measurements", "metrics"}
-    assert set(d["player"]) == {"id", "first_name", "last_name", "birth_date", "age"}
+    assert set(d["player"]) == {"id", "first_name", "last_name", "birth_date", "age", "is_member"}
     assert [n["body"] for n in d["notes"]] == ["neu", "alt"]
     assert set(d["notes"][0]) == {"id", "player_id", "camp_id", "note_date", "focus", "body", "rating",
                                   "next_steps", "video_url", "created_at", "updated_at"}

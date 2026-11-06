@@ -51,6 +51,8 @@ export interface OrganizationPublic {
   iban: string | null
   // KV1: Verein-konfigurierbare Zusatzfragen. Öffentlich (kein Admin-Login nötig). Default [].
   registration_questions?: RegistrationQuestion[]
+  /** Freigeschaltete Module (camps immer); fehlt das Feld: nur camps. Siehe lib/orgModules.ts. */
+  modules?: string[]
 }
 
 export interface CampPublic {

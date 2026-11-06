@@ -153,8 +153,13 @@ class Settings(BaseSettings):
     # DB_POOL_WAIT_SECONDS: how long get_connection() blocks before raising
     # DatabaseBusy; keep well below Render's 30 s request timeout.
     db_pool_max: int = Field(default=15, alias="DB_POOL_MAX")
-    db_pool_min: int = Field(default=1, alias="DB_POOL_MIN")
+    # DB_POOL_MIN: connections opened at startup. Idle connections are kept
+    # up to DB_POOL_MAX (see app/db.py::RetainingConnectionPool), so this no
+    # longer limits reuse. DB_POOL_PING_AFTER_SECONDS: a connection idle at
+    # least this long is checked with `select 1` before it is handed out.
+    db_pool_min: int = Field(default=2, alias="DB_POOL_MIN")
     db_pool_wait_seconds: int = Field(default=5, alias="DB_POOL_WAIT_SECONDS")
+    db_pool_ping_after_seconds: float = Field(default=30.0, ge=0, alias="DB_POOL_PING_AFTER_SECONDS")
 
     @field_validator("db_pool_max")
     @classmethod

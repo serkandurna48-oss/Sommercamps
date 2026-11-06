@@ -164,7 +164,7 @@ def list_camps_for_organization(organization_id: UUID) -> list[dict]:
     published/closed/archived), unlike list_published_camps. Training
     sessions (offer_id set) are excluded: they have their own admin views.
     organization_id must already be resolved server-side, same rule as create_camp."""
-    with db.get_cursor() as cur:
+    with db.get_read_cursor() as cur:
         cur.execute(_LIST_ADMIN, (organization_id,))
         return cur.fetchall()
 
@@ -181,7 +181,7 @@ def get_camp_by_slug(organization_id: UUID, camp_slug: str) -> Optional[dict]:
     not get_published_camp_by_slug: an admin must be able to resolve a draft
     or closed camp (e.g. to list its registrations), which that public-only
     lookup would treat as not found."""
-    with db.get_cursor() as cur:
+    with db.get_read_cursor() as cur:
         cur.execute(_GET_ADMIN_BY_SLUG, (organization_id, camp_slug))
         return cur.fetchone()
 

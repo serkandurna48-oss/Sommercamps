@@ -91,6 +91,9 @@ def create_registration(
         raise HTTPException(status_code=404, detail="Camp not found")
 
     is_training = camp.offer_id is not None
+    if is_training and "trainings" not in tenant.modules:
+        # Trainings module off: a session slug looks like any unknown camp.
+        raise HTTPException(status_code=404, detail="Camp not found")
     if is_training:
         # Bookable check order: unknown/draft/archived -> 404 (above), already
         # started -> 409, bad payment method -> 422, then window/age -> 422.

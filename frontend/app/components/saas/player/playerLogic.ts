@@ -143,6 +143,35 @@ export function buildMetricSeries(measurements: PlayerMeasurement[], metric: str
     .map(({ id, date, value }) => ({ id, date, value }))
 }
 
+export type TrendDirection = 'better' | 'worse' | 'same'
+
+export interface MetricTrend {
+  latest: SeriesPoint
+  previous: SeriesPoint | null
+  /** Letzter minus vorletzter Wert, auf zwei Stellen gerundet; null bei nur einer Messung. */
+  delta: number | null
+  /** Bewertet die Richtung: bei Sprintzeiten ist ein sinkender Wert besser. */
+  direction: TrendDirection | null
+}
+
+/** Letzter Wert einer (älteste zuerst sortierten) Reihe und Veränderung zum vorherigen. */
+export function metricTrend(metric: string, series: SeriesPoint[]): MetricTrend | null {
+  if (series.length === 0) return null
+  const latest = series[series.length - 1]
+  const previous = series.length > 1 ? series[series.length - 2] : null
+  if (!previous) return { latest, previous: null, delta: null, direction: null }
+  const delta = Number((latest.value - previous.value).toFixed(2))
+  if (delta === 0) return { latest, previous, delta: 0, direction: 'same' }
+  const improved = isLowerBetter(metric) ? delta < 0 : delta > 0
+  return { latest, previous, delta, direction: improved ? 'better' : 'worse' }
+}
+
+/** "+0,12 s" / "−0,26 s" (echtes Minuszeichen). */
+export function formatDelta(delta: number, unit: string): string {
+  const sign = delta > 0 ? '+' : delta < 0 ? '\u2212' : ''
+  return `${sign}${NUMBER.format(Math.abs(delta))} ${unit}`
+}
+
 export interface ScaledPoint extends SeriesPoint {
   x: number
   y: number
@@ -164,6 +193,23 @@ export function scaleSeries(points: SeriesPoint[], area: { width: number; height
     x: t1 === t0 ? area.width / 2 : area.pad + ((times[index] - t0) / (t1 - t0)) * innerW,
     y: v1 === v0 ? area.height / 2 : area.pad + (1 - (point.value - v0) / (v1 - v0)) * innerH,
   }))
+}
+
+// --- Kopfzahlen und Ziele ------------------------------------------------
+
+/** Jüngster Trainings- oder Camptermin bis einschließlich heute (ohne stornierte und Wartelisten-Buchungen). */
+export function lastTrainingDate(bookings: PlayerBooking[], today: string): string | null {
+  const days = bookings
+    .filter(booking => (booking.status === 'confirmed' || booking.status === 'registered') && booking.local_date <= today)
+    .map(booking => booking.local_date)
+    .sort()
+  return days.length > 0 ? days[days.length - 1] : null
+}
+
+/** Offene Ziele zuerst, dann erreichte, dann verworfene; innerhalb eines Status bleibt die Serverreihenfolge. */
+export function goalsOpenFirst<T extends { status: string }>(goals: T[]): T[] {
+  const rank = (status: string) => (status === 'offen' ? 0 : status === 'erreicht' ? 1 : 2)
+  return goals.map((goal, index) => ({ goal, index })).sort((a, b) => rank(a.goal.status) - rank(b.goal.status) || a.index - b.index).map(entry => entry.goal)
 }
 
 // --- Suche ----------------------------------------------------------------

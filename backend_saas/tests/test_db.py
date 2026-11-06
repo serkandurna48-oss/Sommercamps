@@ -184,3 +184,37 @@ def test_semaphore_released_after_exception(monkeypatch):
 
     # After the exception the semaphore slot must be free again.
     assert sem.acquire(blocking=False), "Semaphore was not released after exception"
+
+
+def test_mark_idle_suspect_survives_concurrent_pool_mutation():
+    pool = db.RetainingConnectionPool.__new__(db.RetainingConnectionPool)
+    pool._idle_since = {}
+    pool._idle_lock = threading.Lock()
+    stop = threading.Event()
+    errors: list[BaseException] = []
+
+    def mutate():
+        i = 0
+        while not stop.is_set():
+            with pool._idle_lock:
+                pool._idle_since[i] = time.monotonic()
+                pool._idle_since.pop(i - 50, None)
+            i += 1
+
+    def mark():
+        try:
+            for _ in range(3000):
+                pool.mark_idle_suspect()
+        except BaseException as exc:  # noqa: BLE001
+            errors.append(exc)
+
+    writers = [threading.Thread(target=mutate) for _ in range(3)]
+    for t in writers:
+        t.start()
+    marker = threading.Thread(target=mark)
+    marker.start()
+    marker.join()
+    stop.set()
+    for t in writers:
+        t.join()
+    assert errors == []

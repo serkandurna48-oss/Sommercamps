@@ -70,7 +70,9 @@ export default function CampConfigForm({
         Web-Adresse: <strong className="break-all">{camp.slug}</strong> – {de.configPage.hint.slugLocked}
       </p>
 
-      <section className="cp-card flex flex-col gap-4">
+      {/* From 1024 px: facts and parent info left, schedule right (tokens.css .cp-config-sections). */}
+      <div className="cp-config-sections">
+      <section className="cp-card cp-area-facts flex flex-col gap-4">
         <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
           {de.configPage.section.facts}
         </h3>
@@ -85,7 +87,7 @@ export default function CampConfigForm({
         </Field>
       </section>
 
-      <section className="cp-card flex flex-col gap-4">
+      <section className="cp-card cp-area-schedule flex flex-col gap-4">
         <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
           {de.configPage.section.schedule}
         </h3>
@@ -144,7 +146,7 @@ export default function CampConfigForm({
         </div>
       </section>
 
-      <section className="cp-card flex flex-col gap-4">
+      <section className="cp-card cp-area-info flex flex-col gap-4">
         <h3 className="cp-heading" style={{ color: 'var(--cp-ink)' }}>
           {de.configPage.section.parentInfo}
         </h3>
@@ -165,6 +167,7 @@ export default function CampConfigForm({
           />
         </Field>
       </section>
+      </div>
 
       {pending && <PendingNote>{de.configPage.saving}</PendingNote>}
       {!pending && state.error && (

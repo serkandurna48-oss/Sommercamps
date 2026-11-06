@@ -51,8 +51,23 @@ export function formatSessionWhen(localDate: string, localTime: string): string 
   return `${d}.${m}.${y}, ${localTime} Uhr`
 }
 
+const IMPORT_ERROR_TEXT: Record<string, string> = {
+  missing_mapping: 'keiner Spalte zugeordnet',
+  duplicate_mapping: 'mehreren Spalten zugeordnet',
+  duplicate_label: 'Bezeichnung doppelt oder wie ein Standardfeld',
+  invalid_label: 'Bezeichnung ungültig (1–40 Zeichen)',
+  too_many_extra_fields: 'höchstens 10 Zusatzfelder pro Import',
+  too_many_org_extra_fields: 'höchstens 20 verschiedene Zusatzfelder je Verein – nicht mehr benötigte Felder in der Mitgliederliste entfernen',
+  too_long: 'zu lang',
+  invalid_column: 'Spaltenzuordnung ungültig',
+  invalid_target: 'Spaltenzuordnung ungültig',
+  invalid_mapping: 'Spaltenzuordnung ungültig',
+}
+
+/** Zeile/Feld/Code als Text; bekannte Codes mit deutscher Erklärung, Code bleibt in Klammern. */
 export function formatImportError(error: { row: number; field: string; code: string }): string {
-  return `Zeile ${error.row}: Feld ${error.field} (${error.code})`
+  const text = IMPORT_ERROR_TEXT[error.code]
+  return `Zeile ${error.row}: Feld ${error.field} (${text ? `${text}, ` : ''}${error.code})`
 }
 
 // --- Eingaben -------------------------------------------------------------
@@ -104,10 +119,12 @@ export function parseOfferInput(input: Record<string, string>, mode: 'create' | 
   const duration = parseInteger(input.duration_minutes ?? '')
   if (duration === null || duration < 1 || duration > 600) errors.duration_minutes = 'Dauer in vollen Minuten, 1 bis 600.'
 
-  const priceMember = parseEuroToCents(input.price_member_euros ?? '')
-  if (priceMember === null) errors.price_member_euros = 'Bitte einen Preis in Euro eintragen, z. B. 30,00.'
+  // single_price=1 (members module off): one price, stored as member and non-member price.
+  const singlePrice = input.single_price === '1'
   const priceNonmember = parseEuroToCents(input.price_nonmember_euros ?? '')
   if (priceNonmember === null) errors.price_nonmember_euros = 'Bitte einen Preis in Euro eintragen, z. B. 40,00.'
+  const priceMember = singlePrice ? priceNonmember : parseEuroToCents(input.price_member_euros ?? '')
+  if (!singlePrice && priceMember === null) errors.price_member_euros = 'Bitte einen Preis in Euro eintragen, z. B. 30,00.'
 
   const status = (input.status ?? '').trim()
   if (!(OFFER_STATUSES as readonly string[]).includes(status)) errors.status = 'Bitte einen Status wählen.'
@@ -218,7 +235,19 @@ function foldName(text: string): string {
 
 /** Suche und Statusfilter laufen nur im Browser: der Suchbegriff kann ein
  * Kindername sein und gehört nicht in URL, Verlauf oder Server-Logs. */
-export function filterMembers<T extends { first_name: string; last_name: string; member_number: string | null; active: boolean }>(
+/** Labels aller Zusatzfelder, alphabetisch (Spalten der Liste; jsonb behält die Reihenfolge nicht). */
+export function memberExtraLabels(members: { extra?: Record<string, string> }[]): string[] {
+  const labels: string[] = []
+  const seen = new Set<string>()
+  for (const member of members) {
+    for (const label of Object.keys(member.extra ?? {})) {
+      if (!seen.has(label)) { seen.add(label); labels.push(label) }
+    }
+  }
+  return labels.sort((a, b) => a.localeCompare(b, 'de'))
+}
+
+export function filterMembers<T extends { first_name: string; last_name: string; member_number: string | null; active: boolean; extra?: Record<string, string> }>(
   members: T[],
   query: string,
   status: MemberStatusFilter,
@@ -231,5 +260,6 @@ export function filterMembers<T extends { first_name: string; last_name: string;
     return foldName(`${member.first_name}${member.last_name}`).includes(needle)
       || foldName(`${member.last_name}${member.first_name}`).includes(needle)
       || foldName(member.member_number ?? '').includes(needle)
+      || Object.values(member.extra ?? {}).some(value => typeof value === 'string' && foldName(value).includes(needle))
   })
 }

@@ -1,6 +1,7 @@
 ﻿export const previewScreens = [
   ['dashboard', 'Dashboard'],
   ['anmeldungen', 'Neue Anmeldungen heute'],
+  ['camps', 'Camps'],
   ['camp', 'Camp-Detail'],
   ['camp-neu', 'Camp anlegen'],
   ['camp-konfiguration', 'Camp-Einstellungen'],

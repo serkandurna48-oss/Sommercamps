@@ -4,8 +4,9 @@
 import { useId, useMemo, useState } from 'react'
 import { de, formatEuro, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import { xlsxHrefWithFilter, type ExportColumn } from '../../../lib/exportCsv'
-import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
+import type { CampAdmin } from '../../../lib/saasAdminApi'
 import { isActiveRegistration, isOpenPayment, registrationPriceCents } from '../commandCenterLogic'
+import type { PaymentRegistration } from '../commandCenterLogic'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import ActionForm, { type ActionFormState } from '../ui/ActionForm'
 import Button from '../ui/Button'
@@ -17,7 +18,7 @@ import PaymentTextCopy from './PaymentTextCopy'
 import { buildOpenPaymentList, reminderLabels, type ReminderOrganization } from '../../../lib/zahlungserinnerung'
 
 export interface PaymentEntry {
-  registration: RegistrationAdmin
+  registration: PaymentRegistration
   camp: CampAdmin
 }
 
@@ -45,6 +46,7 @@ export default function PaymentSection({
   csvFilename,
   xlsxHref,
   initialFilter = 'open',
+  memberPrices = true,
 }: {
   entries: PaymentEntry[]
   org: ReminderOrganization
@@ -54,11 +56,14 @@ export default function PaymentSection({
   csvFilename: string
   xlsxHref: string
   initialFilter?: Filter
+  /** Members module on: label training rows "Mitgliederpreis"/"Nichtmitgliederpreis". */
+  memberPrices?: boolean
 }) {
   const [filter, setFilter] = useState<Filter>(initialFilter)
   const [search, setSearch] = useState('')
   const [lastPaid, setLastPaid] = useState<PaymentEntry | null>(null)
   const [undoMessage, setUndoMessage] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const searchId = useId()
 
   const counts = useMemo(
@@ -168,7 +173,11 @@ export default function PaymentSection({
           {filter === 'open' && <Button type="button" onClick={() => setFilter('all')}>Auch bezahlte durchsuchen</Button>}
         </div>
       ) : (
-        <div className="cp-roster">
+        <div className="cp-roster cp-pay-list">
+          {/* Column labels for the desktop table; each row stays self-describing for screen readers. */}
+          <div className="cp-pay-head" aria-hidden="true">
+            <span>Kind · Termin</span><span>Betrag</span><span>Status</span><span>Aktion</span>
+          </div>
           {filtered.map(e => (
             <PaymentRow
               key={e.registration.id}
@@ -176,6 +185,9 @@ export default function PaymentSection({
               camp={e.camp}
               org={org}
               orgSlug={orgSlug}
+              memberPrices={memberPrices}
+              expanded={expandedId === e.registration.id}
+              onToggle={() => setExpandedId(id => (id === e.registration.id ? null : e.registration.id))}
               onPaid={() => { setLastPaid(e); setUndoMessage(null) }}
             />
           ))}

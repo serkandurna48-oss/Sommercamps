@@ -3,7 +3,7 @@
 import { createContext, useContext } from 'react'
 import type { OrganizationAdmin } from '../../../lib/saasAdminApi'
 
-export type OrganizationIdentity = Pick<OrganizationAdmin, 'name' | 'logo_url' | 'primary_color'>
+export type OrganizationIdentity = Pick<OrganizationAdmin, 'name' | 'logo_url' | 'primary_color' | 'modules'>
 export const OrganizationContext = createContext<OrganizationIdentity | undefined>(undefined)
 export const useOrganizationIdentity = () => useContext(OrganizationContext)
 

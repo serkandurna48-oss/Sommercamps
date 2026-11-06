@@ -14,11 +14,15 @@ const SESSION_STATUS: Record<TrainingSessionAdmin['status'], { label: string; to
 
 /** Ein Termin mit Belegung, Aktionen und seinen Buchungen. Zeit aus
  * local_date/local_time (Berlin), nicht aus UTC. */
-export default function SessionCard({ orgSlug, offerId, session, registrations }: {
+export default function SessionCard({ orgSlug, offerId, session, registrations, playerDocs = true, memberPrices = true }: {
   orgSlug: string
   offerId: string
   session: TrainingSessionAdmin
   registrations: RegistrationAdmin[]
+  /** Players module on: "Doku schreiben" links into the player file. */
+  playerDocs?: boolean
+  /** Members module on: member/non-member labels on bookings. */
+  memberPrices?: boolean
 }) {
   const status = SESSION_STATUS[session.status] ?? { label: session.status, tone: 'neutral' as const }
   const neverBooked = registrations.length === 0
@@ -58,7 +62,7 @@ export default function SessionCard({ orgSlug, offerId, session, registrations }
           <summary className="cp-focus cp-subheading min-h-[44px] cursor-pointer px-4 py-3">Buchungen ({registrations.length})</summary>
           <ul>
             {registrations.map(registration => (
-              <BookingRow key={registration.id} orgSlug={orgSlug} sessionSlug={session.slug} sessionId={session.id} registration={registration} />
+              <BookingRow key={registration.id} orgSlug={orgSlug} sessionSlug={session.slug} sessionId={session.id} registration={registration} playerDocs={playerDocs} memberPrices={memberPrices} />
             ))}
           </ul>
         </details>

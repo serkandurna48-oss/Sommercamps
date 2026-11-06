@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import AdminShell from '../../../components/saas/shell/AdminShell'
 import OrgDashboardScreen from '../../../components/saas/screens/OrgDashboardScreen'
 import CampDetailScreen from '../../../components/saas/screens/CampDetailScreen'
+import CampsScreen from '../../../components/saas/screens/CampsScreen'
 import CampCreateScreen from '../../../components/saas/screens/CampCreateScreen'
 import CampConfigScreen from '../../../components/saas/screens/CampConfigScreen'
 import OrgPaymentsScreen from '../../../components/saas/screens/OrgPaymentsScreen'
@@ -61,6 +62,7 @@ export default async function AdminPreviewPage({ params, searchParams }: Props) 
       content = <OrgDashboardScreen {...dashboardFixtures} />; break
     }
     case 'anmeldungen': content = <NewRegistrationsScreen {...fixtures} />; break
+    case 'camps': content = <CampsScreen {...fixtures} />; break
     case 'camp': content = <CampDetailScreen {...campProps} initialFilter={initialFilter} initialSort={initialSort} />; break
     case 'camp-zahlungen': content = <CampPaymentsScreen {...campProps} initialFilter={paymentFilter} />; break
     case 'camp-warteliste': content = <CampWaitlistScreen {...campProps} />; break
@@ -112,17 +114,22 @@ export default async function AdminPreviewPage({ params, searchParams }: Props) 
   }
 
   return (
-    <AdminShell>
-      <PreviewProvider empty={empty}>
-        <aside className="cp-chip flex flex-wrap items-center justify-between gap-3 px-4 py-2" style={{ background: 'var(--cp-surface-2)', color: 'var(--cp-ink)' }}>
-          <Link href="/dev/admin-vorschau" className="underline">Alle Vorschauen</Link>
-          <span>Vorschau · erfundene Daten · Änderungen werden nicht gespeichert</span>
-          <Link href={`/dev/admin-vorschau/${screen}${empty ? '' : '?leer=1'}`} className="underline">
-            {empty ? 'Beispieldaten anzeigen' : 'Leerzustand anzeigen'}
-          </Link>
-        </aside>
+    <PreviewProvider empty={empty}>
+      <AdminShell
+        orgSlug={fixtures.orgSlug}
+        org={fixtures.org}
+        beforeContent={
+          <aside className="cp-chip flex flex-wrap items-center justify-between gap-3 px-4 py-2" style={{ background: 'var(--cp-surface-2)', color: 'var(--cp-ink)' }}>
+            <Link href="/dev/admin-vorschau" className="underline">Alle Vorschauen</Link>
+            <span>Vorschau · erfundene Daten · Änderungen werden nicht gespeichert</span>
+            <Link href={`/dev/admin-vorschau/${screen}${empty ? '' : '?leer=1'}`} className="underline">
+              {empty ? 'Beispieldaten anzeigen' : 'Leerzustand anzeigen'}
+            </Link>
+          </aside>
+        }
+      >
         {content}
-      </PreviewProvider>
-    </AdminShell>
+      </AdminShell>
+    </PreviewProvider>
   )
 }

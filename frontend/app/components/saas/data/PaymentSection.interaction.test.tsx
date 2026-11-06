@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PaymentSection, { type PaymentEntry } from './PaymentSection'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import { buildPaymentReminder, type ReminderOrganization } from '../../../lib/zahlungserinnerung'
+import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
+import { de } from '../../../lib/i18n/de'
 
 vi.mock('../actions/paymentActions', () => ({ setPaymentStatusAction: vi.fn() }))
 
@@ -16,7 +18,7 @@ const entry: PaymentEntry = {
     parent_first_name: 'Alex', parent_last_name: 'Beispiel', parent_email: 'alex@example.com', parent_phone: '123',
     emergency_contact_name: null, emergency_contact_phone: null, medical_notes: null, allergies: null,
     jersey_size: null, pickup_authorized: null, photo_permission: false, created_at: '2027-01-01T00:00:00Z',
-  },
+  } satisfies RegistrationAdmin as RegistrationAdmin,
   camp: {
     id: 'camp-1', organization_id: 'org-1', slug: 'summer', title: 'Sommercamp',
     start_date: '2027-07-05', end_date: '2027-07-09', registration_start: null, registration_end: null,
@@ -43,9 +45,9 @@ afterEach(async () => {
   vi.resetAllMocks()
 })
 
-async function render(entries: PaymentEntry[] = [entry], organization = org) {
+async function render(entries: PaymentEntry[] = [entry], organization = org, memberPrices = true) {
   await act(() => root.render(<PaymentSection entries={entries} org={organization} orgSlug="demo"
-    emptyLabel="Keine Anmeldungen" csvFilename="payments.csv" xlsxHref="/export" />))
+    emptyLabel="Keine Anmeldungen" csvFilename="payments.csv" xlsxHref="/export" memberPrices={memberPrices} />))
 }
 
 function button(label: string) {
@@ -56,6 +58,12 @@ function button(label: string) {
 
 async function click(label: string) {
   await act(async () => { button(label).click() })
+}
+
+async function expand(index = 0) {
+  const toggle = container.querySelectorAll<HTMLButtonElement>('.cp-pay-toggle')[index]
+  expect(toggle.getAttribute('aria-expanded')).toBe('false')
+  await act(async () => { toggle.click() })
 }
 
 async function search(value: string) {
@@ -71,6 +79,7 @@ describe('payment workflow', () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     await render()
+    await expand()
     await click('Erinnerung kopieren')
     expect(writeText).toHaveBeenCalledWith(buildPaymentReminder(entry, org))
     expect(container.querySelector('[role="status"]')?.textContent).toBe('Text kopiert')
@@ -80,6 +89,7 @@ describe('payment workflow', () => {
 
   it.each([null, '', '   '])('disables the reminder without an IBAN (%s)', async iban => {
     await render([entry], { ...org, iban })
+    await expand()
     expect(button('Erinnerung kopieren').disabled).toBe(true)
     expect(button('Erinnerung kopieren').title).toBe('IBAN in den Vereinseinstellungen fehlt')
     expect(button('Alle offenen als Liste kopieren').disabled).toBe(false)
@@ -115,6 +125,7 @@ describe('payment workflow', () => {
     const writeText = vi.fn().mockRejectedValue(new Error('denied'))
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     await render()
+    if (label === 'Erinnerung kopieren') await expand()
     await click(label)
     const textarea = container.querySelector('textarea')!
     expect(textarea.readOnly).toBe(true)
@@ -134,6 +145,7 @@ describe('payment workflow', () => {
   it('also falls back when the Clipboard API is unavailable', async () => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined })
     await render()
+    await expand()
     await click('Erinnerung kopieren')
     expect(container.querySelector('textarea')?.value).toBe(buildPaymentReminder(entry, org))
   })
@@ -146,7 +158,7 @@ describe('payment workflow', () => {
     } }])
     await search(query)
     expect(container.querySelectorAll('.cp-ledger-row')).toHaveLength(1)
-    expect(container.querySelector('.cp-ledger-row')?.textContent).toContain('CP-1A2B3C4D')
+    expect(container.querySelector('.cp-ledger-row')?.textContent).toContain('Mia Muster')
     expect(button('Offen2').getAttribute('aria-pressed')).toBe('true')
     const input = container.querySelector('input')!
     expect(container.querySelector('label')?.htmlFor).toBe(input.id)
@@ -221,6 +233,7 @@ describe('payment workflow', () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     await render()
+    await expand()
     await click('Kopieren')
     expect(writeText).toHaveBeenCalledWith('CP-1A2B3C4D')
     expect(button('Kopiert')).toBeDefined()
@@ -229,6 +242,7 @@ describe('payment workflow', () => {
   it('requires an honest confirmation before recording an already completed refund', async () => {
     await render([paidEntry])
     await click('Alle1')
+    await expand()
     await click('Als erstattet markieren')
     expect(container.textContent).toContain('Bereits erfolgte Rückzahlung als erstattet markieren? CampsPilot überweist kein Geld.')
     expect(setPaymentStatusAction).not.toHaveBeenCalled()
@@ -252,4 +266,91 @@ describe('payment workflow', () => {
     await render([{ ...entry, registration: { ...entry.registration, applied_price_cents: null } }])
     expect(text()).toContain('149,00')
   })
+})
+
+describe('compact payment rows', () => {
+  beforeEach(() => { vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))) })
+  afterEach(() => { vi.unstubAllGlobals() })
+  it('shows only name, camp/date, amount, status and the primary action while collapsed', async () => {
+    await render()
+    const row = container.querySelector('.cp-pay-row')!
+    expect([...row.querySelectorAll('button')].map(b => b.getAttribute('aria-label') ?? b.textContent)).toEqual(['Mia Muster, Details anzeigen', 'Als bezahlt markieren'])
+    expect(row.textContent).toContain('Mia Muster')
+    expect(row.textContent).toContain('Sommercamp')
+    expect(row.textContent).toMatch(/149,00/)
+    expect(row.textContent).not.toContain('CP-1A2B3C4D')
+    expect(row.textContent).not.toContain('alex@example.com')
+    expect(row.textContent).not.toContain('Mehr')
+    const toggle = row.querySelector<HTMLButtonElement>('.cp-pay-toggle')!
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(toggle.hasAttribute('aria-controls')).toBe(false)
+  })
+
+  it('expands details and secondary actions inline, one row at a time, and collapses with Escape', async () => {
+    const confirm = vi.spyOn(window, 'confirm')
+    const second: PaymentEntry = { ...entry, registration: { ...entry.registration, id: 'r2', payment_reference: 'CP-SECOND00', child_first_name: 'Noah',
+      created_at: '2027-01-02T10:00:00Z', payment_method: 'bar', member_match: true, applied_price_cents: 3000 } }
+    await render([entry, second])
+    await expand(0)
+    const toggle = container.querySelector<HTMLButtonElement>('.cp-pay-toggle')!
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    const region = container.querySelector<HTMLElement>(`#${CSS.escape(toggle.getAttribute('aria-controls')!)}`)!
+    expect(region.textContent).toContain('CP-1A2B3C4D')
+    expect(region.textContent).toContain('Alex Beispiel')
+    expect(region.textContent).toContain('alex@example.com')
+    expect(region.textContent).toContain('01.01.2027')
+    expect([...region.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Kopieren', 'Erinnerung kopieren', de.paymentsPage.markWaived])
+    expect(region.querySelector('a')?.getAttribute('href')).toBe('/pilot/demo/camps/summer?sort=newest')
+    // Opening another row closes the first one.
+    await expand(1)
+    expect(container.querySelectorAll('[role="region"]')).toHaveLength(1)
+    expect(container.querySelector('[role="region"]')?.textContent).toContain('Mitgliederpreis · 30,00')
+    expect(container.querySelector('[role="region"]')?.textContent).toContain('Bar')
+    // Waiving asks inline, never via window.confirm.
+    await click(de.paymentsPage.markWaived)
+    expect(container.querySelector('[role="region"]')?.textContent).toContain(de.paymentsPage.waivedConfirm)
+    expect(confirm).not.toHaveBeenCalled()
+    const second_toggle = container.querySelectorAll<HTMLButtonElement>('.cp-pay-toggle')[1]
+    second_toggle.focus()
+    await act(() => second_toggle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+    expect(container.querySelector('[role="region"]')).toBeNull()
+    expect(document.activeElement).toBe(second_toggle)
+  })
+
+  it('toggles by clicking the row but not by clicking its action', async () => {
+    await render()
+    const row = container.querySelector<HTMLElement>('.cp-pay-row')!
+    await act(() => row.querySelector<HTMLElement>('.cp-pay-amount')!.click())
+    expect(container.querySelector('[role="region"]')).not.toBeNull()
+    await act(() => row.querySelector<HTMLElement>('.cp-pay-amount')!.click())
+    expect(container.querySelector('[role="region"]')).toBeNull()
+    await click('Als bezahlt markieren')
+    expect(container.querySelector('[role="region"]')).toBeNull()
+  })
+
+  it('offers no "mark as paid" for a paid row, only refund and reopen in the details', async () => {
+    await render([paidEntry])
+    await click('Bezahlt1')
+    const row = container.querySelector('.cp-pay-row')!
+    expect(row.textContent).not.toContain('Als bezahlt markieren')
+    await expand()
+    expect(row.querySelector('[role="region"]')?.textContent).toContain('Wieder auf Offen setzen')
+    expect(row.querySelector('[role="region"]')?.textContent).toContain('Als erstattet markieren')
+  })
+
+  it('renders table column labels once, hidden from assistive tech', async () => {
+    await render()
+    const head = container.querySelector('.cp-pay-head')!
+    expect(head.getAttribute('aria-hidden')).toBe('true')
+    expect(container.querySelectorAll('.cp-pay-head')).toHaveLength(1)
+  })
+})
+
+it('ohne Mitglieder-Modul kein Mitgliederpreis-Label in den Details', async () => {
+  const member: PaymentEntry = { ...entry, registration: { ...entry.registration, member_match: true, applied_price_cents: 3000 } }
+  await render([member], org, false)
+  await expand(0)
+  const region = container.querySelector('[role="region"]')
+  expect(region).not.toBeNull()
+  expect(region!.textContent).not.toContain('Mitgliederpreis')
 })

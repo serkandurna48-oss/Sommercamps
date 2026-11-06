@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { computeBrandSafe } from '../../lib/brandPipeline'
 import { readableTextOn } from '../../lib/readableTextOn'
 import { getPublicCamps, getPublicOrganization, getPublicTrainingOffers } from './publicData'
+import { hasModule } from '../../lib/orgModules'
 import { filterFutureCamps } from './campUtils'
 import CampStructuredData from './CampStructuredData'
 import GrainOverlay from './GrainOverlay'
@@ -84,7 +85,8 @@ export default async function PilotOrgPage({ params, searchParams }: PageProps) 
   const allCamps = campsOutcome.value
   const camps = filterFutureCamps(allCamps)
   // Ein Fehler beim Laden der Trainings darf die Camp-Seite nicht beeinträchtigen.
-  const trainings = trainingsOutcome.status === 'fulfilled' && Array.isArray(trainingsOutcome.value) ? trainingsOutcome.value : []
+  // Ohne Trainings-Modul gibt es keinen Trainingsbereich (die API antwortet dann ohnehin 404).
+  const trainings = hasModule(org, 'trainings') && trainingsOutcome.status === 'fulfilled' && Array.isArray(trainingsOutcome.value) ? trainingsOutcome.value : []
   const hadPastCamps = allCamps.length > 0 && camps.length === 0
   const ground = THEME_SURFACE[org.theme] ?? THEME_SURFACE.tradition
   const brand = computeBrandSafe(org.primary_color, ground)

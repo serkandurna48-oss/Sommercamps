@@ -24,6 +24,7 @@ from app import supabase_auth
 from app.main import app
 from app.repositories import registrations as repo
 from app.schemas import RegistrationCreate
+from app.modules import ALL_MODULES
 from app.tenancy import TenantContext
 from .test_registrations_api import _target, _valid_payload
 
@@ -84,9 +85,11 @@ def real_db(local_database, monkeypatch):
     org_id, camp_id = uuid4(), uuid4()
     slug = f"review-{org_id.hex}"
     with cursor() as cur:
-        cur.execute("INSERT INTO organizations (id,slug,name,contact_email,site_published,plan_status) VALUES (%s,%s,'Review','review@example.com',true,'active')", (org_id, slug))
+        # All modules on: the feature tests (trainings, members, players) run against this
+        # organization; module gating itself is covered in test_organization_modules.py.
+        cur.execute("INSERT INTO organizations (id,slug,name,contact_email,site_published,plan_status,modules) VALUES (%s,%s,'Review','review@example.com',true,'active','{camps,trainings,members,players}')", (org_id, slug))
         cur.execute("INSERT INTO camps (id,organization_id,slug,title,start_date,end_date,age_min,age_max,capacity,price_cents,status) VALUES (%s,%s,'summer-1','Review','2027-07-05','2027-07-09',6,12,1,1000,'published')", (camp_id, org_id))
-    return cursor, TenantContext(org_id, slug, "Review", "active"), _target(id=camp_id, organization_id=org_id, capacity=1)
+    return cursor, TenantContext(org_id, slug, "Review", "active", frozenset(ALL_MODULES)), _target(id=camp_id, organization_id=org_id, capacity=1)
 
 
 def wait_for_lock(cursor, application_name):

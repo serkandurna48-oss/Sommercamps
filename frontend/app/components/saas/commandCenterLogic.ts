@@ -5,6 +5,7 @@
  */
 
 import type { CampAdmin, RegistrationAdmin, TrainingPaymentRegistration } from '../../lib/saasAdminApi'
+import { de } from '../../lib/i18n/de'
 
 /** The registration fields the payment views read; full RegistrationAdmin rows fit as well. */
 export type PaymentRegistration = TrainingPaymentRegistration
@@ -24,6 +25,20 @@ export function registrationPriceCents(camp: Pick<CampAdmin, 'price_cents'>, r: 
 /** Only active registrations carry an outstanding payment obligation. */
 export function isOpenPayment(r: Pick<RegistrationAdmin, 'status' | 'payment_status'>): boolean {
   return isActiveRegistration(r) && r.payment_status === 'open'
+}
+
+/** Why a registration cannot be hard-deleted (null = deletable). Same order as
+ * the backend guard: invoice first (GoBD), then money still held online, then
+ * a recorded platform fee. The backend re-checks; this only picks the hint. */
+export function deleteBlockedHint(
+  r: Pick<RegistrationAdmin, 'payment_status' | 'payment_method' | 'has_invoice' | 'fee_recorded'>,
+): string | null {
+  if (r.has_invoice) return de.adminActions.deleteHasInvoice
+  if (['paid', 'partially_refunded'].includes(r.payment_status) && r.payment_method === 'online') {
+    return 'Online bezahlt: erst erstatten oder stornieren, dann löschen.'
+  }
+  if (r.fee_recorded) return de.adminActions.deleteHasFeeRecord
+  return null
 }
 
 /** Any manual payment decision (paid, free, refunded) can be undone while the registration is active. */

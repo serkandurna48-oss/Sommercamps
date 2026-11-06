@@ -120,6 +120,9 @@ export interface RegistrationAdmin {
   // Spielerakte: Verknüpfung zum Spieler und Doku-Einwilligung der Buchung.
   player_id?: string | null
   documentation_consent?: boolean | null
+  // Löschschutz (GoBD): Rechnung/Storno vorhanden bzw. Plattformgebühr erfasst.
+  has_invoice?: boolean
+  fee_recorded?: boolean
 }
 
 export class AdminActionError extends Error {
@@ -423,7 +426,8 @@ export async function cancelRegistrationAdmin(
 }
 
 /** Löscht eine einzelne Anmeldung endgültig (Camp oder Trainingstermin).
- * 409 `paid_online` = online bezahlt: erst erstatten oder stornieren. */
+ * 409 `paid_online` = online bezahlt: erst erstatten oder stornieren.
+ * 409 `has_invoice` / `has_fee_record` = Rechnung bzw. Gebühr erfasst: stornieren statt löschen. */
 export async function deleteRegistrationAdmin(
   orgSlug: string,
   campSlug: string,
@@ -439,7 +443,9 @@ export async function deleteRegistrationAdmin(
     const code = await errorCode(res)
     throw new AdminActionError(
       code === 'paid_online' ? de.adminActions.deletePaidOnline
-        : code === 'payment_pending' ? de.adminActions.deletePaymentPending
+        : code === 'has_invoice' ? de.adminActions.deleteHasInvoice
+          : code === 'has_fee_record' ? de.adminActions.deleteHasFeeRecord
+            : code === 'payment_pending' ? de.adminActions.deletePaymentPending
           : de.adminActions.deleteFailed,
     )
   }

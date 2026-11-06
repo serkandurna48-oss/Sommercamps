@@ -7,7 +7,7 @@ import { de, paymentStatusLabel } from '../../../lib/i18n/de'
 import type { RegistrationAdmin, RegistrationQuestion } from '../../../lib/saasAdminApi'
 import { cancelRegistrationAction, deleteRegistrationAction, resendRegistrationMailAction, updateRegistrationDetailsAction } from '../actions/waitlistActions'
 import { setPaymentStatusAction } from '../actions/paymentActions'
-import { hasMissingEmergencyContact, hasNotes, isOpenPayment, canReopenPayment } from '../commandCenterLogic'
+import { deleteBlockedHint, hasMissingEmergencyContact, hasNotes, isOpenPayment, canReopenPayment } from '../commandCenterLogic'
 import ActionForm from '../ui/ActionForm'
 import { useRegistrationActionFeedback } from '../ui/RegistrationActionFeedback'
 import Button, { ButtonLink } from '../ui/Button'
@@ -48,6 +48,7 @@ export default function ParticipantDetail({
   const notes = hasNotes(registration)
   const reportResult = useRegistrationActionFeedback()
   const childName = `${registration.child_first_name} ${registration.child_last_name}`
+  const deleteBlocked = deleteBlockedHint(registration)
   const cancel: React.ComponentProps<typeof ActionForm>['action'] = async (previous) => {
     const result = await cancelRegistrationAction(orgSlug, campSlug, registration.registration_token, previous)
     return result.success ? { ...result, success: `${childName} storniert.` } : result
@@ -318,8 +319,8 @@ export default function ParticipantDetail({
         </section>
       )}
       <section className="md:col-span-2 border-t pt-5" style={{ borderColor: 'var(--cp-line-2)' }} aria-label="Anmeldung löschen">
-        {registration.payment_status === 'paid' && registration.payment_method === 'online' ? (
-          <p className="cp-chip" style={{ color: 'var(--cp-muted)' }} data-delete-blocked>Online bezahlt: erst erstatten oder stornieren, dann löschen.</p>
+        {deleteBlocked ? (
+          <p className="cp-chip" style={{ color: 'var(--cp-muted)' }} data-delete-blocked>{deleteBlocked}</p>
         ) : <ActionForm
           action={remove}
           onResult={reportResult}

@@ -253,6 +253,16 @@ it('meldet laufende Zahlungsprüfung (409 payment_pending) mit eigenem Text', as
   expect(error.message).toContain('später erneut')
 })
 
+it.each([
+  ['has_invoice', 'Für diese Buchung gibt es eine Rechnung. Bitte stornieren statt löschen.'],
+  ['has_fee_record', 'bereits abgerechnet'],
+])('meldet Löschschutz 409 %s mit eigenem Text', async (code, text) => {
+  stubFetch(409, { detail: { code, message: 'x' } })
+  const error = await deleteRegistrationAdmin('ksv', 'einzel-1', 'reg-token', 'tok').catch(e => e)
+  expect(error).toBeInstanceOf(AdminActionError)
+  expect(error.message).toContain(text)
+})
+
 it('löscht eine Spielerakte per DELETE und erklärt aktive Buchungen (409)', async () => {
   const fn = stubFetch(204)
   await deletePlayerRecordAdmin('ksv', 'p1', 'tok')

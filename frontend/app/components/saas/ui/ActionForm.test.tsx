@@ -189,3 +189,15 @@ it.each([false, true])('preserves result callbacks and linked confirmation in pr
   }
   expect(container.querySelector('form')).toBeNull()
 })
+
+it('fokussiert beim Öffnen der Bestätigung "Abbrechen", liest die Frage mit und gibt den Fokus zurück', async () => {
+  await renderForm(vi.fn<ActionFn>().mockResolvedValue({ error: null, success: 'ok' }))
+  await clickButton('Aufrücken')
+  const cancel = [...container.querySelectorAll('button')].find(b => b.textContent === 'Abbrechen')!
+  expect(document.activeElement).toBe(cancel)
+  const question = container.querySelector(`#${cancel.getAttribute('aria-describedby')}`)!
+  expect(question.textContent).toBe('Wirklich aufrücken?')
+  expect(question.getAttribute('role')).toBe('group')
+  await clickButton('Abbrechen')
+  expect(document.activeElement).toBe([...container.querySelectorAll('button')].find(b => b.textContent === 'Aufrücken'))
+})

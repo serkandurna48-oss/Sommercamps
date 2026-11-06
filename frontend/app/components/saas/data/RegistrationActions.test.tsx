@@ -89,10 +89,16 @@ it('deletes only after confirmation, for any status, and warns about online paym
   await click('Anmeldung löschen')
   expect(deleteRegistrationAction).not.toHaveBeenCalled()
   expect(container.textContent).toContain('Anmeldung von Mia Test für Sommercamp endgültig löschen?')
-  expect(container.textContent).toContain('Online bezahlte Anmeldungen kannst du nicht löschen')
+  expect(container.textContent).toContain('bleibt die Spielerakte bestehen')
   await submit()
   expect(deleteRegistrationAction).toHaveBeenCalledWith('club', 'camp', child.registration_token, expect.any(Object))
   expect(cancelRegistrationAction).not.toHaveBeenCalled()
+})
+
+it('offers no delete button for a booking paid online, only the refund hint', async () => {
+  await renderParticipants([{ ...child, payment_method: 'online' }])
+  expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Anmeldung löschen')).toBe(false)
+  expect(container.querySelector('[data-delete-blocked]')?.textContent).toContain('erst erstatten oder stornieren')
 })
 
 it('shows the backend refusal when a delete is blocked', async () => {

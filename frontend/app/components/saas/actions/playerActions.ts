@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { de } from '../../../lib/i18n/de'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
 import {
@@ -11,6 +12,7 @@ import {
   createPlayerMeasurementAdmin,
   createPlayerNoteAdmin,
   deletePlayerMeasurementAdmin,
+  deletePlayerRecordAdmin,
   deletePlayerNoteAdmin,
   updatePlayerGoalAdmin,
   updatePlayerNoteAdmin,
@@ -162,4 +164,17 @@ export async function deleteMeasurementAction(orgSlug: string, playerId: string,
   }
   refresh(orgSlug)
   return { error: null, success: 'Messwert gelöscht.' }
+}
+
+/** Deletes the whole player record, then leaves the (now missing) page for the player list. */
+export async function deletePlayerRecordAction(orgSlug: string, playerId: string, _prev: ActionFormState): Promise<ActionFormState> {
+  const token = await getValidAccessToken()
+  if (!token) return { error: NO_SESSION, success: null }
+  try {
+    await deletePlayerRecordAdmin(orgSlug, playerId, token)
+  } catch (error) {
+    return { error: failure(error, 'Spielerakte konnte nicht gelöscht werden.').error, success: null }
+  }
+  refresh(orgSlug)
+  redirect(`/pilot/${orgSlug}/spieler`)
 }

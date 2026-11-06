@@ -111,7 +111,7 @@ describe('Messwert-Verlauf', () => {
     expect(isLowerBetter('Dribbling-Parcours')).toBe(false)
   })
   it('erkennt „niedriger ist besser“ an ausdrücklicher Angabe, Zeiteinheit oder Name', () => {
-    for (const unit of ['s', 'S', 'sek', 'Sek.', 'sec', ' sec ', 'Sekunden', 'ms']) expect(isLowerBetter('Dribbling-Parcours', unit), unit).toBe(true)
+    for (const unit of ['s', 'S', 'sek', 'Sek.', 'sec', ' sec ', 'Sekunden', 'ms', 'min', 'Min.', 'Minuten', 'h', 'Std']) expect(isLowerBetter('Dribbling-Parcours', unit), unit).toBe(true)
     expect(isLowerBetter('Antritt 20 m', 'cm')).toBe(false)
     expect(isLowerBetter('Tempo', 'm/s')).toBe(false)
     expect(isLowerBetter('Sprint 20 m', 'm')).toBe(true)
@@ -236,5 +236,18 @@ describe('Anzeige', () => {
     expect(formatDay('2027-03-29')).toBe('29.03.2027')
     expect(ratingDots(3)).toEqual([true, true, true, false, false])
     expect(ratingDots(null)).toEqual([false, false, false, false, false])
+  })
+})
+
+describe('Minuten und gemischte Einheiten', () => {
+  const pt = (date: string, value: number) => ({ date, value })
+  it('1000-m-Lauf in Minuten: sinkende Zeit ist besser', () => {
+    expect(metricTrend('1000-m-Lauf', [pt('2027-01-01', 4.5), pt('2027-03-01', 4.2)], 'min')).toMatchObject({ delta: -0.3, direction: 'better' })
+  })
+  it('baut eine Reihe nur aus einer Einheit', () => {
+    const m = (id: string, unit: string, value: number) => ({ id, player_id: 'p', measured_on: '2027-01-0' + id, metric: 'Antritt', value, unit, note: null, created_at: `2027-01-0${id}T10:00:00Z`, updated_at: '' })
+    const list = [m('1', 's', 3.2), m('2', 'ms', 3100), m('3', 's', 3.0)]
+    expect(buildMetricSeries(list, 'Antritt', 's').map(p => p.value)).toEqual([3.2, 3.0])
+    expect(buildMetricSeries(list, 'Antritt').map(p => p.value)).toEqual([3.2, 3100, 3.0])
   })
 })

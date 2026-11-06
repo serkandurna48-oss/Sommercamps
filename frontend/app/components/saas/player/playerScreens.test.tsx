@@ -22,6 +22,7 @@ vi.mock('../shell/logoutAction', () => ({ logoutAction: vi.fn() }))
 vi.mock('../actions/playerActions', () => ({
   createNoteAction: vi.fn(), updateNoteAction: vi.fn(), deleteNoteAction: vi.fn(), createGoalAction: vi.fn(),
   setGoalStatusAction: vi.fn(), createMeasurementAction: vi.fn(), deleteMeasurementAction: vi.fn(),
+  deletePlayerRecordAction: vi.fn(),
 }))
 vi.mock('../actions/trainingActions', () => ({
   createOfferAction: vi.fn(), updateOfferAction: vi.fn(), createSessionAction: vi.fn(), deleteSessionAction: vi.fn(),
@@ -226,6 +227,15 @@ describe('Spielerakte (Darstellung)', () => {
     const reps = html(screen(record({ measurements: [custom('a', '2027-01-10', 20, 'Anzahl'), custom('b', '2027-03-29', 25, 'Anzahl')] })))
     expect(reps.querySelector('figure[data-metric="Dribbling-Parcours"] [data-trend]')?.getAttribute('data-trend')).toBe('better')
     expect(reps.querySelector('figure[data-metric="Dribbling-Parcours"]')?.textContent).toContain('Höher ist besser')
+  })
+
+  it('Spielerakte löschen: Knopf nur ohne aktive Buchung, sonst Hinweis', () => {
+    const blocked = html(screen(record({ bookings: [booking({ status: 'registered' })] })))
+    expect(blocked.querySelector('section[aria-label="Spielerakte löschen"] button')).toBeNull()
+    expect(blocked.querySelector('[data-delete-blocked]')?.textContent).toContain('1 aktive Buchung')
+    const free = html(screen(record({ bookings: [booking({ status: 'cancelled' })] })))
+    const section = free.querySelector('section[aria-label="Spielerakte löschen"]')!
+    expect([...section.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Spielerakte löschen'])
   })
 
   it('Buchungen mit Titel, lokalem Datum/Uhrzeit und Zahlstatus', () => {

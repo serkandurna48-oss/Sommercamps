@@ -4,6 +4,7 @@ import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from '../da
 import EmptyState from '../state/EmptyState'
 import PageHeader from '../shell/PageHeader'
 import { ADMIN_PAGE } from '../ui/pageLayout'
+import DeletePlayerRecord from '../player/DeletePlayerRecord'
 import GoalsSection from '../player/GoalsSection'
 import MeasurementsSection from '../player/MeasurementsSection'
 import NotesTimeline from '../player/NotesTimeline'
@@ -95,6 +96,10 @@ export default function PlayerRecordScreen({ orgSlug, org, record, query, today 
                 </details>
               )}
             </section>
+
+            <DeletePlayerRecord orgSlug={orgSlug} playerId={player.id} name={`${player.first_name} ${player.last_name}`}
+              activeBookings={bookings.filter(booking => ['registered', 'confirmed', 'waitlist'].includes(booking.status)).length}
+              notes={notes.length} goals={goals.length} measurements={measurements.length} />
           </div>
         </div>
       </main>

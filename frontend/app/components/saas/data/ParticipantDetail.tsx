@@ -53,7 +53,9 @@ export default function ParticipantDetail({
   }
   const remove: React.ComponentProps<typeof ActionForm>['action'] = async (previous) => {
     const result = await deleteRegistrationAction(orgSlug, campSlug, registration.registration_token, previous)
-    return result.success ? { ...result, success: `${childName} gelöscht.` } : result
+    return result.success
+      ? { ...result, success: `${childName} gelöscht.${result.success === de.adminActions.deletedPlayerKept ? ' Die Spielerakte bleibt bestehen.' : ''}` }
+      : result
   }
   const previewMode = useAdminPreview()
   const resendMail: React.ComponentProps<typeof ActionForm>['action'] = previewMode
@@ -309,7 +311,9 @@ export default function ParticipantDetail({
         </section>
       )}
       <section className="md:col-span-2 border-t pt-5" style={{ borderColor: 'var(--cp-line-2)' }} aria-label="Anmeldung löschen">
-        <ActionForm
+        {registration.payment_status === 'paid' && registration.payment_method === 'online' ? (
+          <p className="cp-chip" style={{ color: 'var(--cp-muted)' }} data-delete-blocked>Online bezahlt: erst erstatten oder stornieren, dann löschen.</p>
+        ) : <ActionForm
           action={remove}
           onResult={reportResult}
           label="Anmeldung löschen"
@@ -319,9 +323,9 @@ export default function ParticipantDetail({
           requireConfirm={<>
             <p className="cp-subheading">Anmeldung von {childName} für {campTitle} endgültig löschen?</p>
             <p>Das lässt sich nicht rückgängig machen. Ein frei werdender Platz geht automatisch an die nächste Anmeldung auf der Warteliste.</p>
-            <p>Online bezahlte Anmeldungen kannst du nicht löschen: Erstatte oder storniere sie zuerst.</p>
+            <p>Hat das Kind noch Notizen oder weitere Buchungen, bleibt die Spielerakte bestehen.</p>
           </>}
-        />
+        />}
       </section>
     </div>
   )

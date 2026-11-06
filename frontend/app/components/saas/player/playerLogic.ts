@@ -118,7 +118,10 @@ export function metricLabel(metric: string): string {
 }
 
 /** Zeiteinheiten: bei Zeiten ist ein niedrigerer Wert besser. "m/s" (Tempo) steht bewusst nicht dabei. */
-const TIME_UNITS = new Set(['s', 'sek', 'sec', 'sekunde', 'sekunden', 'second', 'seconds', 'ms'])
+const TIME_UNITS = new Set([
+  's', 'sek', 'sec', 'sekunde', 'sekunden', 'second', 'seconds', 'ms',
+  'min', 'minute', 'minuten', 'minutes', 'h', 'std', 'stunde', 'stunden', 'hour', 'hours',
+])
 
 /**
  * Ist bei dieser Messgröße ein niedrigerer Wert besser? Reihenfolge:
@@ -126,6 +129,10 @@ const TIME_UNITS = new Set(['s', 'sek', 'sec', 'sekunde', 'sekunden', 'second', 
  * 2. Zeiteinheit (s, sek, sec, ms);
  * 3. Name enthält "sprint" (Standard-Schlüssel sprint_10m ebenso wie eigene Namen).
  * Alles andere: höher ist besser.
+ * Es gibt kein Metrik-Definitionsmodell im Backend (nur die festen Standardmetriken sprint_10m,
+ * sprint_30m, standweitsprung, jonglieren; eigene Metriken sind freier Text mit Einheit). Deshalb
+ * bleibt es bei dieser Heuristik. Prozentwerte mit "niedriger ist besser" (Fehlerquote) erkennt sie
+ * nicht; dafür greift `explicit`, sobald das Backend je Metrik ein Flag liefert.
  */
 export function isLowerBetter(metric: string, unit?: string | null, explicit?: boolean | null): boolean {
   if (typeof explicit === 'boolean') return explicit
@@ -146,10 +153,11 @@ export interface SeriesPoint {
   value: number
 }
 
-/** Messwerte einer Metrik, älteste zuerst. */
-export function buildMetricSeries(measurements: PlayerMeasurement[], metric: string): (SeriesPoint & { id: string })[] {
+/** Messwerte einer Metrik (optional nur einer Einheit), älteste zuerst. */
+export function buildMetricSeries(measurements: PlayerMeasurement[], metric: string, unit?: string): (SeriesPoint & { id: string })[] {
   return measurements
-    .filter(m => m.metric === metric)
+    // Only one unit per series: s and ms (or cm and m) must never be compared raw.
+    .filter(m => m.metric === metric && (unit === undefined || m.unit === unit))
     .map(m => ({ id: m.id, date: m.measured_on, value: m.value, created: m.created_at }))
     .sort((a, b) => a.date.localeCompare(b.date) || a.created.localeCompare(b.created))
     .map(({ id, date, value }) => ({ id, date, value }))

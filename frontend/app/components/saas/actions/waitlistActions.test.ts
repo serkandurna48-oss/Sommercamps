@@ -71,7 +71,7 @@ it('leaves the parent email untouched when the form does not send it', async () 
 })
 
 it('reports a deleted registration and the promoted waitlist entry', async () => {
-  vi.mocked(deleteRegistrationAdmin).mockResolvedValue({ deleted: true, promoted })
+  vi.mocked(deleteRegistrationAdmin).mockResolvedValue({ deleted: true, promoted, player_kept: false })
   const result = await deleteRegistrationAction('club', 'camp', 'tok', initial)
   expect(deleteRegistrationAdmin).toHaveBeenCalledWith('club', 'camp', 'tok', 'admin-token')
   expect(result).toMatchObject({ error: null, promoted })
@@ -83,4 +83,10 @@ it('passes the paid-online refusal on to the admin', async () => {
   const result = await deleteRegistrationAction('club', 'camp', 'tok', initial)
   expect(result.success).toBeNull()
   expect(result.error).toContain('Erst erstatten oder stornieren')
+})
+
+it('tells the admin when the player record stays', async () => {
+  vi.mocked(deleteRegistrationAdmin).mockResolvedValue({ deleted: true, promoted: null, player_kept: true })
+  const result = await deleteRegistrationAction('club', 'camp', 'tok', initial)
+  expect(result.success).toContain('Die Spielerakte bleibt bestehen')
 })

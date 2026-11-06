@@ -8,6 +8,7 @@ import {
   createClubMemberAdmin,
   createTrainingOfferAdmin,
   createTrainingSessionAdmin,
+  deletePlayerRecordAdmin,
   deleteRegistrationAdmin,
   deleteTrainingSessionAdmin,
   fetchClubMembersAdmin,
@@ -231,7 +232,7 @@ it('kodiert Slugs und IDs in allen neuen Pfaden', async () => {
 })
 
 it('löscht eine Anmeldung per DELETE; online bezahlt (409) bekommt den Hinweis "Erst erstatten oder stornieren"', async () => {
-  const fn = stubFetch(200, { deleted: true, promoted: null })
+  const fn = stubFetch(200, { deleted: true, promoted: null, player_kept: false })
   const result = await deleteRegistrationAdmin('ksv', 'einzel-1', 'reg-token', 'tok')
   expect(result.deleted).toBe(true)
   expect(lastCall(fn).init.method).toBe('DELETE')
@@ -244,4 +245,19 @@ it('löscht eine Anmeldung per DELETE; online bezahlt (409) bekommt den Hinweis 
 
   stubFetch(404, { detail: 'Registration not found' })
   expect(await deleteRegistrationAdmin('ksv', 'einzel-1', 'reg-token', 'tok').catch(e => e)).toBeInstanceOf(AdminActionError)
+})
+
+it('meldet laufende Zahlungsprüfung (409 payment_pending) mit eigenem Text', async () => {
+  stubFetch(409, { detail: { code: 'payment_pending', message: 'x' } })
+  const error = await deleteRegistrationAdmin('ksv', 'einzel-1', 'reg-token', 'tok').catch(e => e)
+  expect(error.message).toContain('später erneut')
+})
+
+it('löscht eine Spielerakte per DELETE und erklärt aktive Buchungen (409)', async () => {
+  const fn = stubFetch(204)
+  await deletePlayerRecordAdmin('ksv', 'p1', 'tok')
+  expect(lastCall(fn).init.method).toBe('DELETE')
+  expect(lastCall(fn).url).toMatch(/\/admin\/organizations\/ksv\/players\/p1$/)
+  stubFetch(409, { detail: { code: 'player_has_active_registrations' } })
+  expect((await deletePlayerRecordAdmin('ksv', 'p1', 'tok').catch(e => e)).message).toContain('aktive Buchungen')
 })

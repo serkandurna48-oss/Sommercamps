@@ -92,7 +92,11 @@ export async function deleteRegistrationAction(
   try {
     const result = await deleteRegistrationAdmin(orgSlug, campSlug, registrationToken, token)
     revalidatePath(`/pilot/${orgSlug}`, 'layout')
-    return { error: null, success: de.adminActions.deleted, promoted: result.promoted }
+    return {
+      error: null,
+      success: result.player_kept ? de.adminActions.deletedPlayerKept : de.adminActions.deleted,
+      promoted: result.promoted,
+    }
   } catch (error) {
     return { error: error instanceof AdminActionError ? error.message : de.adminActions.deleteFailed, success: null }
   }

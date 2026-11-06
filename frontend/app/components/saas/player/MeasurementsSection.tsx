@@ -65,7 +65,7 @@ export default function MeasurementsSection({ orgSlug, playerId, measurements, m
         ) : (
           <ul className="flex flex-col">
             {groups.map(group => {
-              const series = buildMetricSeries(measurements, group.metric)
+              const series = buildMetricSeries(measurements, group.metric, group.unit)
               const rows = measurements.filter(m => m.metric === group.metric)
               return (
                 <li key={group.metric} className="flex flex-col border-t py-3 first:border-t-0 first:pt-0" style={{ borderTopColor: 'var(--cp-line-2)' }}>

@@ -7,6 +7,8 @@ const ACTION_LABEL: Record<string, string> = {
   'organization.publish_state_changed': 'Verein veröffentlicht/zurückgezogen',
   'camp.status_changed': 'Camp-Status geändert',
   'registration.cancelled': 'Anmeldung storniert',
+  'registration.deleted': 'Anmeldung gelöscht',
+  'player.deleted': 'Spielerakte gelöscht',
   'registration.payment_status_changed': 'Zahlungsstatus geändert',
   'organization.member_assigned': 'Vereinsadmin zugewiesen',
   'organization.member_removed': 'Vereinsadmin entfernt',

@@ -28,7 +28,7 @@ vi.mock('../actions/trainingActions', () => ({
   cancelSessionAction: vi.fn(), createMemberAction: vi.fn(), setMemberActiveAction: vi.fn(), importMembersAction: vi.fn(),
   removeMemberExtraFieldAction: vi.fn(),
 }))
-vi.mock('../actions/waitlistActions', () => ({ cancelRegistrationAction: vi.fn() }))
+vi.mock('../actions/waitlistActions', () => ({ cancelRegistrationAction: vi.fn(), deleteRegistrationAction: vi.fn() }))
 vi.mock('../actions/paymentActions', () => ({ setPaymentStatusAction: vi.fn() }))
 
 const org = { ...organization, name: 'Testverein', slug: 'demo', logo_url: null, primary_color: null }

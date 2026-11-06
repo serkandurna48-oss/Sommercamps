@@ -51,6 +51,7 @@ from ..admin_schemas import (
     CampCreate,
     CampUpdate,
     CancelRegistrationResponse,
+    DeleteRegistrationResponse,
     GlobalRegistrationOut,
     MeOut,
     OrganizationAdminListItem,
@@ -79,8 +80,8 @@ from ..repositories import platform_stats as platform_stats_repo
 from ..repositories import registrations as registrations_repo
 from ..repositories.camps import CampSlugConflictError
 from ..repositories.organizations import OrganizationSlugConflictError
-from ..repositories.registrations import RegistrationNotFoundError
-from .payments import expire_open_checkout
+from ..repositories.registrations import RegistrationNotFoundError, RegistrationPaidOnlineError
+from .payments import CheckoutPaidError, CheckoutUnavailableError, close_checkout_before_delete, expire_open_checkout
 from ..tenancy import TenantContext
 
 logger = logging.getLogger(__name__)
@@ -597,6 +598,84 @@ def cancel_registration(
     return CancelRegistrationResponse(**result)
 
 
+@router.delete(
+    "/organizations/{organization_slug}/camps/{camp_slug}/registrations/{registration_token}",
+    response_model=DeleteRegistrationResponse,
+)
+def delete_registration(
+    organization_slug: str,
+    camp_slug: str,
+    registration_token: UUID,
+    background_tasks: BackgroundTasks,
+    auth: AuthContext = Depends(require_org_access),
+) -> DeleteRegistrationResponse:
+    """
+    Hard-deletes one registration of a camp or a training session (both
+    live in camp_registrations; `camp_slug` is the session slug for
+    trainings). Scoped by organization AND camp, looked up by the public
+    registration_token. Refused with 409 `paid_online` when the booking was
+    paid online: refund or cancel it instead. A freed place goes to the next
+    waitlisted registration, like on cancel. The audit entry carries status
+    facts only, no personal data.
+    """
+    organization = require_organization(organization_slug)
+    camp = require_camp(organization, camp_slug)
+
+    # An open Stripe Checkout is closed first, so nobody can pay a deleted booking.
+    try:
+        close_checkout_before_delete(organization["id"], camp["id"], registration_token)
+    except CheckoutPaidError as exc:
+        raise HTTPException(
+            status_code=409, detail={"code": "paid_online", "message": "Erst erstatten oder stornieren."},
+        ) from exc
+    except CheckoutUnavailableError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "payment_pending", "message": "Zahlung wird gerade geprüft, bitte später erneut versuchen."},
+        ) from exc
+
+    try:
+        result = registrations_repo.delete_registration_and_promote_next(
+            _admin_tenant(organization), camp["id"], registration_token
+        )
+    except RegistrationNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Registration not found") from exc
+    except RegistrationPaidOnlineError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "paid_online", "message": "Erst erstatten oder stornieren."},
+        ) from exc
+
+    logger.info(
+        "Registration deleted (organization_slug=%s, camp_slug=%s, promoted=%s)",
+        organization_slug,
+        camp_slug,
+        result["promoted"] is not None,
+    )
+    platform_roles.write_audit_log(
+        actor_user_id=auth.user_id,
+        actor_email=auth.email,
+        action="registration.deleted",
+        organization_id=str(organization["id"]),
+        target_type="registration",
+        target_id=str(registration_token),
+        metadata={
+            "status": result["deleted_status"],
+            "payment_status": result["deleted_payment_status"],
+            "promoted": result["promoted"] is not None,
+            "player_removed": result["player_removed"],
+        },
+    )
+    if result["promoted"] is not None:
+        background_tasks.add_task(
+            notifications_sending.send_status_change_notification,
+            result["promoted"]["registration_token"],
+            organization["id"],
+            "promoted",
+        )
+    return DeleteRegistrationResponse(promoted=result["promoted"], player_kept=result["player_kept"])
+
+
 @router.post(
     "/organizations/{organization_slug}/camps/{camp_slug}/registrations/{registration_token}/resend-mail",
     response_model=ResendMailResponse,
@@ -805,7 +884,15 @@ def list_organization_members(
     stays owner-only (see add_organization_member below)."""
     organization = require_organization(organization_slug)
     rows = platform_roles.list_organization_members(organization["id"])
-    return [OrganizationMemberOut.model_validate({**row, "user_id": str(row["user_id"]), "email": None}) for row in rows]
+    # E-mail per admin from Supabase Auth (best effort, None when unavailable);
+    # the frontend falls back to the user id only then.
+    emails = supabase_auth.get_user_emails([str(row["user_id"]) for row in rows])
+    return [
+        OrganizationMemberOut.model_validate(
+            {**row, "user_id": str(row["user_id"]), "email": emails.get(str(row["user_id"]))}
+        )
+        for row in rows
+    ]
 
 
 @router.post(

@@ -422,6 +422,32 @@ export async function cancelRegistrationAdmin(
   return res.json() as Promise<{ cancelled: RegistrationStatusResult; promoted: RegistrationStatusResult | null }>
 }
 
+/** Löscht eine einzelne Anmeldung endgültig (Camp oder Trainingstermin).
+ * 409 `paid_online` = online bezahlt: erst erstatten oder stornieren. */
+export async function deleteRegistrationAdmin(
+  orgSlug: string,
+  campSlug: string,
+  registrationToken: string,
+  token: string,
+): Promise<{ deleted: boolean; promoted: RegistrationStatusResult | null; player_kept: boolean }> {
+  const res = await adminMutate(
+    `/admin/organizations/${orgSlug}/camps/${campSlug}/registrations/${encodeURIComponent(registrationToken)}`,
+    token,
+    'DELETE',
+  )
+  if (res.status === 409) {
+    const code = await errorCode(res)
+    throw new AdminActionError(
+      code === 'paid_online' ? de.adminActions.deletePaidOnline
+        : code === 'payment_pending' ? de.adminActions.deletePaymentPending
+          : de.adminActions.deleteFailed,
+    )
+  }
+  if (res.status === 404) throw new AdminActionError(de.adminActions.deleteGone)
+  if (!res.ok) throw new AdminActionError(de.adminActions.deleteFailed)
+  return res.json() as Promise<{ deleted: boolean; promoted: RegistrationStatusResult | null; player_kept: boolean }>
+}
+
 /** A2: Sendet die zum aktuellen Status passende Eltern-Mail erneut.
  * 422 = Mailversand abgelehnt (Grund steht danach in email_error). Bewusst
  * nicht 502: 502 deutet adminRequest als Server-Neustart. */
@@ -1079,6 +1105,8 @@ export interface PlayerMeasurement {
 export interface PlayerMetric {
   metric: string
   unit: string
+  /** Optional, ausdrücklich: niedriger ist besser (sonst: Zeiteinheit oder "sprint" im Namen). */
+  lower_is_better?: boolean
 }
 
 export interface PlayerDetail {
@@ -1177,6 +1205,14 @@ export async function updatePlayerGoalAdmin(orgSlug: string, playerId: string, g
 
 export async function createPlayerMeasurementAdmin(orgSlug: string, playerId: string, token: string, data: PlayerMeasurementInput): Promise<PlayerMeasurement> {
   return playerWrite(`${playerPath(orgSlug, playerId)}/measurements`, token, 'POST', data, 'Messwert konnte nicht gespeichert werden.')
+}
+
+/** Deletes the whole player record (notes, goals, measurements). 409 while a booking is active. */
+export async function deletePlayerRecordAdmin(orgSlug: string, playerId: string, token: string): Promise<void> {
+  const res = await adminMutate(playerPath(orgSlug, playerId), token, 'DELETE')
+  if (res.status === 409) throw new PlayerRecordError('Es gibt noch aktive Buchungen. Storniere oder lösche sie zuerst.')
+  if (res.status === 404) throw new PlayerRecordError('Die Spielerakte gibt es nicht mehr – lade die Seite neu.')
+  if (!res.ok) throw new PlayerRecordError('Spielerakte konnte nicht gelöscht werden.')
 }
 
 export async function deletePlayerMeasurementAdmin(orgSlug: string, playerId: string, measurementId: string, token: string): Promise<void> {

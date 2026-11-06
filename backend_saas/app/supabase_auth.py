@@ -394,3 +394,42 @@ def find_user_by_email(email: str) -> SupabaseUser | None:
         if len(users) < per_page:
             return None
     return None
+
+
+def get_user_email(user_id: str) -> str | None:
+    """Best-effort admin-API lookup of one account's e-mail (member lists).
+    Returns None when the service-role key is not configured, the account is
+    unknown or Supabase Auth is unreachable; a missing e-mail must never
+    break a list. Nothing is logged beyond the error type."""
+    settings = get_settings()
+    if not settings.supabase_service_role_key:
+        return None
+    try:
+        response = get_client().get(
+            f"{settings.supabase_url}/auth/v1/admin/users/{user_id}",
+            headers={
+                "Authorization": f"Bearer {settings.supabase_service_role_key}",
+                "apikey": settings.supabase_service_role_key,
+            },
+            timeout=3.0,
+        )
+    except httpx.HTTPError:
+        return None
+    if response.status_code != 200:
+        return None
+    try:
+        email = response.json().get("email")
+    except (ValueError, AttributeError):
+        return None
+    return email if isinstance(email, str) and email else None
+
+
+def get_user_emails(user_ids: list[str]) -> dict[str, str | None]:
+    """E-mails for a few accounts at once, fetched concurrently (bounded) so one
+    slow Supabase answer does not add up per admin."""
+    if not user_ids:
+        return {}
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=min(4, len(user_ids))) as pool:
+        return dict(zip(user_ids, pool.map(get_user_email, user_ids)))

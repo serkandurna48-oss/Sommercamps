@@ -4,13 +4,13 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { de, publicUI } from '../../../lib/i18n/de'
-import { cancelRegistrationAction, promoteWaitlistAction } from '../actions/waitlistActions'
+import { cancelRegistrationAction, deleteRegistrationAction, promoteWaitlistAction } from '../actions/waitlistActions'
 import RegistrationActionFeedback from '../ui/RegistrationActionFeedback'
 import ParticipantList from './ParticipantList'
 import WaitlistCard from './WaitlistCard'
 
 vi.mock('../actions/waitlistActions', () => ({ resendRegistrationMailAction: vi.fn(),
-  cancelRegistrationAction: vi.fn(),
+  cancelRegistrationAction: vi.fn(), deleteRegistrationAction: vi.fn(),
   promoteWaitlistAction: vi.fn(),
   updateRegistrationDetailsAction: vi.fn(),
 }))
@@ -82,6 +82,32 @@ it('cancels only after confirmation and explains payment, promotion and refund c
   await submit()
   expect(cancelRegistrationAction).toHaveBeenCalledOnce()
   expect(cancelRegistrationAction).toHaveBeenCalledWith('club', 'camp', child.registration_token, expect.any(Object))
+})
+
+it('deletes only after confirmation, for any status, and warns about online payments', async () => {
+  vi.mocked(deleteRegistrationAction).mockResolvedValue({ error: null, success: 'Anmeldung gelöscht.', promoted: null })
+  await renderParticipants([{ ...child, status: 'cancelled' }])
+  await click('Anmeldung löschen')
+  expect(deleteRegistrationAction).not.toHaveBeenCalled()
+  expect(container.textContent).toContain('Anmeldung von Mia Test für Sommercamp endgültig löschen?')
+  expect(container.textContent).toContain('bleibt die Spielerakte bestehen')
+  await submit()
+  expect(deleteRegistrationAction).toHaveBeenCalledWith('club', 'camp', child.registration_token, expect.any(Object))
+  expect(cancelRegistrationAction).not.toHaveBeenCalled()
+})
+
+it('offers no delete button for a booking paid online, only the refund hint', async () => {
+  await renderParticipants([{ ...child, payment_method: 'online' }])
+  expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Anmeldung löschen')).toBe(false)
+  expect(container.querySelector('[data-delete-blocked]')?.textContent).toContain('erst erstatten oder stornieren')
+})
+
+it('shows the backend refusal when a delete is blocked', async () => {
+  vi.mocked(deleteRegistrationAction).mockResolvedValue({ error: 'Erst erstatten oder stornieren: Online bezahlte Anmeldungen kannst du nicht löschen.', success: null })
+  await renderParticipants()
+  await click('Anmeldung löschen')
+  await submit()
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain('Erst erstatten oder stornieren')
 })
 
 it('Behalten closes confirmation without cancelling', async () => {

@@ -55,6 +55,10 @@ class PlayerNotFoundError(Exception):
     """The player does not exist in this organization."""
 
 
+class PlayerHasActiveRegistrationsError(Exception):
+    """A registered, confirmed or waitlisted booking still references the player."""
+
+
 class PlayerReferenceError(Exception):
     """A referenced record (e.g. camp) does not exist in this organization."""
 
@@ -456,3 +460,52 @@ def update_measurement(organization_id: UUID, player_id: UUID, measurement_id: U
 
 def delete_measurement(organization_id: UUID, player_id: UUID, measurement_id: UUID) -> bool:
     return _delete("player_measurements", organization_id, player_id, measurement_id)
+
+
+def delete_player(organization_id: UUID, player_id: UUID) -> dict:
+    """
+    Deletes the whole player record: notes, goals, measurements and the player
+    row, in one transaction scoped by organization. Refused while an active
+    (registered, confirmed or waitlisted) registration references the player.
+    Cancelled registrations are unlinked (player_id = null) and anonymized in
+    the same transaction: child name -> "Gelöscht", birth date -> a neutral
+    placeholder (the column is NOT NULL with a plausibility CHECK of today minus
+    100 years .. today, so NULL and 1900 are impossible; the placeholder is
+    today minus 99 years), allergies, medical notes, jersey size, pickup list,
+    emergency contact and extra answers -> NULL / {}. Payment, status and parent
+    contact fields stay for the books. Returns record counts only.
+
+    Lock order matches the registration delete: registration rows first, then
+    the player row.
+    """
+    with db.get_cursor() as cur:
+        cur.execute("select id from camp_registrations where player_id = %s and organization_id = %s order by id for update",
+                    (player_id, organization_id))
+        cur.execute("select 1 from players where id = %s and organization_id = %s for update",
+                    (player_id, organization_id))
+        if cur.fetchone() is None:
+            raise PlayerNotFoundError("player not found")
+        cur.execute(
+            "select 1 from camp_registrations where player_id = %s and organization_id = %s"
+            " and status in ('registered', 'confirmed', 'waitlist') limit 1",
+            (player_id, organization_id),
+        )
+        if cur.fetchone() is not None:
+            raise PlayerHasActiveRegistrationsError()
+        counts = {}
+        for table, key in (("player_notes", "notes"), ("player_goals", "goals"), ("player_measurements", "measurements")):
+            cur.execute(f"delete from {table} where player_id = %s and organization_id = %s", (player_id, organization_id))
+            counts[key] = cur.rowcount
+        cur.execute(
+            """update camp_registrations
+               set child_first_name = 'Gelöscht', child_last_name = 'Gelöscht',
+                   child_birth_date = (current_date - interval '99 years')::date,
+                   allergies = null, medical_notes = null, jersey_size = null, pickup_authorized = null,
+                   emergency_contact_name = null, emergency_contact_phone = null,
+                   extra_answers = '{}'::jsonb, player_id = null
+               where player_id = %s and organization_id = %s""",
+            (player_id, organization_id),
+        )
+        counts["anonymized_bookings"] = cur.rowcount
+        cur.execute("delete from players where id = %s and organization_id = %s", (player_id, organization_id))
+        return counts

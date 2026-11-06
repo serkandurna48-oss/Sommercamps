@@ -7,7 +7,7 @@ import ParticipantRow from './ParticipantRow'
 import { updateRegistrationDetailsAction } from '../actions/waitlistActions'
 
 vi.mock('../actions/waitlistActions', () => ({ resendRegistrationMailAction: vi.fn(),
-  cancelRegistrationAction: vi.fn(),
+  cancelRegistrationAction: vi.fn(), deleteRegistrationAction: vi.fn(),
   updateRegistrationDetailsAction: vi.fn(),
 }))
 

@@ -112,6 +112,16 @@ class RegistrationNotFoundError(RegistrationRejectedError):
         super().__init__(f"No registration found for token '{registration_token}' in this organization/camp")
 
 
+class RegistrationPaidOnlineError(RegistrationRejectedError):
+    """A registration paid online (Stripe) must not be hard-deleted: the
+    payment trail would vanish. The admin refunds or cancels it instead —
+    maps to 409."""
+
+    def __init__(self, registration_token: UUID):
+        self.registration_token = registration_token
+        super().__init__("Registration was paid online and cannot be deleted")
+
+
 class DuplicateRegistrationError(RegistrationRejectedError):
     """
     A registration for this exact child (first name + last name + birth
@@ -1037,3 +1047,94 @@ def cancel_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, r
             promoted = _lock_and_promote_next_waitlisted(cur, tenant, registration["camp_id"])
 
         return {"cancelled": cancelled, "promoted": promoted}
+
+
+_LOAD_AND_LOCK_REGISTRATION_FOR_DELETE = """
+    select id, camp_id, status, payment_status, payment_method, player_id,
+           stripe_session_id, stripe_payment_intent_id, stripe_checkout_session_id
+    from camp_registrations
+    where registration_token = %s
+      and organization_id = %s
+      and camp_id = %s
+    for update
+"""
+
+_DELETE_REGISTRATION = "delete from camp_registrations where id = %s and organization_id = %s"
+
+# The child's player record goes with its last registration, but only when it
+# holds no documentation (notes, goals, measurements). Locked first so a
+# concurrent booking of the same child cannot slip in between check and delete.
+_DELETE_ORPHAN_PLAYER = """
+    delete from players p
+    where p.id = %s and p.organization_id = %s
+      and not exists (select 1 from camp_registrations r
+                      where r.player_id = p.id and r.organization_id = p.organization_id)
+      and not exists (select 1 from player_notes n where n.player_id = p.id and n.organization_id = p.organization_id)
+      and not exists (select 1 from player_goals g where g.player_id = p.id and g.organization_id = p.organization_id)
+      and not exists (select 1 from player_measurements m where m.player_id = p.id and m.organization_id = p.organization_id)
+"""
+
+
+def is_paid_online(registration: dict) -> bool:
+    """True when real money moved through the online checkout. A refunded or
+    never-paid checkout is not a payment trail worth protecting."""
+    if registration["payment_status"] != "paid":
+        return False
+    return bool(
+        registration.get("payment_method") == "online"
+        or registration.get("stripe_session_id")
+        or registration.get("stripe_payment_intent_id")
+        or registration.get("stripe_checkout_session_id")
+    )
+
+
+def delete_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, registration_token: UUID) -> dict:
+    """
+    Hard-deletes one registration (org admin clean-up of test or duplicate
+    bookings; camps and training sessions share this table). Scoped like
+    cancel_registration_and_promote_next: `registration_token` AND
+    `organization_id` AND `camp_id`, so a foreign tenant or a URL naming the
+    wrong camp finds nothing (RegistrationNotFoundError).
+
+    Raises RegistrationPaidOnlineError for a registration paid online; the
+    admin must refund or cancel it. Same lock order as cancel (registration
+    row, then camp row). If the deleted row counted against capacity
+    (registered/confirmed), the oldest waitlisted registration is promoted in
+    the same transaction, exactly as on cancel.
+
+    Returns {"deleted_status", "deleted_payment_status", "promoted",
+    "player_removed", "player_kept"}. The child's player record is deleted in
+    the same transaction when nothing else references it and it holds no
+    notes, goals or measurements (`player_removed`); otherwise it stays
+    (`player_kept`). The caller closes any open Stripe Checkout BEFORE calling
+    (payments.close_checkout_before_delete).
+    Nothing personal is returned.
+    """
+    with db.get_cursor() as cur:
+        cur.execute(_LOAD_AND_LOCK_REGISTRATION_FOR_DELETE, (registration_token, tenant.organization_id, camp_id))
+        registration = cur.fetchone()
+        if registration is None:
+            raise RegistrationNotFoundError(registration_token)
+        if is_paid_online(registration):
+            raise RegistrationPaidOnlineError(registration_token)
+
+        cur.execute(_DELETE_REGISTRATION, (registration["id"], tenant.organization_id))
+
+        promoted = None
+        if registration["status"] in CAPACITY_COUNTING_STATUSES:
+            promoted = _lock_and_promote_next_waitlisted(cur, tenant, registration["camp_id"])
+
+        player_removed = player_kept = False
+        if registration.get("player_id") is not None:
+            cur.execute("select 1 from players where id = %s and organization_id = %s for update",
+                        (registration["player_id"], tenant.organization_id))
+            cur.execute(_DELETE_ORPHAN_PLAYER, (registration["player_id"], tenant.organization_id))
+            player_removed = cur.rowcount > 0
+            player_kept = not player_removed
+        return {
+            "deleted_status": registration["status"],
+            "deleted_payment_status": registration["payment_status"],
+            "promoted": promoted,
+            "player_removed": player_removed,
+            "player_kept": player_kept,
+        }

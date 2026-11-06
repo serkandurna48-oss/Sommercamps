@@ -1086,15 +1086,15 @@ def test_signup_mail_contains_login_and_ordered_next_steps(fake_provider, fronte
         confirmation_link="https://auth.example/verify?token=fake&type=signup",
     )
     body = fake_provider.sent[0].html_content
-    assert "Sie haben Ihren Verein" in body
+    assert "Du hast deinen Verein" in body
     assert "<strong>Testverein</strong>" in body
     assert '<a href="https://auth.example/verify?token=fake&amp;type=signup">E-Mail bestätigen</a>' in body
     assert '<a href="https://frontend.example/pilot/testverein/login">' in body
-    assert "Ihr dauerhafter Login" in body
+    assert "Dein dauerhafter Login" in body
     steps = ["E-Mail bestätigen", "Verein einrichten und erstes Camp anlegen", "Zur Prüfung einreichen"]
     assert body.index("<ol>") < body.index(steps[0]) < body.index(steps[1]) < body.index(steps[2]) < body.index("</ol>")
     assert body.count("<li>") == 3
-    assert "wir prüfen Ihre Angaben und schalten Ihren Verein frei" in body
+    assert "wir prüfen deine Angaben und schalten deinen Verein frei" in body
 
 
 def test_signup_resend_mail_contains_permanent_platform_login(fake_provider, frontend_settings):
@@ -1114,7 +1114,7 @@ def test_approval_mail_contains_login_and_publish_next_step(fake_provider, front
     assert "freigeschaltet" in msg.subject
     assert '<a href="https://frontend.example/pilot/testverein/login">' in msg.html_content
     assert "Camp prüfen und veröffentlichen, dann den Anmeldelink an Eltern teilen" in msg.html_content
-    assert "Ihr dauerhafter Login" in msg.html_content
+    assert "Dein dauerhafter Login" in msg.html_content
 
 
 def test_rejection_mail_preserves_reason_and_login(fake_provider, frontend_settings):

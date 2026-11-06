@@ -230,8 +230,8 @@ def build_provider_mail(
         f"<p>Belegung: <strong>{registered_count} von {capacity} Plätzen belegt, "
         f"{waitlist_count} auf der Warteliste</strong></p>\n"
         f"<p>Verwendungszweck: <strong>{e_payment_ref}</strong></p>\n"
-        f"<p>Details finden Sie im Admin-Bereich.</p>\n"
-        f"<p>Mit freundlichen Grüßen,<br>{e_org_name} über CampsPilot</p>"
+        f"<p>Details findest du im Admin-Bereich.</p>\n"
+        f"<p>Viele Grüße,<br>{e_org_name} über CampsPilot</p>"
     )
 
     return MailMessage(

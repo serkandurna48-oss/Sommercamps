@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import base64
 import json
+import threading
+import time
 
 import httpx
 import pytest
@@ -418,3 +420,78 @@ def test_find_user_by_email_flags_accounts_needing_password_setup(monkeypatch, f
     assert supabase_auth.find_user_by_email("x@example.com").needs_password_setup is True
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
     get_settings.cache_clear()
+
+
+def _blocking_client(monkeypatch, status, body):
+    """Fake client whose upstream call blocks until released, counting calls."""
+    release = threading.Event()
+    started = threading.Event()
+    calls = []
+
+    def respond(*a, **k):
+        calls.append(1)
+        started.set()
+        assert release.wait(5)
+        return _FakeResponse(status, body)
+
+    _fake_client(monkeypatch, respond)
+    return release, started, calls
+
+
+def _verify_concurrently(token, n):
+    results = []
+
+    def run():
+        try:
+            results.append(supabase_auth.verify_access_token(token).id)
+        except supabase_auth.SupabaseAuthError as exc:
+            results.append(exc)
+
+    threads = [threading.Thread(target=run) for _ in range(n)]
+    for t in threads:
+        t.start()
+    return threads, results
+
+
+def test_concurrent_cache_misses_share_one_upstream_call(monkeypatch):
+    release, started, calls = _blocking_client(monkeypatch, 200, {"id": "user-1", "email": "a@example.com"})
+    token = _jwt(exp=time.time() + 3600)
+    threads, results = _verify_concurrently(token, 5)
+    assert started.wait(5)
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline and sum(t.is_alive() for t in threads) < 5:
+        time.sleep(0.01)
+    time.sleep(0.05)  # let the followers reach the wait
+    release.set()
+    for t in threads:
+        t.join(5)
+    assert results == ["user-1"] * 5
+    assert len(calls) == 1
+    assert not supabase_auth._inflight
+    supabase_auth.verify_access_token(token)  # now served from the cache
+    assert len(calls) == 1
+
+
+def test_concurrent_failure_is_shared_but_not_cached(monkeypatch):
+    release, started, calls = _blocking_client(monkeypatch, 401, {})
+    token = _jwt(exp=time.time() + 3600)
+    threads, results = _verify_concurrently(token, 4)
+    assert started.wait(5)
+    time.sleep(0.1)
+    release.set()
+    for t in threads:
+        t.join(5)
+    assert len(results) == 4 and all(isinstance(r, supabase_auth.SupabaseAuthError) for r in results)
+    assert len(calls) == 1
+    assert not supabase_auth._inflight and not supabase_auth._token_cache
+    with pytest.raises(supabase_auth.SupabaseAuthError):
+        supabase_auth.verify_access_token(token)  # the next request asks Supabase again
+    assert len(calls) == 2
+
+
+def test_different_tokens_do_not_share_a_flight(monkeypatch):
+    release, started, calls = _blocking_client(monkeypatch, 200, {"id": "user-1"})
+    release.set()
+    for i in range(3):
+        supabase_auth.verify_access_token(_jwt(exp=time.time() + 3600, n=i))
+    assert len(calls) == 3

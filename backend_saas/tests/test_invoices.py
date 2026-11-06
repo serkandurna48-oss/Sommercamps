@@ -6,6 +6,7 @@ provider; synthetic data only.
 
 from __future__ import annotations
 
+import re
 import threading
 import time
 from datetime import date
@@ -127,14 +128,54 @@ def _pdf_text(data) -> bytes:
     return invoices.render_pdf(data, compress=False)
 
 
+def extract_text(pdf: bytes) -> str:
+    """Minimal text extraction for the uncompressed fpdf2 output (pypdf is not
+    a dependency): 2-byte glyph codes in Tj literals, decoded per font via its
+    ToUnicode CMap. Lines are joined with newlines."""
+    text = pdf.decode("latin-1")
+    objects = {int(m.group(1)): m.group(2) for m in re.finditer(r"(\d+) 0 obj(.*?)endobj", text, re.S)}
+    cmaps = {}
+    for name, oid in re.findall(r"/(F\d+) (\d+) 0 R", text):
+        ref = re.search(r"/ToUnicode (\d+) 0 R", objects[int(oid)])
+        cmap = objects[int(ref.group(1))] if ref else ""
+        block = "".join(re.findall(r"beginbfchar(.*?)endbfchar", cmap, re.S))
+        cmaps[name] = {int(a, 16): chr(int(b, 16)) for a, b in re.findall(r"<([0-9A-Fa-f]{4})> <([0-9A-Fa-f]{4})>", block)}
+    escapes = {"n": "\n", "r": "\r", "t": "\t", "b": "\b", "f": "\f"}
+    lines, font, i = [], None, 0
+    while i < len(text):
+        tf = re.compile(r"/(F\d+) [\d.]+ Tf").match(text, i)
+        if tf:
+            font, i = tf.group(1), tf.end()
+            continue
+        if text[i] == "(" and font:
+            raw, i = [], i + 1
+            while text[i] != ")":
+                if text[i] == "\\":
+                    nxt = text[i + 1]
+                    raw.append(escapes.get(nxt, nxt))
+                    i += 2
+                else:
+                    raw.append(text[i])
+                    i += 1
+            i += 1
+            if text.startswith(" Tj", i):
+                data = "".join(raw).encode("latin-1")
+                lines.append("".join(cmaps[font].get(int.from_bytes(data[k:k + 2], "big"), "?")
+                                     for k in range(0, len(data) - 1, 2)))
+            continue
+        i += 1
+    return "\n".join(lines)
+
+
 def test_pdf_contains_the_required_fields_only():
     pdf = _pdf_text(_data())
     assert pdf.startswith(b"%PDF")
+    content = extract_text(pdf)
     for needle in ("Rechnung", "TV-2026-0001", "Testverein e.V.", "Am Sportplatz 3", "34117 Kassel",
                    "Steuernummer: 026 123 45678", "Max Mustermann", "max@example.com", "Lena Mustermann",
                    "Rechnungsdatum: 07.11.2026", "Leistungszeitraum: 05.07.2027 - 09.07.2027",
                    "Nettobetrag: 125,21 EUR", "Umsatzsteuer 19 %: 23,79 EUR", "Gesamtbetrag: 149,00 EUR"):
-        assert needle.encode("latin-1") in pdf, needle
+        assert needle in content, needle
     text = " ".join(t for _, t in invoices.invoice_lines(_data()))
     for forbidden in ("Gebühr", "Plattformgebühr", "2017", "Allerg", "Geburt"):
         assert forbidden not in text
@@ -151,10 +192,30 @@ def test_pdf_tax_variants():
     assert "Steuerfrei nach § 4 Nr. 22 b UStG" in frei and "Nettobetrag" not in frei
     storno = _pdf_text(_data(kind="storno", number="TV-2026-0002", gross_cents=-14900, net_cents=-12521,
                              vat_cents=-2379, cancels={"id": "x", "number": "TV-2026-0001", "issue_date": "2026-11-07"}))
-    assert b"Stornorechnung" in storno and b"Storno zu Rechnung TV-2026-0001 vom 07.11.2026" in storno
-    assert b"-149,00 EUR" in storno
-    # Typography outside Latin-1 does not break the PDF.
-    assert _pdf_text(_data(item={"description": "Camp – „Spezial“ €", "participant": "Zoë Łukasz"})).startswith(b"%PDF")
+    storno = extract_text(storno)
+    assert "Stornorechnung" in storno and "Storno zu Rechnung TV-2026-0001 vom 07.11.2026" in storno
+    assert "-149,00 EUR" in storno
+
+
+
+def test_pdf_renders_names_outside_latin1():
+    """DejaVu Sans is embedded: Turkish, Polish and German names stay intact."""
+    data = _data(
+        recipient={"name": "Ayşe Yılmaz-Doğan", "email": "ayse@example.com", "address": None},
+        item={"description": "Camp – „Spezial“ für Groß & Klein", "participant": "Łukasz Çelik Weiß"},
+        issuer={**_data()["issuer"], "legal_name": "SV Gänseblümchen e.V."},
+    )
+    content = extract_text(_pdf_text(data))
+    for needle in ("Ayşe Yılmaz-Doğan", "Łukasz Çelik Weiß", "„Spezial“ für Groß", "SV Gänseblümchen e.V."):
+        assert needle in content, needle
+    assert "Ay?e" not in content and "?ukasz" not in content
+
+
+def test_pdf_optional_recipient_address():
+    with_address = _data(recipient={"name": "Max Mustermann", "email": "max@example.com",
+                                    "address": "Hauptstraße 5, 34117 Kassel"})
+    assert "Hauptstraße 5, 34117 Kassel" in extract_text(_pdf_text(with_address))
+    assert "Hauptstraße" not in extract_text(_pdf_text(_data()))
 
 
 # ---------- numbering against Postgres ----------
@@ -401,7 +462,7 @@ def test_missing_billing_profile_blocks_until_completed(env, mail):
     assert r.status_code == 409 and r.json()["detail"] == {"code": "missing_billing_profile"}
     _profile(env)
     r = env.client.post(f"/admin/organizations/{env.slug}/invoices/generate-pending", headers=env.admin())
-    assert r.json() == {"created": 1, "blocked": 0}
+    assert r.json() == {"created": 1, "stornos": 0, "blocked": 0, "failed": 0, "remaining": 0}
     assert len(_invoices(env, token)) == 1 and _reg(env, token)["invoice_pending_reason"] is None
     assert len(mail.invoices) == 1
     listing = env.client.get(f"/admin/organizations/{env.slug}/invoices", headers=env.admin()).json()
@@ -479,3 +540,152 @@ def test_brevo_sends_attachment_base64():
     BrevoProvider("key", "noreply@example.com", "CampsPilot", _http_client=client).send(MailMessage(
         to_email="max@example.com", subject="x", html_content="x"))
     assert "attachment" not in client.payload
+
+
+# ---------- fix round 1 ----------
+
+@pytest.mark.parametrize("rate,parts", [(19, [333, 333, 334]), (7, [333, 333, 334]), (19, [500, 500]),
+                                        (19, [1, 998, 1]), (7, [250, 250, 250, 250])])
+def test_storno_split_is_cumulative_and_closes_exactly(rate, parts):
+    net, vat = invoices.split_tax(1000, "ust_pflichtig", rate)
+    original = {"gross_cents": 1000, "net_cents": net, "vat_cents": vat, "tax_status": "ust_pflichtig", "vat_rate": rate}
+    done_net = done_vat = target = 0
+    for part in parts:
+        target += part
+        n, v = invoices.storno_split(original, target, done_net, done_vat)
+        assert n + v == -part
+        done_net, done_vat = done_net - n, done_vat - v
+    assert (done_net, done_vat) == (net, vat)
+
+
+def test_three_partial_refunds_sum_to_zero(env, mail):
+    _profile(env)
+    token, session_id = _paid_destination(env)
+    _post_webhook(env, PLATFORM_HOOK, _completed(session_id, intent=env.intent), PLATFORM_SECRET)
+    for refunded, fee in ((333, 17), (666, 33), (1000, 50)):
+        assert _charge_refunded(env, refunded, fee).status_code == 200
+    docs = _invoices(env, token)
+    assert [d["gross_cents"] for d in docs] == [1000, -333, -333, -334]
+    assert (docs[0]["net_cents"], docs[0]["vat_cents"]) == (840, 160)
+    for column in ("gross_cents", "net_cents", "vat_cents"):
+        assert sum(d[column] for d in docs) == 0, column
+
+
+def test_failed_invoice_run_is_marked_and_retried(env, mail, monkeypatch):
+    _profile(env)
+    real = invoices.render_pdf
+
+    def broken(*args, **kwargs):
+        raise OSError("disk")
+    monkeypatch.setattr(invoices, "render_pdf", broken)
+    token = _register(env)
+    _pay_manually(env, token)
+    row = _reg(env, token)
+    assert _invoices(env, token) == []
+    assert (row["invoice_pending_reason"], row["invoice_error"]) == ("error", "OSError")
+    listing = env.client.get(f"/admin/organizations/{env.slug}/invoices", headers=env.admin()).json()
+    assert listing["open"]["failed"] == 1 and listing["open"]["invoices"] == 1
+    assert [p["reason"] for p in listing["pending"]] == ["error"]
+    monkeypatch.setattr(invoices, "render_pdf", real)
+    r = env.client.post(f"/admin/organizations/{env.slug}/invoices/generate-pending", headers=env.admin())
+    assert r.json() == {"created": 1, "stornos": 0, "blocked": 0, "failed": 0, "remaining": 0}
+    row = _reg(env, token)
+    assert (row["invoice_pending_reason"], row["invoice_error"]) == (None, None)
+    assert len(_invoices(env, token)) == 1 and len(mail.invoices) == 1
+
+
+def test_pending_by_query_without_marker_and_webhook_replay_retries(env, mail, monkeypatch):
+    _profile(env)
+    token, session_id = _paid_destination(env)
+    # The background task never ran (e.g. restart): no invoice, no marker.
+    event = _completed(session_id, intent=env.intent)
+    with monkeypatch.context() as patch:
+        patch.setattr(invoices, "sync_registration", lambda *a, **k: None)
+        _post_webhook(env, PLATFORM_HOOK, event, PLATFORM_SECRET)
+    assert _invoices(env, token) == [] and _reg(env, token)["invoice_pending_reason"] is None
+    listing = env.client.get(f"/admin/organizations/{env.slug}/invoices", headers=env.admin()).json()
+    assert [(p["registration_token"], p["reason"]) for p in listing["pending"]] == [(token, "not_created")]
+    detail = env.client.get(f"/admin/organizations/{env.slug}/registrations/{token}/invoices", headers=env.admin()).json()
+    assert detail["can_create"] is True and detail["pending_reason"] == "not_created"
+    # Stripe's replay of the same event now creates it.
+    assert _post_webhook(env, PLATFORM_HOOK, event, PLATFORM_SECRET).json() == {"received": True, "settled": True}
+    assert len(_invoices(env, token)) == 1
+
+
+def test_invoice_mail_is_claimed_once_and_retried(env, local_database):
+    _profile(env)
+    gate = threading.Event()
+
+    class SlowProvider(DeliveringFake):
+        def send(self, message):
+            gate.wait(2)
+            super().send(message)
+    slow = SlowProvider()
+    reset_provider_for_testing(slow)
+    try:
+        failing = FailingProvider()
+        reset_provider_for_testing(failing)
+        token = _register(env)
+        _pay_manually(env, token)  # mail fails
+        (invoice,) = _invoices(env, token)
+        assert invoice["sent_at"] is None and invoice["send_error"]
+        reset_provider_for_testing(slow)
+        threads = [threading.Thread(target=invoices.send_invoice, args=(invoice["id"], env.org)) for _ in range(3)]
+        for t in threads:
+            t.start()
+        time.sleep(0.2)
+        gate.set()
+        for t in threads:
+            t.join()
+        assert len(slow.invoices) == 1  # claimed atomically: one mail
+        assert _invoices(env, token)[0]["sent_at"] is not None
+        # generate-pending retries unsent mails (here: nothing left).
+        r = env.client.post(f"/admin/organizations/{env.slug}/invoices/generate-pending", headers=env.admin())
+        assert r.json()["remaining"] == 0 and len(slow.invoices) == 1
+    finally:
+        reset_provider_for_testing(None)
+
+
+def test_generate_pending_retries_failed_mail(env):
+    _profile(env)
+    reset_provider_for_testing(FailingProvider())
+    try:
+        token = _register(env)
+        _pay_manually(env, token)
+        listing = env.client.get(f"/admin/organizations/{env.slug}/invoices", headers=env.admin()).json()
+        assert listing["open"]["unsent_mails"] == 1 and listing["open"]["total"] == 1
+        good = DeliveringFake()
+        reset_provider_for_testing(good)
+        r = env.client.post(f"/admin/organizations/{env.slug}/invoices/generate-pending", headers=env.admin())
+        assert r.json()["remaining"] == 0 and len(good.invoices) == 1
+    finally:
+        reset_provider_for_testing(None)
+
+
+def test_generate_pending_is_batched(env, mail, monkeypatch):
+    from app.routers import invoices_admin
+    monkeypatch.setattr(invoices_admin, "GENERATE_BATCH", 2)
+    tokens = [_register(env) for _ in range(5)]
+    for token in tokens:
+        _pay_manually(env, token)  # no master data yet
+    _profile(env)
+    results = []
+    for _ in range(3):
+        results.append(env.client.post(f"/admin/organizations/{env.slug}/invoices/generate-pending",
+                                       headers=env.admin()).json())
+    assert [(r["created"], r["remaining"]) for r in results] == [(2, 3), (2, 1), (1, 0)]
+    assert sum(len(_invoices(env, t)) for t in tokens) == 5
+
+
+def test_booked_price_backfill_keeps_updated_at(env):
+    from pathlib import Path
+    migration = Path(__file__).resolve().parents[2] / "supabase" / "migrations" / "20261107100000_parent_invoices.sql"
+    token = _register(env)
+    with env.cursor() as cur:
+        cur.execute("update camp_registrations set booked_price_cents = null where registration_token = %s", (token,))
+        cur.execute("select updated_at from camp_registrations where registration_token = %s", (token,))
+        before = cur.fetchone()["updated_at"]
+    with env.cursor() as cur:
+        cur.execute(migration.read_text(encoding="utf-8"))
+    row = _reg(env, token)
+    assert row["booked_price_cents"] == 1000 and row["updated_at"] == before

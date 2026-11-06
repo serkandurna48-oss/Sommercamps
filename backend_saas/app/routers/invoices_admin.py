@@ -45,10 +45,23 @@ class PendingInvoiceOut(BaseModel):
     reason: str
 
 
+class OpenWork(BaseModel):
+    """What "Rechnungen erzeugen" would do: bookings without invoice (of
+    which missing master data / failed runs), open stornos, unsent mails."""
+
+    invoices: int = 0
+    missing_profile: int = 0
+    failed: int = 0
+    stornos: int = 0
+    unsent_mails: int = 0
+    total: int = 0
+
+
 class InvoiceListOut(BaseModel):
     billing_profile_complete: bool
     invoices: list[InvoiceOut]
     pending: list[PendingInvoiceOut]
+    open: OpenWork
 
 
 class RefundOptions(BaseModel):
@@ -65,7 +78,11 @@ class RegistrationInvoicesOut(BaseModel):
 
 class GenerateResult(BaseModel):
     created: int
+    stornos: int
     blocked: int
+    failed: int
+    # Still open after this batch (call again).
+    remaining: int
 
 
 def _out(row: dict) -> InvoiceOut:
@@ -99,19 +116,20 @@ def list_invoices(organization_slug: str, auth: AuthContext = Depends(require_or
     with db.get_cursor() as cur:
         cur.execute(_LIST + " order by i.year desc, i.sequence desc limit 1000", (organization["id"],))
         rows = cur.fetchall()
+        # Pending by query (paid, no invoice) - the marker only says why.
         cur.execute(
-            """select r.registration_token, c.title as camp_title, r.invoice_pending_reason as reason
-               from camp_registrations r join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
-               where r.organization_id = %s and r.invoice_pending_reason is not null
-                 and not exists (select 1 from invoices i where i.organization_id = r.organization_id
-                                 and i.registration_id = r.id and i.kind = 'invoice')
-               order by r.created_at limit 500""",
+            f"""select r.registration_token, c.title as camp_title,
+                       coalesce(r.invoice_pending_reason, 'not_created') as reason
+                from camp_registrations r join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
+                where {invoices.PENDING_WHERE}
+                order by r.created_at limit 500""",
             (organization["id"],),
         )
         pending = cur.fetchall()
         complete = _profile_complete(cur, organization["id"])
+        work = invoices.open_work(cur, organization["id"])
     return InvoiceListOut(billing_profile_complete=complete, invoices=[_out(r) for r in rows],
-                          pending=[PendingInvoiceOut.model_validate(p) for p in pending])
+                          pending=[PendingInvoiceOut.model_validate(p) for p in pending], open=OpenWork(**work))
 
 
 def _invoice(organization_id, invoice_id: UUID, with_pdf: bool = False) -> dict:
@@ -181,6 +199,8 @@ def registration_invoices(
         cur.execute(_LIST + " and i.registration_id = %s order by i.year, i.sequence", (organization["id"], reg["id"]))
         rows = cur.fetchall()
     has_invoice = any(r["kind"] == "invoice" for r in rows)
+    paid_without_invoice = (not has_invoice and reg["fee_snapshot_at"] is not None
+                            and reg["payment_status"] in invoices.PAID_STATES)
     remaining = (reg["stripe_checkout_amount_cents"] or 0) - (reg["refunded_cents"] or 0)
     refundable = (
         reg["stripe_charge_type"] == "destination" and reg["stripe_payment_intent_id"] is not None
@@ -188,9 +208,8 @@ def registration_invoices(
     )
     return RegistrationInvoicesOut(
         invoices=[_out(r) for r in rows],
-        pending_reason=None if has_invoice else reg["invoice_pending_reason"],
-        can_create=not has_invoice and reg["fee_snapshot_at"] is not None
-        and reg["payment_status"] in invoices.PAID_STATES,
+        pending_reason=(reg["invoice_pending_reason"] or "not_created") if paid_without_invoice else None,
+        can_create=paid_without_invoice,
         refund=RefundOptions(possible=refundable, remaining_cents=max(remaining, 0) if refundable else 0),
     )
 
@@ -220,33 +239,49 @@ def create_registration_invoice(
         return _out(cur.fetchone())
 
 
+GENERATE_BATCH = 50
+
+
 @router.post("/invoices/generate-pending", response_model=GenerateResult)
 def generate_pending_invoices(organization_slug: str, auth: AuthContext = Depends(require_org_access)) -> GenerateResult:
+    """"Rechnungen erzeugen": up to 50 bookings per call - missing invoices
+    (also after failed runs), open stornos and unsent mails. Idempotent;
+    `remaining` > 0 means call again."""
     organization = require_organization(organization_slug)
+    org_id = organization["id"]
     with db.get_cursor() as cur:
         cur.execute(
-            """select id from camp_registrations
-               where organization_id = %s and invoice_pending_reason is not null order by created_at limit 500""",
-            (organization["id"],),
+            f"""select id from (
+                    select r.id, r.created_at from camp_registrations r where {invoices.PENDING_WHERE}
+                    union
+                    select r.id, r.created_at from camp_registrations r where {invoices.STORNO_PENDING_WHERE}
+                    union
+                    select r.id, r.created_at from camp_registrations r
+                    where r.organization_id = %s and exists (
+                        select 1 from invoices i where i.registration_id = r.id and i.organization_id = %s
+                          and i.sent_at is null and i.send_attempts < 5)
+                ) work order by created_at, id limit %s""",
+            (org_id, org_id, org_id, org_id, GENERATE_BATCH),
         )
         ids = [r["id"] for r in cur.fetchall()]
-    created = blocked = 0
+    created = stornos = blocked = failed = 0
     for registration_id in ids:
-        try:
-            invoice = invoices.create_invoice(registration_id, organization["id"], created_by=auth.user_id)
-        except invoices.InvoiceBlocked:
+        outcome = invoices.sync_registration(registration_id, org_id, created_by=auth.user_id)
+        if outcome["failed"]:
+            failed += 1
+        elif outcome["blocked"]:
             blocked += 1
-            continue
-        created += 1
-        if invoice["sent_at"] is None and invoice["send_attempts"] == 0:
-            invoices.send_invoice(invoice["id"], organization["id"])
-        # Refunds/cancellations that happened while the invoice was pending.
-        for storno in invoices.create_stornos(registration_id, organization["id"], created_by=auth.user_id):
-            invoices.send_invoice(storno["id"], organization["id"])
-    if created:
+        elif outcome["created"]:
+            created += 1
+        stornos += outcome["stornos"]
+    with db.get_cursor() as cur:
+        remaining = invoices.open_work(cur, org_id)
+    # Blocked by missing master data does not count as work the button can do.
+    left = remaining["total"] - remaining["missing_profile"]
+    if ids:
         platform_roles.write_audit_log(
             actor_user_id=auth.user_id, actor_email=auth.email, action="invoice.pending_generated",
-            organization_id=str(organization["id"]), target_type="organization", target_id=organization_slug,
-            metadata={"created": created, "blocked": blocked},
+            organization_id=str(org_id), target_type="organization", target_id=organization_slug,
+            metadata={"created": created, "stornos": stornos, "blocked": blocked, "failed": failed},
         )
-    return GenerateResult(created=created, blocked=blocked)
+    return GenerateResult(created=created, stornos=stornos, blocked=blocked, failed=failed, remaining=max(left, 0))

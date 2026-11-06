@@ -595,7 +595,9 @@ def _settle_checkout(client, obj: dict, account: str | None, created=None, mode:
             review = "amount_mismatch"
         elif (row["payment_status"] in ("paid", "partially_refunded", "refunded")
               and row.get("stripe_payment_intent_id") == payment_intent):
-            return {"received": True, "settled": True}  # replay of an already booked payment
+            # Replay of an already booked payment: no booking change, but retry a
+            # missing or failed invoice (idempotent).
+            return {"received": True, "settled": True, "_sync": (row["id"], row["organization_id"])}
         elif row["payment_status"] == "paid":
             # Paid by transfer or another charge: a second payment arrived.
             review = "duplicate_payment"

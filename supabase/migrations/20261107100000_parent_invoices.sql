@@ -63,10 +63,19 @@ create trigger trg_camp_registrations_booked_price
     before insert on public.camp_registrations
     for each row execute function public.camp_registrations_booked_price();
 
-update public.camp_registrations r
-set booked_price_cents = coalesce(r.applied_price_cents, c.price_cents)
-from public.camps c
-where c.id = r.camp_id and c.organization_id = r.organization_id and r.booked_price_cents is null;
+-- Backfill without touching updated_at (same pattern as 20261106100000_player_records.sql;
+-- one DO block = one statement, a failure cannot leave the trigger disabled). Old bookings
+-- get the CURRENT camp price: the price at their booking time is not recorded anywhere.
+do $$
+begin
+    alter table public.camp_registrations disable trigger set_updated_at;
+    update public.camp_registrations r
+    set booked_price_cents = coalesce(r.applied_price_cents, c.price_cents)
+    from public.camps c
+    where c.id = r.camp_id and c.organization_id = r.organization_id and r.booked_price_cents is null;
+    alter table public.camp_registrations enable trigger set_updated_at;
+end
+$$;
 
 -- Rechnung blockiert (z. B. Rechnungsstammdaten fehlen); nach dem Ergaenzen erzeugbar.
 alter table public.camp_registrations add column if not exists invoice_pending_reason text;

@@ -20,6 +20,7 @@ Parent invoices in the club's name (billing B3, migration 20261107100000).
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from datetime import date, datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Optional
@@ -31,6 +32,8 @@ from psycopg2.extras import Json
 from . import db
 
 logger = logging.getLogger(__name__)
+# fpdf2 subsets the embedded font with fontTools, which logs every step at INFO.
+logging.getLogger("fontTools").setLevel(logging.WARNING)
 BERLIN = ZoneInfo("Europe/Berlin")
 PAID_STATES = ("paid", "partially_refunded", "refunded")
 MISSING_PROFILE = "missing_billing_profile"
@@ -58,6 +61,18 @@ def split_tax(gross_cents: int, tax_status: str, vat_rate: Optional[int]) -> tup
     gross = abs(gross_cents)
     net = int((Decimal(gross) * 100 / Decimal(100 + vat_rate)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
     return sign * net, sign * (gross - net)
+
+
+def storno_split(original: dict, target: int, done_net: int, done_vat: int) -> tuple[int, int]:
+    """Net/VAT of the next storno, computed cumulatively: the stornos up to
+    `target` together carry split_tax(target); the storno that reaches the
+    full amount takes exactly the remainder of the original, so original +
+    all stornos sum to zero in gross, net and VAT."""
+    if target >= original["gross_cents"]:
+        target_net, target_vat = original["net_cents"], original["vat_cents"]
+    else:
+        target_net, target_vat = split_tax(target, original["tax_status"], original["vat_rate"])
+    return -(target_net - done_net), -(target_vat - done_vat)
 
 
 def euro(cents: int) -> str:
@@ -159,15 +174,7 @@ def invoice_lines(data: dict) -> list[tuple[str, str]]:
     return lines
 
 
-_PDF_REPLACE = {"–": "-", "—": "-", "„": '"', "“": '"', "”": '"', "‚": "'", "‘": "'", "’": "'",
-                "€": "EUR", "…": "...", " ": " ", "•": "-"}
-
-
-def _latin1(text: str) -> str:
-    """Core PDF fonts are Latin-1: map common typography, drop the rest."""
-    for source, target in _PDF_REPLACE.items():
-        text = text.replace(source, target)
-    return text.encode("latin-1", "replace").decode("latin-1")
+FONT_DIR = Path(__file__).resolve().parent / "fonts"  # DejaVu Sans, see fonts/LICENSE-DejaVu.txt
 
 
 def render_pdf(data: dict, compress: bool = True) -> bytes:
@@ -175,8 +182,11 @@ def render_pdf(data: dict, compress: bool = True) -> bytes:
 
     pdf = FPDF(format="A4")
     pdf.set_compression(compress)
-    pdf.set_title(_latin1(f"{'Stornorechnung' if data['kind'] == 'storno' else 'Rechnung'} {data['number']}"))
-    pdf.set_author(_latin1(data["issuer"]["legal_name"]))
+    # Unicode TTF (embedded subset): names like Ayşe, Łukasz, Çelik render correctly.
+    pdf.add_font("DejaVu", "", str(FONT_DIR / "DejaVuSans.ttf"))
+    pdf.add_font("DejaVu", "B", str(FONT_DIR / "DejaVuSans-Bold.ttf"))
+    pdf.set_title(f"{'Stornorechnung' if data['kind'] == 'storno' else 'Rechnung'} {data['number']}")
+    pdf.set_author(data["issuer"]["legal_name"])
     pdf.set_auto_page_break(auto=True, margin=20)
     pdf.add_page()
     pdf.set_margins(20, 20, 20)
@@ -189,8 +199,8 @@ def render_pdf(data: dict, compress: bool = True) -> bytes:
             pdf.ln(5)
             continue
         weight, size, height = styles[style]
-        pdf.set_font("Helvetica", weight, size)
-        pdf.multi_cell(0, height, _latin1(text), new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("DejaVu", weight, size)
+        pdf.multi_cell(0, height, text, new_x="LMARGIN", new_y="NEXT")
     return bytes(pdf.output())
 
 
@@ -259,7 +269,7 @@ def create_invoice(registration_id, organization_id, created_by: Optional[str] =
                     "and kind = 'invoice'", (organization_id, registration_id))
         existing = cur.fetchone()
         if existing:
-            return existing
+            return {**existing, "_new": False}
         if booking["payment_status"] not in PAID_STATES or booking["fee_snapshot_at"] is None:
             raise InvoiceBlocked("not_paid")
         amount = _paid_amount(booking)
@@ -277,7 +287,7 @@ def create_invoice(registration_id, organization_id, created_by: Optional[str] =
             cur.execute("update camp_registrations set invoice_pending_reason = %s where id = %s",
                         (MISSING_PROFILE, registration_id))
         else:
-            return _issue(cur, booking, profile, amount, organization_id, registration_id, created_by)
+            return {**_issue(cur, booking, profile, amount, organization_id, registration_id, created_by), "_new": True}
     raise InvoiceBlocked(MISSING_PROFILE)
 
 
@@ -336,17 +346,21 @@ def create_stornos(registration_id, organization_id, created_by: Optional[str] =
             target = gross
         else:
             target = min(gross, int(booking["refunded_cents"] or 0))
-        cur.execute("select coalesce(-sum(gross_cents), 0) as done from invoices where cancels_invoice_id = %s",
-                    (original["id"],))
-        done = int(cur.fetchone()["done"])
-        delta = target - done
+        cur.execute(
+            """select coalesce(-sum(gross_cents), 0) as gross, coalesce(-sum(net_cents), 0) as net,
+                      coalesce(-sum(vat_cents), 0) as vat
+               from invoices where cancels_invoice_id = %s""",
+            (original["id"],),
+        )
+        done = cur.fetchone()
+        delta = target - int(done["gross"])
         if delta <= 0:
             return []
         source = original["data"]
         issue = _today()
         sequence = allocate_number(cur, organization_id, issue.year)
         prefix = source["number"].rsplit("-", 2)[0]
-        net, vat = split_tax(-delta, original["tax_status"], original["vat_rate"])
+        net, vat = storno_split(original, target, int(done["net"]), int(done["vat"]))
         data = {
             **{k: source[k] for k in ("service_period", "issuer", "recipient", "item", "tax")},
             "kind": "storno",
@@ -397,25 +411,31 @@ def _invoice_mail(invoice: dict, pdf: bytes):
 
 
 def send_invoice(invoice_id, organization_id, force: bool = False) -> bool:
-    """Mail the invoice PDF to the parent. Idempotent via sent_at unless
-    force (admin resend). Returns True when delivered; raises only with
-    force=True so the admin sees the failure."""
+    """Mail the invoice PDF to the parent. The send is claimed atomically
+    first (sent_at set in one UPDATE), so two parallel syncs never mail the
+    same invoice twice; on failure the claim is released and the error
+    code recorded. force=True (admin resend) mails again and raises on
+    failure. Returns True when delivered."""
     from .notifications.mail import get_provider
     from .notifications.sending import _error_code
 
     with db.get_cursor() as cur:
-        cur.execute(f"select {_INVOICE_COLUMNS}, pdf from invoices where id = %s and organization_id = %s",
-                    (invoice_id, organization_id))
+        cur.execute(
+            f"""update invoices set sent_at = now(), send_attempts = send_attempts + 1
+                where id = %s and organization_id = %s and (sent_at is null or %s)
+                returning {_INVOICE_COLUMNS}, pdf""",
+            (invoice_id, organization_id, force),
+        )
         invoice = cur.fetchone()
-    if invoice is None or (invoice["sent_at"] is not None and not force):
-        return False
+    if invoice is None:
+        return False  # unknown, or already sent / being sent by another worker
     provider = get_provider()
     try:
         provider.send(_invoice_mail(invoice, bytes(invoice["pdf"])))
     except Exception as exc:  # noqa: BLE001 - recorded, never breaks the booking
         logger.warning("Invoice mail failed (organization_id=%s)", organization_id)
         with db.get_cursor() as cur:
-            cur.execute("update invoices set send_error = %s, send_attempts = send_attempts + 1 where id = %s",
+            cur.execute("update invoices set sent_at = null, send_error = %s where id = %s",
                         (_error_code(exc), invoice_id))
         if force:
             raise
@@ -423,8 +443,8 @@ def send_invoice(invoice_id, organization_id, force: bool = False) -> bool:
     delivered = bool(getattr(provider, "delivers", True))
     with db.get_cursor() as cur:
         cur.execute(
-            """update invoices set send_attempts = send_attempts + 1, send_error = null,
-                   sent_at = case when %s then now() else sent_at end
+            """update invoices set send_error = null,
+                   sent_at = case when %s then sent_at else null end
                where id = %s""",
             (delivered, invoice_id),
         )
@@ -435,27 +455,104 @@ def send_invoice(invoice_id, organization_id, force: bool = False) -> bool:
 # Follow-ups (best effort; never raise into payment or admin flows)
 # ---------------------------------------------------------------------------
 
-def sync_registration(registration_id, organization_id, created_by: Optional[str] = None) -> None:
+# A paid booking that should have an invoice and has none - whatever the
+# marker says (failed background task, restart, missing master data).
+PENDING_WHERE = """
+    r.organization_id = %s
+    and r.fee_snapshot_at is not null
+    and r.payment_status in ('paid', 'partially_refunded', 'refunded')
+    and coalesce(r.fee_base_cents, 0) > 0
+    and not exists (select 1 from invoices i where i.organization_id = r.organization_id
+                    and i.registration_id = r.id and i.kind = 'invoice')
+"""
+
+# Invoiced booking whose refund or cancellation is not fully stornoed yet.
+STORNO_PENDING_WHERE = """
+    r.organization_id = %s
+    and exists (
+        select 1 from invoices i
+        where i.organization_id = r.organization_id and i.registration_id = r.id and i.kind = 'invoice'
+          and (case when r.status = 'cancelled' or r.payment_status = 'refunded' then i.gross_cents
+                    else least(i.gross_cents, coalesce(r.refunded_cents, 0)) end)
+              > coalesce((select -sum(s.gross_cents) from invoices s where s.cancels_invoice_id = i.id), 0)
+    )
+"""
+
+# Mails that never reached the parent (failed or interrupted); retried by generate-pending.
+UNSENT_WHERE = "organization_id = %s and sent_at is null and send_attempts < 5"
+
+
+def _mark_failed(registration_id, organization_id, exc: Exception) -> None:
+    """Remember a failed invoice run on the booking: reason code only, no data."""
+    try:
+        with db.get_cursor() as cur:
+            cur.execute(
+                """update camp_registrations set invoice_pending_reason = 'error', invoice_error = %s
+                   where id = %s and organization_id = %s""",
+                (type(exc).__name__[:100], registration_id, organization_id),
+            )
+    except Exception:  # noqa: BLE001
+        logger.exception("Could not record invoice failure (organization_id=%s)", organization_id)
+
+
+def sync_registration(registration_id, organization_id, created_by: Optional[str] = None) -> dict:
     """Bring invoices of one booking up to date: invoice when paid, storno for
-    refunds/cancellation, mail every new document. Safe to call repeatedly."""
-    new: list[dict] = []
+    refunds/cancellation, mail every unsent document. Safe to call
+    repeatedly (webhook replays, generate-pending). Never raises."""
+    outcome = {"invoice": None, "created": False, "stornos": 0, "blocked": None, "failed": False}
     try:
         try:
-            invoice = create_invoice(registration_id, organization_id, created_by)
-            if invoice["sent_at"] is None and invoice["send_attempts"] == 0:
-                new.append(invoice)
+            outcome["invoice"] = create_invoice(registration_id, organization_id, created_by)
+            outcome["created"] = outcome["invoice"]["_new"]
         except InvoiceBlocked as blocked:
             if blocked.code not in ("not_paid", "free", MISSING_PROFILE, "not_found"):
                 raise
-        new.extend(create_stornos(registration_id, organization_id, created_by))
-    except Exception:  # noqa: BLE001
+            outcome["blocked"] = blocked.code
+        outcome["stornos"] = len(create_stornos(registration_id, organization_id, created_by))
+        with db.get_cursor() as cur:
+            cur.execute(
+                """update camp_registrations set invoice_error = null,
+                       invoice_pending_reason = case when invoice_pending_reason = 'error' then null
+                                                     else invoice_pending_reason end
+                   where id = %s and organization_id = %s and invoice_error is not null""",
+                (registration_id, organization_id),
+            )
+            cur.execute(f"select id from invoices where registration_id = %s and {UNSENT_WHERE} order by sequence",
+                        (registration_id, organization_id))
+            unsent = [row["id"] for row in cur.fetchall()]
+    except Exception as exc:  # noqa: BLE001
         logger.exception("Invoice sync failed (organization_id=%s)", organization_id)
-        return
-    for document in new:
+        _mark_failed(registration_id, organization_id, exc)
+        outcome["failed"] = True
+        return outcome
+    for invoice_id in unsent:
         try:
-            send_invoice(document["id"], organization_id)
+            send_invoice(invoice_id, organization_id)
         except Exception:  # noqa: BLE001
             logger.exception("Invoice mail step failed (organization_id=%s)", organization_id)
+    return outcome
+
+
+def open_work(cur, organization_id) -> dict:
+    """Counts for the admin hint: bookings without invoice (by reason),
+    open stornos, unsent mails."""
+    cur.execute(
+        f"""select count(*) filter (where r.invoice_pending_reason = 'missing_billing_profile') as missing_profile,
+                   count(*) filter (where r.invoice_pending_reason = 'error') as failed,
+                   count(*) as invoices
+            from camp_registrations r where {PENDING_WHERE}""",
+        (organization_id,),
+    )
+    counts = dict(cur.fetchone())
+    cur.execute("select 1 from organization_billing_profiles where organization_id = %s", (organization_id,))
+    if cur.fetchone() is not None:
+        counts["missing_profile"] = 0  # completed meanwhile: "Rechnungen erzeugen" can do them now
+    cur.execute(f"select count(*) as n from camp_registrations r where {STORNO_PENDING_WHERE}", (organization_id,))
+    counts["stornos"] = cur.fetchone()["n"]
+    cur.execute(f"select count(*) as n from invoices where {UNSENT_WHERE}", (organization_id,))
+    counts["unsent_mails"] = cur.fetchone()["n"]
+    counts["total"] = counts["invoices"] + counts["stornos"] + counts["unsent_mails"]
+    return counts
 
 
 def sync_by_token(registration_token: UUID, organization_id) -> None:

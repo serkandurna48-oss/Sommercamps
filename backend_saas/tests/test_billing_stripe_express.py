@@ -638,6 +638,7 @@ def test_stripe_admin_calls_are_rate_limited(env, monkeypatch):
 
 
 GRANTS = Path(__file__).resolve().parents[2] / "supabase" / "migrations" / "20261106160000_billing_refunds_and_grants.sql"
+B3_GRANTS = GRANTS.with_name("20261107110000_invoice_retry.sql")
 
 
 def test_fee_and_stripe_columns_not_readable_by_authenticated(env):
@@ -651,9 +652,15 @@ def test_fee_and_stripe_columns_not_readable_by_authenticated(env):
     try:
         with env.cursor() as cur:
             cur.execute(GRANTS.read_text(encoding="utf-8"))
-            cur.execute(GRANTS.read_text(encoding="utf-8"))  # idempotent
+            cur.execute(B3_GRANTS.read_text(encoding="utf-8"))
+            # Re-run: the guard skips (no table-level grant any more), so later columns stay hidden.
+            cur.execute(GRANTS.read_text(encoding="utf-8"))
+            cur.execute("select has_table_privilege('authenticated', 'public.camp_registrations', 'SELECT') as t")
+            assert cur.fetchone()["t"] is False
         for column in ("fee_cents", "fee_percent", "fee_refunded_cents", "refunded_cents",
-                       "stripe_checkout_fee", "stripe_charge_type", "stripe_payment_intent_id"):
+                       "stripe_checkout_fee", "stripe_charge_type", "stripe_payment_intent_id",
+                       # Later migrations: a re-run of 20261106160000 must not grant them (guard).
+                       "booked_price_cents", "invoice_pending_reason", "invoice_error"):
             with pytest.raises(psycopg2.errors.InsufficientPrivilege):
                 with env.cursor() as cur:
                     cur.execute("select set_config('request.jwt.claims', %s, true)", (json.dumps({"sub": str(user)}),))

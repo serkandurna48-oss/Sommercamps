@@ -20,7 +20,8 @@
 --     drop column if exists refunded_cents, drop column if exists fee_refunded_cents,
 --     drop column if exists refunded_at;
 --   grant select on public.camp_registrations to authenticated;
--- Idempotent: IF NOT EXISTS / DROP ... IF EXISTS Guards, Grants per DO-Block neu gesetzt.
+-- Idempotent: IF NOT EXISTS / DROP ... IF EXISTS Guards; Spaltenrechte nur beim ersten Lauf
+-- (solange das Tabellenrecht noch besteht).
 
 begin;
 
@@ -46,12 +47,17 @@ alter table public.camp_registrations
 comment on column public.camp_registrations.fee_refunded_cents is
     'Plattformgebuehr, die durch Erstattung zurueckging (Stripe ApplicationFee.amount_refunded) bzw. bei manueller Erstattung nicht mehr geschuldet ist. Netto = fee_cents - fee_refunded_cents.';
 
--- Column-level read rights for authenticated (see header, point 3).
-revoke select on public.camp_registrations from authenticated;
+-- Column-level read rights for authenticated (see header, point 3). Guard: only while the
+-- table-level grant still exists (first run). A re-run after later migrations must not
+-- hand out their new columns (e.g. booked_price_cents) through this block.
 do $$
 declare
     readable text;
 begin
+    if not has_table_privilege('authenticated', 'public.camp_registrations', 'SELECT') then
+        return;
+    end if;
+    revoke select on public.camp_registrations from authenticated;
     select string_agg(format('%I', column_name), ', ' order by ordinal_position)
       into readable
       from information_schema.columns

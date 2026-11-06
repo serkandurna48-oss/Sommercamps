@@ -216,6 +216,9 @@ def _run_journey(cursor, identities, fake: FakeProvider) -> None:
                 "photo_permission": False,
                 "terms_accepted": True,
                 "privacy_accepted": True,
+                "parent_street": "Musterweg 1",
+                "parent_postal_code": "34117",
+                "parent_city": "Kassel",
             }
 
         # ── Schritt 4: Kind 1 → registered, CP-Referenz, Mail ohne Namen ────

@@ -22,6 +22,12 @@ from .payment_reference import payment_reference as build_payment_reference
 
 _QUESTION_KEY_RE = _re.compile(r'^[a-z][a-z0-9_]{0,29}$')
 
+# Billing address limits (same bounds as chk_camp_registrations_parent_address).
+BILLING_STREET_MAX = 120
+BILLING_POSTAL_CODE_MAX = 10
+BILLING_CITY_MAX = 80
+_POSTAL_CODE_RE = _re.compile(r'^[0-9A-Za-z][0-9A-Za-z -]{2,8}[0-9A-Za-z]$')
+
 
 class RegistrationQuestion(BaseModel):
     """One additional question shown on the registration form."""
@@ -214,6 +220,14 @@ class RegistrationCreate(BaseModel):
     # in repositories/registrations.py::validate_extra_answers).
     extra_answers: dict[str, str] = Field(default_factory=dict)
 
+    # Billing address of the parent (migration 20261107130000). Optional in
+    # the schema so old clients still validate; required for paid bookings,
+    # which only the repository knows (price decided under the camp lock),
+    # see repositories/registrations.py::require_billing_address.
+    parent_street: Optional[str] = Field(default=None, max_length=BILLING_STREET_MAX)
+    parent_postal_code: Optional[str] = Field(default=None, max_length=BILLING_POSTAL_CODE_MAX)
+    parent_city: Optional[str] = Field(default=None, max_length=BILLING_CITY_MAX)
+
     @model_validator(mode="before")
     @classmethod
     def _drop_client_price_fields(cls, data):
@@ -228,9 +242,16 @@ class RegistrationCreate(BaseModel):
     def _trim_and_limit_answers(cls, value: dict[str, str]) -> dict[str, str]:
         return {k: v.strip()[:80] for k, v in value.items()}
 
+    @field_validator("parent_postal_code", mode="after")
+    @classmethod
+    def _postal_code_format(cls, value: Optional[str]) -> Optional[str]:
+        if value and not _POSTAL_CODE_RE.match(value):
+            raise ValueError("Bitte geben Sie eine gültige Postleitzahl an (4 bis 10 Zeichen).")
+        return value or None
+
     @field_validator(
         "emergency_contact_name", "medical_notes", "allergies",
-        "jersey_size", "pickup_authorized",
+        "jersey_size", "pickup_authorized", "parent_street", "parent_city",
         mode="after",
     )
     @classmethod

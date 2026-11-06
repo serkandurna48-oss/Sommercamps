@@ -84,6 +84,24 @@ class TrainingOnlinePaymentNotPossibleError(RegistrationRejectedError):
     through Stripe Checkout (below the 0.50 EUR minimum, e.g. 0 EUR) — maps to 422."""
 
 
+class BillingAddressRequiredError(RegistrationRejectedError):
+    """A paid booking (price > 0 after member price) without a complete
+    billing address (street, postal code, city) — maps to 422. The invoice
+    must name the recipient's address (§ 14 UStG / § 34a UStDV)."""
+
+
+def billing_address_for(data: RegistrationCreate, price_cents: Optional[int]) -> tuple[Optional[str], ...]:
+    """(street, postal_code, city) to store. Paid bookings need all three
+    (else BillingAddressRequiredError); free bookings store none, even when
+    sent (data minimisation: no invoice, no purpose)."""
+    if not price_cents or price_cents <= 0:
+        return (None, None, None)
+    address = (data.parent_street, data.parent_postal_code, data.parent_city)
+    if not all(address):
+        raise BillingAddressRequiredError("Billing address required for a paid booking")
+    return address
+
+
 class RegistrationWindowClosedError(RegistrationRejectedError):
     """Registration isn't currently open for this camp — maps to 422."""
 
@@ -258,7 +276,7 @@ _GET_TARGET = f"""
       and (c.offer_id is null or o.status = 'published')
 """
 
-_LOCK_CAMP_CAPACITY = "select capacity, status from camps where id = %s for update"
+_LOCK_CAMP_CAPACITY = "select capacity, status, price_cents from camps where id = %s for update"
 
 # SHARE allows registrations in different camps to proceed together, but
 # conflicts with publication/plan UPDATEs. KEY SHARE does not protect these
@@ -295,7 +313,8 @@ _INSERT_REGISTRATION = """
         emergency_contact_name, emergency_contact_phone,
         medical_notes, allergies, health_data_consent, jersey_size, pickup_authorized,
         photo_permission, terms_accepted, privacy_accepted,
-        extra_answers, player_id
+        extra_answers, player_id,
+        parent_street, parent_postal_code, parent_city
     ) values (
         %s, %s, %s,
         %s, %s, %s, %s,
@@ -303,7 +322,8 @@ _INSERT_REGISTRATION = """
         %s, %s,
         %s, %s, %s, %s, %s,
         %s, %s, %s,
-        %s, %s
+        %s, %s,
+        %s, %s, %s
     )
     returning registration_token, status, payment_status, child_first_name, child_last_name
 """
@@ -392,6 +412,7 @@ def _billing_flags(alias: str) -> str:
 _ADMIN_REGISTRATION_FIELDS = """
     id, registration_token, status, payment_status,
     parent_first_name, parent_last_name, parent_email, parent_phone,
+    parent_street, parent_postal_code, parent_city,
     child_first_name, child_last_name, child_birth_date,
     emergency_contact_name, emergency_contact_phone,
     medical_notes, allergies, jersey_size, pickup_authorized,
@@ -784,6 +805,8 @@ def create_registration(
         active_count = cur.fetchone()["active_count"]
 
         new_status = "registered" if active_count < locked["capacity"] else "waitlist"
+        # Waitlisted bookings too: they become payable once promoted.
+        address = billing_address_for(data, locked.get("price_cents"))
 
         player_id = players.find_or_create_player(
             cur, tenant.organization_id, data.child_first_name, data.child_last_name, data.child_birth_date)
@@ -812,6 +835,7 @@ def create_registration(
                 data.privacy_accepted,
                 psycopg2.extras.Json(dict(data.extra_answers)),
                 player_id,
+                *address,
             ),
         )
         return cur.fetchone()
@@ -841,7 +865,8 @@ _INSERT_TRAINING_REGISTRATION = """
         medical_notes, allergies, health_data_consent, jersey_size, pickup_authorized,
         photo_permission, terms_accepted, privacy_accepted,
         extra_answers,
-        applied_price_cents, member_match, payment_method, player_id, documentation_consent
+        applied_price_cents, member_match, payment_method, player_id, documentation_consent,
+        parent_street, parent_postal_code, parent_city
     ) values (
         %s, %s, %s,
         %s, %s, %s, %s,
@@ -850,7 +875,8 @@ _INSERT_TRAINING_REGISTRATION = """
         %s, %s, %s, %s, %s,
         %s, %s, %s,
         %s,
-        %s, %s, %s, %s, %s
+        %s, %s, %s, %s, %s,
+        %s, %s, %s
     )
     returning registration_token, status, payment_status, child_first_name, child_last_name,
         applied_price_cents
@@ -939,6 +965,7 @@ def create_training_registration(
             # Free (or sub-minimum) bookings never go to checkout: choose
             # bar/ueberweisung instead (simplest correct rule, no auto-paid state).
             raise TrainingOnlinePaymentNotPossibleError(camp.slug)
+        address = billing_address_for(data, applied_price)
 
         player_id = players.find_or_create_player(
             cur, tenant.organization_id, data.child_first_name, data.child_last_name, data.child_birth_date)
@@ -955,6 +982,7 @@ def create_training_registration(
                 psycopg2.extras.Json(dict(data.extra_answers)),
                 applied_price, member_match, data.payment_method, player_id,
                 data.documentation_consent,
+                *address,
             ),
         )
         return cur.fetchone()

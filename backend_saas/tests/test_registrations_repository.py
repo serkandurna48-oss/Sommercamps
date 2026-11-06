@@ -342,7 +342,8 @@ def test_create_registration_inserts_registered_when_capacity_available(monkeypa
     assert "insert into camp_registrations" in insert_query.lower()
     assert "health_data_consent" in insert_query
     assert insert_params[14] is False  # old clients without health data
-    assert insert_params[-1] == player_id  # linked to the found-or-created player
+    assert insert_params[-4] == player_id  # linked to the found-or-created player
+    assert insert_params[-3:] == (None, None, None)  # no price known in this fake: no address stored
     assert insert_query.count("%s") == len(insert_params)
 
 

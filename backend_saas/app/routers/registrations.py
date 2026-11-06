@@ -25,6 +25,7 @@ from ..ratelimit import registration_limiter, trusted_client_ip
 from ..notifications.sending import send_registration_notification
 from ..repositories import registrations as registrations_repo
 from ..repositories.registrations import (
+    BillingAddressRequiredError,
     CampNotAvailableError,
     ChildAgeNotEligibleError,
     DuplicateRegistrationError,
@@ -46,6 +47,7 @@ TRAINING_PAYMENT_METHODS = ("ueberweisung", "bar", "online")
 _TRAINING_PAST_MSG = "Dieser Trainingstermin liegt in der Vergangenheit und kann nicht mehr gebucht werden."
 _TRAINING_FULL_MSG = "Dieser Trainingstermin ist leider bereits belegt."
 _DUPLICATE_MSG = "Für dieses Kind liegt für dieses Camp bereits eine Anmeldung vor."
+BILLING_ADDRESS_REQUIRED_MSG = "Bitte geben Sie Ihre Rechnungsanschrift an."
 
 
 def _training_conflict(code: str, message: str) -> dict[str, str]:
@@ -161,6 +163,16 @@ def create_registration(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Für kostenlose Buchungen ist keine Online-Zahlung nötig. Bitte 'bar' oder 'ueberweisung' wählen.",
+        ) from exc
+    except BillingAddressRequiredError as exc:
+        logger.info(
+            "Registration rejected: billing address missing (organization_slug=%s, camp_slug=%s)",
+            tenant.slug,
+            camp_slug,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=BILLING_ADDRESS_REQUIRED_MSG,
         ) from exc
     except ExtraAnswersInvalidError as exc:
         logger.info(

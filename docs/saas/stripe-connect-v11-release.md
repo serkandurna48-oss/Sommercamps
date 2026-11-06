@@ -97,6 +97,6 @@ Production erst nach erfolgreichem Staging-Test und mit Live-Schlüsseln, eigene
 
 ### Aufbewahrung und Datenschutz (zu entscheiden vor Produktivbetrieb)
 - Rechnungen enthalten Elternname, E-Mail, Vor- und Nachname des Kindes und Camp/Training – keine Geburtsdaten, keine Gesundheitsdaten. Zweck: Rechnungsstellung des Vereins (Art. 6 Abs. 1 lit. b/c DSGVO). Verantwortlich ist der Verein, CampsPilot verarbeitet im Auftrag (AVV).
-- Aufbewahrung: Rechnungen 8 Jahre (§ 147 AO, § 14b UStG; ab 2025 für Buchungsbelege 8 Jahre). Ein Löschwunsch der Eltern geht hier hinter die gesetzliche Aufbewahrungspflicht zurück (Art. 17 Abs. 3 lit. b DSGVO); danach löschen. Ein Löschlauf für abgelaufene Rechnungen fehlt noch (Retention-Runbook ergänzen).
+- Aufbewahrung: Rechnungen als Buchungsbelege derzeit 8 Jahre (§ 147 AO, § 14b UStG; Annahme, vom Steuerberater bestätigen lassen). Ein Löschwunsch der Eltern geht hier hinter die gesetzliche Aufbewahrungspflicht zurück (Art. 17 Abs. 3 lit. b DSGVO); danach löschen. Ein Löschlauf für abgelaufene Rechnungen fehlt noch (Retention-Runbook ergänzen).
 - `invoices` hängt per `on delete cascade` am Verein: Wird ein Verein gelöscht, verschwinden seine Rechnungen. Vor dem Löschen eines Vereins dessen Rechnungen exportieren (PDFs) – Aufbewahrung liegt beim Verein.
 - Datenschutzerklärung der Vereine/Plattform um „Rechnung per E-Mail mit PDF“ ergänzen.

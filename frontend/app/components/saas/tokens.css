@@ -415,6 +415,7 @@
 .cp-pay-status { grid-area: status; display: flex; flex-wrap: wrap; gap: 6px; justify-self: end; }
 .cp-pay-action { grid-area: action; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: flex-end; gap: 8px; }
 .cp-pay-fallback { grid-area: fallback; }
+.cp-scope:where(.cp-admin) .cp-extra-remove { min-width: 44px; padding: 2px 10px; font-size: 13px; font-weight: 600; }
 .cp-scope:where(.cp-admin) .cp-pay-copy { min-height: 44px; min-width: 0; padding: 2px 10px; font-size: 13px; }
 .cp-scope:where(.cp-admin) .cp-pay-list { overflow: visible; }
 .cp-pay-list > .cp-pay-row:first-of-type { border-top: 0; }
@@ -1381,7 +1382,9 @@
 }
 
 /* Member list with extra-field columns: the card scrolls horizontally on desktop. */
-.cp-scope:where(.cp-admin) .cp-member-scroll { padding: 0; overflow: clip; }
+/* position: relative keeps the sr-only cell prefixes (position: absolute) inside the
+   scroll box; otherwise they widen the whole page. */
+.cp-scope:where(.cp-admin) .cp-member-scroll { position: relative; padding: 0; overflow: clip; }
 @media (min-width: 1024px) {
   .cp-scope:where(.cp-admin) .cp-member-scroll { overflow-x: auto; }
   .cp-member-wide { min-width: var(--cp-member-min, 100%); }

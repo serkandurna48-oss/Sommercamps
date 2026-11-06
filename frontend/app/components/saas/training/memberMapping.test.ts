@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseCsvPreview, parseCsvRecords } from './memberCsv'
-import { isSensitiveHeader, normalizeHeader, suggestMapping, toApiMapping, validateMapping, type ColumnChoice } from './memberMapping'
-import { filterMembers, memberExtraLabels } from './trainingLogic'
+import { isSensitiveHeader, mappingSummary, normalizeHeader, sampleValues, suggestMapping, toApiMapping, validateMapping, type ColumnChoice } from './memberMapping'
+import { filterMembers, formatImportError, memberExtraLabels } from './trainingLogic'
 
 const targets = (header: string[]) => suggestMapping(header).map(choice => choice.target)
 
@@ -31,14 +31,16 @@ describe('Alias-Vorschläge', () => {
 })
 
 describe('Datenschutz-Warnung', () => {
-  it.each(['Krankheiten', 'Allergien', 'Medikamente', 'Diagnose', 'Adresse', 'Straße', 'PLZ', 'Telefon', 'Handy', 'Mobil-Nr.', 'E-Mail', 'Email Eltern'])(
+  it.each(['Krankheiten', 'Allergien', 'Medikamente', 'Diagnose', 'Adresse', 'Straße', 'PLZ', 'Telefon', 'Handy', 'Mobil-Nr.', 'E-Mail', 'Email Eltern',
+    'Notfallkontakt', 'IBAN', 'Tel.', 'Tel.-Nr.', 'Anschrift', 'Wohnort', 'Mail', 'Gesundheit', 'Asthma', 'Impfstatus', 'Behinderung', 'Kontoinhaber', 'Bank',
+    'Religion', 'Konfession', 'Staatsangehörigkeit'])(
     '%s gilt als sensibel und wird abgewählt', header => {
       expect(isSensitiveHeader(header)).toBe(true)
       expect(suggestMapping([header])[0]).toMatchObject({ target: 'skip', sensitive: true })
     })
 
   it('normale Spalten sind nicht sensibel', () => {
-    expect(['Vorname', 'Mannschaft', 'Beitragsgruppe', 'Geb.-Datum'].some(isSensitiveHeader)).toBe(false)
+    expect(['Vorname', 'Mannschaft', 'Beitragsgruppe', 'Geb.-Datum', 'Titel', 'Bemerkung'].some(isSensitiveHeader)).toBe(false)
   })
 })
 
@@ -102,12 +104,39 @@ describe('Zusatzfelder in der Liste', () => {
     { first_name: 'Ola', last_name: 'O', member_number: null, active: true },
   ]
 
-  it('Spalten in Reihenfolge des ersten Auftretens', () => {
-    expect(memberExtraLabels(members)).toEqual(['Mannschaft', 'Beitrag', 'Fuß'])
+  it('Spalten alphabetisch (deutsch), unabhängig von der jsonb-Reihenfolge', () => {
+    expect(memberExtraLabels(members)).toEqual(['Beitrag', 'Fuß', 'Mannschaft'])
+    expect(memberExtraLabels([{ extra: { Ziel: '1', Ärmel: '2', alt: '3' } }])).toEqual(['alt', 'Ärmel', 'Ziel'])
   })
 
   it('Suche findet Werte von Zusatzfeldern', () => {
     expect(filterMembers(members, 'familie', 'alle').map(m => m.first_name)).toEqual(['Max'])
     expect(filterMembers(members, 'U1', 'alle').map(m => m.first_name)).toEqual(['Max', 'Eva'])
+  })
+})
+
+describe('Übersicht und Beispielwerte', () => {
+  it('Zusammenfassung nennt Zuordnungen, Zähler und Fehlendes', () => {
+    const header = ['Vorname', 'Name', 'Geb.-Datum', 'Team', 'Telefon']
+    const choices: ColumnChoice[] = [
+      choice('first_name'), choice('last_name'), choice('skip'), choice('extra', 'Team'), { target: 'extra', label: 'Telefon', sensitive: true },
+    ]
+    expect(mappingSummary(header, choices)).toEqual({
+      text: 'Vorname ← Vorname, Nachname ← Name · 2 Zusatzfelder · 1 ignoriert',
+      missing: ['Geburtsdatum'],
+      sensitiveImported: 1,
+    })
+  })
+
+  it('höchstens 3 nicht leere Beispielwerte, lange gekürzt', () => {
+    expect(sampleValues([['a'], [''], ['b'], ['c'], ['d']], 0)).toEqual(['a', 'b', 'c'])
+    expect(sampleValues([['x'.repeat(30)]], 0)[0]).toHaveLength(24)
+    expect(sampleValues([['a']], 3)).toEqual([])
+  })
+
+  it('neue Fehlercodes erscheinen auf Deutsch', () => {
+    expect(formatImportError({ row: 1, field: 'geburtsdatum', code: 'missing_mapping' }))
+      .toBe('Zeile 1: Feld geburtsdatum (keiner Spalte zugeordnet, missing_mapping)')
+    expect(formatImportError({ row: 1, field: 'extra', code: 'too_many_org_extra_fields' })).toContain('höchstens 20 verschiedene Zusatzfelder')
   })
 })

@@ -16,6 +16,7 @@ import {
   createTrainingSessionSeriesAdmin,
   deleteTrainingSessionAdmin,
   importClubMembersAdmin,
+  removeClubMemberExtraFieldAdmin,
   setClubMemberActiveAdmin,
   updateTrainingOfferAdmin,
   type ImportErrorItem,
@@ -227,5 +228,19 @@ export async function importMembersAction(orgSlug: string, csv: string, mapping?
       return { error: error.message, errors: error.errors, result: null }
     }
     return { error: message(error, 'Import fehlgeschlagen – es wurde nichts gespeichert.'), errors: [], result: null }
+  }
+}
+
+/** Entfernt ein Zusatzfeld bei allen Mitgliedern des Vereins (z. B. Fehlzuordnung beim Import). */
+export async function removeMemberExtraFieldAction(orgSlug: string, label: string): Promise<{ error: string | null; members?: number }> {
+  const token = await getValidAccessToken()
+  if (!token) return { error: NO_SESSION }
+  if (typeof label !== 'string' || label.trim() === '' || label.length > 100) return { error: 'Zusatzfeld unbekannt.' }
+  try {
+    const { members } = await removeClubMemberExtraFieldAdmin(orgSlug, token, label)
+    refresh(orgSlug)
+    return { error: null, members }
+  } catch (error) {
+    return { error: message(error, 'Zusatzfeld konnte nicht entfernt werden.') }
   }
 }

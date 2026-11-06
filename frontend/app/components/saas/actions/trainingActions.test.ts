@@ -12,6 +12,7 @@ vi.mock('../../../lib/saasAdminApi', async importOriginal => ({
   createClubMemberAdmin: vi.fn(),
   setClubMemberActiveAdmin: vi.fn(),
   importClubMembersAdmin: vi.fn(),
+  removeClubMemberExtraFieldAdmin: vi.fn(),
 }))
 
 import { getValidAccessToken } from '../../../lib/supabaseServer'
@@ -23,7 +24,7 @@ import {
 } from '../../../lib/saasAdminApi'
 import {
   cancelSessionAction, createMemberAction, createOfferAction, createSessionAction, deleteSessionAction,
-  importMembersAction, setMemberActiveAction, updateOfferAction,
+  importMembersAction, removeMemberExtraFieldAction, setMemberActiveAction, updateOfferAction,
 } from './trainingActions'
 
 const initial = { error: null }
@@ -167,4 +168,14 @@ it('Import: leere und zu große Dateien gehen nicht ans Backend', async () => {
   const big = await importMembersAction('ksv', 'x'.repeat(1_000_001))
   expect(big.errors[0].code).toBe('file_too_large')
   expect(importClubMembersAdmin).not.toHaveBeenCalled()
+})
+
+it('Zusatzfeld entfernen: reicht das Label weiter, leeres Label geht nicht ans Backend', async () => {
+  const { removeClubMemberExtraFieldAdmin } = await import('../../../lib/saasAdminApi')
+  vi.mocked(removeClubMemberExtraFieldAdmin).mockResolvedValue({ members: 2 })
+  expect(await removeMemberExtraFieldAction('ksv', 'Telefon')).toEqual({ error: null, members: 2 })
+  expect(removeClubMemberExtraFieldAdmin).toHaveBeenCalledWith('ksv', 'tok', 'Telefon')
+  vi.mocked(removeClubMemberExtraFieldAdmin).mockClear()
+  expect((await removeMemberExtraFieldAction('ksv', '  ')).error).toBeTruthy()
+  expect(removeClubMemberExtraFieldAdmin).not.toHaveBeenCalled()
 })

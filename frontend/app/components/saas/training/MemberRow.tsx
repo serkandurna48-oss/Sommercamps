@@ -22,9 +22,12 @@ export default function MemberRow({ orgSlug, member, extraLabels = [], gridStyle
       </p>
       <div><StatusChip tone={member.active ? 'ok' : 'neutral'} label={member.active ? 'Aktiv' : 'Inaktiv'} /></div>
       {extraLabels.map(label => {
-        const value = member.extra?.[label]
+        // Own keys only: a label like "constructor" must not read the prototype.
+        const raw = member.extra && Object.hasOwn(member.extra, label) ? member.extra[label] : undefined
+        const value = typeof raw === 'string' ? raw : ''
         return (
-          <p key={label} className="cp-chip min-w-0 break-words" data-extra={label} style={{ color: value ? 'var(--cp-ink-2)' : 'var(--cp-muted)' }}>
+          <p key={label} className={`cp-chip relative min-w-0 break-words${value ? '' : ' max-lg:hidden'}`} data-extra={label}
+            style={{ color: value ? 'var(--cp-ink-2)' : 'var(--cp-muted)' }}>
             {/* Phones stack the cells: the label keeps each value self-describing. */}
             <span className="lg:sr-only">{label}: </span>{value || '–'}
           </p>

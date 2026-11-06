@@ -51,8 +51,23 @@ export function formatSessionWhen(localDate: string, localTime: string): string 
   return `${d}.${m}.${y}, ${localTime} Uhr`
 }
 
+const IMPORT_ERROR_TEXT: Record<string, string> = {
+  missing_mapping: 'keiner Spalte zugeordnet',
+  duplicate_mapping: 'mehreren Spalten zugeordnet',
+  duplicate_label: 'Bezeichnung doppelt oder wie ein Standardfeld',
+  invalid_label: 'Bezeichnung ungültig (1–40 Zeichen)',
+  too_many_extra_fields: 'höchstens 10 Zusatzfelder pro Import',
+  too_many_org_extra_fields: 'höchstens 20 verschiedene Zusatzfelder je Verein – nicht mehr benötigte Felder in der Mitgliederliste entfernen',
+  too_long: 'zu lang',
+  invalid_column: 'Spaltenzuordnung ungültig',
+  invalid_target: 'Spaltenzuordnung ungültig',
+  invalid_mapping: 'Spaltenzuordnung ungültig',
+}
+
+/** Zeile/Feld/Code als Text; bekannte Codes mit deutscher Erklärung, Code bleibt in Klammern. */
 export function formatImportError(error: { row: number; field: string; code: string }): string {
-  return `Zeile ${error.row}: Feld ${error.field} (${error.code})`
+  const text = IMPORT_ERROR_TEXT[error.code]
+  return `Zeile ${error.row}: Feld ${error.field} (${text ? `${text}, ` : ''}${error.code})`
 }
 
 // --- Eingaben -------------------------------------------------------------
@@ -218,7 +233,7 @@ function foldName(text: string): string {
 
 /** Suche und Statusfilter laufen nur im Browser: der Suchbegriff kann ein
  * Kindername sein und gehört nicht in URL, Verlauf oder Server-Logs. */
-/** Labels aller Zusatzfelder in Reihenfolge des ersten Auftretens (Spalten der Liste). */
+/** Labels aller Zusatzfelder, alphabetisch (Spalten der Liste; jsonb behält die Reihenfolge nicht). */
 export function memberExtraLabels(members: { extra?: Record<string, string> }[]): string[] {
   const labels: string[] = []
   const seen = new Set<string>()
@@ -227,7 +242,7 @@ export function memberExtraLabels(members: { extra?: Record<string, string> }[])
       if (!seen.has(label)) { seen.add(label); labels.push(label) }
     }
   }
-  return labels
+  return labels.sort((a, b) => a.localeCompare(b, 'de'))
 }
 
 export function filterMembers<T extends { first_name: string; last_name: string; member_number: string | null; active: boolean; extra?: Record<string, string> }>(
@@ -243,6 +258,6 @@ export function filterMembers<T extends { first_name: string; last_name: string;
     return foldName(`${member.first_name}${member.last_name}`).includes(needle)
       || foldName(`${member.last_name}${member.first_name}`).includes(needle)
       || foldName(member.member_number ?? '').includes(needle)
-      || Object.values(member.extra ?? {}).some(value => foldName(value).includes(needle))
+      || Object.values(member.extra ?? {}).some(value => typeof value === 'string' && foldName(value).includes(needle))
   })
 }

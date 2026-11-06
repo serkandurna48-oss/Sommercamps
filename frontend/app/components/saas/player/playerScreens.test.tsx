@@ -103,6 +103,19 @@ describe('Spielerakte (Darstellung)', () => {
     expect(doc.body.textContent).not.toContain(NO_CONSENT_HINT)
   })
 
+  it('Kopf zeigt den Chip „Mitglied“ nur bei player.is_member', () => {
+    const member = html(screen(record({ player: { ...record().player, is_member: true } })))
+    expect(member.querySelector('header')?.textContent).toContain('Mitglied')
+    expect(html(screen()).querySelector('header')?.textContent).not.toContain('Mitglied')
+    expect(html(screen(record({ player: { ...record().player, is_member: false } }))).querySelector('header')?.textContent).not.toContain('Mitglied')
+  })
+
+  it('angepinnter Block ist eine benannte Region (eigener Scrollbereich am Desktop)', () => {
+    const pinned = html(screen()).querySelector('[data-pinned]')!
+    expect(pinned.getAttribute('role')).toBe('region')
+    expect(pinned.getAttribute('aria-label')).toBe('Ziele und Messwerte')
+  })
+
   it('zeigt den Einwilligungshinweis, wenn die jüngste Buchung keine Doku-Einwilligung hat', () => {
     for (const consent of [false, null] as const) {
       const rec = record({ bookings: [booking({ documentation_consent: consent })] })

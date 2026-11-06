@@ -33,7 +33,7 @@ export default function PlayerRecordScreen({ orgSlug, record, query, today = ber
         backHref={`/pilot/${orgSlug}/spieler`}
         backLabel="Alle Spieler"
         title={`${player.first_name} ${player.last_name}`}
-        subtitle={`${age} Jahre · geboren ${formatDay(player.birth_date)}`}
+        subtitle={<>{`${age} Jahre · geboren ${formatDay(player.birth_date)}`}{player.is_member && <>{' '}<StatusChip tone="ok" label="Mitglied" /></>}</>}
         metrics={[
           { label: 'Buchungen', value: String(bookingCount) },
           { label: 'Letztes Training', value: lastTraining ? formatDay(lastTraining) : '–' },
@@ -52,7 +52,8 @@ export default function PlayerRecordScreen({ orgSlug, record, query, today = ber
 
         {/* Reihenfolge im DOM = Reihenfolge am Handy (Ziele, Messwerte, Notizen, Buchungen); ab 1024 px steht der Block „Ziele/Messwerte“ rechts und bleibt beim Scrollen stehen. */}
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
-          <div className="flex flex-col gap-4 lg:sticky lg:top-4 lg:col-start-2 lg:row-start-1 lg:-m-1 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:p-1" data-pinned>
+          <div className="flex flex-col gap-4 lg:sticky lg:top-4 lg:col-start-2 lg:row-start-1 lg:-m-1 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:p-1" data-pinned
+            role="region" aria-label="Ziele und Messwerte">
             <GoalsSection orgSlug={orgSlug} playerId={player.id} goals={goals} />
             <MeasurementsSection orgSlug={orgSlug} playerId={player.id} measurements={measurements} metrics={metrics} today={today} />
           </div>

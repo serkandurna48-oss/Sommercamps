@@ -53,12 +53,22 @@ const ALIASES: Record<string, ColumnTarget> = {
   mitgliedernummer: 'member_number', mitgliedernr: 'member_number', membernumber: 'member_number',
 }
 
-const SENSITIVE = ['krank', 'allerg', 'medikament', 'diagnose', 'adresse', 'strasse', 'plz', 'telefon', 'handy', 'mobil', 'email']
+const SENSITIVE = [
+  // health
+  'krank', 'allerg', 'medikament', 'diagnose', 'gesundheit', 'asthma', 'impf', 'behinderung',
+  // address
+  'adresse', 'anschrift', 'strasse', 'plz', 'wohnort',
+  // contact
+  'telefon', 'handy', 'mobil', 'mail', 'notfall', 'eltern',
+  // bank and other special categories
+  'iban', 'bic', 'konto', 'bank', 'religion', 'konfession', 'staatsang',
+]
 
 /** Gesundheits-, Adress- oder Kontaktdaten am Spaltennamen erkennen (Hinweis, kein Verbot). */
 export function isSensitiveHeader(header: string): boolean {
   const key = normalizeHeader(header)
-  return SENSITIVE.some(word => key.includes(word))
+  // "Tel", "Tel.-Nr." count, "Titel" does not (prefix only).
+  return key.startsWith('tel') || SENSITIVE.some(word => key.includes(word))
 }
 
 /** Vorschlag je Spalte. Unbekannte Spalten: "Nicht importieren" (Datensparsamkeit),
@@ -116,4 +126,43 @@ export function toApiMapping(choices: ColumnChoice[]): MemberImportMapping {
     String(index),
     choice.target === 'skip' ? null : choice.target === 'extra' ? { extra: cleanLabel(choice.label) } : choice.target,
   ]))
+}
+
+/** Bis zu `limit` nicht leere Beispielwerte einer Spalte (gekürzt). */
+export function sampleValues(rows: string[][], index: number, limit = 3): string[] {
+  const values: string[] = []
+  for (const row of rows) {
+    const value = (row[index] ?? '').trim()
+    if (value) values.push(value.length > 24 ? `${value.slice(0, 23)}…` : value)
+    if (values.length >= limit) break
+  }
+  return values
+}
+
+export interface MappingSummary {
+  /** z. B. "Vorname ← Vorname, Nachname ← Name, Geburtsdatum ← Geb.-Datum · 2 Zusatzfelder · 1 ignoriert" */
+  text: string
+  /** Fehlende Pflichtfelder (deutsche Namen). */
+  missing: string[]
+  /** Sensibel benannte Spalten, die trotzdem importiert werden. */
+  sensitiveImported: number
+}
+
+export function mappingSummary(header: string[], choices: ColumnChoice[]): MappingSummary {
+  const parts: string[] = []
+  for (const target of ['first_name', 'last_name', 'birth_date', 'member_number'] as ColumnTarget[]) {
+    const columns = choices.flatMap((choice, index) => (choice.target === target ? [header[index] || `Spalte ${index + 1}`] : []))
+    if (columns.length > 0) parts.push(`${TARGET_LABELS[target]} ← ${columns.join(' + ')}`)
+  }
+  const extras = choices.filter(choice => choice.target === 'extra').length
+  const skipped = choices.filter(choice => choice.target === 'skip').length
+  const counts = [
+    extras > 0 ? `${extras} ${extras === 1 ? 'Zusatzfeld' : 'Zusatzfelder'}` : '',
+    skipped > 0 ? `${skipped} ignoriert` : '',
+  ].filter(Boolean)
+  return {
+    text: [parts.join(', ') || 'Noch keine Spalte zugeordnet', ...counts].join(' · '),
+    missing: REQUIRED.filter(target => !choices.some(choice => choice.target === target)).map(target => TARGET_LABELS[target]),
+    sensitiveImported: choices.filter(choice => choice.sensitive && choice.target !== 'skip').length,
+  }
 }

@@ -982,6 +982,13 @@ export async function importClubMembersAdmin(orgSlug: string, token: string, csv
   return res.json() as Promise<MemberImportResult>
 }
 
+/** Entfernt ein Zusatzfeld (exaktes Label) bei allen Mitgliedern des Vereins. */
+export async function removeClubMemberExtraFieldAdmin(orgSlug: string, token: string, label: string): Promise<{ members: number }> {
+  const res = await adminMutate(`${MEMBERS_BASE(orgSlug)}/extra-fields?label=${encodeURIComponent(label)}`, token, 'DELETE')
+  if (!res.ok) throw new TrainingAdminError('Zusatzfeld konnte nicht entfernt werden.')
+  return res.json() as Promise<{ members: number }>
+}
+
 // --- Spielerakte (nur Admin, Kinderdaten) ---------------------------------
 
 /** Fehler mit festem deutschem Text; enthält nie Antwortinhalte (Notiztexte, Namen). */

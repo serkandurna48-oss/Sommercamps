@@ -174,7 +174,7 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
 
       <MembersSection orgSlug={org.slug} members={members} />
 
-      <section className="mb-8">
+      <section id="module" className="mb-8 scroll-mt-24">
         <h2 className="cp-heading mb-3" style={{ color: 'var(--cp-ink)' }}>
           Module
         </h2>

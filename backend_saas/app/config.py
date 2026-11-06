@@ -114,6 +114,10 @@ class Settings(BaseSettings):
     stripe_checkout_enabled: bool = Field(default=False, alias="STRIPE_CHECKOUT_ENABLED")
     stripe_secret_key: Optional[str] = Field(default=None, alias="STRIPE_SECRET_KEY")
     stripe_webhook_secret: Optional[str] = Field(default=None, alias="STRIPE_CONNECT_WEBHOOK_SECRET")
+    # Billing B2: signing secret of the PLATFORM webhook endpoint
+    # (/api/v1/payments/stripe/platform-webhook). Destination charges on
+    # Express accounts are confirmed only there; without it they stay off.
+    stripe_platform_webhook_secret: Optional[str] = Field(default=None, alias="STRIPE_PLATFORM_WEBHOOK_SECRET")
 
     # Platform accounts (see app/supabase_auth.py). Replaces the previous
     # single-password ADMIN_PASSWORD/JWT_SECRET scheme (feat/platform-

@@ -1,8 +1,16 @@
 """
-CampsPilot Stripe Connect payments v1.1.
+CampsPilot Stripe Connect payments.
 
-Direct charges: Stripe Checkout Sessions are created on the club's connected
-Stripe account. CampsPilot never receives the camp funds or card data.
+Two charge paths, chosen per organization (payment_mode):
+- destination (billing B2, preferred): the club has an active Stripe Connect
+  Express account. Checkout Sessions are created on the PLATFORM with
+  on_behalf_of = club (club is the merchant of record),
+  transfer_data.destination = club and application_fee_amount = platform fee
+  from app/fees.py. Confirmed by the platform webhook
+  (/api/v1/payments/stripe/platform-webhook, STRIPE_PLATFORM_WEBHOOK_SECRET).
+- direct (v1.1, legacy): Checkout Sessions on the club's linked Standard
+  account, no application fee. Confirmed by the Connect webhook.
+Card data never reaches CampsPilot.
 
 Safety:
 - Off by default, independently at service and organization level.
@@ -19,14 +27,18 @@ import re
 import time
 from uuid import UUID
 
+from datetime import datetime
+from typing import Literal, Optional
+
 import stripe
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
+from psycopg2.extras import Json
 from pydantic import BaseModel, ConfigDict, Field
 
-from .. import db
+from .. import db, fees
 from ..admin_resolve import require_organization
-from ..auth_deps import AuthContext, require_platform_owner
+from ..auth_deps import AuthContext, require_org_access, require_platform_owner
 from ..config import get_settings
 from ..deps import get_tenant_context
 from ..ratelimit import SlidingWindowLimiter, trusted_client_ip
@@ -118,26 +130,53 @@ def _flag_for_review(organization_id, registration_token, reason: str) -> None:
     )
 
 
+_ORG_PAYMENT_COLUMNS = """stripe_account_id, stripe_charges_enabled, online_payment_enabled,
+    stripe_express_account_id, stripe_express_charges_enabled, stripe_express_payouts_enabled,
+    stripe_express_details_submitted, stripe_express_requirements_due, stripe_express_synced_at"""
+
+
 def _organization_payment_details(org_id):
     with db.get_cursor() as cur:
-        cur.execute(
-            """select stripe_account_id, stripe_charges_enabled, online_payment_enabled
-               from organizations where id = %s""", (org_id,)
-        )
+        cur.execute(f"select {_ORG_PAYMENT_COLUMNS} from organizations where id = %s", (org_id,))
         return cur.fetchone()
 
 
-def online_payment_available(organization_id) -> bool:
-    """Single rule for camps and trainings: service-level Stripe switches on and
-    the club's connected account is active and enabled for online payment."""
-    settings = get_settings()
-    if not (settings.stripe_checkout_enabled and settings.stripe_secret_key and settings.stripe_webhook_secret):
-        return False
-    org = _organization_payment_details(organization_id)
+def _service_ready(settings) -> bool:
+    """Legacy direct charges: secret key and Connect webhook secret."""
     return bool(
-        org and org["online_payment_enabled"] and org["stripe_charges_enabled"]
-        and org["stripe_account_id"]
+        getattr(settings, "stripe_checkout_enabled", False) and getattr(settings, "stripe_secret_key", None)
+        and getattr(settings, "stripe_webhook_secret", None)
     )
+
+
+def _express_ready(settings) -> bool:
+    """Destination charges additionally need the platform webhook, which is
+    the only place their payments are confirmed."""
+    return _service_ready(settings) and bool(getattr(settings, "stripe_platform_webhook_secret", None))
+
+
+def payment_mode(org: dict | None, express_ready: bool) -> tuple[Optional[str], Optional[str]]:
+    """("destination", express_acct) | ("direct", standard_acct) | (None, None).
+    An active Express account wins; a linked Standard account keeps working
+    until the club has switched. Service-level switches are checked by the
+    caller (_stripe_client / _service_ready)."""
+    if not org:
+        return None, None
+    express = org.get("stripe_express_account_id")
+    if express_ready and express and ACCOUNT_ID.fullmatch(express) and org.get("stripe_express_charges_enabled"):
+        return "destination", express
+    legacy = org.get("stripe_account_id")
+    if legacy and ACCOUNT_ID.fullmatch(legacy) and org.get("online_payment_enabled") and org.get("stripe_charges_enabled"):
+        return "direct", legacy
+    return None, None
+
+
+def online_payment_available(organization_id) -> bool:
+    """Single rule for camps and trainings (see payment_mode)."""
+    settings = get_settings()
+    if not _service_ready(settings):
+        return False
+    return payment_mode(_organization_payment_details(organization_id), _express_ready(settings))[0] is not None
 
 
 @router.get(
@@ -211,11 +250,12 @@ def create_checkout(
     # key (same Stripe session) and a compare-and-set write below.
     with db.get_cursor() as cur:
         cur.execute(
-            """select r.id, r.status, r.payment_status, r.stripe_checkout_session_id,
-                      o.stripe_account_id, o.stripe_charges_enabled, o.online_payment_enabled,
+            f"""select r.id, r.status, r.payment_status, r.stripe_checkout_session_id,
+                      {', '.join('o.' + c.strip() for c in _ORG_PAYMENT_COLUMNS.split(','))},
                       c.title, c.price_cents, c.currency, c.status as camp_status, c.offer_id,
-                      r.applied_price_cents, r.payment_method,
-                      r.stripe_checkout_amount_cents
+                      r.applied_price_cents, r.payment_method, r.created_at,
+                      r.stripe_checkout_amount_cents, r.stripe_checkout_account_id,
+                      r.stripe_charge_type, r.stripe_checkout_fee
                from camp_registrations r
                join organizations o on o.id = r.organization_id
                join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
@@ -234,11 +274,8 @@ def create_checkout(
         raise HTTPException(409, "Für diese Anmeldung ist keine Online-Zahlung möglich")
     if booking["camp_status"] != "published":
         raise HTTPException(409, "Dieses Camp ist nicht mehr veröffentlicht")
-    account = booking["stripe_account_id"]
-    if not (
-        account and ACCOUNT_ID.fullmatch(account)
-        and booking["stripe_charges_enabled"] and booking["online_payment_enabled"]
-    ):
+    mode, account = payment_mode(booking, _express_ready(settings))
+    if mode is None:
         raise HTTPException(503, "Der Verein hat Online-Zahlung noch nicht aktiviert")
     # Training prices (member/non-member) are decided server-side at booking time
     # and live on the registration; camps charge the camp price.
@@ -247,18 +284,33 @@ def create_checkout(
     if not isinstance(amount, int) or amount < 50 or currency != "eur":
         raise HTTPException(409, "Dieser Camp-Preis ist nicht für Stripe Checkout verfügbar")
 
+    quote = None
+    if mode == "destination":
+        # Fee valid on the booking date, computed on the amount actually charged.
+        rule = fees.effective_fee(tenant.organization_id, booking["created_at"])
+        quote = fees.fee_quote(rule, amount)
+
     existing = booking.get("stripe_checkout_session_id")
     if existing:
+        previous_mode = booking.get("stripe_charge_type") or "direct"
+        previous_account = booking.get("stripe_checkout_account_id") or (account if previous_mode == mode else None)
+        scope = {"stripe_account": previous_account} if previous_mode == "direct" else {}
         try:
-            session = _stripe_dict(client.checkout.Session.retrieve(existing, stripe_account=account))
+            session = _stripe_dict(client.checkout.Session.retrieve(existing, **scope))
             if session.get("status") == "open" and session.get("url"):
                 stored_amount = booking.get("stripe_checkout_amount_cents")
-                if stored_amount is None or stored_amount == amount:
+                stored_fee = (booking.get("stripe_checkout_fee") or {}).get("fee_cents")
+                same = (
+                    (stored_amount is None or stored_amount == amount)
+                    and previous_mode == mode and previous_account == account
+                    and (mode == "direct" or stored_fee == quote["fee_cents"])
+                )
+                if same:
                     return CheckoutURL(url=session["url"])
-                # Price changed since this session was created: never reuse it.
-                # Close it (best effort) and create a new one below.
+                # Price, fee or payment path changed since this session was
+                # created: never reuse it. Close it and create a new one below.
                 try:
-                    client.checkout.Session.expire(existing, stripe_account=account)
+                    client.checkout.Session.expire(existing, **scope)
                 except stripe.error.StripeError:
                     raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
                 session = {"status": "expired"}
@@ -275,30 +327,47 @@ def create_checkout(
     # Only public camp title is sent; never send child/parent info or medical data.
     success = f"{settings.frontend_base_url}/pilot/{tenant.slug}/zahlung?result=success"
     cancel = f"{settings.frontend_base_url}/pilot/{tenant.slug}/zahlung?result=cancel"
-    try:
-        session = _stripe_dict(client.checkout.Session.create(
-            mode="payment",
-            payment_method_types=["card"],
-            line_items=[{
-                "price_data": {
-                    "currency": currency,
-                    "unit_amount": amount,
-                    "product_data": {"name": booking["title"][:120]},
-                },
-                "quantity": 1,
-            }],
-            success_url=success,
-            cancel_url=cancel,
-            client_reference_id=str(registration_token),
-            # No application fee; SaaS subscription is billed separately.
-            metadata={**CAMPSPILOT_MARKER, "organization_id": str(tenant.organization_id), "camp_slug": camp_slug},
-            payment_intent_data={"metadata": {**CAMPSPILOT_MARKER, "organization_id": str(tenant.organization_id)}},
+    marker = {**CAMPSPILOT_MARKER, "organization_id": str(tenant.organization_id)}
+    params = dict(
+        mode="payment",
+        payment_method_types=["card"],
+        line_items=[{
+            "price_data": {
+                "currency": currency,
+                "unit_amount": amount,
+                "product_data": {"name": booking["title"][:120]},
+            },
+            "quantity": 1,
+        }],
+        success_url=success,
+        cancel_url=cancel,
+        client_reference_id=str(registration_token),
+        metadata={**marker, "camp_slug": camp_slug},
+    )
+    if mode == "destination":
+        # Platform charge: the club is merchant of record (on_behalf_of), the
+        # funds go to the club, the platform fee is withheld automatically.
+        intent_data = {"metadata": marker, "on_behalf_of": account, "transfer_data": {"destination": account}}
+        if quote["fee_cents"] > 0:
+            intent_data["application_fee_amount"] = quote["fee_cents"]
+        params.update(
+            payment_intent_data=intent_data,
+            idempotency_key=(
+                f"campspilot-dest-{registration_token}-{existing or 'first'}-{amount}-{quote['fee_cents']}-{account}"
+            ),
+        )
+    else:
+        params.update(
+            # No application fee on legacy direct charges.
+            payment_intent_data={"metadata": marker},
             stripe_account=account,
             # Same booking, same previous session, same price -> same Stripe session.
-        idempotency_key=f"campspilot-{registration_token}-{existing or 'first'}-{amount}",
-        ))
+            idempotency_key=f"campspilot-{registration_token}-{existing or 'first'}-{amount}",
+        )
+    try:
+        session = _stripe_dict(client.checkout.Session.create(**params))
     except stripe.error.StripeError:
-        logger.warning("Checkout creation failed (organization_slug=%s)", tenant.slug)
+        logger.warning("Checkout creation failed (organization_slug=%s, mode=%s)", tenant.slug, mode)
         raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
 
     if not session.get("id") or not session.get("url"):
@@ -308,14 +377,15 @@ def create_checkout(
         cur.execute(
             """update camp_registrations
                set stripe_checkout_session_id = %s, stripe_checkout_amount_cents = %s,
-                   stripe_checkout_currency = %s, stripe_checkout_account_id = %s
+                   stripe_checkout_currency = %s, stripe_checkout_account_id = %s,
+                   stripe_charge_type = %s, stripe_checkout_fee = %s
                where id = %s and organization_id = %s
                      and payment_status = 'open' and status in ('registered', 'confirmed')
                      and (stripe_checkout_session_id is not distinct from %s
                           or stripe_checkout_session_id = %s)
                returning id""",
-            (session["id"], amount, currency, account, booking["id"], tenant.organization_id,
-             existing, session["id"]),
+            (session["id"], amount, currency, account, mode, Json(quote) if quote else None,
+             booking["id"], tenant.organization_id, existing, session["id"]),
         )
         if cur.fetchone() is None:
             raise HTTPException(409, "Die Anmeldung wurde inzwischen geändert. Bitte laden Sie die Seite neu.")
@@ -327,6 +397,8 @@ async def stripe_connect_webhook(
     request: Request,
     stripe_signature: str | None = Header(None),
 ):
+    """Connect endpoint: events on connected accounts (legacy direct-charge
+    payments, account.updated for Express accounts)."""
     settings = get_settings()
     if not settings.stripe_checkout_enabled or not settings.stripe_webhook_secret:
         raise HTTPException(503, "Stripe-Webhooks nicht konfiguriert")
@@ -336,21 +408,24 @@ async def stripe_connect_webhook(
     return await run_in_threadpool(_handle_webhook, body, stripe_signature or "")
 
 
-def _handle_webhook(body: bytes, signature: str) -> dict:
-    settings = get_settings()
-    client = _stripe_client()
+def _verified_event(client, body: bytes, signature: str, secret: str) -> dict:
     try:
-        event = client.Webhook.construct_event(body, signature, settings.stripe_webhook_secret)
+        event = client.Webhook.construct_event(body, signature, secret)
     except (ValueError, stripe.error.SignatureVerificationError):
         raise HTTPException(400, "Ungültige Stripe-Signatur") from None
-
     # stripe-python returns an Event (StripeObject), not a plain dict.
     # Convert after signature verification so all subsequent .get calls work.
     event = _stripe_dict(event)
-
-    expected_live = settings.app_env.strip().lower() == "production"
+    expected_live = get_settings().app_env.strip().lower() == "production"
     if event.get("livemode") is not expected_live:
         raise HTTPException(400, "Falscher Stripe-Modus")
+    return event
+
+
+def _handle_webhook(body: bytes, signature: str) -> dict:
+    settings = get_settings()
+    client = _stripe_client()
+    event = _verified_event(client, body, signature, settings.stripe_webhook_secret)
     account = event.get("account")
     if not account or not ACCOUNT_ID.fullmatch(account):
         # Direct charges must originate on a connected account.
@@ -358,6 +433,10 @@ def _handle_webhook(body: bytes, signature: str) -> dict:
 
     event_type = event["type"]
     obj = _stripe_dict(_stripe_dict(event["data"])["object"])
+    if event_type == "account.updated":
+        # Express onboarding progress; Standard accounts are not tracked here.
+        store_express_status(account, obj, event.get("created"))
+        return {"received": True}
     if event_type in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
         if not _is_campspilot(obj):
             # The club's own payments on the same account: not ours, no retry.
@@ -371,12 +450,47 @@ def _handle_webhook(body: bytes, signature: str) -> dict:
     return {"received": True}
 
 
-def _fully_refunded(client, payment_intent: str, account: str) -> bool:
+@router.post("/api/v1/payments/stripe/platform-webhook")
+async def stripe_platform_webhook(
+    request: Request,
+    stripe_signature: str | None = Header(None),
+):
+    """Platform endpoint: destination-charge Checkout Sessions live on the
+    platform account. Own signing secret (STRIPE_PLATFORM_WEBHOOK_SECRET)."""
+    if not _express_ready(get_settings()):
+        raise HTTPException(503, "Stripe-Webhooks nicht konfiguriert")
+    body = await request.body()
+    return await run_in_threadpool(_handle_platform_webhook, body, stripe_signature or "")
+
+
+def _handle_platform_webhook(body: bytes, signature: str) -> dict:
+    settings = get_settings()
+    client = _stripe_client()
+    event = _verified_event(client, body, signature, settings.stripe_platform_webhook_secret)
+    if event.get("account"):
+        # Connected-account events belong to the Connect endpoint.
+        raise HTTPException(400, "Ereignis eines verbundenen Kontos am Plattform-Endpunkt")
+    event_type = event["type"]
+    obj = _stripe_dict(_stripe_dict(event["data"])["object"])
+    if event_type in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
+        if not _is_campspilot(obj):
+            return {"received": True, "ignored": True}
+        if obj.get("payment_status") != "paid":
+            return {"received": True, "settled": False}
+        return _settle_checkout(client, obj, None, event.get("created"), mode="destination")
+    if event_type == "charge.refunded":
+        _record_refund(obj, None, mode="destination")
+    return {"received": True}
+
+
+def _fully_refunded(client, payment_intent: str, account: str | None) -> bool:
     """Refunds can arrive before the completed event was processed (retries,
-    outages). Ask Stripe for the current state instead of trusting the order."""
+    outages). Ask Stripe for the current state instead of trusting the order.
+    account=None: platform charge (destination)."""
+    scope = {"stripe_account": account} if account else {}
     try:
         intent = _stripe_dict(client.PaymentIntent.retrieve(
-            payment_intent, expand=["latest_charge"], stripe_account=account,
+            payment_intent, expand=["latest_charge"], **scope,
         ))
     except stripe.error.StripeError:
         raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
@@ -390,8 +504,29 @@ def _fully_refunded(client, payment_intent: str, account: str) -> bool:
 # commit race any more (account changed, data removed): flag it, stop retries.
 UNMATCHED_RETRY_SECONDS = 6 * 3600
 
+_SETTLE_DIRECT = """select r.id, r.organization_id, r.registration_token, r.payment_status, r.status,
+                      r.stripe_checkout_amount_cents, r.stripe_checkout_currency,
+                      r.stripe_payment_intent_id
+               from camp_registrations r
+               join organizations o on o.id = r.organization_id
+               where r.stripe_checkout_session_id = %s
+                     and r.stripe_checkout_account_id = %s
+                     and o.stripe_account_id = %s
+                     and r.stripe_charge_type is distinct from 'destination'
+               for update of r"""
 
-def _settle_checkout(client, obj: dict, account: str, created=None) -> dict:
+_SETTLE_DESTINATION = """select r.id, r.organization_id, r.registration_token, r.payment_status, r.status,
+                      r.stripe_checkout_amount_cents, r.stripe_checkout_currency,
+                      r.stripe_payment_intent_id, r.stripe_checkout_fee
+               from camp_registrations r
+               join organizations o on o.id = r.organization_id
+               where r.stripe_checkout_session_id = %s
+                     and r.stripe_charge_type = 'destination'
+                     and r.stripe_checkout_account_id = o.stripe_express_account_id
+               for update of r"""
+
+
+def _settle_checkout(client, obj: dict, account: str | None, created=None, mode: str = "direct") -> dict:
     session_id = obj.get("id")
     paid_amount = obj.get("amount_total")
     paid_currency = (obj.get("currency") or "").lower()
@@ -401,21 +536,13 @@ def _settle_checkout(client, obj: dict, account: str, created=None) -> dict:
     if not isinstance(payment_intent, str) or not PAYMENT_INTENT_ID.fullmatch(payment_intent):
         raise HTTPException(400, "Ungültiger Stripe-PaymentIntent")
     # Outside the row lock: a Stripe call must never hold a DB lock.
-    refunded = _fully_refunded(client, payment_intent, account)
+    refunded = _fully_refunded(client, payment_intent, account if mode == "direct" else None)
     review = None
     with db.get_cursor() as cur:
-        cur.execute(
-            """select r.id, r.organization_id, r.registration_token, r.payment_status, r.status,
-                      r.stripe_checkout_amount_cents, r.stripe_checkout_currency,
-                      r.stripe_payment_intent_id
-               from camp_registrations r
-               join organizations o on o.id = r.organization_id
-               where r.stripe_checkout_session_id = %s
-                     and r.stripe_checkout_account_id = %s
-                     and o.stripe_account_id = %s
-               for update of r""",
-            (session_id, account, account),
-        )
+        if mode == "destination":
+            cur.execute(_SETTLE_DESTINATION, (session_id,))
+        else:
+            cur.execute(_SETTLE_DIRECT, (session_id, account, account))
         row = cur.fetchone()
         if row is None:
             if isinstance(created, int) and time.time() - created > UNMATCHED_RETRY_SECONDS:
@@ -441,13 +568,27 @@ def _settle_checkout(client, obj: dict, account: str, created=None) -> dict:
                    where id = %s and payment_status = 'open'""",
                 ("refunded" if refunded else "paid", payment_intent, row["id"]),
             )
+            _snapshot_settled(cur, row, mode)
     if review:
         _flag_for_review(row["organization_id"] if row else None, row["registration_token"] if row else None, review)
         return {"received": True, "settled": False}
     return {"received": True, "settled": True}
 
 
-def _record_refund(obj: dict, account: str) -> None:
+def _snapshot_settled(cur, row: dict, mode: str) -> None:
+    """Freeze the platform fee in the same transaction as the paid state.
+    Destination: exactly the fee given to Stripe at checkout (withheld).
+    Direct: the fee owed, not withheld (legacy accounts)."""
+    quote = row.get("stripe_checkout_fee") if mode == "destination" else None
+    if isinstance(quote, dict) and isinstance(quote.get("fee_cents"), int):
+        fees.write_snapshot(cur, row["id"], row["organization_id"], quote, "application_fee")
+        return
+    if mode == "destination":
+        logger.error("Destination payment without stored fee quote; snapshot computed instead")
+    fees.snapshot_paid_registration(cur, row["id"], row["organization_id"])
+
+
+def _record_refund(obj: dict, account: str | None, mode: str = "direct") -> None:
     intent = obj.get("payment_intent")
     # Do not mark partially refunded payments as fully refunded.
     if not (
@@ -459,6 +600,15 @@ def _record_refund(obj: dict, account: str) -> None:
     # No matching row: either not ours, or the payment is not settled yet;
     # _settle_checkout then reads the refund from Stripe itself.
     with db.get_cursor() as cur:
+        if mode == "destination":
+            cur.execute(
+                """update camp_registrations r set payment_status = 'refunded'
+                   where r.stripe_charge_type = 'destination'
+                     and r.stripe_payment_intent_id = %s
+                     and r.payment_status = 'paid'""",
+                (intent,),
+            )
+            return
         cur.execute(
             """update camp_registrations r set payment_status = 'refunded'
                from organizations o
@@ -466,7 +616,8 @@ def _record_refund(obj: dict, account: str) -> None:
                  and o.stripe_account_id = %s
                  and r.stripe_checkout_account_id = %s
                  and r.stripe_payment_intent_id = %s
-                 and r.payment_status = 'paid'""",
+                 and r.payment_status = 'paid'
+                 and r.stripe_charge_type is distinct from 'destination'""",
             (account, account, intent),
         )
 
@@ -481,7 +632,8 @@ def expire_open_checkout(organization_id, registration_token) -> None:
     try:
         with db.get_cursor() as cur:
             cur.execute(
-                """select stripe_checkout_session_id, stripe_checkout_account_id, payment_status, status
+                """select stripe_checkout_session_id, stripe_checkout_account_id, payment_status, status,
+                          stripe_charge_type
                    from camp_registrations
                    where organization_id = %s and registration_token = %s""",
                 (organization_id, registration_token),
@@ -492,12 +644,274 @@ def expire_open_checkout(organization_id, registration_token) -> None:
         if row["payment_status"] == "open" and row["status"] in ("registered", "confirmed"):
             return  # still payable: keep the session
         client = _stripe_client()
-        session = _stripe_dict(client.checkout.Session.retrieve(
-            row["stripe_checkout_session_id"], stripe_account=row["stripe_checkout_account_id"],
-        ))
+        # Destination sessions live on the platform account.
+        scope = {} if row.get("stripe_charge_type") == "destination" else {
+            "stripe_account": row["stripe_checkout_account_id"]}
+        session = _stripe_dict(client.checkout.Session.retrieve(row["stripe_checkout_session_id"], **scope))
         if session.get("status") == "open":
-            client.checkout.Session.expire(
-                row["stripe_checkout_session_id"], stripe_account=row["stripe_checkout_account_id"],
-            )
+            client.checkout.Session.expire(row["stripe_checkout_session_id"], **scope)
     except Exception:  # noqa: BLE001 - best effort, the webhook flags late payments
         logger.warning("Could not expire open Stripe checkout")
+
+
+# ---------------------------------------------------------------------------
+# Billing B2: Stripe Connect Express onboarding (club admin) and refunds
+# ---------------------------------------------------------------------------
+
+class ExpressStatus(BaseModel):
+    """What the club admin sees in Einstellungen → Zahlungen. No account ids."""
+
+    state: Literal["not_set_up", "incomplete", "active"]
+    charges_enabled: bool
+    payouts_enabled: bool
+    details_submitted: bool
+    requirements_due: int
+    synced_at: Optional[datetime] = None
+    legacy_account_linked: bool
+    legacy_active: bool
+    online_payment_mode: Optional[Literal["destination", "direct"]] = None
+    # Platform side configured for Express in this environment.
+    service_ready: bool
+
+
+class OnboardingRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    # Only used when the account is created: e.V. → non_profit, GmbH/UG → company.
+    business_type: Literal["company", "non_profit"] = "non_profit"
+
+
+class OnboardingLink(BaseModel):
+    url: str
+
+
+class RefundRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    # None = full refund. Partial refunds return the platform fee proportionally.
+    amount_cents: Optional[int] = Field(default=None, ge=1, le=10_000_000)
+
+
+class RefundResult(BaseModel):
+    status: str
+    amount_cents: int
+
+
+def _express_status(org: dict, settings) -> ExpressStatus:
+    has_express = bool(org.get("stripe_express_account_id"))
+    if not has_express:
+        state = "not_set_up"
+    elif org.get("stripe_express_charges_enabled") and org.get("stripe_express_details_submitted"):
+        state = "active"
+    else:
+        state = "incomplete"
+    mode, _ = payment_mode(org, _express_ready(settings)) if _service_ready(settings) else (None, None)
+    return ExpressStatus(
+        state=state,
+        charges_enabled=bool(org.get("stripe_express_charges_enabled")),
+        payouts_enabled=bool(org.get("stripe_express_payouts_enabled")),
+        details_submitted=bool(org.get("stripe_express_details_submitted")),
+        requirements_due=int(org.get("stripe_express_requirements_due") or 0),
+        synced_at=org.get("stripe_express_synced_at"),
+        legacy_account_linked=bool(org.get("stripe_account_id")),
+        legacy_active=bool(org.get("stripe_account_id") and org.get("stripe_charges_enabled") and org.get("online_payment_enabled")),
+        online_payment_mode=mode,
+        service_ready=_express_ready(settings),
+    )
+
+
+def _account_values(account: dict) -> tuple[bool, bool, bool, int]:
+    requirements = account.get("requirements") or {}
+    if not isinstance(requirements, dict):
+        requirements = _stripe_dict(requirements)
+    due = set(requirements.get("currently_due") or []) | set(requirements.get("past_due") or [])
+    return (
+        bool(account.get("charges_enabled")), bool(account.get("payouts_enabled")),
+        bool(account.get("details_submitted")), len(due),
+    )
+
+
+def store_express_status(account_id: str, account: dict, event_created: int | None = None) -> bool:
+    """Write the Express account state. Webhook events older than the last
+    stored state are skipped (Stripe does not guarantee event order)."""
+    charges, payouts, details, due = _account_values(account)
+    created = event_created if isinstance(event_created, int) else None
+    with db.get_cursor() as cur:
+        cur.execute(
+            """update organizations
+               set stripe_express_charges_enabled = %s, stripe_express_payouts_enabled = %s,
+                   stripe_express_details_submitted = %s, stripe_express_requirements_due = %s,
+                   stripe_express_synced_at = coalesce(to_timestamp(%s::bigint), now())
+               where stripe_express_account_id = %s
+                 and (%s::bigint is null or stripe_express_synced_at is null
+                      or stripe_express_synced_at <= to_timestamp(%s::bigint))
+               returning id""",
+            (charges, payouts, details, due, created, account_id, created, created),
+        )
+        return cur.fetchone() is not None
+
+
+def _payment_org(organization_id) -> dict:
+    org = _organization_payment_details(organization_id)
+    if org is None:
+        raise HTTPException(404, "Organization not found")
+    return org
+
+
+@router.get("/admin/organizations/{organization_slug}/payments/stripe", response_model=ExpressStatus)
+def get_express_status(organization_slug: str, auth: AuthContext = Depends(require_org_access)) -> ExpressStatus:
+    del auth
+    organization = require_organization(organization_slug)
+    return _express_status(_payment_org(organization["id"]), get_settings())
+
+
+def _require_express_service():
+    settings = get_settings()
+    if not _express_ready(settings):
+        raise HTTPException(503, "Online-Zahlung ist in dieser Umgebung noch nicht eingerichtet")
+    if not settings.frontend_base_is_usable():
+        raise HTTPException(503, "FRONTEND_BASE_URL fehlt")
+    return settings
+
+
+@router.post("/admin/organizations/{organization_slug}/payments/stripe/onboarding", response_model=OnboardingLink)
+def start_express_onboarding(
+    organization_slug: str,
+    body: OnboardingRequest | None = None,
+    auth: AuthContext = Depends(require_org_access),
+) -> OnboardingLink:
+    """Create the club's Express account once, then hand out a fresh Stripe
+    onboarding link (links are single-use and expire after minutes)."""
+    organization = require_organization(organization_slug)
+    settings = _require_express_service()
+    client = _stripe_client()
+    business_type = (body or OnboardingRequest()).business_type
+    org = _payment_org(organization["id"])
+    account_id = org.get("stripe_express_account_id")
+    created = False
+    if not account_id:
+        try:
+            account = _stripe_dict(client.Account.create(
+                type="express",
+                country="DE",
+                business_type=business_type,
+                capabilities={"card_payments": {"requested": True}, "transfers": {"requested": True}},
+                metadata={**CAMPSPILOT_MARKER, "organization_id": str(organization["id"])},
+                # Two clicks (or a retry after a lost response) get the same account.
+                idempotency_key=f"campspilot-express-{organization['id']}",
+            ))
+        except stripe.error.StripeError:
+            logger.warning("Express account creation failed (organization_slug=%s)", organization_slug)
+            raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
+        new_id = account.get("id")
+        if not isinstance(new_id, str) or not ACCOUNT_ID.fullmatch(new_id):
+            raise HTTPException(503, "Zahlungsanbieter hat kein Konto geliefert")
+        with db.get_cursor() as cur:
+            cur.execute(
+                """update organizations set stripe_express_account_id = %s, stripe_express_business_type = %s
+                   where id = %s and stripe_express_account_id is null
+                   returning stripe_express_account_id""",
+                (new_id, business_type, organization["id"]),
+            )
+            stored = cur.fetchone()
+        if stored is None:
+            account_id = _payment_org(organization["id"]).get("stripe_express_account_id")
+            if not account_id:
+                raise HTTPException(409, "Bitte die Seite neu laden")
+        else:
+            account_id, created = new_id, True
+            store_express_status(account_id, account)
+    base = f"{settings.frontend_base_url}/pilot/{organization_slug}/konfiguration"
+    try:
+        link = _stripe_dict(client.AccountLink.create(
+            account=account_id,
+            refresh_url=f"{base}?stripe=refresh#zahlungen",
+            return_url=f"{base}?stripe=return#zahlungen",
+            type="account_onboarding",
+        ))
+    except stripe.error.StripeError:
+        logger.warning("Account link creation failed (organization_slug=%s)", organization_slug)
+        raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
+    url = link.get("url")
+    if not isinstance(url, str) or not url.startswith("https://connect.stripe.com/"):
+        raise HTTPException(503, "Zahlungsanbieter hat keinen Link geliefert")
+    platform_roles.write_audit_log(
+        actor_user_id=auth.user_id, actor_email=auth.email, action="stripe.express_onboarding_started",
+        organization_id=str(organization["id"]), target_type="organization", target_id=organization_slug,
+        metadata={"account_created": created},
+    )
+    return OnboardingLink(url=url)
+
+
+@router.post("/admin/organizations/{organization_slug}/payments/stripe/sync", response_model=ExpressStatus)
+def sync_express_status(organization_slug: str, auth: AuthContext = Depends(require_org_access)) -> ExpressStatus:
+    """"Status prüfen": read the Express account from Stripe now."""
+    del auth
+    organization = require_organization(organization_slug)
+    settings = _require_express_service()
+    org = _payment_org(organization["id"])
+    account_id = org.get("stripe_express_account_id")
+    if account_id:
+        client = _stripe_client()
+        try:
+            account = _stripe_dict(client.Account.retrieve(account_id))
+        except stripe.error.StripeError:
+            raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
+        store_express_status(account_id, account)
+        org = _payment_org(organization["id"])
+    return _express_status(org, settings)
+
+
+@router.post("/admin/organizations/{organization_slug}/registrations/{registration_token}/refund", response_model=RefundResult)
+def refund_destination_payment(
+    organization_slug: str,
+    registration_token: UUID,
+    body: RefundRequest | None = None,
+    auth: AuthContext = Depends(require_org_access),
+) -> RefundResult:
+    """Refund an online payment made through the platform (destination
+    charge). The transfer to the club is reversed and the platform fee is
+    returned proportionally. The paid → refunded status change is booked by
+    the platform webhook (charge.refunded, full refunds only)."""
+    organization = require_organization(organization_slug)
+    with db.get_cursor() as cur:
+        cur.execute(
+            """select payment_status, stripe_payment_intent_id, stripe_charge_type,
+                      stripe_checkout_amount_cents
+               from camp_registrations
+               where organization_id = %s and registration_token = %s""",
+            (organization["id"], registration_token),
+        )
+        row = cur.fetchone()
+    if row is None:
+        raise HTTPException(404, "Registration not found")
+    if row["stripe_charge_type"] != "destination" or not row["stripe_payment_intent_id"]:
+        raise HTTPException(409, "Diese Zahlung lief nicht über CampsPilot. Bitte im eigenen Stripe-Konto erstatten.")
+    if row["payment_status"] != "paid":
+        raise HTTPException(409, "Nur bezahlte Online-Zahlungen können erstattet werden")
+    amount = (body or RefundRequest()).amount_cents
+    paid = row["stripe_checkout_amount_cents"] or 0
+    if amount is not None and amount > paid:
+        raise HTTPException(422, "Betrag höher als die Zahlung")
+    _require_express_service()
+    client = _stripe_client()
+    params = dict(
+        payment_intent=row["stripe_payment_intent_id"],
+        refund_application_fee=True,
+        reverse_transfer=True,
+        metadata={**CAMPSPILOT_MARKER, "organization_id": str(organization["id"])},
+        idempotency_key=f"campspilot-refund-{registration_token}-{amount or 'full'}",
+    )
+    if amount is not None:
+        params["amount"] = amount
+    try:
+        refund = _stripe_dict(client.Refund.create(**params))
+    except stripe.error.InvalidRequestError:
+        raise HTTPException(409, "Stripe hat die Erstattung abgelehnt (z. B. schon erstattet)") from None
+    except stripe.error.StripeError:
+        raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
+    refunded = refund.get("amount") if isinstance(refund.get("amount"), int) else (amount or paid)
+    platform_roles.write_audit_log(
+        actor_user_id=auth.user_id, actor_email=auth.email, action="stripe.refund_requested",
+        organization_id=str(organization["id"]), target_type="registration", target_id=str(registration_token),
+        metadata={"amount_cents": refunded, "full": amount is None or amount == paid},
+    )
+    return RefundResult(status=str(refund.get("status") or "pending"), amount_cents=refunded)

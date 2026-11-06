@@ -191,6 +191,8 @@ def test_signed_webhook_credits_only_verified_amount_and_account(monkeypatch):
     ))
     monkeypatch.setattr(payments, "_stripe_client", lambda: stripe)
     monkeypatch.setattr(payments, "_fully_refunded", lambda *_: False)
+    # Fee snapshot (billing B1) is covered against real Postgres in test_billing_*.
+    monkeypatch.setattr(payments.fees, "snapshot_paid_registration", lambda *_: None)
     flagged = []
     monkeypatch.setattr(payments, "_flag_for_review", lambda org, token, reason: flagged.append(reason))
     cursor = _Cursor({
@@ -309,6 +311,7 @@ def webhook_env(monkeypatch):
         app_env="staging", stripe_checkout_enabled=True, stripe_webhook_secret=SECRET,
     ))
     monkeypatch.setattr(payments, "_stripe_client", lambda: stripe)
+    monkeypatch.setattr(payments.fees, "snapshot_paid_registration", lambda *_: None)
     flagged = []
     monkeypatch.setattr(payments, "_flag_for_review", lambda org, token, reason: flagged.append(reason))
     cursor = _Cursor({

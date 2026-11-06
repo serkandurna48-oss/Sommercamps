@@ -24,9 +24,15 @@ jede Rechnung vollständig ist.]
 
 Die Anschrift wird nicht für Werbung, Post oder andere Zwecke genutzt. Sie steht nicht im
 E-Mail-Text, aber in der Rechnung, die als PDF-Anhang über den E-Mail-Dienstleister [Brevo]
-an Sie versendet wird. [Abschnitt "Weitergabe an Dritte" entsprechend ergänzen: die öffentliche
-Seite sagt dort bisher, Brevo erhalte keine Namen; seit den Elternrechnungen (B3) enthält der
-PDF-Anhang Name und künftig Anschrift. Rechtlich prüfen lassen.]
+an Sie versendet wird.
+
+## Weitergabe an Dritte (Ergänzung zum Abschnitt E-Mail-Dienstleister)
+
+[Brevo] versendet die Bestätigungsmail (E-Mail-Adresse, Camp, Termin, Zahlungsdetails, keine
+Namen) und bei kostenpflichtigen Buchungen die Rechnung bzw. Stornorechnung als PDF-Anhang. Der
+Anhang enthält Name und Rechnungsanschrift der Eltern sowie den Namen des Kindes; die Rechnungsmail
+spricht die Eltern mit Namen an. Keine Geburtsdaten oder Gesundheitsangaben.
+[Auftragsverarbeitung und Text rechtlich prüfen lassen.]
 
 ## Rechtsgrundlage
 
@@ -41,12 +47,18 @@ PDF-Anhang Name und künftig Anschrift. Rechtlich prüfen lassen.]
 Die Anschrift ist Teil der Rechnung und wird wie Rechnungen aufbewahrt: grundsätzlich acht Jahre
 (§ 147 Abs. 1 Nr. 4, Abs. 3 AO; § 14b UStG), gerechnet ab dem Ende des Kalenderjahres, in dem die
 Rechnung erstellt wurde. Die in der Rechnung festgeschriebene Anschrift wird nicht nachträglich
-verändert. Die Anschrift an der Buchung selbst wird gelöscht, sobald sie nicht mehr für die
-Rechnungsstellung gebraucht wird [Frist/Verfahren vom Verein festlegen; derzeit manuelle Löschung].
+verändert. An der Buchung selbst gelten die Fristen für Anmeldedaten. Löscht der Verein die
+Teilnehmerübersicht (Spielerakte) eines Kindes, wird die Anschrift an den stornierten Buchungen
+sofort entfernt; die Rechnung behält sie. Eine automatische Löschung nach Frist gibt es derzeit
+nicht [Frist/Verfahren vom Verein festlegen].
 
 [Fristen rechtlich prüfen lassen.]
 
 ## Technische Hinweise (für den Verein, nicht für die Erklärung)
+
+- Übergangsfrist beim Rollout: `BILLING_ADDRESS_LEGACY_UNTIL` (Backend). Bis zu diesem Datum werden
+  Buchungen aus alten, noch offenen Formularen ohne Anschrift angenommen (Rechnung dann nur mit
+  Name und E-Mail); danach ist die Anschrift immer Pflicht.
 
 - Spalten `camp_registrations.parent_street`, `parent_postal_code`, `parent_city`; nur das Backend
   liest sie (kein Spaltenrecht für `authenticated`).

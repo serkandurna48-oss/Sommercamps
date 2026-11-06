@@ -92,8 +92,9 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
             <p>
               Die Rechnungsanschrift wird nur für die Rechnungsstellung verwendet und steht auf der
               Rechnung. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertrag) sowie Art. 6 Abs. 1
-              lit. c DSGVO (gesetzliche Pflicht zur Rechnungsstellung und Aufbewahrung). Sie wird wie
-              Rechnungen aufbewahrt (siehe Speicherdauer).
+              lit. c DSGVO (gesetzliche Pflicht zur Rechnungsstellung und Aufbewahrung). Auf der
+              Rechnung wird sie wie Rechnungen aufbewahrt; an der Anmeldung selbst gelten die Fristen
+              für Anmeldedaten (siehe Speicherdauer).
             </p>
           </section>
 
@@ -141,10 +142,12 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
             <ul>
               <li>
                 <strong>Brevo</strong> (Sendinblue SAS, 55 rue d&apos;Amsterdam, 75008 Paris,
-                Frankreich) – für den Versand der Bestätigungsmail. Übermittelt werden die
+                Frankreich) – für den E-Mail-Versand. Für die Bestätigungsmail werden die
                 E-Mail-Adresse der Eltern sowie Camp, Termin, Zahlungsdetails und Kontaktdaten des
-                Anbieters. Keine Namen von Eltern oder Kindern, keine Geburtsdaten, Allergien oder
-                medizinischen Hinweise.
+                Anbieters übermittelt, keine Namen von Eltern oder Kindern. Bei kostenpflichtigen
+                Buchungen wird die Rechnung (und gegebenenfalls eine Stornorechnung) als PDF-Anhang
+                versendet; sie enthält Name und Rechnungsanschrift der Eltern sowie den Namen des
+                Kindes. Keine Geburtsdaten, Allergien oder medizinischen Hinweise.
               </li>
             </ul>
             <p>

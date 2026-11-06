@@ -54,7 +54,6 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
                     label: de.dashboard.spotsLabel,
                     value: `${nextCamp.registeredCount}/${nextCamp.camp.capacity}`,
                     bar: nextCamp.camp.capacity > 0 ? nextCamp.registeredCount / nextCamp.camp.capacity : 0,
-                    barColor: brand.brand,
                   },
                   { label: de.dashboard.openPaymentsLabel, value: String(nextCamp.openPaymentsCount), numericValue: nextCamp.openPaymentsCount },
                   { label: de.dashboard.waitlistLabel, value: String(nextCamp.waitlistCount), numericValue: nextCamp.waitlistCount },
@@ -71,7 +70,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
 
         {showCard ? (
           <section className="mb-12">
-            <OnboardingCard orgSlug={orgSlug} org={org} camps={camps} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+            <OnboardingCard orgSlug={orgSlug} org={org} camps={camps} />
           </section>
         ) : (
           <section className="mb-12">
@@ -79,32 +78,36 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
             {missingFields.length > 0 && (
               <div
                 className="cp-body mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[var(--cp-r-card)] border px-4 py-3"
-                style={{ borderColor: 'var(--cp-pending-line)', background: 'var(--cp-surface)' }}
+                style={{ borderColor: 'var(--cp-pending-line)', background: 'var(--cp-pending-bg)' }}
               >
-                <span aria-hidden style={{ color: 'var(--cp-pending)' }}>!</span>
+                <span
+                  aria-hidden
+                  className="cp-label inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border"
+                  style={{ color: 'var(--cp-pending)', borderColor: 'var(--cp-pending-line)', background: 'var(--cp-surface)' }}
+                >!</span>
                 <span>{de.onboarding.missingFieldsHint(missingFields)}</span>
                 <Link href={`/pilot/${orgSlug}/konfiguration`} className="cp-focus min-h-[44px] inline-flex items-center underline">{de.onboarding.missingFieldsAction}</Link>
               </div>
             )}
             {firstTask ? (
               <div className="flex flex-col gap-4">
-                <TaskCard task={firstTask} orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+                <TaskCard task={firstTask} orgSlug={orgSlug} />
                 {restTasks.length > 0 && (
                   <div className="flex flex-col gap-4">
                     {restTasks.map(t => (
-                      <TaskRow key={t.id} task={t} orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+                      <TaskRow key={t.id} task={t} orgSlug={orgSlug} asCard />
                     ))}
                   </div>
                 )}
               </div>
             ) : showLaunchSuccess ? (
-              <LaunchSuccessCard orgSlug={orgSlug} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+              <LaunchSuccessCard orgSlug={orgSlug} />
             ) : (
               <div className="cp-card" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
                 <SuccessNote>{de.onboarding.liveLabel}</SuccessNote>
                 <p className="cp-body mt-2 break-all" style={{ color: 'var(--cp-ink-2)' }}>/pilot/{orgSlug}</p>
                 <div className="mt-4">
-                  <ButtonLink href={`/pilot/${orgSlug}`} variant="primary" brandStrong={brand.brandStrong} brandOn={brand.brandOn}>
+                  <ButtonLink href={`/pilot/${orgSlug}`} variant="primary">
                     {de.onboarding.liveOpen}
                   </ButtonLink>
                 </div>
@@ -113,10 +116,10 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
           </section>
         )}
 
-        <DashboardCampsCard camps={campsWithStats} orgSlug={orgSlug} brandColor={brand.brand} action={
+        <DashboardCampsCard camps={campsWithStats} orgSlug={orgSlug} action={
             <ButtonLink
               href={`/pilot/${orgSlug}/camps/new`}
-              variant={showCard ? 'secondary' : 'primary'} brandStrong={brand.brandStrong} brandOn={brand.brandOn}
+              variant="secondary"
             >
               + Camp anlegen
             </ButtonLink>

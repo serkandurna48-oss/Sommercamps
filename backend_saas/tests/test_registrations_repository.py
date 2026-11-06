@@ -232,6 +232,7 @@ def test_create_registration_locks_camp_row_for_update(monkeypatch):
             {"capacity": 5, "status": "published"},  # locked camp row
             None,  # duplicate-child check: none found
             {"active_count": 0},  # count query
+            {"id": uuid4()},  # player find-or-create (insert ... returning id)
             {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},
         ]
     )
@@ -256,6 +257,7 @@ def test_create_registration_checks_for_duplicate_child_before_counting_capacity
             {"capacity": 5, "status": "published"},
             None,
             {"active_count": 0},
+            {"id": uuid4()},  # player find-or-create (insert ... returning id)
             {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},
         ]
     )
@@ -295,6 +297,7 @@ def test_create_registration_counts_only_capacity_counting_statuses_for_this_cam
             {"capacity": 5, "status": "published"},
             None,
             {"active_count": 0},
+            {"id": uuid4()},  # player find-or-create (insert ... returning id)
             {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},
         ]
     )
@@ -317,11 +320,13 @@ def test_create_registration_inserts_registered_when_capacity_available(monkeypa
     org_id = uuid4()
     camp = _target(org_id, capacity=2)
     token = uuid4()
+    player_id = uuid4()
     fake_cursor = _FakeCursor(
         results=[{"site_published": True, "plan_status": "active"},
             {"capacity": 2, "status": "published"},
             None,
             {"active_count": 1},  # 1 of 2 spots taken
+            {"id": player_id},  # player find-or-create (insert ... returning id)
             {"registration_token": token, "status": "registered", "payment_status": "open"},
         ]
     )
@@ -330,13 +335,14 @@ def test_create_registration_inserts_registered_when_capacity_available(monkeypa
     result = registrations.create_registration(_tenant(org_id), camp, _registration_data())
 
     assert result["registration_token"] == token
-    insert_query, insert_params = fake_cursor.executed[4]
+    insert_query, insert_params = fake_cursor.executed[5]
     assert insert_params[0] == org_id  # organization_id from tenant
     assert insert_params[1] == camp.id  # camp_id from server-resolved camp
     assert insert_params[2] == "registered"  # capacity was available
     assert "insert into camp_registrations" in insert_query.lower()
     assert "health_data_consent" in insert_query
     assert insert_params[14] is False  # old clients without health data
+    assert insert_params[-1] == player_id  # linked to the found-or-created player
     assert insert_query.count("%s") == len(insert_params)
 
 
@@ -354,6 +360,7 @@ def test_create_registration_inserts_waitlist_when_capacity_reached(monkeypatch)
             {"capacity": 2, "status": "published"},
             None,
             {"active_count": 2},  # already at capacity
+            {"id": uuid4()},  # player find-or-create (insert ... returning id)
             {"registration_token": token, "status": "waitlist", "payment_status": "open"},
         ]
     )
@@ -362,7 +369,7 @@ def test_create_registration_inserts_waitlist_when_capacity_reached(monkeypatch)
     result = registrations.create_registration(_tenant(org_id), camp, _registration_data())
 
     assert result["status"] == "waitlist"
-    insert_query, insert_params = fake_cursor.executed[4]
+    insert_query, insert_params = fake_cursor.executed[5]
     assert insert_params[2] == "waitlist"
     assert "insert into camp_registrations" in insert_query.lower()
 
@@ -412,6 +419,7 @@ def test_create_registration_ignores_any_id_like_data_on_the_request_object(monk
             {"capacity": 5, "status": "published"},
             None,
             {"active_count": 0},
+            {"id": uuid4()},  # player find-or-create (insert ... returning id)
             {"registration_token": uuid4(), "status": "registered", "payment_status": "open"},
         ]
     )
@@ -423,7 +431,7 @@ def test_create_registration_ignores_any_id_like_data_on_the_request_object(monk
 
     registrations.create_registration(_tenant(org_id), camp, data)
 
-    insert_params = fake_cursor.executed[4][1]
+    insert_params = fake_cursor.executed[5][1]
     assert insert_params[0] == org_id
     assert insert_params[0] != other_org_id
 

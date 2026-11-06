@@ -209,7 +209,7 @@ def test_export_organization_payments_xlsx_includes_camp_column(monkeypatch):
     camp_a = _camp_row(org["id"], slug="week-1", title="Week 1", price_cents=5000)
     camp_b = _camp_row(org["id"], slug="week-2", title="Week 2", price_cents=7000)
     monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
-    monkeypatch.setattr(camps_repo, "list_camps_for_organization", lambda org_id: [camp_a, camp_b])
+    monkeypatch.setattr(camps_repo, "list_camps_and_sessions_for_organization", lambda org_id: [camp_a, camp_b])
     monkeypatch.setattr(
         registrations_repo,
         "list_registrations_for_organization",

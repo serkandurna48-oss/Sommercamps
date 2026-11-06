@@ -131,13 +131,16 @@ describe('daily overview', () => {
     expect(campLink!.className).not.toContain('cp-btn-primary')
   })
 
-  it('promotes "Camp anlegen" to primary once onboarding is complete', async () => {
+  // Redesign R2: one primary action per view. "Jetzt dran" always carries it
+  // (task, launch card or live card), so "Camp anlegen" stays secondary.
+  it('keeps "Camp anlegen" secondary once onboarding is complete', async () => {
     // org has site_published+required fields, camp is published → step3Done → showCard=false
     const dom = markup(await OrgDashboardPage({ params: Promise.resolve({ org: 'demo' }) }))
     const campLink = [...dom.querySelectorAll<HTMLAnchorElement>('a[href="/pilot/demo/camps/new"]')]
       .find(a => a.textContent?.trim() === '+ Camp anlegen')
     expect(campLink).not.toBeNull()
-    expect(campLink!.className).toContain('cp-btn-primary')
+    expect(campLink!.className).toContain('cp-btn-secondary')
+    expect(dom.querySelectorAll('.cp-btn-primary')).toHaveLength(1)
   })
 
   it('shows launch success card with copy-link button when first camp just published and no registrations', async () => {
@@ -175,7 +178,7 @@ describe('camp navigation and task destinations', () => {
     ['payment', '/zahlungen?filter=open'], ['missing-contact', '?filter=missing-info'], ['waitlist', '/warteliste'],
   ] as const)('links both task variants to the %s work view', (kind, suffix) => {
     const task: Task = { id: kind, kind, campSlug: 'herbst', campTitle: 'Herbstcamp', count: 1, priority: 1 }
-    for (const element of [<TaskCard key="card" task={task} orgSlug="demo" brandStrong="#116644" brandOn="#fff" />, <TaskRow key="row" task={task} orgSlug="demo" />]) {
+    for (const element of [<TaskCard key="card" task={task} orgSlug="demo" />, <TaskRow key="row" task={task} orgSlug="demo" />]) {
       expect(markup(element).querySelector('a')?.getAttribute('href')).toBe(`/pilot/demo/camps/herbst${suffix}`)
     }
   })

@@ -62,7 +62,7 @@ export default function ParticipantPrintDialog({ camp, rows, filterText, orgName
   }
 
   return createPortal(
-    <dialog ref={dialogRef} aria-labelledby={titleId} onCancel={onClose} className="cp-scope cp-daylist-preview cp-participant-print">
+    <dialog ref={dialogRef} aria-labelledby={titleId} onCancel={onClose} className="cp-scope cp-admin cp-daylist-preview cp-participant-print">
       <div className="cp-noprint cp-print-toolbar">
         <div>
           <h1 id={titleId}>Druckausgabe vorbereiten</h1>

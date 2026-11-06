@@ -19,12 +19,10 @@ type Kind = Task['kind'] | 'all'
 export default function TaskFilterList({
   tasks,
   orgSlug,
-  brandColor,
   emptyLabel,
 }: {
   tasks: Task[]
   orgSlug: string
-  brandColor: string
   emptyLabel: string
 }) {
   const [filter, setFilter] = useState<Kind>('all')
@@ -52,28 +50,24 @@ export default function TaskFilterList({
           label={de.tasksPage.filterAll}
           count={counts.all}
           active={filter === 'all'}
-          brandColor={brandColor}
           onClick={() => setFilter('all')}
         />
         <FilterButton
           label={de.tasksPage.filterPayment}
           count={counts.payment}
           active={filter === 'payment'}
-          brandColor={brandColor}
           onClick={() => setFilter(f => (f === 'payment' ? 'all' : 'payment'))}
         />
         <FilterButton
           label={de.tasksPage.filterMissingContact}
           count={counts['missing-contact']}
           active={filter === 'missing-contact'}
-          brandColor={brandColor}
           onClick={() => setFilter(f => (f === 'missing-contact' ? 'all' : 'missing-contact'))}
         />
         <FilterButton
           label={de.tasksPage.filterWaitlist}
           count={counts.waitlist}
           active={filter === 'waitlist'}
-          brandColor={brandColor}
           onClick={() => setFilter(f => (f === 'waitlist' ? 'all' : 'waitlist'))}
         />
       </div>

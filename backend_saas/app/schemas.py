@@ -147,6 +147,12 @@ class CampPublic(BaseModel):
         return is_registration_open(self.registration_start, self.registration_end)
 
 
+_CLIENT_PRICE_FIELDS = frozenset({
+    "price", "price_cents", "price_member_cents", "applied_price_cents",
+    "member_match", "is_member", "member",
+})
+
+
 class RegistrationCreate(BaseModel):
     """
     Public registration request body. Deliberately has NO organization_id
@@ -185,10 +191,27 @@ class RegistrationCreate(BaseModel):
     terms_accepted: bool
     privacy_accepted: bool
 
+    # Only meaningful for training sessions ('ueberweisung' | 'bar', validated
+    # in the router); ignored for classic camps.
+    payment_method: Optional[str] = None
+
+    # Nur Trainingsbuchungen: freiwillige Einwilligung zur internen Trainingsdoku.
+    # Bei Camps ignoriert (bleibt NULL).
+    documentation_consent: StrictBool = False
+
     # KV1: Antworten auf die Zusatzfragen des Vereins. Keys müssen den
     # keys der registration_questions entsprechen (serverseitig validiert
     # in repositories/registrations.py::validate_extra_answers).
     extra_answers: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_client_price_fields(cls, data):
+        """Prices are decided server-side only. A browser that sends any price
+        or membership field gets it silently discarded (never stored)."""
+        if isinstance(data, dict):
+            return {k: v for k, v in data.items() if k not in _CLIENT_PRICE_FIELDS}
+        return data
 
     @field_validator('extra_answers', mode='after')
     @classmethod
@@ -242,6 +265,10 @@ class RegistrationCreated(BaseModel):
     registration_token: UUID
     status: str
     payment_status: str
+    # Price actually charged (server-side). Only set for training sessions;
+    # None for classic camps (their price is the camp price). Never carries a
+    # membership hint beyond the amount itself.
+    applied_price_cents: Optional[int] = None
 
     # Legacy response fields stay excluded; the bank reference uses no name.
     child_first_name: str = Field(default='', exclude=True)

@@ -13,6 +13,9 @@ import WaitlistRow from './WaitlistRow'
  * ist: es gibt nur eine sinnvolle Reihenfolge, kein wählbares Ziel
  * (backend_saas promotet immer FIFO, nie einen vom Aufrufer gewählten
  * Datensatz).
+ *
+ * Eine Primäraktion je Ansicht: In der Vereinsübersicht (`showCampTitle`, mehrere
+ * Karten) ist „Platz vergeben“ sekundär, auf der Warteliste eines Camps primär.
  */
 export default function WaitlistCard({
   orgSlug,
@@ -24,8 +27,6 @@ export default function WaitlistCard({
   registeredCount,
   priceCents,
   currency,
-  brandStrong,
-  brandOn,
   showCampTitle = false,
 }: {
   orgSlug: string
@@ -37,9 +38,6 @@ export default function WaitlistCard({
   registeredCount: number
   priceCents: number
   currency: string
-  brandColor: string
-  brandStrong: string
-  brandOn: string
   showCampTitle?: boolean
 }) {
   const promote = promoteWaitlistAction.bind(null, orgSlug, campSlug)
@@ -71,9 +69,7 @@ export default function WaitlistCard({
             onResult={reportResult}
             label={de.waitlistPage.promote(childName)}
             pendingLabel={de.waitlistPage.promoting}
-            variant="primary"
-            brandStrong={brandStrong}
-            brandOn={brandOn}
+            variant={showCampTitle ? 'secondary' : 'primary'}
             requireConfirm={<>
               <p className="cp-subheading">Platz an {childName} für {campTitle} vergeben?</p>
               <p>Preis: {formatEuro(priceCents, currency)}</p>

@@ -21,7 +21,7 @@ export default async function PaymentReturn({
       </h1>
       <p className="mt-5 text-base leading-relaxed">
         {cancelled
-          ? 'Es wurde keine Online-Zahlung abgeschlossen. Falls eine Überweisung möglich ist, nutzen Sie die Angaben aus Ihrer Anmeldebestätigung.'
+          ? 'Es wurde keine Online-Zahlung abgeschlossen. Ihre Buchung bleibt reserviert. In Ihrer Bestätigungsmail steht, wie Sie per Überweisung zahlen können. Alternativ wenden Sie sich direkt an den Verein.'
           : 'Vielen Dank! Ihre Zahlung wird über die sichere Stripe-Bestätigung geprüft. Erst der automatische Zahlungsabgleich bestätigt den Eingang – die Weiterleitung allein ist noch kein Zahlungsbeleg.'}
       </p>
       <Link

@@ -36,7 +36,7 @@ const campDraft: CampAdmin = {
 
 function render(org: OrganizationAdmin, camps: CampAdmin[]) {
   const html = renderToStaticMarkup(
-    <OnboardingCard orgSlug="demo" org={org} camps={camps} brandStrong="#116644" brandOn="#fff" />
+    <OnboardingCard orgSlug="demo" org={org} camps={camps} />
   )
   const container = document.createElement('div')
   container.innerHTML = html

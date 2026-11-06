@@ -85,9 +85,9 @@ describe('development-only admin preview', () => {
         document.body.innerHTML = html
         const header = document.querySelector('header')!
         const campLevel = screen.startsWith('camp') && screen !== 'camp-neu' && !empty
-        expect([...header.querySelectorAll('nav a')].map(a => a.textContent)).toEqual([
-          campLevel ? 'Teilnehmer' : 'Übersicht', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Einstellungen',
-        ])
+        expect([...header.querySelectorAll('nav a')].map(a => [...a.querySelectorAll('span:not([aria-hidden])')].map(span => span.textContent).join('').trim())).toEqual(campLevel
+          ? ['Teilnehmer', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Einstellungen']
+          : ['Übersicht', 'Zahlungen', 'Warteliste', 'Aufgaben', 'Trainings', 'Mitglieder', 'Spieler', 'Einstellungen'])
         const back = [...header.querySelectorAll('a')].find(a => a.textContent?.trim() === '← Zurück')
         if (screen === 'dashboard') expect(back).toBeUndefined()
         else {
@@ -105,11 +105,9 @@ describe('development-only admin preview', () => {
         for (const card of document.querySelectorAll('.cp-card:not(.cp-card-list), [class*="rounded-[var(--cp-r-card)]"]')) {
           expect(card.querySelectorAll('.cp-btn-primary').length).toBeLessThanOrEqual(1)
         }
-        if (screen === 'dashboard') {
-          for (const link of document.querySelectorAll('main a')) {
-            if (link.textContent?.trim() === 'Ansehen') expect(link.className).toContain('cp-btn-primary')
-          }
-        }
+        // Redesign R2: one primary action per view (e.g. dashboard: the first
+        // task card; task rows and "Camp anlegen" stay secondary).
+        expect(document.querySelectorAll('main .cp-btn-primary').length, screen).toBeLessThanOrEqual(1)
         // Admin-UI uses Sie-form; parent-facing hilfe additionally contains Sie/Ihnen in FAQ templates
         expect(document.body.textContent).not.toMatch(/—|\.\.\./)
         expect(html).not.toMatch(/href="\/(pilot|platform)\//)
@@ -134,6 +132,24 @@ describe('development-only admin preview', () => {
       expect(fetch).not.toHaveBeenCalled()
     }, 30_000)
   }
+
+  it('keeps exactly one primary action on unpublished configuration and multi-camp waitlist', async () => {
+    const primaries = async (screen: string) => {
+      hooks.pathname = `/dev/admin-vorschau/${screen}`
+      const document = window.document.implementation.createHTMLDocument()
+      document.body.innerHTML = renderToStaticMarkup(await page(screen))
+      return [...document.querySelectorAll('main .cp-btn-primary')].map(b => b.textContent?.trim())
+    }
+    expect(await primaries('camp-konfiguration-entwurf')).toEqual(['Camp veröffentlichen'])
+    expect(await primaries('konfiguration-entwurf')).toEqual(['Vereinsseite veröffentlichen'])
+    expect(await primaries('konfiguration')).toEqual(['Speichern'])
+    expect(await primaries('camp-konfiguration')).toEqual(['Speichern'])
+    // Several camps with free places: every "Platz vergeben" is secondary, none primary.
+    expect(await primaries('warteliste-plaetze')).toEqual([])
+    hooks.pathname = '/dev/admin-vorschau/warteliste-plaetze'
+    const html = renderToStaticMarkup(await page('warteliste-plaetze'))
+    expect(html.match(/cp-btn-secondary[^>]*>[^<]*Platz[^<]*vergeben/g)?.length ?? 0).toBeGreaterThanOrEqual(2)
+  })
 
   it('keeps logout local and preserves empty-state navigation', async () => {
     await previewLogoutAction()

@@ -29,7 +29,7 @@ export default function OrgConfigScreen({ orgSlug, org }: OrganizationIdentityPr
           {de.configPage.orgHint}
         </p>
 
-        <OrganizationConfigForm orgSlug={orgSlug} org={org} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+        <OrganizationConfigForm orgSlug={orgSlug} org={org} />
       </main>
     </>
   )

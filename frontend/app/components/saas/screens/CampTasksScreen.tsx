@@ -33,7 +33,7 @@ export default function CampTasksScreen({ orgSlug, campSlug, org, camp, registra
         <h2 className="cp-title mb-6" style={{ color: 'var(--cp-ink)' }}>
           {de.tasksPage.heading}
         </h2>
-        <TaskFilterList tasks={tasks} orgSlug={orgSlug} brandColor={brand.brand} emptyLabel={de.tasksPage.emptyCamp} />
+        <TaskFilterList tasks={tasks} orgSlug={orgSlug} emptyLabel={de.tasksPage.emptyCamp} />
       </main>
     </>
   )

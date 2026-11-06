@@ -3,7 +3,7 @@ import AnalyticsConsentBanner from '../AnalyticsConsent'
 import { notFound } from 'next/navigation'
 import { computeBrandSafe } from '../../lib/brandPipeline'
 import { readableTextOn } from '../../lib/readableTextOn'
-import { getPublicCamps, getPublicOrganization } from './publicData'
+import { getPublicCamps, getPublicOrganization, getPublicTrainingOffers } from './publicData'
 import { filterFutureCamps } from './campUtils'
 import CampStructuredData from './CampStructuredData'
 import GrainOverlay from './GrainOverlay'
@@ -12,6 +12,7 @@ import PublicLoadError from './PublicLoadError'
 import { publicFontClassName } from './publicFonts'
 import { clubMetadata, getSiteUrl, neutralMetadata } from './socialMetadata'
 import './publicTheme.css'
+import './training/trainingPages.css'
 
 type PageProps = {
   params: Promise<{ org: string }>
@@ -42,6 +43,15 @@ const THEME_SURFACE: Record<string, string> = {
   kompakt: '#FFFFFF',
 }
 
+/** Trainings sind ergänzend: jeder Fehler (auch synchron) wird zur leeren Liste. */
+async function loadTrainingOffers(orgSlug: string) {
+  try {
+    return await getPublicTrainingOffers(orgSlug)
+  } catch {
+    return []
+  }
+}
+
 /**
  * CP-S408/Eltern-Flow-Auftrag — CampsPilot SaaS staging pilot flow.
  *
@@ -60,9 +70,10 @@ const THEME_SURFACE: Record<string, string> = {
 export default async function PilotOrgPage({ params, searchParams }: PageProps) {
   const { org: orgSlug } = await params
   const selectedSlug = (await searchParams)?.camp
-  const [orgOutcome, campsOutcome] = await Promise.allSettled([
+  const [orgOutcome, campsOutcome, trainingsOutcome] = await Promise.allSettled([
     getPublicOrganization(orgSlug),
     getPublicCamps(orgSlug),
+    loadTrainingOffers(orgSlug),
   ])
 
   if (orgOutcome.status === 'rejected') return <PublicLoadError />
@@ -72,6 +83,8 @@ export default async function PilotOrgPage({ params, searchParams }: PageProps) 
   if (campsOutcome.status === 'rejected') return <PublicLoadError org={org} />
   const allCamps = campsOutcome.value
   const camps = filterFutureCamps(allCamps)
+  // Ein Fehler beim Laden der Trainings darf die Camp-Seite nicht beeinträchtigen.
+  const trainings = trainingsOutcome.status === 'fulfilled' && Array.isArray(trainingsOutcome.value) ? trainingsOutcome.value : []
   const hadPastCamps = allCamps.length > 0 && camps.length === 0
   const ground = THEME_SURFACE[org.theme] ?? THEME_SURFACE.tradition
   const brand = computeBrandSafe(org.primary_color, ground)
@@ -93,7 +106,7 @@ export default async function PilotOrgPage({ params, searchParams }: PageProps) 
       <CampStructuredData org={org} camps={allCamps} />
       <GrainOverlay />
       <div className="app">
-        <ParentFlow org={org} camps={camps} hadPastCamps={hadPastCamps} initialCampSlug={typeof selectedSlug === 'string' ? selectedSlug : undefined} />
+        <ParentFlow org={org} camps={camps} trainings={trainings} hadPastCamps={hadPastCamps} initialCampSlug={typeof selectedSlug === 'string' ? selectedSlug : undefined} />
       </div>
       {/* Inside the themed wrapper so the banner uses the club's colors and fonts. */}
       <AnalyticsConsentBanner orgSlug={org.slug} isLanding />

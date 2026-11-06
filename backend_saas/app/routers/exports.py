@@ -122,8 +122,11 @@ def _payments_sheet(camp_registrations: list[tuple[dict, list[dict]]], include_c
     ]
     rows = []
     for camp, registrations in camp_registrations:
-        price_eur = camp["price_cents"] / 100
         for r in registrations:
+            # Training bookings carry their own (member/non-member) price;
+            # legacy rows keep the camp price.
+            applied = r.get("applied_price_cents")
+            price_eur = (applied if applied is not None else camp["price_cents"]) / 100
             row = (
                 ([camp["title"]] if include_camp_column else [])
                 + [
@@ -231,7 +234,7 @@ def export_organization_xlsx(
     camp), so this deliberately has no `view=participants` option."""
     organization = require_organization(organization_slug)
 
-    camps = camps_repo.list_camps_for_organization(organization["id"])
+    camps = camps_repo.list_camps_and_sessions_for_organization(organization["id"])
     registrations_by_camp_id: dict = defaultdict(list)
     for row in registrations_repo.list_registrations_for_organization(organization["id"]):
         registrations_by_camp_id[row["camp_id"]].append(row)

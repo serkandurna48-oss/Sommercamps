@@ -1,49 +1,74 @@
 @import './ui/focus.css';
 
 /*
- * Richtung C "Hybrid Matchday" — platform tokens (Auftrag Abschnitt 3.1) and
- * the Archivo type scale (Abschnitt 3.2).
+ * CampsPilot brand kit, theme "Tageslicht" (light work surface, dark band).
+ * Values come from the brand kit tokens.json; names keep the historical
+ * --cp-* vocabulary so existing components follow without edits.
  *
- * Deliberately NOT on `:root` — this file is imported only by the new
- * org-admin screens (frontend/app/pilot/[org]/(org-admin)/layout.tsx) and
- * scoped under the `.cp-scope` class applied there, so it can never leak
- * into the parent-facing /pilot/[org] flow or the legacy KSV/JK site, both
- * of which keep their own tokens untouched (see pilot/theme.ts, globals.css).
+ * Deliberately NOT on `:root` — this file is imported only by the admin,
+ * platform and sign-in screens and scoped under `.cp-scope:where(.cp-admin)`, so it can
+ * never leak into the parent-facing /pilot/[org] flow or the legacy KSV/JK
+ * site, both of which keep their own tokens (see pilot/theme.ts,
+ * globals.css, publicTheme.css).
  *
- * Mandant-specific tokens (--cp-brand, --cp-brand-strong, --cp-brand-on,
- * --cp-brand-tint) are NOT defined here — they're computed server-side per
- * organization (see components/saas/brandPipeline.ts) and merged into this
- * same .cp-scope element via an inline style, mirroring the existing
- * --accent pattern in PilotFlow.tsx.
+ * The club colour (brandPipeline.ts) belongs to the parent pages and the
+ * club logo tile in the band. Admin controls (primary action, active tab,
+ * focus, progress) use the CampsPilot orange below (--cp-accent*), never
+ * the club colour.
  */
 
-.cp-scope {
+.cp-scope:where(.cp-admin) {
   --cp-mobile-nav-target-height: 56px;
   --cp-safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --cp-mobile-nav-height: calc(var(--cp-mobile-nav-target-height) + var(--cp-safe-area-bottom) + 1px);
   --cp-selection-height: 0px;
-  /* Flächen */
-  --cp-band: #131a17;
-  --cp-band-2: #26302c;
-  --cp-band-line: #2c3733;
-  --cp-paper: #f4f5f2;
+  /* Flächen (brand kit: surface, surface-raised, surface-sunken, band, band-raised) */
+  --cp-band: #0a1013;
+  --cp-band-2: #121a1d;
+  --cp-band-line: #25302f;
+  --cp-band-glow: radial-gradient(ellipse 60% 140% at 82% -40%, rgb(234 238 236 / 0.09), transparent 70%);
+  --cp-paper: #f4f3ef;
   --cp-surface: #ffffff;
-  --cp-surface-2: #fafbf9;
-  --cp-line: #d9ded7;
-  --cp-line-2: #e6e9e4;
-  --cp-field-line: #c9cfc7;
+  --cp-surface-2: #f8f7f3;
+  --cp-surface-sunken: #ebe9e2;
+  --cp-line: #dcd9cf;
+  --cp-line-2: #e7e4dc;
+  --cp-field-line: #8a8576;
 
-  /* Text auf heller Fläche */
-  --cp-ink: #171c19;
-  --cp-ink-2: #3e4740;
-  --cp-muted: #5a625c;
+  /* Text auf heller Fläche (ink, ink-muted) */
+  --cp-ink: #191813;
+  --cp-ink-2: #3e3a2f;
+  --cp-muted: #625d4d;
 
-  /* Text auf dem Band */
-  --cp-on-band: #ffffff;
-  --cp-on-band-2: #b7c0b9;
-  --cp-on-band-3: #8d978f;
+  /* Text auf dem Band (on-band, on-band-muted) */
+  --cp-on-band: #eaeeec;
+  --cp-on-band-2: #9da9a6;
+  --cp-on-band-3: #87938f;
 
-  /* Status — nie vom Mandanten überschreibbar */
+  /* CampsPilot-Orange: Primäraktion, aktiver Tab, Fokus, Fortschritt.
+   * Text auf Orange ist immer --cp-on-accent; Orange als Text immer
+   * --cp-accent-ink (5,3:1 auf Weiss). */
+  --cp-accent: #e8672b;
+  --cp-accent-strong: #f27a3d;
+  --cp-accent-ink: #a8460f;
+  --cp-on-accent: #1b0d06;
+  --cp-accent-soft: #fbe3d6;
+  --cp-accent-gradient: linear-gradient(135deg, var(--cp-accent-strong), var(--cp-accent));
+  --cp-accent-bar: linear-gradient(90deg, var(--cp-accent-strong), var(--cp-accent));
+
+  /* Bildwelt (Leerzustände, Illustrationen), nie Bedienung oder Status */
+  --cp-pitch: #1c3a2c;
+  --cp-chalk: #dfe8e1;
+
+  /* Schatten */
+  --cp-shadow-card: 0 1px 2px rgb(25 24 19 / 0.06), 0 12px 32px -20px rgb(25 24 19 / 0.25);
+  --cp-shadow-card-dark: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -16px rgb(0 0 0 / 0.6);
+  --cp-shadow-accent: 0 8px 24px -12px rgb(232 103 43 / 0.6);
+
+  /* Bewegung */
+  --cp-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Status — nie vom Mandanten überschreibbar, nie Orange */
   --cp-ok: #1c6b45;
   --cp-ok-bg: #e3efe8;
   --cp-ok-line: #a9cdbb;
@@ -57,14 +82,16 @@
   --cp-info-bg: #e7edf6;
   --cp-info-line: #b4c6e0;
 
-  /* Radien */
-  --cp-r-bar: 0px;
-  --cp-r-chip: 4px;
-  --cp-r-field: 11px;
-  --cp-r-card: 14px;
+  /* Radien (radius-chip 6, radius-control 8, radius-card 16, radius-pill) */
+  --cp-r-bar: 999px;
+  --cp-r-chip: 6px;
+  --cp-r-field: 8px;
+  --cp-r-card: 16px;
+  --cp-r-pill: 999px;
 
   background: var(--cp-paper);
   color: var(--cp-ink);
+  accent-color: var(--cp-accent-ink);
 }
 
 /* ----------------------------------------------------------------------
@@ -74,105 +101,121 @@
  * dieser Klassen sitzen.
  * ---------------------------------------------------------------------- */
 
-.cp-scope {
+.cp-scope:where(.cp-admin) {
   font-family: var(--font-cp), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Überschriften und Kennzahlen: Archivo 800, Breite 112 %, enges Tracking
+ * (brand kit). Fließtext 400, normale Breite, 16 px. */
 .cp-band-hero {
-  font-size: 52px;
-  line-height: 1;
-  letter-spacing: -1.4px;
-  font-stretch: 118%;
-  font-weight: 700;
+  font-size: 44px;
+  line-height: 46px;
+  letter-spacing: -0.03em;
+  font-stretch: 112%;
+  font-weight: 800;
 }
 .cp-band-metric {
   font-size: 38px;
-  line-height: 1;
-  font-stretch: 110%;
-  font-weight: 700;
-}
-/* Design-Reifung nach dem vierten Praxistest: hero-metric von 76 auf 62 px
- * reduziert. Bei 76 px dominierte der Countdown die Kopfzeile so stark,
- * dass Belegung und offene Zahlungen — die handlungsrelevanten Zahlen —
- * kaum wahrgenommen wurden. 62 px ist noch klar größer als cp-band-metric
- * (38 px), aber nicht mehr doppelt so groß. S3 stellt die Belegung als
- * ersten Metrik-Wert voran, damit das "hero"-Gewicht auf die richtige Zahl
- * fällt. */
-.cp-band-hero-metric {
-  font-size: 62px;
-  line-height: 0.95;
-  letter-spacing: -2px;
-  font-stretch: 134%;
+  line-height: 40px;
+  letter-spacing: -1px;
+  font-stretch: 112%;
   font-weight: 800;
 }
-/* Statische Haltepunkt-Anpassung, kein Tween — Abschnitt 6: unter 768px ist
- * für 52/38px kein Platz mehr (siehe Verifikation bei 390px), unabhängig
- * von den Motion-Regeln in Abschnitt 7 (die nur Übergänge betreffen). */
+/* Design-Reifung nach dem vierten Praxistest: die Hero-Kennzahl bleibt
+ * sichtbar größer als cp-band-metric, aber nicht doppelt so groß, damit
+ * Belegung und offene Zahlungen die Kopfzeile tragen. */
+.cp-band-hero-metric {
+  font-size: 56px;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  font-stretch: 112%;
+  font-weight: 800;
+}
+/* Statische Haltepunkt-Anpassung, kein Tween. */
 @media (max-width: 767px) {
   .cp-band-hero {
-    font-size: 34px;
-    letter-spacing: -0.8px;
+    font-size: 32px;
+    line-height: 36px;
   }
   .cp-band-metric {
     font-size: 28px;
+    line-height: 32px;
   }
   .cp-band-hero-metric {
-    font-size: 42px;
-    letter-spacing: -1.2px;
+    font-size: 40px;
   }
 }
 .cp-band-title {
-  font-size: 18px;
-  line-height: 1.2;
-  letter-spacing: -0.3px;
+  font-size: 24px;
+  line-height: 28px;
+  letter-spacing: -0.6px;
   font-stretch: 112%;
-  font-weight: 700;
+  font-weight: 800;
+}
+@media (max-width: 767px) {
+  .cp-band-title {
+    font-size: 20px;
+    line-height: 24px;
+    letter-spacing: -0.4px;
+  }
 }
 .cp-title {
   font-size: 24px;
-  line-height: 1.2;
-  letter-spacing: -0.4px;
+  line-height: 28px;
+  letter-spacing: -0.6px;
   font-stretch: 112%;
-  font-weight: 700;
+  font-weight: 800;
 }
 .cp-heading {
-  font-size: 21px;
-  line-height: 1.25;
-  letter-spacing: -0.3px;
-  font-stretch: 108%;
-  font-weight: 700;
+  font-size: 20px;
+  line-height: 26px;
+  letter-spacing: -0.4px;
+  font-stretch: 112%;
+  font-weight: 800;
 }
 .cp-subheading {
   font-size: 17px;
-  line-height: 1.3;
+  line-height: 1.35;
+  letter-spacing: -0.2px;
   font-stretch: 100%;
-  font-weight: 600;
+  font-weight: 700;
 }
 .cp-body {
-  font-size: 15px;
-  line-height: 1.55;
+  font-size: 16px;
+  line-height: 1.5;
   font-stretch: 100%;
   font-weight: 400;
 }
 .cp-label {
-    font-size: 13px;
-  line-height: 1.4;
+  font-size: 14px;
+  line-height: 20px;
   font-stretch: 100%;
   font-weight: 600;
 }
 .cp-chip {
   font-size: 12px;
-  line-height: 1.2;
+  line-height: 16px;
   font-stretch: 100%;
   font-weight: 600;
 }
+/* Abschnittsmarke: 12 px, 700, Versalien, 1,2 px Spacing, Orange als Text. */
+.cp-eyebrow {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--cp-accent-ink);
+}
+.cp-scope:where(.cp-admin) header .cp-eyebrow { color: var(--cp-accent-strong); }
 
 /* Bereichs-Tabs im Band. Unter 768px ist die Leiste eine fixierte Fussleiste
- * mit gleich breiten Spalten — bei 390px müssen alle fünf Ziele ohne
+ * mit gleich breiten Spalten — bei 390px müssen alle Ziele (bis zu sieben, Spalten
+ * aus der Tab-Anzahl, Kurzbeschriftung) ohne
  * horizontales Scrollen sichtbar sein, dafür kleinere Schrift und Umbruch
  * statt nowrap. Die Regel steht absichtlich NACH .cp-subheading: sonst
  * gewinnt dessen 17px. Der wandernde Unterstrich ist dort ausgeblendet,
- * deshalb markiert eine Oberkante in der Vereinsfarbe den aktiven Bereich. */
+ * deshalb markiert eine Oberkante in CampsPilot-Orange den aktiven Bereich. */
 @media (max-width: 767px) {
   .cp-admin-layout {
     padding-bottom: calc(var(--cp-mobile-nav-height) + var(--cp-selection-height) + 16px);
@@ -192,14 +235,48 @@
     font-weight: 600;
     position: relative;
   }
+  .cp-band-tabs[data-tab-count='6'] .cp-band-tab,
+  .cp-band-tabs[data-tab-count='7'] .cp-band-tab {
+    font-size: 11px;
+    letter-spacing: 0;
+  }
+  /* Acht Bereiche in einer Zeile (375 px: ~46 px je Spalte): kleinere Schrift,
+     kein Innenabstand; Kurzlabels höchstens 8 Zeichen (navTabs.test.ts). */
+  .cp-band-tabs[data-tab-count='8'] .cp-band-tab {
+    font-size: 10px;
+    letter-spacing: -0.01em;
+    padding-inline: 0;
+  }
   .cp-band-tab .cp-tab-hint {
     position: absolute;
     right: 2px;
     top: 4px;
   }
   .cp-band-tab[data-active='true'] {
-    box-shadow: inset 0 2px 0 0 var(--cp-tab-mark, currentColor);
+    box-shadow: inset 0 2px 0 0 var(--cp-accent);
   }
+}
+
+/* Desktop: brand-kit tabs (14 px, 500, aktiver Tab mit 2 px Orange-Unterlinie
+ * aus BandTabs.tsx). Acht Bereiche passen ab 1024 px vollständig in die
+ * 1080-px-Spalte; zwischen 768 und 1023 px scrollt die Leiste horizontal. */
+@media (min-width: 768px) {
+  .cp-band-tabs { column-gap: 20px; scrollbar-width: none; }
+  .cp-band-tabs::-webkit-scrollbar { display: none; }
+  .cp-band-tab {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
+    font-stretch: 100%;
+    letter-spacing: 0;
+    min-height: 44px;
+    transition: color 150ms var(--cp-ease);
+  }
+  .cp-band-tab:hover { color: var(--cp-on-band) !important; }
+  .cp-band-tab[data-active='true'] { font-weight: 600; }
+}
+@media (min-width: 1200px) {
+  .cp-band-tabs { column-gap: 28px; }
 }
 
 /* Klick-Rückmeldung der Bereichsleiste (BandTabs.tsx, TabHint). Immer
@@ -233,6 +310,16 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Codes zum Abtippen (Verwendungszweck, Web-Adresse): Archivo statt
+ * font-mono, das im Admin auf eine Serifenschrift zurückfiel. Tabellarische
+ * Ziffern und etwas Laufweite halten Zeichen gut unterscheidbar. */
+.cp-code {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums slashed-zero;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+}
+
 /* Eine Stimme für jede hervorgehobene Zahl im Admin — Design-Reifung nach
  * dem zweiten Praxistest: vorher hatte cp-band-metric (Band, gross, breit
  * gestreckt) nichts mit dem viel leiseren cp-title auf den StatCards zu
@@ -241,11 +328,12 @@
  * absichtlich an Stadionanzeigen/Spielstand-Tafeln angelehnt (das
  * eigentliche Sujet dieses Produkts), nicht generisches Dashboard-Grau. */
 .cp-scoreboard {
-  font-size: 34px;
-  line-height: 1;
-  letter-spacing: -0.6px;
-  font-stretch: 132%;
+  font-size: 38px;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-stretch: 112%;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 @media (max-width: 767px) {
   .cp-scoreboard {
@@ -279,10 +367,10 @@
 
 /* Abschnitt 7, "Pflicht" — ohne diesen Block ist das Feature nicht fertig. */
 @media (prefers-reduced-motion: reduce) {
-  .cp-scope,
-  .cp-scope *,
-  .cp-scope *::before,
-  .cp-scope *::after {
+  .cp-scope:where(.cp-admin),
+  .cp-scope:where(.cp-admin) *,
+  .cp-scope:where(.cp-admin) *::before,
+  .cp-scope:where(.cp-admin) *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
@@ -300,9 +388,44 @@
  * Hover-Zustände für Buttons — inline style kann kein :hover, deshalb
  * stehen die Regeln hier und werden per className in Button.tsx referenziert.
  * ---------------------------------------------------------------------- */
-.cp-btn-primary:not(:disabled):hover { opacity: 0.88; }
-.cp-btn-secondary:not(:disabled):hover { background: var(--cp-surface-2); }
-.cp-btn-danger:not(:disabled):hover { background: var(--cp-error-bg); }
+/* Buttons (brand kit): 48 px mobil, Desktop 44 px statt 42 px (Mindest-
+ * Zielgröße der Admin-Tests; Höhe als Utility in Button.tsx), 14 px, Radius 8,
+ * Innenabstand 10/16. Primär = Orange-Verlauf mit fast schwarzem Text,
+ * genau eine pro Ansicht. Sekundär = transparent mit 1 px Rand. */
+/* In the components layer so Tailwind utilities on a single button (px-0, min-h-[52px]) still win. */
+@layer components {
+.cp-scope:where(.cp-admin) .cp-btn {
+  padding: 10px 16px;
+  gap: 8px;
+  border-radius: var(--cp-r-field);
+  border: 1px solid var(--cp-field-line);
+  background: transparent;
+  color: var(--cp-ink);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  font-stretch: 100%;
+  letter-spacing: 0;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 150ms var(--cp-ease), border-color 150ms var(--cp-ease), box-shadow 150ms var(--cp-ease), filter 150ms var(--cp-ease);
+}
+.cp-scope:where(.cp-admin) .cp-btn-primary {
+  border-color: transparent;
+  background: var(--cp-accent-gradient);
+  color: var(--cp-on-accent);
+  font-weight: 600;
+  box-shadow: var(--cp-shadow-accent);
+}
+.cp-scope:where(.cp-admin) .cp-btn-secondary:not(:disabled):hover { background: var(--cp-surface-sunken); }
+.cp-scope:where(.cp-admin) .cp-btn-primary:not(:disabled):hover { background: var(--cp-accent); }
+.cp-scope:where(.cp-admin) .cp-btn-danger { color: var(--cp-error); border-color: var(--cp-error); }
+.cp-scope:where(.cp-admin) .cp-btn-danger:not(:disabled):hover { background: var(--cp-error-bg); }
+.cp-scope:where(.cp-admin) .cp-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+/* On the dark band: light outline instead of the field border (3,4:1 against the band, control border >= 3:1). */
+.cp-scope:where(.cp-admin) header .cp-btn-secondary { color: var(--cp-on-band); border-color: rgb(234 238 236 / 0.4); }
+.cp-scope:where(.cp-admin) header .cp-btn-secondary:not(:disabled):hover { background: var(--cp-band-2); }
+}
 
 /* ----------------------------------------------------------------------
  * Tabellenzeile mit festen Spalten (Admin-Listen: Teilnehmer, Zahlungen).
@@ -320,12 +443,8 @@
  * Listen-Container nach Rolle, nicht einheitlich (Design-Reifung nach dem
  * ersten Praxistest): eine Teilnehmer-/Wartelisten-Aufstellung ist ein
  * Mannschaftsbogen, kein generisches SaaS-Card-Grid — flache Fläche,
- * Vereinsfarben-Spine links (raw --cp-brand, wie CapacityBar/Band-Kante),
- * kein umlaufender Rahmen, kein Radius. Farbe kommt als Inline-Style
- * (borderLeftColor) von der jeweiligen Seite, nicht aus einer CSS-Var —
- * --cp-brand ist nur auf der Style-Preview-Seite tatsächlich gesetzt,
- * überall sonst wird die Vereinsfarbe als Prop durchgereicht (Abschnitt
- * 3.3-Konvention, siehe CapacityBar/StatusChip).
+ * kein umlaufender Rahmen, kein Radius. Die Vereinsfarbe spielt hier keine
+ * Rolle mehr (Redesign: Bedienelemente nutzen CampsPilot-Orange).
  * ---------------------------------------------------------------------- */
 .cp-roster {
   background: var(--cp-surface);
@@ -363,15 +482,15 @@
  * dunkle Band würde sonst als schwarze Fläche auf Papier landen.
  * ---------------------------------------------------------------------- */
 @media print {
-  .cp-scope header:not(.cp-daylist-heading),
+  .cp-scope:where(.cp-admin) header:not(.cp-daylist-heading),
   .cp-noprint {
     display: none !important;
   }
-  .cp-scope {
+  .cp-scope:where(.cp-admin) {
     background: #ffffff;
     color: #000000;
   }
-  .cp-scope a {
+  .cp-scope:where(.cp-admin) a {
     color: #000000;
     text-decoration: none;
   }
@@ -706,12 +825,14 @@
 }
 
 /* Shared admin geometry: cards, metrics, rows and fields. */
-.cp-scope { --cp-card-padding: 20px; --cp-card-gap: 16px; }
-.cp-scope .cp-card, .cp-scope .cp-roster {
+.cp-scope:where(.cp-admin) { --cp-card-padding: 20px; --cp-card-gap: 16px; }
+@media (min-width: 768px) { .cp-scope:where(.cp-admin) { --cp-card-padding: 24px; } }
+.cp-scope:where(.cp-admin) .cp-card, .cp-scope:where(.cp-admin) .cp-roster {
   min-width: 0; border: 1px solid var(--cp-line); border-radius: var(--cp-r-card);
   padding: var(--cp-card-padding); background: var(--cp-surface);
 }
-.cp-scope .cp-card-list, .cp-scope .cp-roster { padding: 0; overflow: clip; }
+.cp-scope:where(.cp-admin) .cp-card { box-shadow: var(--cp-shadow-card); }
+.cp-scope:where(.cp-admin) .cp-card-list, .cp-scope:where(.cp-admin) .cp-roster { padding: 0; overflow: clip; }
 .cp-stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--cp-card-gap); }
 .cp-stat-tile { container-type: inline-size; }
 .cp-stat-tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
@@ -731,8 +852,8 @@
 .cp-participant-status { display: flex; flex-wrap: wrap; gap: 8px; }
 .cp-participant-summary { grid-template-columns: minmax(0, 1fr) 20px; grid-template-areas: 'main action' 'secondary action' 'status action'; }
 .cp-participant-summary .cp-row-action { align-self: center; }
-.cp-scope .cp-participant-trigger { display: block; padding: 0; border-color: transparent; background: transparent; }
-.cp-input, .cp-scope main input:not([type='checkbox']):not([type='radio']):not([type='hidden']), .cp-scope main select {
+.cp-scope:where(.cp-admin) .cp-participant-trigger { display: block; padding: 0; border-color: transparent; background: transparent; }
+.cp-input, .cp-scope:where(.cp-admin) main input:not([type='checkbox']):not([type='radio']):not([type='hidden']), .cp-scope:where(.cp-admin) main select {
   min-height: 48px; min-width: 0; max-width: 100%; font-size: 16px; line-height: 22px;
   border-radius: var(--cp-r-field);
 }
@@ -749,7 +870,7 @@
 }
 
 /* Pitch-side lists: the same rows and actions, with phone-only geometry. */
-.cp-scope {
+.cp-scope:where(.cp-admin) {
   --cp-list-target: 44px;
   --cp-list-gap: 12px;
   --cp-list-line: 1px;
@@ -757,9 +878,14 @@
   --cp-list-sticky-layer: 5;
   --cp-list-name-weight: 700;
 }
-.cp-scope .cp-mobile-only { display: none; }
+.cp-scope:where(.cp-admin) .cp-mobile-only { display: none; }
 .cp-row-overflow, .cp-overflow-panel, .cp-mobile-actions, .cp-payment-filters { display: contents; }
 .cp-row-action:has(> .cp-mobile-only) { display: none; }
+
+/* Payment actions stack as one even column of full-width buttons. */
+.cp-scope:where(.cp-admin) .cp-payment-actions { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+.cp-scope:where(.cp-admin) .cp-payment-actions :is(form, form > div) { width: 100%; align-items: stretch; }
+.cp-scope:where(.cp-admin) .cp-payment-actions .cp-btn { width: 100%; }
 
 /* Preserve the existing desktop order: reminder, payment, waiver. */
 @media (width >= 640px) {
@@ -768,20 +894,21 @@
 }
 
 @media (width < 640px) {
-  .cp-scope .cp-mobile-only { display: block; }
-  .cp-scope .cp-desktop-only { display: none; }
-  .cp-scope .cp-roster, .cp-scope .cp-waitlist {
+  .cp-scope:where(.cp-admin) .cp-mobile-only { display: block; }
+  .cp-scope:where(.cp-admin) .cp-desktop-only { display: none; }
+  .cp-scope:where(.cp-admin) .cp-roster, .cp-scope:where(.cp-admin) .cp-waitlist {
     overflow: visible;
     background: transparent;
     border: 0;
     border-radius: 0;
   }
-  .cp-scope .cp-mobile-card {
+  .cp-scope:where(.cp-admin) .cp-mobile-card {
     min-width: 0;
     margin-block: var(--cp-list-gap);
     border: var(--cp-list-line) solid var(--cp-line);
     border-radius: var(--cp-r-card);
     background: var(--cp-surface);
+    box-shadow: var(--cp-shadow-card);
     overflow-wrap: anywhere;
   }
   .cp-mobile-card .cp-list-row {
@@ -796,14 +923,14 @@
   .cp-camp-date { font-size: inherit; font-weight: normal; color: var(--cp-muted); }
   .cp-mobile-card .cp-camp-date { margin-block: var(--cp-list-gap); }
   .cp-participant-card-top { flex-direction: column; align-items: stretch; padding: var(--cp-card-padding); }
-  .cp-scope .cp-participant-trigger { width: 100%; }
-  .cp-scope .cp-mobile-primary {
+  .cp-scope:where(.cp-admin) .cp-participant-trigger { width: 100%; }
+  .cp-scope:where(.cp-admin) .cp-mobile-primary {
     display: flex; align-items: center; justify-content: center;
     min-height: var(--cp-list-target); width: 100%; margin-top: var(--cp-list-gap);
     border: var(--cp-list-line) solid var(--cp-field-line); border-radius: var(--cp-r-field);
     background: var(--cp-surface-2); color: var(--cp-ink);
   }
-  .cp-scope .cp-mobile-actions, .cp-payment-actions { display: flex; flex-direction: column; gap: var(--cp-list-gap); width: 100%; align-items: stretch; }
+  .cp-scope:where(.cp-admin) .cp-mobile-actions, .cp-payment-actions { display: flex; flex-direction: column; gap: var(--cp-list-gap); width: 100%; align-items: stretch; }
   .cp-mobile-actions form, .cp-mobile-actions form > div, .cp-waitlist-promote,
   .cp-waitlist-promote form, .cp-waitlist-promote form > div { width: 100%; }
   .cp-mobile-actions button, .cp-mobile-actions a, .cp-waitlist-promote button,
@@ -832,7 +959,7 @@
 }
 
 /* Toolbar above lists: actions side by side, explanations as quiet hints. */
-.cp-scope .cp-toolbar {
+.cp-scope:where(.cp-admin) .cp-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
@@ -841,9 +968,64 @@
   padding-bottom: 24px;
   border-bottom: 1px solid var(--cp-line-2);
 }
-.cp-scope .cp-toolbar > * { margin-bottom: 0; }
-.cp-scope .cp-hint {
+.cp-scope:where(.cp-admin) .cp-toolbar > * { margin-bottom: 0; }
+.cp-scope:where(.cp-admin) .cp-hint {
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 18px;
   color: var(--cp-muted);
+}
+
+/* Quiet CampsPilot attribution at the end of every admin page. */
+.cp-admin-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px 32px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--cp-muted);
+}
+.cp-admin-foot svg { color: var(--cp-ink-2); flex: none; }
+
+/* Wordmark next to the mark (brand kit: Archivo 800, 112 %, space-2). */
+.cp-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 800;
+  font-stretch: 112%;
+  letter-spacing: -0.3px;
+}
+
+/* Empty state: the pitch motif, flat, as an illustration only. */
+.cp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 24px;
+  text-align: center;
+  border: 1px dashed var(--cp-line);
+  border-radius: var(--cp-r-card);
+  background: var(--cp-surface-2);
+}
+.cp-empty-art { margin-bottom: 16px; }
+.cp-empty-art .pitch { fill: var(--cp-pitch); }
+.cp-empty-art .chalk { fill: none; stroke: var(--cp-chalk); stroke-width: 1.5; }
+.cp-empty-art .spot { fill: var(--cp-accent); }
+
+/* App band: dark night surface with a faint floodlight cone (brand kit). */
+.cp-scope:where(.cp-admin) .cp-band {
+  background: var(--cp-band-glow), var(--cp-band);
+  color: var(--cp-on-band);
+}
+/* Club identity tile in the band. The club colour is the only club accent
+ * in the admin area: a 3 px line along the tile's bottom edge. */
+.cp-org-tile {
+  border-radius: var(--cp-r-field);
+  background: var(--cp-band-2);
+  box-shadow: inset 0 0 0 1px var(--cp-band-line), inset 0 -3px 0 0 var(--cp-club, transparent);
 }

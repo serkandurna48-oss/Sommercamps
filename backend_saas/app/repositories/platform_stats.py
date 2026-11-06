@@ -15,15 +15,15 @@ _STATS_QUERY = """
     select
         (select count(*) from organizations where site_published) as organizations_published,
         (select count(*) from organizations where not site_published) as organizations_draft,
-        (select count(*) from camps) as camps_total,
+        (select count(*) from camps where offer_id is null) as camps_total,
         (select count(*) from camp_registrations) as registrations_total,
         (select count(*) from camp_registrations where created_at >= now() - interval '30 days')
             as registrations_last_30_days,
-        (select coalesce(sum(price_cents), 0)
+        (select coalesce(sum(coalesce(r.applied_price_cents, c.price_cents)), 0)
             from camp_registrations r join camps c on c.id = r.camp_id
             where r.payment_status = 'open' and r.status in ('registered', 'confirmed', 'waitlist')
         ) as payments_open_cents,
-        (select coalesce(sum(price_cents), 0)
+        (select coalesce(sum(coalesce(r.applied_price_cents, c.price_cents)), 0)
             from camp_registrations r join camps c on c.id = r.camp_id
             where r.payment_status = 'paid'
         ) as payments_paid_cents,

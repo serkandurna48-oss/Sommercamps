@@ -17,7 +17,7 @@ beforeEach(async () => {
   document.body.append(container)
   root = createRoot(container)
   vi.mocked(createCampAction).mockResolvedValue({ error: 'Bitte erneut versuchen.' })
-  await act(() => root.render(<CampCreateForm orgSlug="review" brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<CampCreateForm orgSlug="review" />))
 })
 afterEach(async () => {
   await act(() => root.unmount())
@@ -86,7 +86,7 @@ it('keeps all input values after an error and resubmits them', async () => {
 it('zeigt die Kopie mit leeren Pflichtterminen und übergibt bearbeitete Angaben', async () => {
   const source = { ...getPreviewFixtures().camps[0], location: 'Sportplatz', includes: ['Ball', 'Trikot'], registration_start: '2026-01-01T08:00:00Z', currency: 'CHF' }
   const values = prefillCampDuplicate(source)
-  await act(() => root.render(<CampCreateForm key="copy" orgSlug="review" initialValues={values} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<CampCreateForm key="copy" orgSlug="review" initialValues={values} />))
   const input = (name: string) => container.querySelector<HTMLInputElement>(`[name="${name}"]`)!
   expect(input('title').value).toBe(`${source.title} (Kopie)`)
   expect(input('slug').value).toBe(values.slug)

@@ -49,10 +49,10 @@ it.each(['Bezahlt', 'Offen', 'Storniert', 'Warteliste', 'Kostenlos'])('status te
 it('renders camp, date, name and text status in every list without another data request', async () => {
   await act(() => root.render(<>
     <ParticipantList camp={camp} campSlug={camp.slug} registrations={[registration]} orgSlug="demo" brandColor="#116644" />
-    <PaymentSection org={fixture.org} entries={[{ camp, registration }]} orgSlug="demo" brandColor="#116644" emptyLabel="Leer" csvFilename="test.csv" xlsxHref="/export" />
+    <PaymentSection org={fixture.org} entries={[{ camp, registration }]} orgSlug="demo" emptyLabel="Leer" csvFilename="test.csv" xlsxHref="/export" />
     <WaitlistCard orgSlug="demo" campSlug={camp.slug} campTitle={camp.title} campDate={formatDateRange(camp.start_date, camp.end_date)}
       capacity={20} registeredCount={20} priceCents={camp.price_cents} currency={camp.currency} waitlisted={[{ ...registration, status: 'waitlist' }]}
-      brandColor="#116644" brandStrong="#116644" brandOn="#fff" />
+ />
     <TodayRegistrations entries={[{ camp, registration }]} orgSlug="demo" fullList />
   </>))
   const rows = [...host.querySelectorAll('.cp-mobile-card')]
@@ -86,13 +86,14 @@ it('keeps the reminder in the payment overflow and the payment action outside it
   const writeText = vi.fn().mockResolvedValue(undefined)
   vi.stubGlobal('navigator', { clipboard: { writeText } })
   const entry = { camp, registration }
-  await act(() => root.render(<PaymentSection org={reminderOrg} entries={[entry]} orgSlug="demo" brandColor="#116644"
+  await act(() => root.render(<PaymentSection org={reminderOrg} entries={[entry]} orgSlug="demo"
     emptyLabel="Leer" csvFilename="test.csv" xlsxHref="/export" />))
   const row = host.querySelector('.cp-ledger-row')!
   const buttons = [...row.querySelectorAll('button')]
   const primary = buttons.find(button => button.textContent === 'Als bezahlt markieren')!
   expect(primary.closest('.cp-overflow-panel')).toBeNull()
-  expect(primary.className).toContain('cp-btn-primary')
+  // Redesign R2: one primary per view, so the per-row action is secondary.
+  expect(primary.className).toContain('cp-btn-secondary')
   await act(() => row.querySelector<HTMLButtonElement>('[aria-haspopup]')!.click())
   const dialog = row.querySelector('[role="dialog"]')!
   const reminder = [...dialog.querySelectorAll('button')].find(button => button.textContent === 'Erinnerung kopieren')!

@@ -24,7 +24,8 @@ from fastapi.responses import JSONResponse
 from . import db
 from .db import DatabaseBusy
 from .config import get_settings
-from .routers import admin_router, camps_router, exports_router, organizations_router, pilot_request_router, registrations_router, signup_router, payments_router
+from .routers.training import admin_router as training_admin_router, public_router as training_public_router
+from .routers import admin_router, camps_router, exports_router, memberships_router, organizations_router, players_router, pilot_request_router, registrations_router, signup_router, payments_router
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,19 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 logging.basicConfig(level=settings.log_level)
+
+
+def _link_unlinked_registrations_best_effort() -> None:
+    """Links registrations written between the player_records migration and this deploy.
+    Never blocks startup; logs only the count or the error type (no personal data)."""
+    from .repositories import players
+
+    try:
+        linked = players.link_unlinked_registrations()
+        if linked:
+            logger.info("Linked %d registrations to player records", linked)
+    except Exception as exc:  # noqa: BLE001 - best effort
+        logger.warning("Player linking at startup skipped (%s)", type(exc).__name__)
 
 
 @asynccontextmanager
@@ -49,6 +63,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             settings.frontend_base_url,
             settings.app_env,
         )
+    if settings.app_env != "test":  # tests assert that no request/startup path touches the DB unmocked
+        _link_unlinked_registrations_best_effort()
     try:
         yield
     finally:
@@ -79,6 +95,10 @@ app.include_router(camps_router)
 app.include_router(registrations_router)
 app.include_router(admin_router)
 app.include_router(exports_router)
+app.include_router(memberships_router)
+app.include_router(players_router)
+app.include_router(training_admin_router)
+app.include_router(training_public_router)
 app.include_router(signup_router)
 app.include_router(pilot_request_router)
 app.include_router(payments_router)

@@ -1,20 +1,16 @@
 import Button from './Button'
-import { computeBrandTokens } from '../brandPipeline'
 
 export default function FilterButton({
   label,
   count,
   active,
-  brandColor,
   onClick,
 }: {
   label: string
   count: number
   active: boolean
-  brandColor: string
   onClick: () => void
 }) {
-  const { brandStrong } = computeBrandTokens(brandColor)
   return (
     <Button
       type="button"
@@ -22,9 +18,9 @@ export default function FilterButton({
       aria-pressed={active}
       className="cp-focus min-w-[44px] cp-label inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-[var(--cp-r-field)] border px-4 whitespace-nowrap transition-colors motion-reduce:transition-none"
       style={{
-        color: active ? brandStrong : 'var(--cp-ink-2)',
-        borderColor: active ? brandStrong : 'var(--cp-field-line)',
-        background: 'var(--cp-surface)',
+        color: active ? 'var(--cp-accent-ink)' : 'var(--cp-ink-2)',
+        borderColor: active ? 'var(--cp-accent-ink)' : 'var(--cp-line)',
+        background: active ? 'var(--cp-accent-soft)' : 'var(--cp-surface)',
       }}
     >
       {label}

@@ -16,21 +16,17 @@ import { setOrganizationPublishedAction, type PublishActionState } from '../acti
  * Vereins-Konfigurationsseite UND der Plattform-Konsole-Vereinsdetailseite
  * (platform/(console)/[org]) — derselbe Schalter, zwei Orte.
  *
- * Die Brand-Props sind optional, weil genau das die beiden Orte unterscheidet:
- * im Vereinsbereich ist „Veröffentlichen“ eine Hauptaktion in Vereinsfarbe wie
- * jedes Speichern daneben, in der Plattform-Konsole gibt es bewusst keine
- * Vereinsfarbe (wie NewOrgForm). Ohne die Props bleibt es beim bisherigen
- * --cp-ink aus Button.tsx. */
+ * `emphasis` hält die Regel „eine Primäraktion je Ansicht“ ein: Steht auf
+ * derselben Seite ein Speichern-Button, stuft der Aufrufer ihn oder diesen
+ * Schalter auf 'secondary' (Standard 'primary', z. B. in der Plattform-Konsole). */
 export default function PublishToggle({
   orgSlug,
   published,
-  brandStrong,
-  brandOn,
+  emphasis = 'primary',
 }: {
   orgSlug: string
   published: boolean
-  brandStrong?: string
-  brandOn?: string
+  emphasis?: 'primary' | 'secondary'
 }) {
   const feedbackId = useId()
   const hintId = `${feedbackId}-hint`
@@ -68,10 +64,8 @@ export default function PublishToggle({
         <Button
           aria-describedby={[hintId, state.error && feedbackId].filter(Boolean).join(' ')}
           type="submit"
-          variant={published ? 'danger' : 'primary'}
+          variant={published ? 'danger' : emphasis}
           disabled={pending}
-          brandStrong={brandStrong}
-          brandOn={brandOn}
         >
           {pending ? 'Wird gespeichert …' : published ? 'Vereinsseite zurückziehen' : 'Vereinsseite veröffentlichen'}
         </Button>

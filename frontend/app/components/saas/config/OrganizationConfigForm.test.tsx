@@ -39,7 +39,7 @@ afterEach(async () => {
 })
 
 async function render() {
-  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={org} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={org} />))
 }
 
 function dataForm() {
@@ -99,7 +99,7 @@ it('renders trainer_image_url and trainer_text fields with stored org values', a
     trainer_image_url: 'https://example.com/trainer.jpg',
     trainer_text: 'Unser Trainer hat 10 Jahre Erfahrung.',
   }
-  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={orgWithTrainer} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={orgWithTrainer} />))
   expect(container.querySelector('label[for="trainer_image_url"]')?.textContent).toBe('Trainer-Bild-URL')
   expect(container.querySelector<HTMLInputElement>('[name="trainer_image_url"]')!.value).toBe('https://example.com/trainer.jpg')
   expect(container.querySelector('label[for="trainer_text"]')?.textContent).toBe('Trainer-Text')
@@ -108,7 +108,7 @@ it('renders trainer_image_url and trainer_text fields with stored org values', a
 
 it('renders terms_text field with stored org value', async () => {
   const orgWithTerms = { ...org, terms_text: 'Unsere Stornobedingungen.' }
-  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={orgWithTerms} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={orgWithTerms} />))
   const ta = container.querySelector<HTMLTextAreaElement>('[name="terms_text"]')!
   expect(ta).not.toBeNull()
   expect(ta.value).toBe('Unsere Stornobedingungen.')
@@ -142,7 +142,7 @@ it('shows error under logo_url field when submitted with invalid URL', async () 
 
 it('never renders billing notes or the billing section, even with owner data', async () => {
   const ownerOrg = { ...org, billing_notes: 'Private contract terms' }
-  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={ownerOrg} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={ownerOrg} />))
   expect(container.querySelector('[name="billing_notes"]')).toBeNull()
   expect(container.textContent).not.toContain('Abrechnung')
   expect(container.textContent).not.toContain('Konditionen')
@@ -162,7 +162,7 @@ it('retains edited extra fields after a failed save and sends them again on retr
   const question = { key: 'hinweis', label: 'Hinweis', type: 'text' as const, options: null, other_label: null, required: true }
   const configured = { ...org, registration_questions: [question] }
   vi.mocked(updateOrganizationConfigAction).mockResolvedValueOnce({ error: 'Erneut versuchen', saved: false })
-  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={configured} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={configured} />))
   await changeField('[id$="-label"]', 'Zusätzlicher Hinweis')
   await save()
   expect(container.querySelector<HTMLInputElement>('[id$="-label"]')!.value).toBe('Zusätzlicher Hinweis')
@@ -172,7 +172,7 @@ it('retains edited extra fields after a failed save and sends them again on retr
   await save()
   expect(vi.mocked(updateOrganizationConfigAction).mock.calls[1][2].get('registration_questions')).toBe(submitted.get('registration_questions'))
   const fresh = { ...configured, registration_questions: [{ ...question, label: 'Gespeicherter Hinweis' }] }
-  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={fresh} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={fresh} />))
   expect(container.querySelector<HTMLInputElement>('[id$="-label"]')!.value).toBe('Gespeicherter Hinweis')
 })
 
@@ -218,7 +218,7 @@ it('keeps brand values after a failed save and refreshes them when saved props a
   expect(container.querySelector('.brand-preview-tradition')!.textContent).toContain('Neuer Vereinsname')
   expect(container.querySelector<HTMLInputElement>('#primary_color')!.value).toBe('#cc0000')
   const updated = { ...org, name: 'Gespeicherter Verein', primary_color: '#123456', theme: 'akademie' }
-  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={updated} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<OrganizationConfigForm orgSlug="review" org={updated} />))
   expect(container.querySelector('.brand-preview-akademie')!.textContent).toContain('Gespeicherter Verein')
   expect(container.querySelector<HTMLInputElement>('#primary_color')!.value).toBe('#123456')
 })

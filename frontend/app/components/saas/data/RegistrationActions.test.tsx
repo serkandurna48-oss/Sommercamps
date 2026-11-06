@@ -64,7 +64,7 @@ async function renderWaitlist(waitlisted = [waiting], registeredCount = 1) {
     <RegistrationActionFeedback registrations={waitlisted} waitlistHref="/pilot/club/camps/camp/warteliste">
       {waitlisted.length ? <WaitlistCard orgSlug="club" campSlug="camp" campTitle="Sommercamp" waitlisted={waitlisted}
         capacity={2} registeredCount={registeredCount} priceCents={12900} currency="EUR"
-        brandColor="#112233" brandStrong="#112233" brandOn="#ffffff" /> : <p>Niemand wartet.</p>}
+ /> : <p>Niemand wartet.</p>}
     </RegistrationActionFeedback>,
   ))
 }

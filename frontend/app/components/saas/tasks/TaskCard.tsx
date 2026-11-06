@@ -26,7 +26,7 @@ function taskCopy(task: Task): { title: string; hint: string } {
  * die zwei Beschreibungen widersprechen sich leicht, diese ist die
  * spezifischere für genau diesen Block.
  */
-export default function TaskCard({ task, orgSlug, brandStrong, brandOn }: { task: Task; orgSlug: string; brandStrong: string; brandOn: string }) {
+export default function TaskCard({ task, orgSlug }: { task: Task; orgSlug: string }) {
   const [done, setDone] = useState(false)
   const copy = taskCopy(task)
 
@@ -40,7 +40,7 @@ export default function TaskCard({ task, orgSlug, brandStrong, brandOn }: { task
       </p>} secondary={<p className="cp-body" style={{ color: 'var(--cp-muted)' }}>
         {copy.hint}
       </p>} status={<StatusChip label={done ? 'Erledigt' : 'Offen'} tone={done ? 'ok' : 'pending'} />} action={<div className="flex flex-wrap gap-3">
-        <ButtonLink href={taskHref(orgSlug, task)} variant="primary" brandStrong={brandStrong} brandOn={brandOn}>
+        <ButtonLink href={taskHref(orgSlug, task)} variant="primary">
           {de.tasks.review}
         </ButtonLink>
         <Button variant="secondary" onClick={() => setDone(v => !v)} aria-pressed={done}>

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { de, formatDateRange, formatEuro, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
-import { isActiveRegistration, isOpenPayment, canReopenPayment } from '../commandCenterLogic'
+import { isActiveRegistration, isOpenPayment, canReopenPayment, registrationPriceCents } from '../commandCenterLogic'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import ActionForm from '../ui/ActionForm'
 import type { ActionFormState } from '../ui/ActionForm'
@@ -11,6 +11,7 @@ import Button, { ButtonLink } from '../ui/Button'
 import ListRow from '../ui/ListRow'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from './StatusChip'
 import RowOverflow from '../ui/RowOverflow'
+import { paymentMethodLabel } from '../training/trainingLogic'
 import PaymentTextCopy, { PaymentTextFallback } from './PaymentTextCopy'
 import { buildPaymentReminder, reminderLabels, type ReminderOrganization } from '../../../lib/zahlungserinnerung'
 
@@ -20,16 +21,12 @@ export default function PaymentRow({
   org,
   orgSlug,
   onPaid,
-  brandStrong,
-  brandOn,
 }: {
   registration: RegistrationAdmin
   camp: CampAdmin
   org: ReminderOrganization
   orgSlug: string
   onPaid: () => void
-  brandStrong: string
-  brandOn: string
 }) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle')
   const reminder = buildPaymentReminder({ registration, camp }, org)
@@ -56,7 +53,7 @@ export default function PaymentRow({
     <div className="cp-ledger-row cp-mobile-card border-t" data-status={registration.payment_status} style={{ borderTopColor: 'var(--cp-line-2)' }}>
       <ListRow className="cp-list-row-padded" main={<div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono font-semibold" style={{ color: 'var(--cp-ink)' }}>{registration.payment_reference}</span>
+          <span className="cp-code" style={{ color: 'var(--cp-ink)' }}>{registration.payment_reference}</span>
           <Button className="cp-desktop-only" type="button" variant="secondary" aria-label={`Verwendungszweck ${registration.payment_reference} kopieren`} onClick={copyReference}>
             {copyState === 'copied' ? 'Kopiert' : 'Kopieren'}
           </Button>
@@ -69,9 +66,10 @@ export default function PaymentRow({
 
       </div>} secondary={        <p className="cp-chip mt-0.5 truncate" style={{ color: 'var(--cp-muted)' }}>
           {registration.parent_first_name} {registration.parent_last_name} · {registration.parent_email}
+          {registration.payment_method ? ` · Zahlart: ${paymentMethodLabel(registration.payment_method)}` : ''}
         </p>} status={<div className="flex flex-col items-start gap-2">
           <span className="cp-num cp-subheading shrink-0" style={{ color: 'var(--cp-ink)' }}>
-            {formatEuro(camp.price_cents, camp.currency)}
+            {formatEuro(registrationPriceCents(camp, registration), camp.currency)}
           </span>
           <StatusChip
             tone={PAYMENT_STATUS_TONE[registration.payment_status] ?? 'neutral'}
@@ -90,9 +88,7 @@ export default function PaymentRow({
               action={markPaid}
               label={de.paymentsPage.markPaid}
               pendingLabel={de.paymentsPage.updating}
-              variant="primary"
-              brandStrong={brandStrong}
-              brandOn={brandOn}
+              variant="secondary"
             />
             <RowOverflow label={`Weitere Aktionen für ${registration.child_first_name} ${registration.child_last_name}`}>
             <Button className="cp-mobile-only" type="button" onClick={copyReference}>{copyState === 'copied' ? 'Kopiert' : 'Verwendungszweck kopieren'}</Button>

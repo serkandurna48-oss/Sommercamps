@@ -30,7 +30,7 @@ export default function CampCreateScreen({ orgSlug, org, initialValues, sourceMi
         </p>
 
         {sourceMissing && <p role="status" className="cp-body mb-6" style={{ color: 'var(--cp-muted)' }}>{DUPLICATE_MISSING}</p>}
-        <CampCreateForm key={initialValues?.slug ?? 'new'} orgSlug={orgSlug} initialValues={initialValues} brandStrong={brand.brandStrong} brandOn={brand.brandOn} />
+        <CampCreateForm key={initialValues?.slug ?? 'new'} orgSlug={orgSlug} initialValues={initialValues} />
       </main>
     </>
   )

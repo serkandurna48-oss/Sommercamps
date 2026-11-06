@@ -4,7 +4,7 @@ import { useId, useState } from 'react'
 import { xlsxHrefWithFilter, type ExportColumn } from '../../../lib/exportCsv'
 import { paymentStatusLabel } from '../../../lib/i18n/de'
 import type { CampAdmin, RegistrationAdmin, RegistrationQuestion } from '../../../lib/saasAdminApi'
-import { filterRegistrations, type ParticipantFilter } from '../commandCenterLogic'
+import { filterRegistrations, registrationPriceCents, type ParticipantFilter } from '../commandCenterLogic'
 import { DAY_LIST_COLUMNS, dayListRows, exportFilterText } from '../dayListExport'
 import ExportBar from '../ui/ExportBar'
 import DayListPrint from './DayListPrint'
@@ -35,7 +35,7 @@ export default function ParticipantExport({ registrations, camp, orgSlug, orgNam
     { header: 'Kind', value: r => `${r.child_first_name} ${r.child_last_name}` },
     { header: 'Elternteil', value: r => `${r.parent_first_name} ${r.parent_last_name}` },
     { header: 'E-Mail', value: r => r.parent_email },
-    { header: 'Preis (EUR)', value: () => (camp.price_cents / 100).toFixed(2).replace('.', ',') },
+    { header: 'Preis (EUR)', value: r => (registrationPriceCents(camp, r) / 100).toFixed(2).replace('.', ',') },
     { header: 'Zahlungsstatus', value: r => paymentStatusLabel[r.payment_status] ?? r.payment_status },
   ]
   const participantColumns: ExportColumn<RegistrationAdmin>[] = [

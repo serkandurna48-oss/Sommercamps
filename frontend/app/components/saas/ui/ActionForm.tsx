@@ -31,8 +31,6 @@ export default function ActionForm({
   label,
   pendingLabel,
   variant = 'secondary',
-  brandStrong,
-  brandOn,
   requireConfirm,
   cancelLabel = 'Abbrechen',
   onResult,
@@ -41,8 +39,6 @@ export default function ActionForm({
   label: string
   pendingLabel: string
   variant?: 'primary' | 'secondary' | 'danger'
-  brandStrong?: string
-  brandOn?: string
   /** Wenn gesetzt: Text der Bestätigungsfrage. Zeigt erst nach Klick. */
   requireConfirm?: ReactNode
   cancelLabel?: string
@@ -73,7 +69,7 @@ export default function ActionForm({
   if (requireConfirm && !confirming) {
     return (
       <div className="flex flex-col items-start gap-2">
-        <Button aria-describedby={state.error ? feedbackId : undefined} type="button" variant={variant} brandStrong={brandStrong} brandOn={brandOn} onClick={() => setConfirming(true)}>
+        <Button aria-describedby={state.error ? feedbackId : undefined} type="button" variant={variant} onClick={() => setConfirming(true)}>
           {label}
         </Button>
         {state.error && (
@@ -98,7 +94,7 @@ export default function ActionForm({
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <Button aria-describedby={[effectiveConfirming && confirmId, state.error && feedbackId].filter(Boolean).join(' ') || undefined} type="submit" disabled={pending} variant={variant} brandStrong={brandStrong} brandOn={brandOn}>
+        <Button aria-describedby={[effectiveConfirming && confirmId, state.error && feedbackId].filter(Boolean).join(' ') || undefined} type="submit" disabled={pending} variant={variant}>
           {pending ? pendingLabel : label}
         </Button>
         {effectiveConfirming && (

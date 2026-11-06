@@ -1,12 +1,11 @@
 'use client'
 
-import { computeBrandTokens } from '../brandPipeline'
 
 import { useId, useMemo, useState } from 'react'
 import { de, formatEuro, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import { xlsxHrefWithFilter, type ExportColumn } from '../../../lib/exportCsv'
 import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
-import { isActiveRegistration, isOpenPayment } from '../commandCenterLogic'
+import { isActiveRegistration, isOpenPayment, registrationPriceCents } from '../commandCenterLogic'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import ActionForm, { type ActionFormState } from '../ui/ActionForm'
 import Button from '../ui/Button'
@@ -31,7 +30,7 @@ function buildColumns(showCampTitle: boolean): ExportColumn<PaymentEntry>[] {
     { header: 'Kind', value: e => `${e.registration.child_first_name} ${e.registration.child_last_name}` },
     { header: 'Elternteil', value: e => `${e.registration.parent_first_name} ${e.registration.parent_last_name}` },
     { header: 'E-Mail', value: e => e.registration.parent_email },
-    { header: 'Preis (EUR)', value: e => formatEuro(e.camp.price_cents, e.camp.currency) },
+    { header: 'Preis (EUR)', value: e => formatEuro(registrationPriceCents(e.camp, e.registration), e.camp.currency) },
     { header: 'Anmeldestatus', value: e => registrationStatusLabel[e.registration.status] ?? e.registration.status },
     { header: 'Zahlungsstatus', value: e => paymentStatusLabel[e.registration.payment_status] ?? e.registration.payment_status },
   ]
@@ -41,7 +40,6 @@ export default function PaymentSection({
   entries,
   org,
   orgSlug,
-  brandColor,
   emptyLabel,
   showCampTitle = false,
   csvFilename,
@@ -51,7 +49,6 @@ export default function PaymentSection({
   entries: PaymentEntry[]
   org: ReminderOrganization
   orgSlug: string
-  brandColor: string
   emptyLabel: string
   showCampTitle?: boolean
   csvFilename: string
@@ -63,7 +60,6 @@ export default function PaymentSection({
   const [lastPaid, setLastPaid] = useState<PaymentEntry | null>(null)
   const [undoMessage, setUndoMessage] = useState<string | null>(null)
   const searchId = useId()
-  const brand = computeBrandTokens(brandColor)
 
   const counts = useMemo(
     () => ({
@@ -109,7 +105,7 @@ export default function PaymentSection({
       {lastPaid && (
         <div className="mb-5 rounded-lg border p-4" style={{ borderColor: 'var(--cp-ok)', background: 'var(--cp-ok-bg)' }}>
           <p role="status" className="mb-3">
-            {formatEuro(lastPaid.camp.price_cents, lastPaid.camp.currency)} für {lastPaid.registration.child_first_name} als bezahlt erfasst – {lastPaid.registration.payment_reference}
+            {formatEuro(registrationPriceCents(lastPaid.camp, lastPaid.registration), lastPaid.camp.currency)} für {lastPaid.registration.child_first_name} als bezahlt erfasst – {lastPaid.registration.payment_reference}
           </p>
           <ActionForm key={lastPaid.registration.registration_token} action={undoPayment} label="Rückgängig: wieder auf Offen" pendingLabel={de.paymentsPage.updating} />
         </div>
@@ -138,14 +134,12 @@ export default function PaymentSection({
           label={de.paymentsPage.filterOpen}
           count={counts.open}
           active={filter === 'open'}
-          brandColor={brandColor}
           onClick={() => setFilter('open')}
         />
         <FilterButton
           label={de.paymentsPage.filterPaid}
           count={counts.paid}
           active={filter === 'paid'}
-          brandColor={brandColor}
           onClick={() => setFilter(f => (f === 'paid' ? 'all' : 'paid'))}
         />
         {counts.waived > 0 && (
@@ -153,11 +147,10 @@ export default function PaymentSection({
             label={de.paymentsPage.filterWaived}
             count={counts.waived}
             active={filter === 'waived'}
-            brandColor={brandColor}
             onClick={() => setFilter(f => (f === 'waived' ? 'all' : 'waived'))}
           />
         )}
-        <FilterButton label={de.paymentsPage.filterAll} count={counts.all} active={filter === 'all'} brandColor={brandColor} onClick={() => setFilter('all')} />
+        <FilterButton label={de.paymentsPage.filterAll} count={counts.all} active={filter === 'all'} onClick={() => setFilter('all')} />
       </div>
       </div>
 
@@ -183,8 +176,6 @@ export default function PaymentSection({
               camp={e.camp}
               org={org}
               orgSlug={orgSlug}
-              brandStrong={brand.brandStrong}
-              brandOn={brand.brandOn}
               onPaid={() => { setLastPaid(e); setUndoMessage(null) }}
             />
           ))}

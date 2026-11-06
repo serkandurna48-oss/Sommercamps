@@ -50,7 +50,7 @@ _SELECT_ALL = f"""
     select {', '.join(f'o.{c.strip()}' for c in _ORGANIZATION_FIELDS.strip().split(','))},
            count(c.id) as camp_count
     from organizations o
-    left join camps c on c.organization_id = o.id
+    left join camps c on c.organization_id = o.id and c.offer_id is null
     group by o.id
     order by o.name asc
 """
@@ -160,7 +160,7 @@ def list_organizations_filtered(review_status: Optional[str] = None) -> list[dic
         query = f"""
             select {cols}, count(c.id) as camp_count
             from organizations o
-            left join camps c on c.organization_id = o.id
+            left join camps c on c.organization_id = o.id and c.offer_id is null
             where o.review_status = %s
             group by o.id
             order by o.name asc
@@ -173,7 +173,7 @@ def list_organizations_filtered(review_status: Optional[str] = None) -> list[dic
             f"""
             select {cols}, count(c.id) as camp_count
             from organizations o
-            left join camps c on c.organization_id = o.id
+            left join camps c on c.organization_id = o.id and c.offer_id is null
             group by o.id
             order by o.name asc
             """

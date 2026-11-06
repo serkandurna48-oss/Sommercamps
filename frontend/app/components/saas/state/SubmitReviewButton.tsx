@@ -10,14 +10,10 @@ const AVV_VERSION = '2026-10'
 
 export default function SubmitReviewButton({
   orgSlug,
-  brandStrong,
-  brandOn,
   reviewNote,
   submitAction,
 }: {
   orgSlug: string
-  brandStrong: string
-  brandOn: string
   reviewNote: string | null
   submitAction: SubmitAction
 }) {
@@ -50,7 +46,7 @@ export default function SubmitReviewButton({
     <div className="mt-3">
       {reviewNote && phase === 'idle' && (
         <p className="cp-body mb-3" style={{ color: 'var(--cp-ink-2)' }}>
-          <span style={{ color: 'var(--cp-error, #b91c1c)', fontWeight: 600 }}>{de.onboarding.reviewRejectedPrefix}</span>
+          <span style={{ color: 'var(--cp-error)', fontWeight: 600 }}>{de.onboarding.reviewRejectedPrefix}</span>
           {' '}{reviewNote}
         </p>
       )}
@@ -60,14 +56,12 @@ export default function SubmitReviewButton({
           <Button
             type="button"
             variant="primary"
-            brandStrong={brandStrong}
-            brandOn={brandOn}
             onClick={() => { setPhase('dialog'); setAvvChecked(false); setErrorMsg('') }}
           >
             {de.onboarding.step3ActionSubmit}
           </Button>
           {phase === 'error' && (
-            <p role="alert" className="cp-body mt-2" style={{ color: 'var(--cp-error, #b91c1c)' }}>{errorMsg}</p>
+            <p role="alert" className="cp-body mt-2" style={{ color: 'var(--cp-error)' }}>{errorMsg}</p>
           )}
         </>
       )}
@@ -99,8 +93,6 @@ export default function SubmitReviewButton({
             <Button
               type="button"
               variant="primary"
-              brandStrong={brandStrong}
-              brandOn={brandOn}
               disabled={!avvChecked || phase === 'submitting'}
               onClick={handleSubmit}
             >

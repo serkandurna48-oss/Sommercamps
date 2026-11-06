@@ -33,18 +33,13 @@ export default function OrgWaitlistScreen({ orgSlug, org, camps, registrationsBy
         orgName={org.name}
         orgLogoUrl={org.logo_url}
         title={de.command.waitlist}
+        subtitle={de.waitlistPage.subtitleOrg}
         metrics={[{ label: de.command.waitlist, value: String(totalWaiting) }]}
         tabs={orgTabs(orgSlug)}
         brandColor={brand.brand}
       />
 
       <main className={PAGE_READING}>
-        <h2 className="cp-title mb-1" style={{ color: 'var(--cp-ink)' }}>
-          {de.waitlistPage.heading}
-        </h2>
-        <p className="cp-body mb-6" style={{ color: 'var(--cp-muted)' }}>
-          {de.waitlistPage.subtitleOrg}
-        </p>
 
         <RegistrationActionFeedback registrations={groups.flatMap(g => g.waitlisted)} waitlistHref={`/pilot/${orgSlug}/warteliste`}>
           {groups.length === 0 ? (
@@ -69,9 +64,6 @@ export default function OrgWaitlistScreen({ orgSlug, org, camps, registrationsBy
                   priceCents={g.camp.price_cents}
                   currency={g.camp.currency}
                   waitlisted={g.waitlisted}
-                  brandColor={brand.brand}
-                  brandStrong={brand.brandStrong}
-                  brandOn={brand.brandOn}
                   showCampTitle
                 />
               ))}

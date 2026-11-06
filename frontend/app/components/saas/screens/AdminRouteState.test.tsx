@@ -19,7 +19,7 @@ it.each(['dashboard', 'zahlungen', 'warteliste', 'aufgaben', 'konfiguration', 'a
     const back = [...container.querySelectorAll('header a')].find(a => a.textContent?.trim() === '← Zurück')
     if (path === 'dashboard') expect(back).toBeUndefined()
     else expect(back?.getAttribute('href')).toBe(path.startsWith('camps/sommer/') ? '/pilot/demo/camps/sommer' : '/pilot/demo/dashboard')
-    expect(container.querySelector('nav a')?.textContent).toBe(path.startsWith('camps/sommer') ? 'Teilnehmer' : 'Übersicht')
+    expect(container.querySelector('nav a span:not([aria-hidden])')?.textContent).toBe(path.startsWith('camps/sommer') ? 'Teilnehmer' : 'Übersicht')
     expect(container.querySelector(reset ? 'main button' : '[role="status"]')).not.toBeNull()
   }
 })

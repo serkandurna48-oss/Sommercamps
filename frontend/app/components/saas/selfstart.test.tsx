@@ -54,12 +54,12 @@ it('Freigegebener Wizard: führt direkt zur Vereins- und Camp-Veröffentlichung'
 })
 
 it.each([false, true])('Freigegebene Übersicht mit veröffentlichter Vereinsseite %s: keine Wizard-Dashboard-Schleife', site_published => {
-  const dom = markup(<OnboardingCard orgSlug={org.slug} org={{ ...org, review_status: 'approved', site_published }} camps={[camp]} brandStrong="#116644" brandOn="#fff" />)
+  const dom = markup(<OnboardingCard orgSlug={org.slug} org={{ ...org, review_status: 'approved', site_published }} camps={[camp]} />)
   link(dom, 'Jetzt veröffentlichen', site_published ? '/pilot/testverein/camps/sommer/konfiguration' : '/pilot/testverein/konfiguration#publication')
 })
 
 it('Wartende Übersicht: Dauer, Hilfe und Status-Aktualisierung statt voreiliger Veröffentlichung', () => {
-  const dom = markup(<OnboardingCard orgSlug={org.slug} org={{ ...org, review_status: 'submitted' }} camps={[camp]} brandStrong="#116644" brandOn="#fff" />)
+  const dom = markup(<OnboardingCard orgSlug={org.slug} org={{ ...org, review_status: 'submitted' }} camps={[camp]} />)
   expect(dom.textContent).toContain('meist innerhalb eines Werktags')
   expect(dom.textContent).not.toContain('Jetzt veröffentlichen')
   link(dom, 'Freigabestatus aktualisieren', '/pilot/testverein/einrichtung?schritt=4')

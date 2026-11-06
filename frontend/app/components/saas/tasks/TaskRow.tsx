@@ -18,14 +18,15 @@ function taskTitle(task: Task): string {
   }
 }
 
-/** Ruhige Zeile mit einem Button (Abschnitt 4.2) — "Ansehen" statt eines
+/** Ruhige Zeile mit einem Sekundär-Button (Abschnitt 4.2; die eine
+ * Primäraktion der Übersicht trägt die TaskCard darüber) — "Ansehen" statt eines
  * eigenen Erledigt-Reglers, den nur die große Karte bekommt. */
-export default function TaskRow({ task, orgSlug, brandStrong, brandOn }: { task: Task; orgSlug: string; brandStrong?: string; brandOn?: string }) {
+export default function TaskRow({ task, orgSlug, asCard = false }: { task: Task; orgSlug: string; asCard?: boolean }) {
   const [done, setDone] = useState(false)
 
   return (
     <div
-      className={brandStrong ? 'cp-card' : 'border-t cp-list-row-padded'}
+      className={asCard ? 'cp-card' : 'border-t cp-list-row-padded'}
       style={{ borderColor: 'var(--cp-line-2)', background: 'var(--cp-surface)' }}
     >
       <ListRow main={<p className={`cp-body ${done ? 'line-through' : ''}`} style={{ color: done ? 'var(--cp-muted)' : 'var(--cp-ink-2)' }}>
@@ -34,9 +35,7 @@ export default function TaskRow({ task, orgSlug, brandStrong, brandOn }: { task:
         href={taskHref(orgSlug, task)}
         onClick={() => setDone(true)}
         className="shrink-0"
-        variant={brandStrong ? 'primary' : 'secondary'}
-        brandStrong={brandStrong}
-        brandOn={brandOn}
+        variant="secondary"
       >
         {de.tasks.review}
       </ButtonLink>} />

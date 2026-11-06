@@ -42,7 +42,7 @@ afterEach(async () => {
 
 async function render(row = registration) {
   await act(() => root.render(<ParticipantRow registration={row} selected={false} onToggleSelect={() => {}}
-    brandColor="#112233" orgSlug="review-club" campSlug="review-camp" campTitle="Review Camp" />))
+ orgSlug="review-club" campSlug="review-camp" campTitle="Review Camp" />))
 }
 
 async function click(label: string) {
@@ -78,7 +78,7 @@ it('shows configured position and origin answers in participant detail', async (
     { key: 'verein', label: 'Herkunftsverein', type: 'choice' as const, options: ['KSV Baunatal', 'Kein Verein'], other_label: 'Anderer Verein', required: false },
   ]
   await act(() => root.render(<ParticipantRow registration={{ ...registration, extra_answers: { position: 'Torwart', verein: 'FC Teststadt' } }}
-    selected={false} onToggleSelect={() => {}} brandColor="#112233" orgSlug="review-club" campSlug="review-camp"
+    selected={false} onToggleSelect={() => {}} orgSlug="review-club" campSlug="review-camp"
     campTitle="Review Camp" questions={questions} />))
   await act(() => container.querySelector<HTMLButtonElement>('button[aria-expanded]')!.click())
   const section = container.querySelector('section[aria-label="Zusatzantworten"]')!

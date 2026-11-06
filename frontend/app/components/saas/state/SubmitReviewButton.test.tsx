@@ -26,8 +26,6 @@ async function renderBtn(submitAction: SubmitAction, reviewNote: string | null =
   await act(() => root.render(
     <SubmitReviewButton
       orgSlug="demo"
-      brandStrong="#116644"
-      brandOn="#fff"
       reviewNote={reviewNote}
       submitAction={submitAction}
     />

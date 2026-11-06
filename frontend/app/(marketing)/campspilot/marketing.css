@@ -23,8 +23,10 @@
   --ink-2: #414b4d;
   --ink-3: #6b7573;
   --grass: #1c3a2c;
-  --accent: #d4581f;
-  --accent-ink: #a8400f;
+  --accent: #e8672b;        /* brand kit: brand */
+  --accent-strong: #f27a3d; /* brand kit: brand-strong (gradient start) */
+  --accent-ink: #a8460f;    /* brand kit: brand-ink, orange as text on light */
+  --on-accent: #1b0d06;     /* brand kit: on-brand */
   --line-d: #25302f;
   --line-l: #d9dcd6;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);

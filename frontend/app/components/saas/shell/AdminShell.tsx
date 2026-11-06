@@ -1,5 +1,6 @@
 import { archivo } from '../fonts'
 import GrainOverlay from '../GrainOverlay'
+import CampsPilotMark from '../brand/CampsPilotMark'
 import { ViewerProvider } from './ViewerContext'
 import { OrganizationProvider, type OrganizationIdentity } from './OrganizationContext'
 import '../tokens.css'
@@ -10,9 +11,13 @@ export default function AdminShell({ children, isPlatformOwner = false, org }: {
   org?: OrganizationIdentity
 }) {
   return (
-    <div className={`${archivo.variable} cp-scope min-h-screen cp-admin-layout`}>
+    <div className={`${archivo.variable} cp-scope cp-admin min-h-screen cp-admin-layout`}>
       <GrainOverlay />
       <OrganizationProvider org={org}><ViewerProvider isPlatformOwner={isPlatformOwner}>{children}</ViewerProvider></OrganizationProvider>
+      <footer className="cp-admin-foot cp-noprint">
+        <CampsPilotMark width={24} height={16} />
+        <span>Verwaltung mit CampsPilot</span>
+      </footer>
     </div>
   )
 }

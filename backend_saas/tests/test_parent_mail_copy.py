@@ -91,3 +91,75 @@ def test_mail_escapes_selected_camp_and_reference():
     )
     assert "<script>" not in mail.html_content and "<b>" not in mail.html_content
     assert "&lt;script&gt;" in mail.html_content and "&lt;b&gt;" in mail.html_content
+
+
+# ---------- Training mails: payment method, subject, cancellation note ----------
+
+from datetime import datetime, timezone  # noqa: E402
+import hashlib  # noqa: E402
+
+_TRAINING_START = datetime(2027, 3, 4, 16, 0, tzinfo=timezone.utc)  # 17:00 Berlin
+_IBAN = "DE89370400440532013000"
+
+
+def _training_mail(payment_method, *, promoted=False, status="registered", iban=_IBAN):
+    return build_registration_mail(
+        status=status, org_name="Testverein", org_email="club@example.com", org_phone=None,
+        camp_title="Einzeltraining", camp_start=date(2027, 3, 4), camp_end=date(2027, 3, 4),
+        parent_email="eva.muster@example.com", payment_reference="CP-12345678", iban=iban,
+        price_cents=3500, currency="EUR", starts_at=_TRAINING_START,
+        payment_method=payment_method, promoted=promoted,
+    )
+
+
+def test_training_mail_bar_has_no_bank_details():
+    html = _training_mail("bar").html_content
+    assert "Bitte bar beim Training bezahlen." in html
+    assert "35,00" in html
+    assert "IBAN" not in html and _IBAN not in html
+    assert "Verwendungszweck" not in html
+
+
+def test_training_mail_online_has_transfer_fallback_with_iban():
+    html = _training_mail("online").html_content
+    assert "Sie zahlen online" in html
+    assert "Falls die Online-Zahlung nicht geklappt hat:" in html
+    assert _IBAN in html and "CP-12345678" in html and "35,00" in html
+
+
+def test_training_mail_online_without_iban_points_to_contact():
+    html = _training_mail("online", iban=None).html_content
+    assert "Falls die Online-Zahlung nicht geklappt hat, wenden Sie sich bitte an club@example.com." in html
+    assert "IBAN" not in html
+
+
+def test_training_mail_ueberweisung_keeps_transfer_block():
+    html = _training_mail("ueberweisung").html_content
+    assert _IBAN in html and "Verwendungszweck" in html and "35,00" in html
+    assert "bar beim Training" not in html
+
+
+@pytest.mark.parametrize("method", ["bar", "ueberweisung"])
+def test_training_mail_subject_and_cancel_note(method):
+    mail = _training_mail(method)
+    assert mail.subject == "Buchungsbestätigung: Einzeltraining am 4. März 2027, 17:00 Uhr"
+    assert "Kostenlose Absage bis 24 h vorher – bitte direkt beim Verein melden." in mail.html_content
+
+
+def test_training_promoted_mail_keeps_platz_frei_subject_and_bar_block():
+    mail = _training_mail("bar", promoted=True)
+    assert mail.subject.startswith("Platz frei")
+    assert "Bitte bar beim Training bezahlen." in mail.html_content and "IBAN" not in mail.html_content
+
+
+def test_classic_camp_mail_is_byte_identical_to_before():
+    """Pinned against the pre-change template output (sha256 of subject + body)."""
+    mail = build_registration_mail(
+        status="registered", org_name="Testverein", org_email="club@example.com", org_phone="0561 1234",
+        camp_title="Herbstcamp", camp_start=date(2027, 10, 25), camp_end=date(2027, 10, 29),
+        parent_email="e@example.com", payment_reference="CP-12345678", iban=_IBAN,
+        price_cents=14900, currency="EUR",
+    )
+    digest = hashlib.sha256((mail.subject + "\n" + mail.html_content).encode()).hexdigest()
+    assert digest == "5403dd74094c08fedf9aec5729355d8ea84b2b2d3e96cb8cd5ea2236f4db4724"
+    assert "Kostenlose Absage" not in mail.html_content

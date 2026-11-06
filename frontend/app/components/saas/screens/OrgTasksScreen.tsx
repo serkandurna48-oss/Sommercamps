@@ -20,19 +20,14 @@ export default function OrgTasksScreen({ orgSlug, org, camps, registrationsByCam
         orgName={org.name}
         orgLogoUrl={org.logo_url}
         title={de.command.tasks}
+        subtitle={de.tasksPage.subtitleOrg}
         metrics={[{ label: de.tasksPage.heading, value: String(tasks.length) }]}
         tabs={orgTabs(orgSlug)}
         brandColor={brand.brand}
       />
 
       <main className={PAGE_READING}>
-        <h2 className="cp-title mb-1" style={{ color: 'var(--cp-ink)' }}>
-          {de.tasksPage.heading}
-        </h2>
-        <p className="cp-body mb-6" style={{ color: 'var(--cp-muted)' }}>
-          {de.tasksPage.subtitleOrg}
-        </p>
-        <TaskFilterList tasks={tasks} orgSlug={orgSlug} brandColor={brand.brand} emptyLabel={de.tasksPage.emptyOrg} />
+        <TaskFilterList tasks={tasks} orgSlug={orgSlug} emptyLabel={de.tasksPage.emptyOrg} />
       </main>
     </>
   )

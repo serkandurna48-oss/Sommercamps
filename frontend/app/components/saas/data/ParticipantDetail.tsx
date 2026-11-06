@@ -32,8 +32,6 @@ export default function ParticipantDetail({
   campSlug,
   campTitle,
   questions = [],
-  brandStrong,
-  brandOn,
   onDetailsSaved,
 }: {
   registration: RegistrationAdmin
@@ -41,8 +39,6 @@ export default function ParticipantDetail({
   campSlug: string
   campTitle: string
   questions?: RegistrationQuestion[]
-  brandStrong: string
-  brandOn: string
   onDetailsSaved?: (registration: RegistrationAdmin) => void
 }) {
   const editorId = useId()
@@ -173,7 +169,7 @@ export default function ParticipantDetail({
             )}
 
             <div className="flex gap-2">
-              <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn}>
+              <Button type="submit" variant="primary" disabled={pending}>
                 {pending ? de.command.editParticipantSaving : de.command.editParticipantSave}
               </Button>
               <Button type="button" variant="secondary" disabled={pending} onClick={() => setEditing(false)}>
@@ -265,9 +261,7 @@ export default function ParticipantDetail({
                 action={resendMail}
                 label="Mail erneut senden"
                 pendingLabel="Wird gesendet …"
-                variant="primary"
-                brandStrong={brandStrong}
-                brandOn={brandOn}
+                variant="secondary"
               />
             </>
           ) : registration.email_sent_at ? (
@@ -279,7 +273,7 @@ export default function ParticipantDetail({
 
         {isOpenPayment(registration) && (
           <div className="mt-3 flex flex-wrap gap-2">
-            <ActionForm action={markPaid} label={de.paymentsPage.markPaid} pendingLabel={de.paymentsPage.updating} variant={editing ? 'secondary' : 'primary'} brandStrong={brandStrong} brandOn={brandOn} />
+            <ActionForm action={markPaid} label={de.paymentsPage.markPaid} pendingLabel={de.paymentsPage.updating} variant="secondary" />
             <ActionForm action={markWaived} label={de.paymentsPage.markWaived} pendingLabel={de.paymentsPage.updating} variant="secondary" requireConfirm={de.paymentsPage.waivedConfirm} />
           </div>
         )}

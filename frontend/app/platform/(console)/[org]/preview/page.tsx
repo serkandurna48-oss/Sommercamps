@@ -109,14 +109,14 @@ export default async function PlatformOrgPreviewPage({ params }: { params: Promi
     >
       <div
         className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3"
-        style={{ background: '#111', borderColor: 'rgba(255,255,255,0.15)' }}
+        style={{ background: 'var(--cp-band)', borderColor: 'var(--cp-band-line)' }}
       >
-        <p className="cp-chip" style={{ color: '#FFFFFF' }}>
+        <p className="cp-chip" style={{ color: 'var(--cp-on-band)' }}>
           Vorschau — so sieht die Seite aus, wenn sie veröffentlicht ist
           {!org.site_published && ' (dieser Verein ist noch ein Entwurf, Eltern können ihn nicht finden)'}.
           {org.site_published && ' Achtung: eine hier abgeschickte Anmeldung wird echt gespeichert, der Verein ist bereits veröffentlicht.'}
         </p>
-        <Link href={`/platform/${orgSlug}`} className="cp-chip shrink-0" style={{ color: '#FFFFFF', textDecoration: 'underline' }}>
+        <Link href={`/platform/${orgSlug}`} className="cp-chip shrink-0" style={{ color: 'var(--cp-on-band)', textDecoration: 'underline' }}>
           Zurück zur Vereinsdetailseite
         </Link>
       </div>

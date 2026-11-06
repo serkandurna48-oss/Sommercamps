@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getValidAccessToken } from '../../lib/supabaseServer'
 import { fetchCampsAdmin, fetchOrganizationsAdmin, fetchPlatformStats, type OrganizationAdmin } from '../../lib/saasAdminApi'
@@ -7,6 +6,7 @@ import OrganizationList from './OrganizationList'
 import StatsOverview from './StatsOverview'
 import SubmittedOrgsSection from './SubmittedOrgsSection'
 import { PAGE } from '../../components/saas/ui/pageLayout'
+import { ButtonLink } from '../../components/saas/ui/Button'
 
 async function loadReviewData(organizations: OrganizationAdmin[], token: string) {
   const submitted = submittedOrganizations(organizations)
@@ -42,13 +42,9 @@ export default async function PlatformPage() {
                 : `${organizations.length} Vereine auf CampsPilot.`}
           </p>
         </div>
-        <Link
-          href="/platform/new"
-          className="cp-subheading inline-flex min-h-[50px] items-center justify-center rounded-[var(--cp-r-field)] px-5"
-          style={{ background: 'var(--cp-ink)', color: '#FFFFFF' }}
-        >
+        <ButtonLink href="/platform/new" variant="primary">
           + Neuen Verein anlegen
-        </Link>
+        </ButtonLink>
       </div>
 
       <OrganizationList organizations={organizations} />

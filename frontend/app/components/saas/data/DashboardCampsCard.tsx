@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import Link from '../preview/AdminLink'
 import type { CampWithStats } from '../dashboardLogic'
 import { campStatusLabel, de, formatDateRange } from '../../../lib/i18n/de'
@@ -27,7 +27,7 @@ function DashboardCampRow({ entry, orgSlug }: { entry: CampWithStats; orgSlug: s
           <p className="cp-label cp-num mb-2">{occupied}</p>
           <div
             className="h-1.5 w-full"
-            style={{ background: 'var(--cp-line-2)', borderRadius: 'var(--cp-r-bar)' }}
+            style={{ background: 'var(--cp-surface-sunken)', borderRadius: 'var(--cp-r-bar)' }}
             role="progressbar"
             aria-label={`${camp.title}: ${occupied}`}
             aria-valuemin={0}
@@ -35,7 +35,7 @@ function DashboardCampRow({ entry, orgSlug }: { entry: CampWithStats; orgSlug: s
             aria-valuemax={camp.capacity}
             aria-valuetext={occupied}
           >
-            <div className="h-full" style={{ width: `${Math.min(1, Math.max(0, ratio)) * 100}%`, background: 'var(--cp-brand)', borderRadius: 'var(--cp-r-bar)' }} />
+            <div className="h-full" style={{ width: `${Math.min(1, Math.max(0, ratio)) * 100}%`, background: 'var(--cp-accent-bar)', borderRadius: 'var(--cp-r-bar)' }} />
           </div>
           {status && <p className="cp-label mt-2" style={{ color: 'var(--cp-ink-2)' }}>{status}</p>}
           {waitlistCount > 0 && <p className="cp-label mt-2" style={{ color: 'var(--cp-muted)' }}>{de.dashboard.waitingPlaces(waitlistCount)}</p>}
@@ -48,10 +48,9 @@ function DashboardCampRow({ entry, orgSlug }: { entry: CampWithStats; orgSlug: s
   )
 }
 
-export default function DashboardCampsCard({ camps, orgSlug, brandColor, action }: {
+export default function DashboardCampsCard({ camps, orgSlug, action }: {
   camps: CampWithStats[]
   orgSlug: string
-  brandColor: string
   action: ReactNode
 }) {
   // Match the dashboard's existing date-only UTC comparison; a camp ending today is still current.
@@ -67,7 +66,7 @@ export default function DashboardCampsCard({ camps, orgSlug, brandColor, action 
   )
 
   return (
-    <section className="cp-card" aria-labelledby="dashboard-camps-title" style={{ '--cp-brand': brandColor } as CSSProperties}>
+    <section className="cp-card" aria-labelledby="dashboard-camps-title">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 id="dashboard-camps-title" className="cp-title">{de.dashboard.yourCamps}</h2>
         {action}

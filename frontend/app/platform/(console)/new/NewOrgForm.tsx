@@ -1,8 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import Link from 'next/link'
-import Button from '../../../components/saas/ui/Button'
+import Button, { ButtonLink } from '../../../components/saas/ui/Button'
 import Field from '../../../components/saas/ui/Field'
 import { INPUT_CLASS, INPUT_STYLE } from '../../../components/saas/ui/formFieldStyles'
 import { createOrganizationWithCampAction, type NewOrgState } from './actions'
@@ -25,13 +24,9 @@ export default function NewOrgForm() {
         <p className="mb-4" style={{ color: 'var(--cp-error)' }} role="alert">
           {state.error}
         </p>
-        <Link
-          href={`/pilot/${state.orgCreatedSlug}/dashboard`}
-          className="cp-subheading inline-flex min-h-[50px] items-center justify-center rounded-[var(--cp-r-field)] px-5"
-          style={{ background: 'var(--cp-ink)', color: '#FFFFFF' }}
-        >
+        <ButtonLink href={`/pilot/${state.orgCreatedSlug}/dashboard`} variant="primary">
           Zur Verwaltung von „{state.orgCreatedSlug}&ldquo;
-        </Link>
+        </ButtonLink>
       </div>
     )
   }

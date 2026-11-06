@@ -121,21 +121,18 @@ export default function ParticipantList({
             label={de.command.filterPaymentOpen}
             count={counts['payment-open']}
             active={filter === 'payment-open'}
-            brandColor={brandColor}
             onClick={() => setFilter(f => (f === 'payment-open' ? 'all' : 'payment-open'))}
           />
           <FilterButton
             label={de.command.filterMissingInfo}
             count={counts['missing-info']}
             active={filter === 'missing-info'}
-            brandColor={brandColor}
             onClick={() => setFilter(f => (f === 'missing-info' ? 'all' : 'missing-info'))}
           />
           <FilterButton
             label={de.command.filterAll}
             count={counts.all}
             active={filter === 'all'}
-            brandColor={brandColor}
             onClick={() => setFilter('all')}
           />
         </div>
@@ -158,7 +155,6 @@ export default function ParticipantList({
               registration={r}
               selected={selected.has(r.id)}
               onToggleSelect={() => toggleSelect(r.id)}
-              brandColor={brandColor}
               orgSlug={orgSlug}
               campSlug={campSlug}
               campTitle={camp.title}
@@ -170,7 +166,7 @@ export default function ParticipantList({
       )}
 
       <SelectionBar count={selected.size}>
-        <ButtonLink href={`mailto:?bcc=${selectedEmails.join(',')}`} variant="primary" brandStrong={brand.brandStrong} brandOn={brand.brandOn}>
+        <ButtonLink href={`mailto:?bcc=${selectedEmails.join(',')}`} variant="primary">
           E-Mail an Ausgewählte
         </ButtonLink>
       </SelectionBar>

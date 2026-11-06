@@ -48,7 +48,6 @@ export default function CampPaymentsScreen({ orgSlug, campSlug, org, camp, regis
           initialFilter={initialFilter}
           entries={entries}
           orgSlug={orgSlug}
-          brandColor={brand.brand}
           emptyLabel={de.paymentsPage.emptyCamp}
           csvFilename={`${campSlug}-zahlungen.csv`}
           xlsxHref={`/pilot/${orgSlug}/camps/${campSlug}/export?view=payments`}

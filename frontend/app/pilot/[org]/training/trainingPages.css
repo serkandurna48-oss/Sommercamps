@@ -1,0 +1,23 @@
+/* Öffentliche Trainingsseiten: nutzt die Tokens des Vereins-Themes aus publicTheme.css. */
+.cp-public .tr-col { max-width: 720px; margin-inline: auto; padding: 40px 24px 72px; }
+.cp-public .tr-col.wide { max-width: 1100px; padding-inline: 0; }
+.cp-public .tr-col.wide > .screen { padding: 0; }
+.cp-public .tr-lead { color: var(--ink-2); margin: 8px 0 0; }
+.cp-public .tr-list, .cp-public .tr-sessions { list-style: none; margin: 20px 0 0; padding: 0; display: grid; gap: 10px; }
+.cp-public .tr-card, .cp-public .tr-session {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;
+  min-height: 56px; padding: 14px 16px; text-align: left; font: inherit; color: inherit; text-decoration: none;
+  background: transparent; border: 1.5px solid var(--cp-field-line, var(--line)); border-radius: var(--cp-r-chip, 12px);
+}
+.cp-public .tr-card { flex-direction: column; align-items: flex-start; }
+.cp-public a.tr-card:hover, .cp-public button.tr-session:hover { border-color: var(--brand-strong, var(--brand)); }
+.cp-public button.tr-session { cursor: pointer; }
+.cp-public .tr-session.full { opacity: .65; }
+.cp-public .tr-session-when { font-weight: 600; }
+.cp-public .tr-session-spots { font-size: 14px; color: var(--ink-2); white-space: nowrap; }
+.cp-public .tr-session-price { font-size: 14px; color: var(--ink-2); }
+.cp-public .tr-meta { font-size: 14px; color: var(--ink-2); margin: 4px 0 0; }
+.cp-public .tr-badge { display: inline-block; font-size: 12px; font-weight: 600; line-height: 1; padding: 4px 8px; margin: 6px 0 0; border: 1px solid var(--cp-field-line, var(--line)); border-radius: 999px; color: var(--ink-2); }
+.cp-public .tr-price { font-weight: 600; margin: 4px 0 0; }
+.cp-public .tr-notice { margin-top: 16px; }
+.cp-public .tr-facts { margin-top: 20px; }

@@ -13,10 +13,10 @@ const PLAN_STATUS_LABEL: Record<string, string> = {
 }
 
 const PLAN_STATUS_TONE: Record<string, { bg: string; fg: string }> = {
-  pilot: { bg: 'var(--cp-warn-bg, #FDF3E0)', fg: 'var(--cp-warn, #92620A)' },
-  active: { bg: 'var(--cp-success-bg, #E3F3E9)', fg: 'var(--cp-success, #1C6B45)' },
+  pilot: { bg: 'var(--cp-pending-bg)', fg: 'var(--cp-pending)' },
+  active: { bg: 'var(--cp-ok-bg)', fg: 'var(--cp-ok)' },
   suspended: { bg: 'var(--cp-error-bg)', fg: 'var(--cp-error)' },
-  cancelled: { bg: 'var(--cp-line)', fg: 'var(--cp-muted)' },
+  cancelled: { bg: 'var(--cp-surface-sunken)', fg: 'var(--cp-muted)' },
 }
 
 type StatusFilter = 'all' | 'published' | 'draft' | OrganizationAdmin['plan_status']
@@ -128,7 +128,7 @@ export default function OrganizationList({ organizations }: { organizations: Org
               className="cp-chip rounded-[var(--cp-r-chip)] border px-3 py-2"
               style={
                 statusFilter === f.value
-                  ? { borderColor: 'var(--cp-ink)', background: 'var(--cp-ink)', color: '#FFFFFF' }
+                  ? { borderColor: 'var(--cp-accent-ink)', background: 'var(--cp-accent-soft)', color: 'var(--cp-accent-ink)' }
                   : { borderColor: 'var(--cp-field-line)', color: 'var(--cp-ink-2)' }
               }
             >

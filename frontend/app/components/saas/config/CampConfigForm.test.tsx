@@ -39,7 +39,7 @@ afterEach(async () => {
 })
 
 it('sends registration deadlines as explicit instants, not server-local wall times', async () => {
-  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={camp} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={camp} />))
   await act(async () => {
     container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
   })
@@ -50,7 +50,7 @@ it('sends registration deadlines as explicit instants, not server-local wall tim
 })
 
 it('publishes explicitly and retains the confirmed state over repeated saves', async () => {
-  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={camp} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={camp} />))
   expect(container.querySelector('select[name="status"]')).toBeNull()
   await act(async () => container.querySelector<HTMLButtonElement>('[value="published"]')!.click())
   expect(vi.mocked(updateCampConfigAction).mock.calls[0][3].get('status')).toBe('published')
@@ -63,7 +63,7 @@ it('publishes explicitly and retains the confirmed state over repeated saves', a
 })
 
 it.each(['draft', 'closed'])('requires confirmation before changing a published camp to %s', async status => {
-  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={{ ...camp, status: 'published' }} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={{ ...camp, status: 'published' }} />))
   const button = container.querySelector<HTMLButtonElement>(`[value="${status}"]`)!
   expect(button.className).toContain('cp-btn-danger')
   vi.mocked(window.confirm).mockReturnValue(false)
@@ -75,7 +75,7 @@ it.each(['draft', 'closed'])('requires confirmation before changing a published 
 })
 it('keeps entered values when saving fails', async () => {
   vi.mocked(updateCampConfigAction).mockResolvedValue({ error: 'Try again', saved: false })
-  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={camp} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={camp} />))
   container.querySelector<HTMLInputElement>('[name="title"]')!.value = 'Changed title'
 
   await act(async () => {
@@ -88,7 +88,7 @@ it('keeps entered values when saving fails', async () => {
 })
 
 it('replaces the earlier result with a pending note while the next save runs', async () => {
-  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={camp} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={camp} />))
   await act(async () => {
     container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
   })
@@ -107,7 +107,7 @@ it('replaces the earlier result with a pending note while the next save runs', a
 
 it('clears a previous error instead of showing it next to a running save', async () => {
   vi.mocked(updateCampConfigAction).mockResolvedValue({ error: 'Try again', saved: false })
-  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={camp} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={camp} />))
   await act(async () => {
     container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
   })
@@ -126,7 +126,7 @@ it('clears a previous error instead of showing it next to a running save', async
 })
 
 it('keeps saved values until fresh server props arrive, then accepts those props', async () => {
-  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={camp} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={camp} />))
   container.querySelector<HTMLInputElement>('[name="title"]')!.value = 'Changed title'
   await act(async () => {
     container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
@@ -136,6 +136,6 @@ it('keeps saved values until fresh server props arrive, then accepts those props
     container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
   })
   expect(vi.mocked(updateCampConfigAction).mock.calls[1][3].get('title')).toBe('Changed title')
-  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={{ ...camp, title: 'Confirmed title' }} brandStrong="#112233" brandOn="#ffffff" />))
+  await act(() => root.render(<CampConfigForm orgSlug="review" org={org} camp={{ ...camp, title: 'Confirmed title' }} />))
   expect(container.querySelector<HTMLInputElement>('[name="title"]')!.defaultValue).toBe('Confirmed title')
 })

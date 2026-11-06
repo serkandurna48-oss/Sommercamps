@@ -21,14 +21,10 @@ const initialState: CampCreateActionState = { error: null }
  * können. */
 export default function CampCreateForm({
   orgSlug,
-  brandStrong,
-  brandOn,
   backButton,
   initialValues,
 }: {
   orgSlug: string
-  brandStrong: string
-  brandOn: string
   backButton?: ReactNode
   initialValues?: CampDuplicate
 }) {
@@ -118,7 +114,7 @@ export default function CampCreateForm({
       )}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto sm:order-2">
+        <Button type="submit" variant="primary" disabled={pending} className="w-full sm:w-auto sm:order-2">
           {pending ? 'Wird angelegt …' : 'Camp anlegen'}
         </Button>
         {backButton}

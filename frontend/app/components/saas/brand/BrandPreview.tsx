@@ -4,6 +4,7 @@ import { de } from '../../../lib/i18n/de'
 import { isAllowedImageUrl } from '../../../lib/imageUrl'
 import { readableTextOn } from '../../../lib/readableTextOn'
 import { normalizeHex } from './ColorField'
+import { FALLBACK_BRAND_COLOR } from '../../../lib/brandPipeline'
 import '../../../pilot/[org]/publicTheme.css'
 
 export type BrandPreviewTheme = 'tradition' | 'akademie' | 'kompakt'
@@ -20,11 +21,12 @@ export default function BrandPreview({ name, logoUrl, color, theme }: {
   theme?: BrandPreviewTheme
 }) {
   const safeLogoUrl = logoUrl && isAllowedImageUrl(logoUrl) ? logoUrl : null
-  const normalizedColor = normalizeHex(color)
+  // The preview shows the parent page, which falls back to the default club colour.
+  const normalizedColor = normalizeHex(color) ?? FALLBACK_BRAND_COLOR
   return (
     <div
       aria-label={de.einrichtung.previewLabel} data-theme={theme}
-      className={`w-full min-w-0 shrink-0 rounded-[var(--cp-r-card)] border p-4 lg:w-56${theme ? ` cp-public brand-preview-${theme}` : ''}`}
+      className={`w-full min-w-0 shrink-0 rounded-[var(--cp-r-card)] border p-4 lg:w-56 ${theme ? `cp-public brand-preview-${theme}` : ''}`}
       style={{
         borderColor: theme ? 'var(--line)' : 'var(--cp-line)',
         background: theme ? 'var(--surface)' : 'var(--cp-surface)',
@@ -37,7 +39,7 @@ export default function BrandPreview({ name, logoUrl, color, theme }: {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={safeLogoUrl} alt="" className="h-8 w-8 shrink-0 rounded object-contain" />
         ) : (
-          <span className="h-8 w-8 shrink-0 rounded" style={{ background: normalizedColor || 'var(--cp-line)' }} aria-hidden="true" />
+          <span className="h-8 w-8 shrink-0 rounded" style={{ background: normalizedColor }} aria-hidden="true" />
         )}
         <span className="cp-subheading min-w-0" style={{ color: theme ? 'var(--ink)' : 'var(--cp-ink)', overflowWrap: 'anywhere' }}>
           {name || 'Vereinsname'}
@@ -47,9 +49,9 @@ export default function BrandPreview({ name, logoUrl, color, theme }: {
         <span
           className={theme ? 'btn primary' : 'cp-label inline-flex min-h-[36px] items-center rounded-[var(--cp-r-field)] px-4 py-2'}
           style={{
-            background: normalizedColor || 'var(--cp-ink)',
-            color: theme && normalizedColor ? readableTextOn(normalizedColor) : '#fff',
-            ...(theme ? { borderColor: normalizedColor || 'var(--cp-ink)' } : {}),
+            background: normalizedColor,
+            color: readableTextOn(normalizedColor),
+            ...(theme ? { borderColor: normalizedColor } : {}),
           }}
         >
           {de.einrichtung.previewBtnExample}

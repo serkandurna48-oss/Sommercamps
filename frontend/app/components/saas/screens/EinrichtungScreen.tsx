@@ -2,7 +2,7 @@
 
 import { useState, useActionState, useId } from 'react'
 import type { CampAdmin, OrganizationAdmin } from '../../../lib/saasAdminApi'
-import { computeBrandTokens, type BrandTokens } from '../brandPipeline'
+import { computeBrandTokens } from '../brandPipeline'
 import { computeWizardStep } from '../onboardingSteps'
 import BrandPreview from '../brand/BrandPreview'
 import ColorField from '../brand/ColorField'
@@ -69,20 +69,19 @@ export default function EinrichtungScreen({
       <main className={PAGE_FORM}>
         <ProgressBar step={step} total={4} />
         {step === 1 && (
-          <Step1Auftritt orgSlug={orgSlug} org={org} brand={brand} onSuccess={goNext} />
+          <Step1Auftritt orgSlug={orgSlug} org={org} onSuccess={goNext} />
         )}
         {step === 2 && (
-          <Step2Rechtliches orgSlug={orgSlug} org={org} brand={brand} onSuccess={goNext} onBack={goBack} />
+          <Step2Rechtliches orgSlug={orgSlug} org={org} onSuccess={goNext} onBack={goBack} />
         )}
         {step === 3 && (
-          <Step3Camp orgSlug={orgSlug} org={org} camps={camps} brand={brand} onSuccess={goNext} onBack={goBack} />
+          <Step3Camp orgSlug={orgSlug} org={org} camps={camps} onSuccess={goNext} onBack={goBack} />
         )}
         {step === 4 && (
           <Step4Pruefen
             orgSlug={orgSlug}
             org={org}
             camps={camps}
-            brand={brand}
             onBack={goBack}
             goToStep={goToStep}
             submitAction={reviewSubmitAction}
@@ -104,7 +103,7 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
   ]
   return (
     <div className="mb-8" aria-label={de.einrichtung.stepOf(step, total)}>
-      <p className="cp-chip mb-4" style={{ color: 'var(--cp-muted)' }}>
+      <p className="cp-eyebrow mb-4">
         {de.einrichtung.stepOf(step, total)}
       </p>
       <div className="flex items-center gap-1.5">
@@ -120,7 +119,7 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
                   className="cp-label flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs leading-none"
                   style={{
                     background: done ? 'var(--cp-ok-bg)' : active ? 'var(--cp-ink)' : 'var(--cp-surface-2)',
-                    color: done ? 'var(--cp-ok)' : active ? '#fff' : 'var(--cp-muted)',
+                    color: done ? 'var(--cp-ok)' : active ? 'var(--cp-surface)' : 'var(--cp-muted)',
                     border: done ? '1px solid var(--cp-ok-line)' : active ? 'none' : '1px solid var(--cp-line)',
                   }}
                 >
@@ -163,8 +162,6 @@ function WizardNavButtons({
   onBack,
   submitType = false,
   onNext,
-  brandStrong,
-  brandOn,
 }: {
   step: number
   total: number
@@ -172,19 +169,17 @@ function WizardNavButtons({
   onBack?: () => void
   submitType?: boolean
   onNext?: () => void
-  brandStrong: string
-  brandOn: string
 }) {
   const isLast = step === total
   return (
     <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
       {!isLast && submitType && (
-        <Button type="submit" variant="primary" disabled={pending} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto sm:order-2">
+        <Button type="submit" variant="primary" disabled={pending} className="w-full sm:w-auto sm:order-2">
           {pending ? de.einrichtung.weiterSaving : de.einrichtung.weiter}
         </Button>
       )}
       {!isLast && !submitType && onNext && (
-        <Button type="button" variant="primary" onClick={onNext} brandStrong={brandStrong} brandOn={brandOn} className="w-full sm:w-auto sm:order-2">
+        <Button type="button" variant="primary" onClick={onNext} className="w-full sm:w-auto sm:order-2">
           {de.einrichtung.weiter}
         </Button>
       )}
@@ -215,12 +210,10 @@ function ErrorBanner({ id, children }: { id?: string; children: string }) {
 function Step1Auftritt({
   orgSlug,
   org,
-  brand,
   onSuccess,
 }: {
   orgSlug: string
   org: OrganizationAdmin
-  brand: BrandTokens
   onSuccess: () => void
 }) {
   const preview = useAdminPreview()
@@ -245,42 +238,42 @@ function Step1Auftritt({
   return (
     <>
       <StepHeader title={de.einrichtung.step1Title} kicker={de.einrichtung.step1Kicker} />
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <form
-          action={formAction}
-          className="flex flex-1 min-w-0 flex-col gap-4"
-          aria-describedby={!pending && state.error ? feedbackId : undefined}
-        >
-          <Field label={de.configPage.field.name} htmlFor="w-name">
-            <input
-              id="w-name" name="name" required
-              value={name} onChange={e => setName(e.target.value)}
-              className={INPUT_CLASS} style={INPUT_STYLE}
-            />
-          </Field>
-          <Field label={de.configPage.field.logoUrl} htmlFor="w-logo_url">
-            <input
-              id="w-logo_url" name="logo_url" inputMode="url"
-              value={logoUrl} onChange={e => setLogoUrl(e.target.value)}
-              className={INPUT_CLASS} style={INPUT_STYLE}
-            />
-          </Field>
-          <ColorField id="w-primary_color" value={color} onChange={setColor} />
+      <form
+        action={formAction}
+        className="flex min-w-0 flex-col"
+        aria-describedby={!pending && state.error ? feedbackId : undefined}
+      >
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+          <div className="flex min-w-0 flex-1 flex-col gap-4">
+            <Field label={de.configPage.field.name} htmlFor="w-name">
+              <input
+                id="w-name" name="name" required
+                value={name} onChange={e => setName(e.target.value)}
+                className={INPUT_CLASS} style={INPUT_STYLE}
+              />
+            </Field>
+            <Field label={de.configPage.field.logoUrl} htmlFor="w-logo_url">
+              <input
+                id="w-logo_url" name="logo_url" inputMode="url"
+                value={logoUrl} onChange={e => setLogoUrl(e.target.value)}
+                className={INPUT_CLASS} style={INPUT_STYLE}
+              />
+            </Field>
+            <ColorField id="w-primary_color" value={color} onChange={setColor} />
 
-          {!pending && state.error && <ErrorBanner id={feedbackId}>{state.error}</ErrorBanner>}
+            {!pending && state.error && <ErrorBanner id={feedbackId}>{state.error}</ErrorBanner>}
+          </div>
 
-          <WizardNavButtons
-            step={1}
-            total={4}
-            pending={pending}
-            submitType
-            brandStrong={brand.brandStrong}
-            brandOn={brand.brandOn}
-          />
-        </form>
+          <BrandPreview name={name} logoUrl={logoUrl} color={color} />
+        </div>
 
-        <BrandPreview name={name} logoUrl={logoUrl} color={color} />
-      </div>
+        <WizardNavButtons
+          step={1}
+          total={4}
+          pending={pending}
+          submitType
+        />
+      </form>
     </>
   )
 }
@@ -290,13 +283,11 @@ function Step1Auftritt({
 function Step2Rechtliches({
   orgSlug,
   org,
-  brand,
   onSuccess,
   onBack,
 }: {
   orgSlug: string
   org: OrganizationAdmin
-  brand: BrandTokens
   onSuccess: () => void
   onBack: () => void
 }) {
@@ -387,8 +378,6 @@ function Step2Rechtliches({
           pending={pending}
           onBack={onBack}
           submitType
-          brandStrong={brand.brandStrong}
-          brandOn={brand.brandOn}
         />
       </form>
     </>
@@ -401,14 +390,12 @@ function Step3Camp({
   orgSlug,
   org: _org,
   camps,
-  brand,
   onSuccess,
   onBack,
 }: {
   orgSlug: string
   org: OrganizationAdmin
   camps: CampAdmin[]
-  brand: BrandTokens
   onSuccess: () => void
   onBack: () => void
 }) {
@@ -444,8 +431,6 @@ function Step3Camp({
           total={4}
           onBack={onBack}
           onNext={onSuccess}
-          brandStrong={brand.brandStrong}
-          brandOn={brand.brandOn}
         />
       </>
     )
@@ -456,8 +441,6 @@ function Step3Camp({
       <StepHeader title={de.einrichtung.step3Title} kicker={de.einrichtung.step3Kicker} />
       <CampCreateForm
         orgSlug={orgSlug}
-        brandStrong={brand.brandStrong}
-        brandOn={brand.brandOn}
         backButton={
           <Button type="button" variant="secondary" onClick={onBack} className="sm:order-1">
             {de.einrichtung.back}
@@ -482,7 +465,6 @@ function Step4Pruefen({
   orgSlug,
   org,
   camps,
-  brand,
   onBack,
   goToStep,
   submitAction,
@@ -490,7 +472,6 @@ function Step4Pruefen({
   orgSlug: string
   org: OrganizationAdmin
   camps: CampAdmin[]
-  brand: BrandTokens
   onBack: () => void
   goToStep: (s: WizardStep) => void
   submitAction: SubmitAction
@@ -554,8 +535,6 @@ function Step4Pruefen({
         <ButtonLink
           href={`/pilot/${orgSlug}`}
           variant="secondary"
-          brandStrong={brand.brandStrong}
-          brandOn={brand.brandOn}
         >
           {de.einrichtung.previewLink}
         </ButtonLink>
@@ -571,7 +550,7 @@ function Step4Pruefen({
             {de.einrichtung.approvedBanner}
           </p>
           <div className="mb-3 flex flex-wrap gap-3">
-            {!org.site_published && <ButtonLink href={`/pilot/${orgSlug}/konfiguration#publication`} variant="primary" brandStrong={brand.brandStrong} brandOn={brand.brandOn}>
+            {!org.site_published && <ButtonLink href={`/pilot/${orgSlug}/konfiguration#publication`} variant="primary">
               {de.einrichtung.publishSite}
             </ButtonLink>}
             {camps.filter(camp => camp.status !== 'published').slice(0, 1).map(camp => (
@@ -582,9 +561,7 @@ function Step4Pruefen({
           </div>
           <ButtonLink
             href={`/pilot/${orgSlug}/dashboard`}
-            variant="primary"
-            brandStrong={brand.brandStrong}
-            brandOn={brand.brandOn}
+            variant={org.site_published ? 'primary' : 'secondary'}
           >
             {de.einrichtung.dashboardLink}
           </ButtonLink>
@@ -594,8 +571,6 @@ function Step4Pruefen({
       {(needsReview) && allDone && (
         <SubmitReviewButton
           orgSlug={orgSlug}
-          brandStrong={brand.brandStrong}
-          brandOn={brand.brandOn}
           reviewNote={reviewNote}
           submitAction={submitAction}
         />
@@ -611,8 +586,6 @@ function Step4Pruefen({
         step={4}
         total={4}
         onBack={onBack}
-        brandStrong={brand.brandStrong}
-        brandOn={brand.brandOn}
       />
     </>
   )

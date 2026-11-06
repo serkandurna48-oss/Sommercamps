@@ -8,11 +8,15 @@ Two status values → two distinct messages:
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from html import escape
 from typing import Optional
 
+from zoneinfo import ZoneInfo
+
 from .mail import MailMessage
+
+_BERLIN = ZoneInfo("Europe/Berlin")
 
 
 def _date_range(start: date, end: date) -> str:
@@ -24,6 +28,15 @@ def _date_range(start: date, end: date) -> str:
         return f"{start.day}.–{end_text}"
     start_year = f" {start.year}" if start.year != end.year else ""
     return f"{start.day}. {months[start.month - 1]}{start_year}–{end_text}"
+
+
+def _when(start: date, end: date, starts_at: Optional[datetime]) -> str:
+    """Training sessions (starts_at set) show date and Berlin local time;
+    classic camps keep the date range."""
+    if starts_at is None:
+        return _date_range(start, end)
+    local = starts_at.astimezone(_BERLIN)
+    return f"{_date_range(local.date(), local.date())}, {local:%H:%M} Uhr"
 
 
 def build_registration_mail(
@@ -42,8 +55,13 @@ def build_registration_mail(
     price_cents: Optional[int] = None,
     currency: Optional[str] = None,
     promoted: bool = False,
+    starts_at: Optional[datetime] = None,
+    payment_method: Optional[str] = None,
 ) -> MailMessage:
-    """promoted=True: the registration moved up from the waitlist; same payment
+    """payment_method is only set for training bookings ('bar' | 'ueberweisung').
+    Classic camps leave it None and keep the unchanged camp mail.
+
+    promoted=True: the registration moved up from the waitlist; same payment
     details as a direct confirmation, but the parent is told a spot opened up."""
     # Escape all user-supplied strings before interpolating into HTML.
     e_org_name = escape(org_name)
@@ -54,7 +72,7 @@ def build_registration_mail(
     e_iban = escape(iban) if iban else None
     e_phone = escape(org_phone) if org_phone else None
 
-    dates = _date_range(camp_start, camp_end)
+    dates = _when(camp_start, camp_end, starts_at)
     phone_line = f"<br>Telefon: {e_phone}" if e_phone else ""
 
     amount_line = ""
@@ -63,13 +81,38 @@ def build_registration_mail(
         formatted = f"{price_cents // 100},{price_cents % 100:02d}"
         amount_line = f"<p>Betrag: <strong>{formatted}&nbsp;{e_cur}</strong></p>\n"
 
+    is_training = starts_at is not None
     if status in ("registered", "confirmed"):
-        subject = (
-            f"Platz frei – Ihre Anmeldung ist bestätigt – {camp_title}"
-            if promoted
-            else f"Anmeldebestätigung – {camp_title}"
-        )
-        if e_iban:
+        if promoted:
+            subject = f"Platz frei – Ihre Anmeldung ist bestätigt – {camp_title}"
+        elif is_training:
+            subject = f"Buchungsbestätigung: {camp_title} am {dates}"
+        else:
+            subject = f"Anmeldebestätigung – {camp_title}"
+        if is_training and payment_method == "bar":
+            payment_block = (
+                f"{amount_line}"
+                "<p>Bitte bar beim Training bezahlen.</p>"
+            )
+        elif is_training and payment_method == "online":
+            if e_iban:
+                fallback = (
+                    "<p>Falls die Online-Zahlung nicht geklappt hat:</p>"
+                    f"<p>Empfänger: <strong>{e_payee}</strong>"
+                    f"<br>IBAN: <strong>{e_iban}</strong>"
+                    f"<br>Verwendungszweck: <strong>{e_payment_ref}</strong></p>"
+                )
+            else:
+                fallback = (
+                    "<p>Falls die Online-Zahlung nicht geklappt hat, "
+                    f"wenden Sie sich bitte an {e_org_email}.</p>"
+                )
+            payment_block = (
+                f"{amount_line}"
+                "<p>Sie zahlen online. Die Zahlung schließen Sie direkt nach der Buchung auf der Zahlungsseite ab.</p>\n"
+                f"{fallback}"
+            )
+        elif e_iban:
             payment_block = (
                 f"{amount_line}"
                 f"<p>Empfänger: <strong>{e_payee}</strong>"
@@ -89,11 +132,16 @@ def build_registration_mail(
             if promoted
             else f"<p>Ihre Anmeldung für <strong>{e_camp_title}</strong>\n({dates}) ist bei uns eingegangen.</p>"
         )
+        cancel_note = (
+            "<p>Kostenlose Absage bis 24 h vorher – bitte direkt beim Verein melden.</p>\n"
+            if is_training
+            else ""
+        )
         html = f"""\
 <p>Guten Tag,</p>
 {intro}
 {payment_block}
-<p>Bei Fragen wenden Sie sich direkt an {e_org_name}:<br>
+{cancel_note}<p>Bei Fragen wenden Sie sich direkt an {e_org_name}:<br>
 E-Mail: {e_org_email}{phone_line}</p>
 <p>Viele Grüße,<br>{e_org_name}</p>"""
     else:
@@ -125,6 +173,7 @@ def build_cancellation_mail(
     camp_start: date,
     camp_end: date,
     parent_email: str,
+    starts_at: Optional[datetime] = None,
 ) -> MailMessage:
     """Sent to the parent when the club cancels a registration."""
     e_org_name = escape(org_name)
@@ -132,7 +181,7 @@ def build_cancellation_mail(
     e_camp_title = escape(camp_title)
     e_phone = escape(org_phone) if org_phone else None
     phone_line = f"<br>Telefon: {e_phone}" if e_phone else ""
-    dates = _date_range(camp_start, camp_end)
+    dates = _when(camp_start, camp_end, starts_at)
     html = f"""\
 <p>Guten Tag,</p>
 <p>Ihre Anmeldung für <strong>{e_camp_title}</strong> ({dates}) wurde storniert.</p>
@@ -159,11 +208,12 @@ def build_provider_mail(
     waitlist_count: int,
     contact_email: str,
     org_name: str,
+    starts_at: Optional[datetime] = None,
 ) -> MailMessage:
     e_camp_title = escape(camp_title)
     e_payment_ref = escape(payment_reference)
     e_org_name = escape(org_name)
-    dates = _date_range(camp_start, camp_end)
+    dates = _when(camp_start, camp_end, starts_at)
 
     if status == "registered":
         subject = f"Neue Anmeldung – {camp_title}"

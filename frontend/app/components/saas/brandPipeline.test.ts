@@ -4,7 +4,7 @@ import { __internal, computeBrandTokens } from './brandPipeline'
 const { contrastRatio, hexToRgb } = __internal
 
 function contrastAgainstPaper(hex: string): number {
-  return contrastRatio(hexToRgb(hex), hexToRgb('#F4F5F2'))
+  return contrastRatio(hexToRgb(hex), hexToRgb('#F4F3EF'))
 }
 
 describe('computeBrandTokens — Auftrag Abschnitt 3.3', () => {
@@ -13,7 +13,7 @@ describe('computeBrandTokens — Auftrag Abschnitt 3.3', () => {
     expect(tokens.brand).toBe('#C8102E')
     expect(tokens.brandStrong).toBe('#C8102E')
     expect(contrastAgainstPaper(tokens.brandStrong)).toBeGreaterThanOrEqual(4.5)
-    expect(contrastAgainstPaper(tokens.brandStrong)).toBeCloseTo(5.38, 1)
+    expect(contrastAgainstPaper(tokens.brandStrong)).toBeCloseTo(5.30, 1)
   })
 
   it('JK Performance Academy (#C79B3B) wird abgedunkelt, bis Kontrast >=4.5:1', () => {

@@ -14,8 +14,8 @@
 
 import { computeBrandSafe, __internal as sharedInternal } from '../../lib/brandPipeline'
 
-// Muss mit --cp-paper in tokens.css übereinstimmen.
-const PAPER_HEX = '#F4F5F2'
+// Muss mit --cp-paper in tokens.css übereinstimmen (nur Admin-Wrapper; Elternseiten rechnen direkt über lib/brandPipeline).
+const PAPER_HEX = '#F4F3EF'
 
 export interface BrandTokens {
   /** Nur für textfreie Flächen: Tab-Unterstrich, Belegungsbalken, Band-Kante. */

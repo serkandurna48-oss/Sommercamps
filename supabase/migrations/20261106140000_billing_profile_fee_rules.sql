@@ -16,8 +16,9 @@
 --     drop column if exists fee_snapshot_at;
 --
 -- Rechte: alle neuen Tabellen sind backend-only (RLS an, keine Policy, keine Rechte fuer
--- anon/authenticated). Die neuen Spalten an camp_registrations bekommen keine
--- Spaltenrechte (20261024130000_column_level_grants.sql bleibt unveraendert).
+-- anon/authenticated). Achtung: camp_registrations hat tabellenweites SELECT fuer
+-- authenticated (20261018154831); die neuen fee_*-Spalten werden erst durch
+-- 20261106160000_billing_refunds_and_grants.sql per Spaltenrecht abgeschirmt.
 -- Idempotent: IF NOT EXISTS / DROP ... IF EXISTS Guards, Backfill nur fuer Vereine ohne Regel.
 
 begin;

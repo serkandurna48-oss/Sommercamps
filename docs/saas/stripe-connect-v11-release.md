@@ -1,6 +1,8 @@
 # Stripe Connect v1.1 – Release-Checkliste
 
 ## Modell
+> **Stand 06.11.2026:** Neues Modell siehe Abschnitt „Abrechnung B1/B2“ unten (Express + Destination Charges mit Plattformgebühr). Das folgende Direct-Charge-Modell gilt nur noch für bereits verbundene Standard-Konten.
+
 CampsPilot ist Plattform, Vereine sind direkte Stripe-Zahlungsempfänger (Direct Charges). Keine CampsPilot-Provision auf Campbuchungen. SaaS-Gebühren werden separat abgerechnet.
 
 ## Status
@@ -53,3 +55,23 @@ Production erst nach erfolgreichem Staging-Test und mit Live-Schlüsseln, eigene
 - Stripe-Schlüssel nur in Render, nicht in öffentlichen Next.js-Variablen.
 - Vereine bleiben getrennt: Stripe-Event-Konto und gespeicherte Session müssen zum selben Mandanten gehören.
 - Keine Produktionstests mit realen Kinderanmeldungen.
+
+## Abrechnung B1/B2: Express + Destination Charges (06.11.2026)
+
+**Nur Testmodus**, bis Weys Tech UG gegründet ist.
+
+- **Modell:** Verein hat ein Stripe-Connect-**Express**-Konto (`organizations.stripe_express_account_id`, getrennt vom Alt-Feld `stripe_account_id`). Checkout-Session auf der **Plattform** mit `payment_intent_data.on_behalf_of` = Verein, `transfer_data.destination` = Verein, `application_fee_amount` = Plattformgebühr (`app/fees.py::effective_fee`, Regel zum Buchungsdatum, auf den gezahlten Betrag). Stripe-Kosten trägt die Plattform.
+- **Reihenfolge:** aktives Express-Konto → Destination Charge; sonst aktives Alt-Standardkonto → Direct Charge wie bisher (ohne Gebühr); sonst keine Online-Zahlung.
+- **Einrichtung durch den Verein:** Einstellungen → Zahlungen → „Online-Zahlung einrichten“ (`POST /admin/organizations/{slug}/payments/stripe/onboarding`, Account Link), „Status prüfen“ (`…/sync`); Status auch per `account.updated` am Connect-Webhook.
+- **Bezahlt:** nur durch den Plattform-Webhook (`checkout.session.completed` / `async_payment_succeeded`), idempotent; speichert `stripe_payment_intent_id` und den Gebühren-Snapshot (`fee_*`, `fee_collection='application_fee'`).
+- **Erstattung:** `POST /admin/organizations/{slug}/registrations/{token}/refund` (optional `amount_cents`) → `Refund.create(refund_application_fee=true, reverse_transfer=true)`; Status „Erstattet“ setzt der Webhook (`charge.refunded`, nur Vollerstattung).
+- **Gebühren:** Plattform-Konsole → Verein → „Plattformgebühr“ (`/admin/platform/organizations/{slug}/fee-rules`, nur Owner). Bestehende Vereine: Backfill Starter 6,90 % ab 2000-01-01.
+
+### Staging einrichten (Serkan, Testmodus)
+
+1. Stripe-Dashboard (Testmodus) → Connect: Express-Konten aktivieren, Plattformprofil + Branding ausfüllen, Land DE.
+2. **Plattform-Webhook** anlegen: URL `https://<staging-backend>/api/v1/payments/stripe/platform-webhook`, „Ereignisse auf **Ihrem Konto**“, Events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded` → `whsec_…` = `STRIPE_PLATFORM_WEBHOOK_SECRET`.
+3. **Connect-Webhook** (bestehend, `…/api/v1/payments/stripe/webhook`, „Ereignisse auf verbundenen Konten“) um `account.updated` ergänzen.
+4. Render Staging: `STRIPE_CHECKOUT_ENABLED=true`, `STRIPE_SECRET_KEY=sk_test_…`, `STRIPE_CONNECT_WEBHOOK_SECRET`, `STRIPE_PLATFORM_WEBHOOK_SECRET`, `FRONTEND_BASE_URL` = Staging-Frontend (Rücksprung aus Stripe).
+5. Staging-DB: Migrationen `20261106140000_billing_profile_fee_rules.sql` und `20261106150000_stripe_express_destination.sql` (vorher Backup; erste ändert Daten per Backfill).
+6. Test: Vereinsadmin → Einstellungen → Zahlungen → einrichten (Stripe-Testdaten, Test-IBAN `DE89370400440532013000`) → zurück → „Aktiv“. Elternbuchung → Testkarte `4242 4242 4242 4242` → „Bezahlt“; im Stripe-Dashboard die Application Fee prüfen (z. B. 5 % bei JK). Erstattung per API → „Erstattet“, Gebühr anteilig zurück.

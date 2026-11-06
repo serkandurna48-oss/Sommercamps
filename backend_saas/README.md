@@ -477,10 +477,14 @@ copy .env.example .env        # Windows; `cp .env.example .env` on macOS/Linux
 | `ADMIN_PASSWORD` | **yes** | — | Platform-admin login password (see [Admin / Onboarding](#admin--onboarding)). Own namespace — never the same value as `backend/`'s `ADMIN_PASSWORD`. |
 | `JWT_SECRET` | **yes** | — | Signs platform-admin session tokens (HS256). Own namespace — never the same value as `backend/`'s `JWT_SECRET`. |
 | `TOKEN_EXPIRE_HOURS` | no | `24` | Platform-admin token lifetime. |
+| `STRIPE_CHECKOUT_ENABLED` | no | `false` | Master switch for online payment (Stripe). |
+| `STRIPE_SECRET_KEY` | with Stripe | — | `sk_test_…` outside production, `sk_live_…` only with `APP_ENV=production` (checked at runtime). |
+| `STRIPE_CONNECT_WEBHOOK_SECRET` | with Stripe | — | Signing secret of the **Connect** webhook (`/api/v1/payments/stripe/webhook`, events on connected accounts: legacy direct-charge payments, `account.updated`). |
+| `STRIPE_PLATFORM_WEBHOOK_SECRET` | for Express | — | Signing secret of the **platform** webhook (`/api/v1/payments/stripe/platform-webhook`). Without it Express onboarding and destination charges stay off; legacy direct charges keep working. |
 
-No Stripe/Brevo/JWT/admin-password variables exist here — none of that is in scope yet. No
-Supabase service-role key is needed either: this service connects directly to Postgres and does
-not need to bypass RLS via the API layer.
+Billing B1/B2 (fees, Express, destination charges): see
+[`docs/saas/stripe-connect-v11-release.md`](../docs/saas/stripe-connect-v11-release.md#abrechnung-b1b2-express--destination-charges-06112026).
+Never commit any of these values.
 
 ## CORS
 

@@ -26,6 +26,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from ..admin_resolve import require_organization
 from ..admin_schemas import RegistrationAdminOut, _validate_slug
+from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES
+from ..schemas import RegistrationCreated
 from ..auth_deps import AuthContext, require_org_access
 from ..deps import get_tenant_context
 from ..repositories import camps as camps_repo
@@ -198,6 +200,47 @@ class SessionAdminOut(BaseModel):
     age_min: int
     age_max: int
     location: Optional[str] = None
+
+
+class SessionWithRegistrationsOut(SessionAdminOut):
+    registrations: list[RegistrationAdminOut]
+
+
+class OfferOverviewOut(BaseModel):
+    """Offer detail page in one request: offer, its sessions with counts, and
+    each session's registrations (same rows/shape as the per-session list)."""
+
+    offer: OfferAdminOut
+    sessions: list[SessionWithRegistrationsOut]
+
+
+class TrainingPaymentOfferOut(BaseModel):
+    id: UUID
+    title: str
+    kind: str
+    status: str
+
+
+class TrainingPaymentRegistrationOut(RegistrationCreated):
+    """Payment-relevant subset of RegistrationAdminOut (no medical, emergency,
+    birth-date or free-text answers). payment_reference is computed from the
+    session title exactly as on the per-session list."""
+
+    id: UUID
+    payment_method: Optional[str] = None
+    member_match: Optional[bool] = None
+    parent_first_name: str
+    parent_last_name: str
+    parent_email: str
+    child_first_name: str
+    child_last_name: str
+    created_at: datetime
+
+
+class TrainingPaymentGroupOut(BaseModel):
+    offer: TrainingPaymentOfferOut
+    session: SessionAdminOut
+    registrations: list[TrainingPaymentRegistrationOut]
 
 
 class SessionPublicOut(BaseModel):
@@ -437,6 +480,72 @@ def list_session_registrations(
     _session_or_404(organization, offer_id, session_id)
     rows = registrations_repo.list_registrations_for_camp(organization["id"], session_id)
     return [RegistrationAdminOut.model_validate(r) for r in rows]
+
+
+# ------------------------------------------------------- admin: aggregates
+
+@admin_router.get(_ADMIN + "/{offer_id}/overview", response_model=OfferOverviewOut)
+def get_offer_overview(
+    organization_slug: str, offer_id: UUID, auth: AuthContext = Depends(require_org_access)
+) -> OfferOverviewOut:
+    """Replaces offer + sessions + one registrations request per session
+    (2 + N requests) with one. Child data: never logged."""
+    organization = require_organization(organization_slug)
+    offer = _offer_or_404(organization, offer_id)
+    sessions = repo.list_sessions_with_counts(organization["id"], offer_id)
+    by_session: dict = {s["id"]: [] for s in sessions}
+    for row in registrations_repo.list_registrations_for_offer(organization["id"], offer_id):
+        # A registration for a session created between the two queries is
+        # skipped; the next load shows it.
+        if row["camp_id"] in by_session:
+            by_session[row["camp_id"]].append(RegistrationAdminOut.model_validate(row))
+    return OfferOverviewOut(
+        offer=OfferAdminOut.model_validate(offer),
+        sessions=[
+            SessionWithRegistrationsOut(**_session_admin(s).model_dump(), registrations=by_session[s["id"]])
+            for s in sessions
+        ],
+    )
+
+
+@admin_router.get("/organizations/{organization_slug}/training-payments", response_model=list[TrainingPaymentGroupOut])
+def list_training_payments(
+    organization_slug: str, auth: AuthContext = Depends(require_org_access)
+) -> list[TrainingPaymentGroupOut]:
+    """Every training session of the organization that has registrations,
+    with those registrations (payment fields only), in one query. Groups are
+    ordered by offer title, then session start. Draft sessions without an
+    active booking are left out (same rule as the payments page had).
+    booked_count/free_spots count registered/confirmed rows, as on
+    GET .../sessions. Child data: never logged."""
+    organization = require_organization(organization_slug)
+    groups: dict = {}
+    for row in repo.list_training_payment_rows(organization["id"]):
+        group = groups.get(row["session_id"])
+        if group is None:
+            group = groups[row["session_id"]] = {"row": row, "registrations": []}
+        group["registrations"].append(row)
+    out = []
+    for group in groups.values():
+        first = group["row"]
+        booked = sum(1 for r in group["registrations"] if r["status"] in CAPACITY_COUNTING_STATUSES)
+        if first["session_status"] == "draft" and booked == 0:
+            continue
+        session = _session_admin({
+            "id": first["session_id"], "offer_id": first["offer_id"], "slug": first["session_slug"],
+            "status": first["session_status"], "capacity": first["capacity"], "booked_count": booked,
+            "price_member_cents": first["price_member_cents"], "price_cents": first["price_cents"],
+            "age_min": first["age_min"], "age_max": first["age_max"], "location": first["location"],
+            "starts_at": first["starts_at"], "ends_at": first["ends_at"],
+        })
+        out.append(TrainingPaymentGroupOut(
+            offer=TrainingPaymentOfferOut(
+                id=first["offer_id"], title=first["offer_title"], kind=first["offer_kind"], status=first["offer_status"],
+            ),
+            session=session,
+            registrations=[TrainingPaymentRegistrationOut.model_validate(r) for r in group["registrations"]],
+        ))
+    return out
 
 
 # ------------------------------------------------------------------- public

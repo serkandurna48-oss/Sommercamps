@@ -391,6 +391,29 @@ def list_registrations_for_camp(organization_id: UUID, camp_id: UUID) -> list[di
         return cur.fetchall()
 
 
+_LIST_REGISTRATIONS_FOR_OFFER = f"""
+    select r.camp_id, c.title as camp_title,
+        {', '.join('r.' + f.strip() for f in _ADMIN_REGISTRATION_FIELDS.strip().split(',') if f.strip())}
+    from camp_registrations r
+    join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
+    where r.organization_id = %s
+      and c.offer_id = %s
+    order by r.created_at asc, r.id asc
+"""
+
+
+def list_registrations_for_offer(organization_id: UUID, offer_id: UUID) -> list[dict]:
+    """
+    Every registration of every session of one training offer, in one query
+    (each row carries `camp_id` = session id for grouping). Same rows and
+    PII rules as list_registrations_for_camp; both ids must already be
+    resolved within this organization.
+    """
+    with db.get_read_cursor() as cur:
+        cur.execute(_LIST_REGISTRATIONS_FOR_OFFER, (organization_id, offer_id))
+        return cur.fetchall()
+
+
 _LIST_REGISTRATIONS_FOR_ORGANIZATION = f"""
     select camp_id, {_ADMIN_REGISTRATION_FIELDS}
     from camp_registrations

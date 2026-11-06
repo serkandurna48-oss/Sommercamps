@@ -9,7 +9,6 @@ import { setPaymentStatusAction } from '../actions/paymentActions'
 import ActionForm from '../ui/ActionForm'
 import type { ActionFormState } from '../ui/ActionForm'
 import Button, { ButtonLink } from '../ui/Button'
-import ListRow from '../ui/ListRow'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from './StatusChip'
 import RowOverflow from '../ui/RowOverflow'
 import { paymentMethodLabel } from '../training/trainingLogic'
@@ -50,90 +49,98 @@ export default function PaymentRow({
   const markRefunded = setPaymentStatusAction.bind(null, orgSlug, camp.slug, registration.registration_token, 'refunded', de.paymentsPage.markRefundedSuccess)
   const markOpen = setPaymentStatusAction.bind(null, orgSlug, camp.slug, registration.registration_token, 'open', de.paymentsPage.markOpenSuccess)
 
-  return (
-    <div className="cp-ledger-row cp-mobile-card border-t" data-status={registration.payment_status} style={{ borderTopColor: 'var(--cp-line-2)' }}>
-      <ListRow className="cp-list-row-padded" main={<div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="cp-code" style={{ color: 'var(--cp-ink)' }}>{registration.payment_reference}</span>
-          <Button className="cp-desktop-only" type="button" variant="secondary" aria-label={`Verwendungszweck ${registration.payment_reference} kopieren`} onClick={copyReference}>
-            {copyState === 'copied' ? 'Kopiert' : 'Kopieren'}
-          </Button>
-        </div>
-        {copyState === 'error' && <p role="alert">Kopieren nicht möglich – bitte den Verwendungszweck auswählen und kopieren.</p>}
-        <p className="cp-subheading" style={{ color: 'var(--cp-ink)' }}>
-          <span className="cp-child-name">{registration.child_first_name} {registration.child_last_name}</span><span className="cp-desktop-only"> · {camp.title}</span>
-          <span className="cp-mobile-only cp-camp-date">{camp.title} · {formatDateRange(camp.start_date, camp.end_date)}</span>
-        </p>
+  const childName = `${registration.child_first_name} ${registration.child_last_name}`
+  const open = isOpenPayment(registration)
+  const reopen = canReopenPayment(registration)
+  const refundable = registration.payment_status === 'paid'
+  const copyLabel = copyState === 'copied' ? 'Kopiert' : 'Verwendungszweck kopieren'
 
-      </div>} secondary={        <p className="cp-chip mt-0.5 truncate" style={{ color: 'var(--cp-muted)' }}>
+  // Compact ledger row: one table row on desktop (>= 1024 px), a card on phones.
+  // Exactly one visible action (mark as paid) for open payments; everything else sits in "Mehr".
+  return (
+    <div className="cp-ledger-row cp-mobile-card cp-pay-row" data-status={registration.payment_status}>
+      <div className="cp-pay-who min-w-0">
+        <p className="cp-label cp-child-name truncate" style={{ color: 'var(--cp-ink)' }}>{childName}</p>
+        <p className="cp-hint truncate">
           {registration.parent_first_name} {registration.parent_last_name} · {registration.parent_email}
           {registration.payment_method ? ` · Zahlart: ${paymentMethodLabel(registration.payment_method)}` : ''}
-        </p>} status={<div className="flex flex-col items-start gap-2">
-          <span className="cp-num cp-subheading shrink-0" style={{ color: 'var(--cp-ink)' }}>
-            {formatEuro(registrationPriceCents(camp, registration), camp.currency)}
-          </span>
+        </p>
+        <p className="cp-hint truncate cp-desktop-only" title={camp.title}>{camp.title}</p>
+        <p className="cp-mobile-only cp-camp-date">{camp.title} · {formatDateRange(camp.start_date, camp.end_date)}</p>
+      </div>
+      <div className="cp-pay-ref min-w-0">
+        <span className="cp-code" style={{ color: 'var(--cp-ink)' }}>{registration.payment_reference}</span>
+        <Button className="cp-desktop-only cp-pay-copy" type="button" variant="secondary" aria-label={`Verwendungszweck ${registration.payment_reference} kopieren`} onClick={copyReference}>
+          {copyState === 'copied' ? 'Kopiert' : 'Kopieren'}
+        </Button>
+        {copyState === 'error' && <p role="alert" className="cp-hint">Kopieren nicht möglich – bitte den Verwendungszweck auswählen und kopieren.</p>}
+      </div>
+      <span className="cp-pay-amount cp-num cp-label" style={{ color: 'var(--cp-ink)' }}>
+        {formatEuro(registrationPriceCents(camp, registration), camp.currency)}
+      </span>
+      <div className="cp-row-status cp-pay-status">
+        <StatusChip
+          tone={PAYMENT_STATUS_TONE[registration.payment_status] ?? 'neutral'}
+          label={paymentStatusLabel[registration.payment_status] ?? registration.payment_status}
+        />
+        {!isActiveRegistration(registration) && (
           <StatusChip
-            tone={PAYMENT_STATUS_TONE[registration.payment_status] ?? 'neutral'}
-            label={paymentStatusLabel[registration.payment_status] ?? registration.payment_status}
-          />
-          {!isActiveRegistration(registration) && (
-            <StatusChip
-              tone={REGISTRATION_STATUS_TONE[registration.status] ?? 'neutral'}
-              label={registrationStatusLabel[registration.status] ?? registration.status}
-              dot
-            />
-          )}
-        </div>} action={<div className="cp-mobile-actions">        {isOpenPayment(registration) && (
-          <div className="cp-payment-actions flex flex-wrap items-center gap-2">
-            <ActionForm
-              action={markPaid}
-              label={de.paymentsPage.markPaid}
-              pendingLabel={de.paymentsPage.updating}
-              variant="secondary"
-            />
-            <RowOverflow label={`Weitere Aktionen für ${registration.child_first_name} ${registration.child_last_name}`}>
-            <Button className="cp-mobile-only" type="button" onClick={copyReference}>{copyState === 'copied' ? 'Kopiert' : 'Verwendungszweck kopieren'}</Button>
-            <PaymentTextCopy text={reminder} label={reminderLabels.copy}
-              onFallback={setFallbackText}
-              disabledReason={reminder === null ? reminderLabels.missingIban : undefined} />
-            <ActionForm
-              action={markWaived}
-              label={de.paymentsPage.markWaived}
-              pendingLabel={de.paymentsPage.updating}
-              variant="secondary"
-              requireConfirm={de.paymentsPage.waivedConfirm}
-            />
-            </RowOverflow>
-          </div>
-        )}
-
-        {!isOpenPayment(registration) && <>
-          <ButtonLink className="cp-mobile-only" href={`/pilot/${orgSlug}/camps/${camp.slug}?sort=newest`}>Anmeldungen ansehen</ButtonLink>
-          <RowOverflow label={`Weitere Aktionen für ${registration.child_first_name} ${registration.child_last_name}`}>
-          <Button className="cp-mobile-only" type="button" onClick={copyReference}>{copyState === 'copied' ? 'Kopiert' : 'Verwendungszweck kopieren'}</Button>
-        {registration.payment_status === 'paid' && (
-          <ActionForm
-            action={markRefunded}
-            label={de.paymentsPage.markRefunded}
-            pendingLabel={de.paymentsPage.updating}
-            variant="danger"
-            requireConfirm="Bereits erfolgte Rückzahlung als erstattet markieren? CampsPilot überweist kein Geld."
+            tone={REGISTRATION_STATUS_TONE[registration.status] ?? 'neutral'}
+            label={registrationStatusLabel[registration.status] ?? registration.status}
+            dot
           />
         )}
-        {canReopenPayment(registration) && (
+      </div>
+      <div className="cp-pay-action">
+        {open && (
           <ActionForm
-            action={markOpen}
-            label={de.paymentsPage.markOpen}
+            action={markPaid}
+            label={de.paymentsPage.markPaid}
             pendingLabel={de.paymentsPage.updating}
             variant="secondary"
-            requireConfirm={de.paymentsPage.markOpenConfirm}
           />
         )}
+        {!open && <ButtonLink className="cp-mobile-only" href={`/pilot/${orgSlug}/camps/${camp.slug}?sort=newest`}>Anmeldungen ansehen</ButtonLink>}
+        {open || refundable || reopen ? (
+          <RowOverflow menu label={`Mehr Aktionen für ${childName}`}>
+            <Button className="cp-mobile-only" type="button" onClick={copyReference}>{copyLabel}</Button>
+            {open && <>
+              <PaymentTextCopy text={reminder} label={reminderLabels.copy}
+                onFallback={setFallbackText}
+                disabledReason={reminder === null ? reminderLabels.missingIban : undefined} />
+              <ActionForm
+                action={markWaived}
+                label={de.paymentsPage.markWaived}
+                pendingLabel={de.paymentsPage.updating}
+                variant="secondary"
+                requireConfirm={de.paymentsPage.waivedConfirm}
+              />
+            </>}
+            {refundable && (
+              <ActionForm
+                action={markRefunded}
+                label={de.paymentsPage.markRefunded}
+                pendingLabel={de.paymentsPage.updating}
+                variant="danger"
+                requireConfirm="Bereits erfolgte Rückzahlung als erstattet markieren? CampsPilot überweist kein Geld."
+              />
+            )}
+            {reopen && (
+              <ActionForm
+                action={markOpen}
+                label={de.paymentsPage.markOpen}
+                pendingLabel={de.paymentsPage.updating}
+                variant="secondary"
+                requireConfirm={de.paymentsPage.markOpenConfirm}
+              />
+            )}
           </RowOverflow>
-        </>}
-        </div>} />
-      {isOpenPayment(registration) && fallbackText && fallbackText === reminder && (
-        <div className="cp-list-row-padded"><PaymentTextFallback text={fallbackText} /></div>
+        ) : (
+          <Button className="cp-mobile-only" type="button" onClick={copyReference}>{copyLabel}</Button>
+        )}
+      </div>
+      {open && fallbackText && fallbackText === reminder && (
+        <div className="cp-pay-fallback"><PaymentTextFallback text={fallbackText} /></div>
       )}
     </div>
   )

@@ -90,7 +90,10 @@ describe('daily overview', () => {
     const block = dom.querySelector('section[aria-labelledby="today-registrations"]')!
     expect(block.textContent).toContain('Heute neu: 4 Anmeldungen')
     expect(block.querySelectorAll('li')).toHaveLength(3)
-    expect(block.textContent).toContain('Berta Kind · Herbstcamp · heute, 10:42')
+    // Compact rows: child as label, camp and arrival time as hint, one link per row.
+    const berta = [...block.querySelectorAll('li')].find(li => li.textContent?.startsWith('Berta Kind'))!
+    expect(berta.textContent).toContain('Herbstcamp · heute, 10:42')
+    expect(berta.querySelectorAll('a')).toHaveLength(1)
     expect(block.textContent).not.toContain('Mitternacht')
     expect(block.querySelector('a[href="/pilot/demo/anmeldungen"]')).not.toBeNull()
   })

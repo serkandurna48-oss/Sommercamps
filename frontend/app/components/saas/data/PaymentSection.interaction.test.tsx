@@ -6,6 +6,7 @@ import PaymentSection, { type PaymentEntry } from './PaymentSection'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import { buildPaymentReminder, type ReminderOrganization } from '../../../lib/zahlungserinnerung'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
+import { de } from '../../../lib/i18n/de'
 
 vi.mock('../actions/paymentActions', () => ({ setPaymentStatusAction: vi.fn() }))
 
@@ -252,5 +253,50 @@ describe('payment workflow', () => {
     root = createRoot(container)
     await render([{ ...entry, registration: { ...entry.registration, applied_price_cents: null } }])
     expect(text()).toContain('149,00')
+  })
+})
+
+describe('compact payment rows', () => {
+  beforeEach(() => { vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))) })
+  afterEach(() => { vi.unstubAllGlobals() })
+  it('shows exactly one visible action for an open payment and keeps the rest in an accessible "Mehr" menu', async () => {
+    const confirm = vi.spyOn(window, 'confirm')
+    await render()
+    const row = container.querySelector('.cp-pay-row')!
+    const outsideMenu = [...row.querySelectorAll('button')].filter(b => !b.closest('.cp-overflow-panel') && !b.closest('.cp-pay-ref') && !b.className.includes('cp-mobile-only'))
+    expect(outsideMenu.map(b => b.textContent)).toEqual(['Als bezahlt markieren', 'Mehr'])
+    const trigger = row.querySelector<HTMLButtonElement>('[aria-haspopup="dialog"]')!
+    expect(trigger.className).not.toContain('cp-mobile-only')
+    expect(trigger.getAttribute('aria-label')).toBe('Mehr Aktionen für Mia Muster')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+    await act(() => trigger.click())
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+    const dialog = row.querySelector('[role="dialog"]')!
+    expect([...dialog.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Verwendungszweck kopieren', 'Erinnerung kopieren', de.paymentsPage.markWaived])
+    expect(document.activeElement).toBe(dialog.querySelector('button'))
+    await act(() => document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+    expect(document.activeElement).toBe(trigger)
+    // Waiving asks inline, never via window.confirm.
+    await act(() => trigger.click())
+    await click(de.paymentsPage.markWaived)
+    expect(row.querySelector('[role="dialog"]')?.textContent).toContain(de.paymentsPage.waivedConfirm)
+    expect(confirm).not.toHaveBeenCalled()
+  })
+
+  it('offers no "mark as paid" for a paid row, only the menu with refund and reopen', async () => {
+    await render([paidEntry])
+    await click('Bezahlt1')
+    const row = container.querySelector('.cp-pay-row')!
+    expect(row.textContent).not.toContain('Als bezahlt markieren')
+    await act(() => row.querySelector<HTMLButtonElement>('[aria-haspopup]')!.click())
+    expect(row.querySelector('[role="dialog"]')?.textContent).toContain('Wieder auf Offen setzen')
+  })
+
+  it('renders table column labels once, hidden from assistive tech', async () => {
+    await render()
+    const head = container.querySelector('.cp-pay-head')!
+    expect(head.getAttribute('aria-hidden')).toBe('true')
+    expect(container.querySelectorAll('.cp-pay-head')).toHaveLength(1)
   })
 })

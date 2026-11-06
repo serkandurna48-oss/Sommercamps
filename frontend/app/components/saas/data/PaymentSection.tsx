@@ -169,7 +169,11 @@ export default function PaymentSection({
           {filter === 'open' && <Button type="button" onClick={() => setFilter('all')}>Auch bezahlte durchsuchen</Button>}
         </div>
       ) : (
-        <div className="cp-roster">
+        <div className="cp-roster cp-pay-list">
+          {/* Column labels for the desktop table; each row stays self-describing for screen readers. */}
+          <div className="cp-pay-head" aria-hidden="true">
+            <span>Kind · Eltern</span><span>Verwendungszweck</span><span>Betrag</span><span>Status</span><span>Aktion</span>
+          </div>
           {filtered.map(e => (
             <PaymentRow
               key={e.registration.id}

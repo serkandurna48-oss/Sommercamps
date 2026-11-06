@@ -396,22 +396,64 @@
   background: var(--cp-surface-2);
 }
 
-/* Zahlungen liest sich wie ein Kontoauszug, nicht wie ein Team-Bogen:
- * jede Zeile trägt ihre eigene Statusfarbe als schmale Kante links, statt
- * einer gemeinsamen Vereinsfarben-Spine — Status ist hier die Information,
- * die beim schnellen Scannen zählt, nicht die Vereinszugehörigkeit. */
-.cp-ledger-row {
-  border-left: 3px solid transparent;
+/* Zahlungen liest sich wie ein Kontoauszug: kompakte Tabellenzeilen ab
+ * 1024 px (Kind/Eltern · Verwendungszweck · Betrag · Status · Aktion), auf
+ * dem Handy Karten. Status steht als Text-Chip in der Zeile; keine farbige
+ * Seitenkante (Brandkit: keine farbigen Seitenbalken). */
+.cp-pay-head { display: none; }
+.cp-pay-row {
+  display: grid; gap: 8px 16px; align-items: center; padding: 12px var(--cp-card-padding, 20px);
+  border-top: 1px solid var(--cp-line-2);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'who amount' 'ref status' 'action action' 'fallback fallback';
 }
-.cp-ledger-row[data-status='open'] {
-  border-left-color: var(--cp-pending);
+.cp-pay-row > * { min-width: 0; }
+.cp-pay-who { grid-area: who; }
+.cp-pay-ref { grid-area: ref; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.cp-scope:where(.cp-admin) .cp-pay-ref .cp-code { font-size: 13px; line-height: 18px; overflow-wrap: anywhere; }
+.cp-pay-amount { grid-area: amount; justify-self: end; white-space: nowrap; }
+.cp-pay-status { grid-area: status; display: flex; flex-wrap: wrap; gap: 6px; justify-self: end; }
+.cp-pay-action { grid-area: action; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: flex-end; gap: 8px; }
+.cp-pay-fallback { grid-area: fallback; }
+.cp-scope:where(.cp-admin) .cp-pay-copy { min-height: 32px; min-width: 0; padding: 2px 10px; font-size: 13px; }
+.cp-scope:where(.cp-admin) .cp-pay-list { overflow: visible; }
+.cp-pay-list > .cp-pay-row:first-of-type { border-top: 0; }
+@media (min-width: 1024px) {
+  .cp-pay-head, .cp-pay-row {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr) 104px 128px 300px;
+    grid-template-areas: 'who ref amount status action' 'fallback fallback fallback fallback fallback';
+  }
+  .cp-pay-head {
+    display: grid; gap: 0 16px; padding: 10px var(--cp-card-padding, 20px);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--cp-muted);
+    border-bottom: 1px solid var(--cp-line-2);
+  }
+  .cp-pay-head > :nth-child(3), .cp-pay-head > :nth-child(5) { text-align: right; }
+  .cp-pay-ref { flex-wrap: nowrap; justify-content: space-between; }
+  .cp-pay-ref .cp-pay-copy { flex-shrink: 0; }
+  .cp-pay-row { padding-block: 10px; }
+  .cp-pay-head + .cp-pay-row { border-top: 0; }
+  .cp-pay-status { justify-self: start; }
+  .cp-pay-action { flex-wrap: nowrap; }
+  .cp-pay-who .cp-hint { font-size: 13px; }
 }
-.cp-ledger-row[data-status='paid'] {
-  border-left-color: var(--cp-ok);
+@media (width < 640px) {
+  .cp-pay-row { padding: var(--cp-card-padding); align-items: start; }
+  .cp-pay-row .cp-camp-date { margin-block: 4px 0; font-size: 14px; }
+  .cp-pay-action { flex-direction: column; align-items: stretch; }
+  .cp-pay-action :is(form, form > div, .cp-btn) { width: 100%; }
 }
-.cp-ledger-row[data-status='refunded'],
-.cp-ledger-row[data-status='waived'] {
-  border-left-color: var(--cp-info);
+/* "Mehr"-Menü: Popover unter dem Knopf ab 640 px; darunter klappt es inline auf. */
+@media (width >= 640px) {
+  .cp-row-overflow[data-menu] { display: block; position: relative; }
+  .cp-row-overflow[data-menu] > .cp-overflow-panel { display: none; }
+  .cp-row-overflow[data-menu] > .cp-overflow-panel[data-open='true'] {
+    display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: max-content; min-width: 240px; max-width: min(320px, 90vw);
+    padding: 10px; border: 1px solid var(--cp-line); border-radius: var(--cp-r-field);
+    background: var(--cp-surface); box-shadow: var(--cp-shadow-card);
+  }
+  .cp-row-overflow[data-menu] > .cp-overflow-panel :is(form, form > div, .cp-btn) { width: 100%; }
 }
 
 /* ----------------------------------------------------------------------

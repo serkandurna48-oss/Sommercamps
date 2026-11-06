@@ -56,8 +56,11 @@ class _Flight:
 # cache_key -> in-flight verification (guarded by _token_cache_lock). Removed
 # as soon as the verification finishes, success or failure.
 _inflight: dict[str, _Flight] = {}
-# Above the httpx timeouts (5 s connect + 5 s read), so a waiter does not give up before the leader.
-_FLIGHT_WAIT_SECONDS = 11.0
+# httpx applies timeout=5.0 per phase (connect, write, read, pool), so the
+# leader's call is bounded by 4 x 5 s; waiters wait slightly longer than that
+# and therefore never give up while the leader can still succeed. The leader
+# always sets the event (finally), so this is only a safety net.
+_FLIGHT_WAIT_SECONDS = 21.0
 
 
 def _token_expiry(access_token: str) -> float | None:

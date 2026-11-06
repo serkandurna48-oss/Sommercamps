@@ -141,3 +141,69 @@ def test_dsn_adds_tcp_keepalive_for_cloud_hosts_only():
     cloud = db._dsn_with_sslmode("postgresql://u:p@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?keepalives_idle=60")
     assert "keepalives=1" in cloud and "keepalives_idle=60" in cloud and "keepalives_count=3" in cloud
     assert "keepalives" not in db._dsn_with_sslmode("postgresql://postgres@127.0.0.1:54322/postgres")
+
+
+def _terminate_pool_backends() -> int:
+    killer = psycopg2.connect(host="127.0.0.1", port=int(os.environ["REVIEW_POSTGRES_PORT"]),
+                              user="postgres", dbname="postgres", application_name="cp_pool_killer")
+    killer.autocommit = True
+    with killer.cursor() as cur:
+        cur.execute("select count(pg_terminate_backend(pid)) from pg_stat_activity "
+                    "where application_name = 'cp_pool_test' and pid <> pg_backend_pid()")
+        n = cur.fetchone()[0]
+    killer.close()
+    return n
+
+
+def _run(n: int, query) -> list[str]:
+    outcomes = []
+    for _ in range(n):
+        try:
+            query()
+            outcomes.append("ok")
+        except (psycopg2.OperationalError, psycopg2.InterfaceError):
+            outcomes.append("fail")
+    return outcomes
+
+
+def _write_style_query():
+    with db.get_cursor() as cur:
+        cur.execute("select 1")
+
+
+def _read_query():
+    with db.get_read_cursor() as cur:
+        cur.execute("select 1 as one")
+        assert cur.fetchone()["one"] == 1
+
+
+def test_after_all_pooled_connections_die_reads_do_not_fail(pool):
+    """Pooler restart / network blip with recently used (unpinged) connections:
+    a read is retried once on a fresh connection, so no request fails."""
+    assert len(_parallel_pids(5)) == 5
+    assert _terminate_pool_backends() == 5
+    assert _run(20, _read_query) == ["ok"] * 20
+    assert not pool._used
+
+
+def test_after_all_pooled_connections_die_at_most_one_transaction_fails(pool):
+    """get_cursor never retries; the first broken connection makes the pool
+    ping the other idle ones, so only one request fails (not up to maxconn)."""
+    assert len(_parallel_pids(5)) == 5
+    assert _terminate_pool_backends() == 5
+    outcomes = _run(20, _write_style_query)
+    assert outcomes.count("fail") <= 1
+    assert outcomes[1:] == ["ok"] * 19
+    assert not pool._used
+
+
+def test_read_errors_on_a_live_connection_are_not_retried(pool):
+    calls = []
+    with pytest.raises(psycopg2.errors.QueryCanceled):
+        with db.get_read_cursor() as cur:
+            calls.append(1)
+            cur.execute("set statement_timeout = 50; select pg_sleep(1)")  # one execute, cancelled
+    assert calls == [1]
+    with db.get_read_cursor() as cur:  # same connection, still usable; undo the test-only SET
+        cur.execute("reset statement_timeout")
+    assert len(pool._pool) == 1 and len(pool.connects) == 1

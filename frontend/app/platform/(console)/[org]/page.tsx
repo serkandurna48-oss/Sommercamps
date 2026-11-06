@@ -8,6 +8,8 @@ import PublishToggle from '../../../components/saas/config/PublishToggle'
 import MembersSection from './MembersSection'
 import BillingNotesForm from './BillingNotesForm'
 import StripeConnectForm from './StripeConnectForm'
+import ModulesForm from './ModulesForm'
+import { orgModules } from '../../../lib/orgModules'
 import ReviewBox from './ReviewBox'
 import { computeSetupSteps, setupProgressCount } from '../../setupProgress'
 
@@ -171,6 +173,18 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
       </section>
 
       <MembersSection orgSlug={org.slug} members={members} />
+
+      <section className="mb-8">
+        <h2 className="cp-heading mb-3" style={{ color: 'var(--cp-ink)' }}>
+          Module
+        </h2>
+        <div className="rounded-[var(--cp-r-card)] border p-4" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
+          <p className="cp-body mb-3" style={{ color: 'var(--cp-ink-2)' }}>
+            Trainings, Mitgliederliste und Spielerakte sind Zusatzmodule. Abschalten blendet sie für den Verein aus; Daten bleiben erhalten.
+          </p>
+          <ModulesForm orgSlug={org.slug} modules={orgModules(org)} />
+        </div>
+      </section>
 
       <section>
         <h2 className="cp-heading mb-3" style={{ color: 'var(--cp-ink)' }}>

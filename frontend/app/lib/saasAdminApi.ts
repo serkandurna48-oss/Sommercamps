@@ -82,6 +82,8 @@ export interface OrganizationAdmin {
   avv_accepted_at?: string | null
   review_note?: string | null
   approved_at?: string | null
+  /** Freigeschaltete Module (camps immer); fehlt das Feld: nur camps. Siehe lib/orgModules.ts. */
+  modules?: string[]
 }
 
 export interface RegistrationAdmin {
@@ -374,6 +376,12 @@ export async function updateOrganizationAdmin(
   await mutateOrThrow(`/admin/organizations/${orgSlug}`, token, 'PATCH', data)
 }
 
+/** Platform owner only: the full set of enabled modules (camps is always kept by the
+ * backend). PATCH /admin/platform/organizations/{slug}/modules, audit-logged there. */
+export async function updateOrganizationModulesAdmin(orgSlug: string, token: string, modules: string[]): Promise<void> {
+  await mutateOrThrow(`/admin/platform/organizations/${orgSlug}/modules`, token, 'PATCH', { modules })
+}
+
 export async function updateCampAdmin(
   orgSlug: string,
   campSlug: string,
@@ -488,6 +496,8 @@ export interface Me {
   email: string | null
   is_platform_owner: boolean
   admin_organization_slugs: string[]
+  /** Module je verwaltetem Verein (nur org_admin). */
+  organization_modules?: Record<string, string[]>
 }
 
 /** Dedupliziert innerhalb eines Server-Requests: Layout und Seite teilen

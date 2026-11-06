@@ -69,7 +69,7 @@ function checkbox(nodes: ElementNode[], heading: string) {
 
 function fillRequiredFields(nodes: ElementNode[]) {
   const inputs = nodes.filter((node) => node.type === 'input' && node.props.type !== 'checkbox')
-  const values = ['Mia', 'Muster', '01.01.2018', 'Eva Muster', 'eva@example.de', '12345', '67890', '']
+  const values = ['Mia', 'Muster', '01.01.2018', 'Eva Muster', 'eva@example.de', '12345', '67890', '', 'Musterweg 1', '34117', 'Kassel']
   inputs.forEach((input, index) => change(input, values[index]))
 }
 
@@ -184,7 +184,7 @@ it('promises bank details on the next screen only when the club stored an IBAN',
 it('rejects a parent name without a space and shows a validation error', async () => {
   let nodes = render()
   const inputs = nodes.filter((node) => node.type === 'input' && node.props.type !== 'checkbox')
-  const values = ['Mia', 'Muster', '01.01.2018', 'Alex', 'eva@example.de', '12345', '67890', '']
+  const values = ['Mia', 'Muster', '01.01.2018', 'Alex', 'eva@example.de', '12345', '67890', '', 'Musterweg 1', '34117', 'Kassel']
   inputs.forEach((input, index) => change(input, values[index]))
   change(checkbox(nodes, 'Teilnahmebedingungen'), true)
   change(checkbox(nodes, 'Datenschutz'), true)
@@ -199,7 +199,7 @@ it('accepts a two-word parent name and splits it into first and last name', asyn
   const onSubmitted = vi.fn()
   let nodes = render(onSubmitted)
   const inputs = nodes.filter((node) => node.type === 'input' && node.props.type !== 'checkbox')
-  const values = ['Mia', 'Muster', '01.01.2018', 'Alex Beispiel', 'eva@example.de', '12345', '67890', '']
+  const values = ['Mia', 'Muster', '01.01.2018', 'Alex Beispiel', 'eva@example.de', '12345', '67890', '', 'Musterweg 1', '34117', 'Kassel']
   inputs.forEach((input, index) => change(input, values[index]))
   change(checkbox(nodes, 'Teilnahmebedingungen'), true)
   change(checkbox(nodes, 'Datenschutz'), true)

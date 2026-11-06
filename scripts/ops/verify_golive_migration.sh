@@ -1,12 +1,14 @@
 #!/bin/bash
 # Verifies supabase/golive/PROD-MIGRATION-2026-11.sql on throwaway local DBs (127.0.0.1:55443).
-# Usage: bash scripts/ops/verify_golive_migration.sh "$PWD"   (local throwaway Postgres only, never a cloud DB)
+# Usage: bash scripts/ops/verify_golive_migration.sh "$PWD" [target_ref]   (local throwaway Postgres only, never a cloud DB)
+#        target_ref defaults to origin/demo/jan (use the release branch before it is merged)
 # 1) scratch_golive_prod: bootstrap like scripts/dev/local.py (+ anon role), the 16 prod migrations
 #    from origin/feat/platform-foundation, synthetic prod-like rows, then the combined file twice.
 # 2) scratch_golive_full: same bootstrap, all migrations of origin/demo/jan one by one.
 # 3) schema diff between both (pg_dump --schema-only).
 set -euo pipefail
 REPO=$1
+TARGET=${2:-origin/demo/jan}
 PG="psql -h 127.0.0.1 -p 55443 -U postgres -X -q -v ON_ERROR_STOP=1 -v VERBOSITY=terse"
 OUT=${OUT:-$(mktemp -d)}
 mkdir -p "$OUT"
@@ -72,8 +74,8 @@ diff "$OUT/state1.txt" "$OUT/state2.txt" && echo "run 2 ok: data unchanged"
 
 echo "== 2) full state"
 bootstrap scratch_golive_full
-apply_ref scratch_golive_full origin/demo/jan
-echo "full migrations: $(git -C "$REPO" ls-tree --name-only origin/demo/jan supabase/migrations/ | grep -c '\.sql$')"
+apply_ref scratch_golive_full "$TARGET"
+echo "full migrations: $(git -C "$REPO" ls-tree --name-only "$TARGET" supabase/migrations/ | grep -c '\.sql$')"
 
 $PG -d scratch_golive_prod -At -f "$REPO/supabase/golive/PROD-PRECHECK-2026-11.sql" | tr "\n" " "; echo
 echo "== 3) schema diff (prod+combined vs. all migrations)"

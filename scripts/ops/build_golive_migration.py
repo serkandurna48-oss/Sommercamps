@@ -89,7 +89,9 @@ out += [
     "select (select count(*) from public.organization_fee_rules) as fee_rules,",
     "       (select count(*) from public.camp_registrations where booked_price_cents is null) as ohne_buchungspreis,",
     "       (select count(*) from information_schema.columns where table_schema = 'public'",
-    "          and table_name = 'camp_registrations' and column_name = 'anonymized_at') as anonymized_at_spalte;",
+    "          and table_name = 'camp_registrations' and column_name = 'anonymized_at') as anonymized_at_spalte,",
+    "       (select count(*) from information_schema.columns where table_schema = 'public'",
+    "          and table_name = 'camp_registrations' and column_name = 'parent_street') as rechnungsanschrift_spalte;",
     "",
 ]
 dest = root / "supabase/golive/PROD-MIGRATION-2026-11.sql"

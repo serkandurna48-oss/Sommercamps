@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { registrations } from '../../dev/admin-vorschau/fixtures'
 import type { RegistrationAdmin, RegistrationQuestion } from '../../lib/saasAdminApi'
-import { DEFAULT_PRINT_FIELDS, participantPrintFields, printColumnCost, printColumnSections, printSafeBrandColor, selectedPrintColumns } from './participantPrint'
+import { billingAddressText, DEFAULT_PRINT_FIELDS, participantPrintFields, printColumnCost, printColumnSections, printSafeBrandColor, selectedPrintColumns } from './participantPrint'
 
 describe('printSafeBrandColor — Kontrast auf weißem Druckpapier', () => {
   it('behält dunkle Vereinsfarben unverändert (Kontrast ≥ 4,5:1 auf Weiß)', () => {
@@ -80,5 +80,16 @@ describe('participant print field selection', () => {
     const sections = printColumnSections(selectedPrintColumns(fields, ids, camp))
     expect(sections.length).toBeGreaterThan(1)
     expect(sections.every(section => section.filter(c => c.size === 'l').length <= 4)).toBe(true)
+  })
+})
+
+describe('Rechnungsanschrift im Druck', () => {
+  it('fügt Straße, PLZ und Ort zusammen und bleibt ohne vollständige Anschrift leer', () => {
+    expect(billingAddressText({ parent_street: 'Hauptstraße 5', parent_postal_code: '34117', parent_city: 'Kassel' }))
+      .toBe('Hauptstraße 5, 34117 Kassel')
+    expect(billingAddressText({ parent_street: 'Hauptstraße 5', parent_postal_code: null, parent_city: 'Kassel' })).toBe('')
+    expect(billingAddressText({})).toBe('')
+    expect(fields.find(field => field.id === 'address')?.group).toBe('Kontakt und Betreuung')
+    expect(DEFAULT_PRINT_FIELDS.participants).not.toContain('address')
   })
 })

@@ -9,6 +9,7 @@ one clear, readable error instead of a bare KeyError.
 from __future__ import annotations
 
 import re
+from datetime import date
 from functools import lru_cache
 from typing import Optional
 from urllib.parse import urlsplit
@@ -109,6 +110,18 @@ class Settings(BaseSettings):
         ):
             raise ValueError("Confirmation redirect must use the frontend origin")
         return target
+
+    # Rollout tolerance for the parent billing address (migration 20261107130000):
+    # until this date (inclusive, Europe/Berlin) a paid booking from an old
+    # frontend that sends none of the three address keys is accepted without
+    # address (logged). Unset = strict: the address is always required. Set it
+    # to go-live date + 7 days on prod and staging during the rollout, then remove it.
+    billing_address_legacy_until: Optional[date] = Field(default=None, alias="BILLING_ADDRESS_LEGACY_UNTIL")
+
+    @field_validator("billing_address_legacy_until", mode="before")
+    @classmethod
+    def _blank_legacy_until(cls, value):
+        return None if isinstance(value, str) and not value.strip() else value
 
     # Opt-in direct-charge Stripe Connect. Never expose secrets to the browser.
     stripe_checkout_enabled: bool = Field(default=False, alias="STRIPE_CHECKOUT_ENABLED")

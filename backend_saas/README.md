@@ -481,6 +481,7 @@ copy .env.example .env        # Windows; `cp .env.example .env` on macOS/Linux
 | `STRIPE_SECRET_KEY` | with Stripe | — | `sk_test_…` outside production, `sk_live_…` only with `APP_ENV=production` (checked at runtime). |
 | `STRIPE_CONNECT_WEBHOOK_SECRET` | with Stripe | — | Signing secret of the **Connect** webhook (`/api/v1/payments/stripe/webhook`, events on connected accounts: legacy direct-charge payments, `account.updated`). |
 | `STRIPE_PLATFORM_WEBHOOK_SECRET` | for Express | — | Signing secret of the **platform** webhook (`/api/v1/payments/stripe/platform-webhook`). Without it Express onboarding and destination charges stay off; legacy direct charges keep working. |
+| `BILLING_ADDRESS_LEGACY_UNTIL` | rollout only | unset (strict) | ISO date. Until this day (inclusive, Europe/Berlin) a paid booking from an old frontend that sends none of `parent_street`/`parent_postal_code`/`parent_city` is accepted without address and logged (`reason=legacy_client`, slugs only). Set to go-live date + 7 days on prod and staging during the rollout, then remove. Empty or partial addresses are always rejected. |
 
 Billing B1/B2 (fees, Express, destination charges): see
 [`docs/saas/stripe-connect-v11-release.md`](../docs/saas/stripe-connect-v11-release.md#abrechnung-b1b2-express--destination-charges-06112026).

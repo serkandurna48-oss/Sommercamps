@@ -72,6 +72,10 @@ def _valid_payload(**overrides) -> dict:
         "photo_permission": False,
         "terms_accepted": True,
         "privacy_accepted": True,
+        # Billing address: required for paid bookings (20261107130000).
+        "parent_street": "Musterweg 1",
+        "parent_postal_code": "34117",
+        "parent_city": "Kassel",
     }
     base.update(overrides)
     return base

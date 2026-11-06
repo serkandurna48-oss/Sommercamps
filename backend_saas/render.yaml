@@ -67,3 +67,5 @@ services:
         sync: false           # whsec_… des Connect-Endpunkts /api/v1/payments/stripe/webhook
       - key: STRIPE_PLATFORM_WEBHOOK_SECRET
         sync: false           # whsec_… des Plattform-Endpunkts /api/v1/payments/stripe/platform-webhook (Express)
+      - key: BILLING_ADDRESS_LEGACY_UNTIL
+        sync: false           # ISO-Datum, nur im Rollout: Go-Live + 7 Tage (Prod und Staging), danach entfernen

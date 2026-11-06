@@ -14,6 +14,13 @@ import { parentDetailsOnly, type ParentDetails } from './siblingRegistration'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const PHONE_RE = /^\+?[\d ]*\d[\d ]*$/
+// Same bounds as the backend (schemas.py / chk_camp_registrations_parent_address).
+const POSTAL_CODE_RE = /^[0-9A-Za-z][0-9A-Za-z -]{2,8}[0-9A-Za-z]$/
+// Newlines would add own lines to the invoice; same rule as the backend.
+const CONTROL_CHARS_RE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/
+const CONTROL_CHARS_MSG = 'Bitte verwenden Sie keine Zeilenumbrüche oder Steuerzeichen.'
+const STREET_MAX = 120
+const CITY_MAX = 80
 
 interface FormState {
   childFirstName: string
@@ -32,6 +39,9 @@ interface FormState {
   photoPermission: boolean
   documentationConsent: boolean
   extraAnswers: Record<string, string>
+  billingStreet: string
+  billingPostalCode: string
+  billingCity: string
 }
 
 const EMPTY: FormState = {
@@ -51,6 +61,9 @@ const EMPTY: FormState = {
   photoPermission: false,
   documentationConsent: false,
   extraAnswers: {},
+  billingStreet: '',
+  billingPostalCode: '',
+  billingCity: '',
 }
 
 /**
@@ -65,6 +78,9 @@ export interface TrainingFormConfig {
   onlinePaymentAvailable?: boolean
   /** Termin inzwischen voll oder vergangen: Flow lädt die Termine neu. */
   onSlotTaken?: (conflict: 'full' | 'past') => void
+  /** Termin kann Geld kosten (Mitglieds- oder Nichtmitgliedspreis > 0): Rechnungsanschrift abfragen.
+   * Bewusst nicht vom Mitgliedsstatus abhängig: der Browser erfährt ihn nicht. */
+  billingAddressRequired?: boolean
 }
 
 type FieldKey =
@@ -78,9 +94,12 @@ type FieldKey =
   | 'agb'
   | 'privacy'
   | 'healthDataConsent'
+  | 'billingStreet'
+  | 'billingPostalCode'
+  | 'billingCity'
 
 // One source for blur feedback, progress and submit validation.
-function validateForm(form: FormState, training = false): Partial<Record<FieldKey, string>> {
+function validateForm(form: FormState, training = false, needsAddress = false): Partial<Record<FieldKey, string>> {
   const bad: Partial<Record<FieldKey, string>> = {}
   if (!form.childFirstName.trim()) bad.childFirstName = 'Bitte tragen Sie den Vornamen ein.'
   if (!form.childLastName.trim()) bad.childLastName = 'Bitte tragen Sie den Nachnamen ein.'
@@ -96,6 +115,19 @@ function validateForm(form: FormState, training = false): Partial<Record<FieldKe
   if (!form.termsAccepted) bad.agb = 'Bitte akzeptieren Sie die Teilnahmebedingungen.'
   if (!form.privacyAccepted) bad.privacy = 'Bitte stimmen Sie der Datenschutzerklärung zu.'
   if (form.allergies.trim() && !form.healthDataConsent) bad.healthDataConsent = 'Bitte stimmen Sie der Verarbeitung der Gesundheitsangaben ausdrücklich zu oder entfernen Sie diese Angaben.'
+  if (needsAddress) {
+    const street = form.billingStreet.trim()
+    const postalCode = form.billingPostalCode.trim()
+    const city = form.billingCity.trim()
+    if (!street) bad.billingStreet = 'Bitte tragen Sie Straße und Hausnummer ein.'
+    else if (CONTROL_CHARS_RE.test(street)) bad.billingStreet = CONTROL_CHARS_MSG
+    else if (street.length > STREET_MAX) bad.billingStreet = `Bitte höchstens ${STREET_MAX} Zeichen.`
+    if (!postalCode) bad.billingPostalCode = 'Bitte tragen Sie die Postleitzahl ein.'
+    else if (!POSTAL_CODE_RE.test(postalCode)) bad.billingPostalCode = 'Bitte prüfen Sie die Postleitzahl (4 bis 10 Zeichen).'
+    if (!city) bad.billingCity = 'Bitte tragen Sie den Ort ein.'
+    else if (CONTROL_CHARS_RE.test(city)) bad.billingCity = CONTROL_CHARS_MSG
+    else if (city.length > CITY_MAX) bad.billingCity = `Bitte höchstens ${CITY_MAX} Zeichen.`
+  }
   return bad
 }
 
@@ -247,7 +279,11 @@ export default function RegistrationFormScreen({
     setFocusRequest((request) => request + 1)
   }
 
-  const validation = useMemo(() => validateForm(form, Boolean(training)), [form, training])
+  // Paid booking: the invoice needs the parent's address. Also shown when the server asks for it
+  // (price changed since the page loaded). Derived, no extra hook (see hook order note above).
+  const needsAddress = (training ? Boolean(training.billingAddressRequired) : camp.price_cents > 0)
+    || Boolean(serverFields.billingStreet || serverFields.billingPostalCode || serverFields.billingCity)
+  const validation = useMemo(() => validateForm(form, Boolean(training), needsAddress), [form, training, needsAddress])
   const ageHint = (submitAttempted || touched.childBirthDate) ? ageHintForCamp(form.childBirthDate, camp, Boolean(training)) : null
 
   const extraDone = useMemo(
@@ -258,7 +294,8 @@ export default function RegistrationFormScreen({
   const sectionDone = useMemo(
     () => ({
       1: !validation.childFirstName && !validation.childLastName && !validation.childBirthDate,
-      2: !validation.parentName && !validation.parentEmail && !validation.parentPhone,
+      2: !validation.parentName && !validation.parentEmail && !validation.parentPhone
+        && !validation.billingStreet && !validation.billingPostalCode && !validation.billingCity,
       3: !validation.emergencyPhone,
       4: form.termsAccepted && form.privacyAccepted && !validation.healthDataConsent && extraDone && (!training || paymentMethod !== null),
     }),
@@ -319,6 +356,11 @@ export default function RegistrationFormScreen({
         extra_answers: Object.keys(form.extraAnswers).length > 0 ? form.extraAnswers : undefined,
         ...(training && paymentMethod ? { payment_method: paymentMethod } : {}),
         ...(training ? { documentation_consent: form.documentationConsent } : {}),
+        ...(needsAddress ? {
+          parent_street: form.billingStreet.trim(),
+          parent_postal_code: form.billingPostalCode.trim(),
+          parent_city: form.billingCity.trim(),
+        } : {}),
       })
       if (!outcome.ok) {
         captureSaasEvent('camp_registration_failed', orgSlug, camp.slug, { error_kind: 'api', status_code: outcome.status })
@@ -329,6 +371,7 @@ export default function RegistrationFormScreen({
           parent_first_name: 'parentName', parent_last_name: 'parentName', parent_email: 'parentEmail',
           parent_phone: 'parentPhone', emergency_contact_phone: 'emergencyPhone', terms_accepted: 'agb', privacy_accepted: 'privacy',
           health_data_consent: 'healthDataConsent',
+          parent_street: 'billingStreet', parent_postal_code: 'billingPostalCode', parent_city: 'billingCity',
         } as const
         const fields: Partial<Record<FieldKey, string>> = {}
         for (const [apiField, field] of Object.entries(mapping)) {
@@ -731,6 +774,70 @@ export default function RegistrationFormScreen({
                     />
                   </label>
                 </div>
+                {needsAddress && (
+                  <fieldset className="f billing-address" aria-describedby="hint-billing-address" style={{ border: 'none', padding: 0, margin: '24px 0 0' }}>
+                    <legend className="d3" style={{ fontSize: '1.05em', marginBottom: 4 }}>Rechnungsanschrift</legend>
+                    <p className="hint" id="hint-billing-address" style={{ marginTop: 0 }}>
+                      Für Ihre Rechnung von {orgName}. Wir verwenden die Anschrift nur für die Rechnungsstellung.
+                    </p>
+                    <label htmlFor="parent_street" className={`field${badFields.billingStreet ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.billingStreet = el }}>
+                      <span className="t-lab">Straße und Hausnummer *</span>
+                      <input
+                        type="text"
+                        id="parent_street"
+                        name="parent_street"
+                        autoComplete="address-line1"
+                        required
+                        aria-required="true"
+                        value={form.billingStreet}
+                        onChange={(e) => set('billingStreet', e.target.value)}
+                        onBlur={() => touch('billingStreet')}
+                        aria-invalid={!!badFields.billingStreet}
+                        aria-describedby={badFields.billingStreet ? 'err-billing-street' : undefined}
+                      />
+                      <span className="err">{badFields.billingStreet && <span id="err-billing-street">{badFields.billingStreet}</span>}</span>
+                    </label>
+                    <div className="row2">
+                      <label htmlFor="parent_postal_code" className={`field s${badFields.billingPostalCode ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.billingPostalCode = el }}>
+                        <span className="t-lab">PLZ *</span>
+                        <input
+                          type="text"
+                          id="parent_postal_code"
+                          name="parent_postal_code"
+                          autoComplete="postal-code"
+                          inputMode="text"
+                          required
+                          aria-required="true"
+                          maxLength={10}
+                          className="num"
+                          value={form.billingPostalCode}
+                          onChange={(e) => set('billingPostalCode', e.target.value)}
+                          onBlur={() => touch('billingPostalCode')}
+                          aria-invalid={!!badFields.billingPostalCode}
+                          aria-describedby={badFields.billingPostalCode ? 'err-billing-postal-code' : undefined}
+                        />
+                        <span className="err">{badFields.billingPostalCode && <span id="err-billing-postal-code">{badFields.billingPostalCode}</span>}</span>
+                      </label>
+                      <label htmlFor="parent_city" className={`field${badFields.billingCity ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.billingCity = el }}>
+                        <span className="t-lab">Ort *</span>
+                        <input
+                          type="text"
+                          id="parent_city"
+                          name="parent_city"
+                          autoComplete="address-level2"
+                          required
+                          aria-required="true"
+                          value={form.billingCity}
+                          onChange={(e) => set('billingCity', e.target.value)}
+                          onBlur={() => touch('billingCity')}
+                          aria-invalid={!!badFields.billingCity}
+                          aria-describedby={badFields.billingCity ? 'err-billing-city' : undefined}
+                        />
+                        <span className="err">{badFields.billingCity && <span id="err-billing-city">{badFields.billingCity}</span>}</span>
+                      </label>
+                    </div>
+                  </fieldset>
+                )}
               </section>
 
               {/* Section 3: Zusatzfragen — only rendered when questions exist */}

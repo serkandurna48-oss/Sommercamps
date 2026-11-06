@@ -96,6 +96,10 @@ export interface RegistrationAdmin {
   parent_last_name: string
   parent_email: string
   parent_phone: string
+  // Rechnungsanschrift (kostenpflichtige Buchungen seit 20261107130000; sonst null/fehlend).
+  parent_street?: string | null
+  parent_postal_code?: string | null
+  parent_city?: string | null
   child_first_name: string
   child_last_name: string
   child_birth_date: string

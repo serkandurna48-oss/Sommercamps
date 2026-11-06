@@ -4,8 +4,8 @@
 -- Ziel:    Supabase "CampsPilot Production" (Ref wkmckfbzhmihyfwiekct). NICHT Legacy-KSV/JK.
 -- Prod-Stand (Annahme, siehe docs/cto/golive-2026-11.md): origin/feat/platform-foundation @ dbd0c09
 --          = 16 Migrationen, letzte 20261027120000_health_data_consent.sql
--- Ziel-Stand: origin/demo/jan @ d489e82 = 30 Migrationen
--- Inhalt:  14 fehlende Migrationen, in Anwendungsreihenfolge, unveraendert eingebettet.
+-- Ziel-Stand: HEAD @ 4ebc417 = 31 Migrationen
+-- Inhalt:  15 fehlende Migrationen, in Anwendungsreihenfolge, unveraendert eingebettet.
 --          Jede Datei laeuft in EINER eigenen Transaktion: Dateien mit eigenem
 --          begin;/commit; unveraendert, alle anderen hier mit begin;/commit; umschlossen.
 --          Bricht eine Datei ab, sind die vorherigen schon festgeschrieben, die
@@ -18,7 +18,8 @@
 --   ersten Fehler ab (Annahme fuer den Editor, mit psql belegt).
 -- DATEN AENDERN (Backfill): 20261106100000 (players aus Anmeldungen), 20261106130000 (modules),
 --   20261106140000 (Gebuehrenregel starter 6,90 % fuer JEDEN Verein), 20261107100000
---   (booked_price_cents = aktueller Camp-Preis), 20261107120000 (anonymized_at fuer Platzhalter-Zeilen).
+--   (booked_price_cents = aktueller Camp-Preis), 20261107120000 (anonymized_at fuer Platzhalter-Zeilen),
+--   20261107140000 (Kontoart destination fuer vorhandene Express-Konten, auf Prod erwartet 0 Zeilen).
 -- Rollback: je Datei im Dateikopf; Gesamt-Rollback = Restore aus dem Backup.
 -- Erzeugt mit scripts/ops/build_golive_migration.py, geprueft mit scripts/ops/verify_golive_migration.sh.
 -- ============================================================
@@ -35,7 +36,7 @@ end
 $$;
 
 -- ------------------------------------------------------------
--- [01/14] 20261030203000_stripe_checkout_v11.sql
+-- [01/15] 20261030203000_stripe_checkout_v11.sql
 -- sha256 84facb5963e7a926424e77d5c0a6bd6fa23d94d201b8b920ad153b700d2ef5a2
 -- Transaktion: hier umschlossen
 -- ------------------------------------------------------------
@@ -65,7 +66,7 @@ create unique index if not exists uniq_campspilot_stripe_payment_intent
 commit;
 
 -- ------------------------------------------------------------
--- [02/14] 20261105180000_training_offers_memberships.sql
+-- [02/15] 20261105180000_training_offers_memberships.sql
 -- sha256 3611a7dde0214e48fc1791cb1aa2d8fbe688efcc0843bcc2b7dbd325d53d1e92
 -- Transaktion: hier umschlossen
 -- ------------------------------------------------------------
@@ -204,7 +205,7 @@ alter table public.camp_registrations add constraint chk_camp_registrations_paym
 commit;
 
 -- ------------------------------------------------------------
--- [03/14] 20261105190000_training_hardening.sql
+-- [03/15] 20261105190000_training_hardening.sql
 -- sha256 86c4c427f7c62cf95d295eb164cd82a1bdcec661f0a8845f951f978a4341b7aa
 -- Transaktion: hier umschlossen
 -- ------------------------------------------------------------
@@ -233,7 +234,7 @@ revoke all on public.organization_memberships from anon, authenticated;
 commit;
 
 -- ------------------------------------------------------------
--- [04/14] 20261106100000_player_records.sql
+-- [04/15] 20261106100000_player_records.sql
 -- sha256 770b16d80678646290ba730f3a1c0e074af710861763376d2d73197cfe990fad
 -- Transaktion: hier umschlossen
 -- ------------------------------------------------------------
@@ -488,7 +489,7 @@ $$;
 commit;
 
 -- ------------------------------------------------------------
--- [05/14] 20261106110000_training_offer_category.sql
+-- [05/15] 20261106110000_training_offer_category.sql
 -- sha256 9fa400a674463c9413126ebfbe9e24d6e3f7defbb6edc13c21d8a80008cd75b4
 -- Transaktion: hier umschlossen
 -- ------------------------------------------------------------
@@ -506,7 +507,7 @@ alter table public.training_offers
 commit;
 
 -- ------------------------------------------------------------
--- [06/14] 20261106120000_membership_extra_fields.sql
+-- [06/15] 20261106120000_membership_extra_fields.sql
 -- sha256 0cb7fba29954ab54fef872493a65645eeb3be3f60366c7c6b599ff6d8684cf15
 -- Transaktion: hier umschlossen
 -- ------------------------------------------------------------
@@ -534,7 +535,7 @@ revoke all on public.organization_memberships from anon, authenticated;
 commit;
 
 -- ------------------------------------------------------------
--- [07/14] 20261106130000_organization_modules.sql
+-- [07/15] 20261106130000_organization_modules.sql
 -- sha256 52149c772200d9b1a4fdc85abad936d8d45aae062d33ce45f6a4ddd7bc633b7f
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -622,7 +623,7 @@ grant select (modules) on public.organizations to authenticated;
 commit;
 
 -- ------------------------------------------------------------
--- [08/14] 20261106140000_billing_profile_fee_rules.sql
+-- [08/15] 20261106140000_billing_profile_fee_rules.sql
 -- sha256 b3b660c0ac9bf252d3bb0df07d5b45ec492c42cd1099e47f948854e637f737d4
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -815,7 +816,7 @@ comment on column public.camp_registrations.fee_collection is
 commit;
 
 -- ------------------------------------------------------------
--- [09/14] 20261106150000_stripe_express_destination.sql
+-- [09/15] 20261106150000_stripe_express_destination.sql
 -- sha256 5e0bbaa21b54e628814d946e999a550b41d764c9554c987decea70b3355a82e2
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -888,7 +889,7 @@ revoke all on public.organizations from anon;
 commit;
 
 -- ------------------------------------------------------------
--- [10/14] 20261106160000_billing_refunds_and_grants.sql
+-- [10/15] 20261106160000_billing_refunds_and_grants.sql
 -- sha256 d5b415361e3c8fa64c2681c1792f657293985ffb8cd0529ed16f03764518f06b
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -966,7 +967,7 @@ $$;
 commit;
 
 -- ------------------------------------------------------------
--- [11/14] 20261107100000_parent_invoices.sql
+-- [11/15] 20261107100000_parent_invoices.sql
 -- sha256 02d81a3af1839166fc9d775f246911d6e6e0cb5c0d8bf24d0db4a17a7ae4efd9
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -1182,7 +1183,7 @@ revoke all on public.registration_refund_events from public, anon, authenticated
 commit;
 
 -- ------------------------------------------------------------
--- [12/14] 20261107110000_invoice_retry.sql
+-- [12/15] 20261107110000_invoice_retry.sql
 -- sha256 f4951df63ccfcdd0e0100ee945387acf985334621c2ad8c3e9cdeb2bda5730df
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -1225,7 +1226,7 @@ revoke select (booked_price_cents, invoice_pending_reason, invoice_error)
 commit;
 
 -- ------------------------------------------------------------
--- [13/14] 20261107120000_registration_anonymized_at.sql
+-- [13/15] 20261107120000_registration_anonymized_at.sql
 -- sha256 c3c35cabcf5c301393a8fa4685bc99e2df3efbd93762c6d807c58ccce3ca1cd0
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -1322,7 +1323,7 @@ revoke select (anonymized_at) on public.camp_registrations from authenticated;
 commit;
 
 -- ------------------------------------------------------------
--- [14/14] 20261107130000_parent_billing_address.sql
+-- [14/15] 20261107130000_parent_billing_address.sql
 -- sha256 18f4765bf61b27f7a7ca08901816f8df51a04e06e275f36c6b1d3f752b108abc
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -1373,10 +1374,70 @@ revoke select (parent_street, parent_postal_code, parent_city)
 
 commit;
 
+-- ------------------------------------------------------------
+-- [15/15] 20261107140000_stripe_managed_risk.sql
+-- sha256 bcec3eb29392992a9270ebb43eca9ba3f3754ec2432a4c7b8c4637a38548e47d
+-- Transaktion: eigene (begin/commit in der Datei)
+-- ------------------------------------------------------------
+-- Online-Zahlung mit Stripe Managed Risk: Vereinskonten werden als Accounts v2 angelegt
+-- (losses_collector = stripe, fees_collector = stripe, volles Stripe-Dashboard). Zahlungen
+-- laufen als Direct Charges auf dem Vereinskonto mit application_fee_amount (Plattformgebuehr).
+--
+-- organizations.stripe_express_account_kind: welcher Zahlungsweg zum Konto in
+-- stripe_express_account_id gehoert.
+--   destination = Express-Konto aus B2 (Destination Charges ueber die Plattform, nur Staging)
+--   direct_fee  = Accounts-v2-Konto mit Managed Risk (Direct Charge + Plattformgebuehr)
+-- NULL bei vorhandenem Konto wird im Code als destination behandelt (Altbestand).
+-- camp_registrations.stripe_charge_type bekommt den Wert direct_fee.
+--
+-- Aendert Daten (Backfill der Kontoart fuer vorhandene Express-Konten) -> vorher Backup ziehen.
+-- Rollback (erst, wenn kein Konto/keine Buchung direct_fee hat):
+--   alter table public.camp_registrations drop constraint if exists chk_camp_registrations_stripe_charge_type;
+--   alter table public.camp_registrations add constraint chk_camp_registrations_stripe_charge_type
+--     check (stripe_charge_type is null or stripe_charge_type in ('direct', 'destination'));
+--   alter table public.organizations drop constraint if exists chk_organizations_stripe_express_kind,
+--     drop column if exists stripe_express_account_kind;
+-- Rechte: keine Spaltenrechte fuer anon/authenticated (Backend-only).
+-- Release-Reihenfolge: diese Migration -> Backend (das Backend liest die Spalte bei jedem Checkout).
+-- Idempotent: IF NOT EXISTS / DROP ... IF EXISTS Guards, Backfill nur fuer NULL.
+
+begin;
+
+set local lock_timeout = '5s';
+
+alter table public.organizations add column if not exists stripe_express_account_kind text;
+
+alter table public.organizations drop constraint if exists chk_organizations_stripe_express_kind;
+alter table public.organizations
+    add constraint chk_organizations_stripe_express_kind check (
+        stripe_express_account_kind is null or stripe_express_account_kind in ('destination', 'direct_fee')
+    );
+
+-- Existing Express accounts were created for destination charges.
+update public.organizations
+   set stripe_express_account_kind = 'destination'
+ where stripe_express_account_id is not null and stripe_express_account_kind is null;
+
+comment on column public.organizations.stripe_express_account_kind is
+    'Zahlungsweg des Kontos in stripe_express_account_id: direct_fee (Accounts v2, Managed Risk, Direct Charge + application_fee) oder destination (B2-Express, nur Staging). NULL mit Konto = destination.';
+
+alter table public.camp_registrations drop constraint if exists chk_camp_registrations_stripe_charge_type;
+alter table public.camp_registrations
+    add constraint chk_camp_registrations_stripe_charge_type check (
+        stripe_charge_type is null or stripe_charge_type in ('direct', 'destination', 'direct_fee')
+    );
+
+-- Backend-only column, even if column grants were handed out again. No-op when absent.
+revoke select (stripe_express_account_kind) on public.organizations from anon, authenticated;
+
+commit;
+
 -- Ende. Pruefabfrage (nur lesen):
 select (select count(*) from public.organization_fee_rules) as fee_rules,
        (select count(*) from public.camp_registrations where booked_price_cents is null) as ohne_buchungspreis,
        (select count(*) from information_schema.columns where table_schema = 'public'
           and table_name = 'camp_registrations' and column_name = 'anonymized_at') as anonymized_at_spalte,
        (select count(*) from information_schema.columns where table_schema = 'public'
-          and table_name = 'camp_registrations' and column_name = 'parent_street') as rechnungsanschrift_spalte;
+          and table_name = 'camp_registrations' and column_name = 'parent_street') as rechnungsanschrift_spalte,
+       (select count(*) from information_schema.columns where table_schema = 'public'
+          and table_name = 'organizations' and column_name = 'stripe_express_account_kind') as kontoart_spalte;

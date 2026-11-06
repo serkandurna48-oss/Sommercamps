@@ -88,22 +88,35 @@ v1-Konten mit der Plattform als Verlustträger ab („Use Accounts v2 and set `l
   Stripe-Gebühren (zahlt der Verein, `fees_collector=stripe`) und Plattformgebühr (Application Fee an die
   Plattform). Stripe trägt Ausfälle (Managed Risk). Rechnung an Eltern weiter im Namen des Vereins.
 - **Bezahlt:** Connect-Webhook `checkout.session.completed` / `async_payment_succeeded`, idempotent; liest
-  den PaymentIntent auf dem Vereinskonto (`expand latest_charge.application_fee`), schreibt Snapshot
+  den PaymentIntent auf dem Vereinskonto (nur `expand latest_charge`), schreibt Snapshot
   (`fee_collection='application_fee'`, exakt die Quote aus dem Checkout) und stößt die Rechnung an.
+  Die Application Fee wird nur gelesen, wenn schon etwas erstattet wurde; scheitert das, wird trotzdem
+  „bezahlt“ gebucht und die Gebührenerstattung mit dem nächsten Erstattungs-Event nachgetragen.
+  Weicht `charge.application_fee_amount` von der Quote ab: gebucht, Audit `stripe.payment_needs_review`
+  mit Grund `fee_mismatch`.
+- **Gebühr < Betrag:** Stripe verlangt `application_fee_amount` kleiner als den Betrag. Eine Regel, die den
+  Betrag erreicht (extreme Mindestgebühr), wird auf Betrag − 1 Cent begrenzt (Log-Warnung); Snapshot = begrenzter Wert.
+- **Idempotenz Kontoerstellung:** `campspilot-acct-v2-<org_id>-<sha256(Parameter)[:12]>`: Doppelklick = gleiches
+  Konto, korrigierte Angaben (Rechtsform, E-Mail) = neuer Versuch statt `idempotency_error`. Ein verwaistes
+  Stripe-Konto aus dem ersten Versuch ist möglich und harmlos.
+- **Fehler bei der Einrichtung:** jede 4xx-Antwort von Stripe (außer 429), auch typisierte v2-Fehler wie
+  `feature_not_enabled`, erscheint als 409 mit Stripes Grund; Netzwerk und 429 als 503.
 - **Erstattung:** `POST /admin/organizations/{slug}/registrations/{token}/refund` →
   `Refund.create(payment_intent, amount, refund_application_fee=true, stripe_account=<Vereinskonto>,
   idempotency_key)`, kein `reverse_transfer`. Gebucht wird per Connect-Webhook `charge.refunded` bzw.
   `charge.refund.updated`: erstatteter Betrag und zurückgegebene Application Fee werden bei Stripe gelesen
-  (Fee-Objekt liegt auf dem Plattformkonto; falls nicht expandiert, `ApplicationFee.retrieve` ohne
-  Stripe-Account-Header). Fehlt die Application Fee noch (wird bei Direct Charges asynchron angelegt),
+  (Fee-Objekt liegt auf dem Plattformkonto: `ApplicationFee.retrieve` ohne Stripe-Account-Header).
+  Fehlt die Application Fee noch (wird bei Direct Charges asynchron angelegt),
   antwortet der Webhook 503 und Stripe wiederholt.
 - **Bestehende Wege:** Altkonten (Standard, Direct Charge ohne Gebühr) unverändert. B2-Konten
   (`stripe_express_account_kind='destination'` bzw. NULL vor der Migration) laufen weiter über den
   Plattform-Webhook und brauchen `STRIPE_PLATFORM_WEBHOOK_SECRET`; es werden keine neuen angelegt.
+- **Bekannte Lücke:** Rückbuchungen (`charge.dispute.*`) werden nicht ausgewertet; die Buchung bleibt
+  „bezahlt“, der Verein sieht den Streitfall im eigenen Stripe-Dashboard.
 - **Migration:** `supabase/migrations/20261107140000_stripe_managed_risk.sql` (Kontoart-Spalte, Backfill
   `destination` für vorhandene Express-Konten, `stripe_charge_type` erlaubt `direct_fee`, kein
-  Spaltenrecht für anon/authenticated). Vorher Backup. Nicht in `supabase/golive/PROD-MIGRATION-2026-11.sql`
-  enthalten, separat anwenden.
+  Spaltenrecht für anon/authenticated). Vorher Backup. Prod: im Bündel `supabase/golive/PROD-MIGRATION-2026-11.sql`
+  als [15/15]; Staging: `supabase/golive/STAGING-MIGRATION-managed-risk.sql`.
 
 ### Webhooks
 

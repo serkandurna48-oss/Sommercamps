@@ -1023,7 +1023,7 @@ export interface PlayerSummary {
   note_count: number
   open_goal_count: number
   /** Aktives Vereinsmitglied (gleicher Name + Geburtsdatum). */
-  is_member?: boolean
+  is_member?: boolean | null  // null when the members module is off
 }
 
 export interface PlayerBooking {
@@ -1082,7 +1082,7 @@ export interface PlayerMetric {
 }
 
 export interface PlayerDetail {
-  player: { id: string; first_name: string; last_name: string; birth_date: string; age: number; is_member?: boolean }
+  player: { id: string; first_name: string; last_name: string; birth_date: string; age: number; is_member?: boolean | null }
   bookings: PlayerBooking[]
   notes: PlayerNote[]
   goals: PlayerGoal[]

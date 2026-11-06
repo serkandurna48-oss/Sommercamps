@@ -103,6 +103,11 @@ describe('Angebotsformular', () => {
     })
   })
 
+  it('ein Preis (ohne Mitglieder-Modul): Mitgliederpreis = Preis, kein Pflichtfeld', () => {
+    const result = parseOfferInput({ ...baseOffer, price_member_euros: '', single_price: '1' }, 'create')
+    expect(result.ok && [result.value.price_member_cents, result.value.price_nonmember_cents]).toEqual([4050, 4050])
+  })
+
   it('beim Bearbeiten werden slug und kind nicht gesendet', () => {
     const result = parseOfferInput(baseOffer, 'update')
     expect(result.ok && 'slug' in result.value).toBe(false)

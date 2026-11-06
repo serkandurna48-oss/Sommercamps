@@ -23,10 +23,12 @@ const initialState: TrainingFormState = { error: null }
 
 /** Anlegen und Bearbeiten eines Trainingsangebots. Web-Adresse und Art sind
  * nach dem Anlegen unveränderlich (Backend: 422), im Bearbeiten nur Anzeige. */
-export default function OfferForm({ orgSlug, offer, backButton }: {
+export default function OfferForm({ orgSlug, offer, backButton, memberPrice = true }: {
   orgSlug: string
   offer?: TrainingOffer
   backButton?: ReactNode
+  /** Members module on: separate member price. Off: one price for everyone. */
+  memberPrice?: boolean
 }) {
   const feedbackId = useId()
   const editing = Boolean(offer)
@@ -98,10 +100,12 @@ export default function OfferForm({ orgSlug, offer, backButton }: {
           <Field label="Ort (optional)" htmlFor="offer_location">
             <input id="offer_location" name="location" defaultValue={value('location', offer?.location ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
-          <Field label="Preis für Vereinsmitglieder" htmlFor="offer_price_member_euros" suffix="€" hint="Zum Beispiel 30,00. 0 ist erlaubt." error={err('price_member_euros')}>
-            <PriceInput id="offer_price_member_euros" name="price_member_euros" required defaultValue={value('price_member_euros', offer ? formatEuroInput(offer.price_member_cents) : '')} />
-          </Field>
-          <Field label="Preis für Nichtmitglieder" htmlFor="offer_price_nonmember_euros" suffix="€" hint="Zum Beispiel 40,00." error={err('price_nonmember_euros')}>
+          {memberPrice ? (
+            <Field label="Preis für Vereinsmitglieder" htmlFor="offer_price_member_euros" suffix="€" hint="Zum Beispiel 30,00. 0 ist erlaubt." error={err('price_member_euros')}>
+              <PriceInput id="offer_price_member_euros" name="price_member_euros" required defaultValue={value('price_member_euros', offer ? formatEuroInput(offer.price_member_cents) : '')} />
+            </Field>
+          ) : <input type="hidden" name="single_price" value="1" />}
+          <Field label={memberPrice ? 'Preis für Nichtmitglieder' : 'Preis'} htmlFor="offer_price_nonmember_euros" suffix="€" hint="Zum Beispiel 40,00." error={err('price_nonmember_euros')}>
             <PriceInput id="offer_price_nonmember_euros" name="price_nonmember_euros" required defaultValue={value('price_nonmember_euros', offer ? formatEuroInput(offer.price_nonmember_cents) : '')} />
           </Field>
         </div>

@@ -19,6 +19,7 @@ vi.mock('../../lib/saasApi', async (original) => ({
 }))
 
 const org: OrganizationPublic = {
+  modules: ['camps', 'trainings', 'members'],
   slug: 'testverein', name: 'Testverein', theme: 'akademie', primary_color: '#e1b650',
   logo_url: '/test-logo.svg', contact_email: 'camps@example.org', contact_phone: null,
   legal_name: null, legal_address: null, contact_person_name: null, intro_heading: null,

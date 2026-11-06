@@ -1,10 +1,11 @@
+import { hasModule } from '../../../lib/orgModules'
 import PageHeader from '../shell/PageHeader'
 import { ButtonLink } from '../ui/Button'
 import { PAGE_FORM } from '../ui/pageLayout'
 import OfferForm from '../training/OfferForm'
 import type { OrganizationIdentityProps } from './types'
 
-export default function TrainingOfferCreateScreen({ orgSlug }: OrganizationIdentityProps) {
+export default function TrainingOfferCreateScreen({ orgSlug, org }: OrganizationIdentityProps) {
   return (
     <>
       <PageHeader
@@ -15,7 +16,7 @@ export default function TrainingOfferCreateScreen({ orgSlug }: OrganizationIdent
       />
       <main className={PAGE_FORM}>
         <h2 className="sr-only">Angebot anlegen</h2>
-        <OfferForm orgSlug={orgSlug}
+        <OfferForm orgSlug={orgSlug} memberPrice={hasModule(org, 'members')}
           backButton={<ButtonLink href={`/pilot/${orgSlug}/trainings`}>Abbrechen</ButtonLink>} />
       </main>
     </>

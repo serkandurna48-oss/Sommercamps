@@ -55,6 +55,7 @@ export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsBy
           showCampTitle
           csvFilename={`${orgSlug}-zahlungen.csv`}
           xlsxHref={`/pilot/${orgSlug}/export?view=payments`}
+          memberPrices={hasModule(org, 'members')}
         />
       </main>
     </>

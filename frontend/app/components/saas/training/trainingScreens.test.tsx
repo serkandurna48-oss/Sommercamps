@@ -71,6 +71,12 @@ describe('Trainingsangebote', () => {
     expect(doc.querySelector('a[href="/pilot/demo/trainings/new"]')?.textContent).toBe('Angebot anlegen')
   })
 
+  it('ohne Mitglieder-Modul nur ein Preis in der Angebotsliste', () => {
+    const text = html(<TrainingsScreen orgSlug="demo" org={{ ...org, modules: ['camps', 'trainings'] }} offers={[offer]} />).body.textContent ?? ''
+    expect(text).not.toContain('Mitglieder')
+    expect(text).toContain('40,50')
+  })
+
   // Launch-UX: Trainings/Mitglieder are reached through the sidebar in the layout (AdminSidebar.test.tsx).
   it('zeigt die Primäraktion im Seitenkopf und einen Leerzustand', () => {
     const doc = html(<TrainingsScreen orgSlug="demo" org={org} offers={[]} />)
@@ -109,6 +115,13 @@ describe('Angebot mit Terminen und Buchungen', () => {
     expect(row.textContent).toContain('Zahlung offen')
     expect(row.textContent).toContain('Barzahlung vor Ort')
     expect(row.textContent).toContain('Als bezahlt markieren')
+  })
+
+  it('ohne Mitglieder-Modul kein Mitglied-/Nichtmitglied-Label', () => {
+    const doc = html(<TrainingOfferScreen orgSlug="demo" org={{ ...org, modules: ['camps', 'trainings'] }} offer={offer}
+      sessions={[session]} registrationsBySession={{ [session.id]: [registration({ member_match: false })] }} />)
+    const row = doc.querySelector('li[data-payment-status="open"]')!
+    expect(row.textContent).not.toContain('Mitglied')
   })
 
   it('Nichtmitglied, Preis 0 und Überweisung', () => {

@@ -6,9 +6,10 @@ it('normalisiert: camps immer, bekannte Module in fester Reihenfolge', () => {
   expect(normalizeModules(['players', 'shop', 'trainings', 'players'])).toEqual(['camps', 'trainings', 'players'])
 })
 
-it('ohne Feld: alles wie vor der Modul-Einführung (Backend bleibt die Grenze)', () => {
-  expect(orgModules(undefined)).toEqual(['camps', 'trainings', 'members', 'players'])
-  expect(orgModules({})).toEqual(['camps', 'trainings', 'members', 'players'])
+it('ohne Feld: nur camps (fail closed, wie der Backend-Default)', () => {
+  expect(orgModules(undefined)).toEqual(['camps'])
+  expect(orgModules({})).toEqual(['camps'])
+  expect(orgModules({ modules: null })).toEqual(['camps'])
 })
 
 it('mit Feld: nur freigeschaltete Module', () => {

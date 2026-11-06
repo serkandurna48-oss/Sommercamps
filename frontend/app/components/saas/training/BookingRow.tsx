@@ -11,7 +11,7 @@ import { paymentMethodLabel } from './trainingLogic'
 /** Eine Buchung eines Trainingstermins. Zahlstatus wird über denselben Weg
  * gesetzt wie in den Camp-Zahlungen; die Route nimmt den Termin-Slug. Bei
  * Barzahlung markiert der Admin die Zahlung nach Erhalt selbst als bezahlt. */
-export default function BookingRow({ orgSlug, sessionSlug, sessionId, registration, playerDocs = true }: {
+export default function BookingRow({ orgSlug, sessionSlug, sessionId, registration, playerDocs = true, memberPrices = true }: {
   orgSlug: string
   sessionSlug: string
   /** Termin-Id (= camp_id der Notiz); für den Link in die Spielerakte. */
@@ -19,13 +19,15 @@ export default function BookingRow({ orgSlug, sessionSlug, sessionId, registrati
   registration: RegistrationAdmin
   /** Players module on: show "Doku schreiben" (link into the player file). */
   playerDocs?: boolean
+  /** Members module on: show "Mitglied"/"Nichtmitglied". */
+  memberPrices?: boolean
 }) {
   const token = registration.registration_token
   const markPaid = setPaymentStatusAction.bind(null, orgSlug, sessionSlug, token, 'paid', de.paymentsPage.markPaidSuccess)
   const markOpen = setPaymentStatusAction.bind(null, orgSlug, sessionSlug, token, 'open', de.paymentsPage.markOpenSuccess)
   const cancel = cancelRegistrationAction.bind(null, orgSlug, sessionSlug, token)
   const active = isActiveRegistration(registration)
-  const memberLabel = registration.member_match === true ? 'Mitglied' : registration.member_match === false ? 'Nichtmitglied' : null
+  const memberLabel = !memberPrices ? null : registration.member_match === true ? 'Mitglied' : registration.member_match === false ? 'Nichtmitglied' : null
 
   return (
     <li className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-start sm:justify-between" style={{ borderTopColor: 'var(--cp-line-2)' }} data-payment-status={registration.payment_status}>

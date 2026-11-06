@@ -25,13 +25,11 @@ export function normalizeModules(values: readonly string[]): OrgModule[] {
 
 /**
  * Module eines Vereins für die Oberfläche. Das Backend liefert `modules` immer mit; fehlt
- * das Feld (ältere Antwort, Test-Fixture, Organisation nicht geladen), zeigt die Oberfläche
- * alles wie vor der Modul-Einführung. Das ist unkritisch, weil das Backend gesperrte Module
- * selbst ablehnt und die Seiten dann den Modul-Hinweis zeigen.
+ * das Feld (ältere Antwort, Organisation nicht geladen), gilt wie im Backend nur `camps`
+ * (fail closed). So kann z. B. die Plattform-Konsole nie versehentlich alles vorbelegen.
  */
 export function orgModules(org: { modules?: readonly string[] | null } | null | undefined): OrgModule[] {
-  const values = org?.modules
-  return values ? normalizeModules(values) : [...ALL_MODULES]
+  return normalizeModules(org?.modules ?? [])
 }
 
 export function hasModule(org: { modules?: readonly string[] | null } | null | undefined, module: OrgModule): boolean {

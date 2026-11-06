@@ -34,3 +34,19 @@ describe('OfferForm Art des Angebots', () => {
     expect(select.querySelector('option[selected]')?.getAttribute('value')).toBe('mental')
   })
 })
+
+describe('OfferForm ohne Mitglieder-Modul', () => {
+  it('zeigt nur einen Preis und sendet single_price', () => {
+    const doc = new DOMParser().parseFromString(
+      renderToStaticMarkup(<OfferForm orgSlug="demo" offer={offer} memberPrice={false} />), 'text/html')
+    expect(doc.querySelector('input[name="price_member_euros"]')).toBeNull()
+    expect(doc.querySelector<HTMLInputElement>('input[name="single_price"]')?.value).toBe('1')
+    expect(doc.querySelector('label[for="offer_price_nonmember_euros"]')?.textContent).toContain('Preis')
+    expect(doc.body.textContent).not.toContain('Vereinsmitglieder')
+  })
+
+  it('mit Modul beide Preisfelder', () => {
+    expect(render(offer).querySelector('input[name="price_member_euros"]')).not.toBeNull()
+    expect(render(offer).querySelector('input[name="single_price"]')).toBeNull()
+  })
+})

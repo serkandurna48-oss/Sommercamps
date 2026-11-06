@@ -47,7 +47,7 @@ export default function TrainingOfferScreen({ orgSlug, org, offer, sessions, reg
               <ul className="flex flex-col gap-3">
                 {sorted.map(session => (
                   <SessionCard key={session.id} orgSlug={orgSlug} offerId={offer.id} session={session}
-                    registrations={registrationsBySession[session.id] ?? []} playerDocs={playerDocs} />
+                    registrations={registrationsBySession[session.id] ?? []} playerDocs={playerDocs} memberPrices={hasModule(org, 'members')} />
                 ))}
               </ul>
             )}
@@ -66,7 +66,7 @@ export default function TrainingOfferScreen({ orgSlug, org, offer, sessions, reg
 
         <section aria-labelledby="edit-heading">
           <h2 id="edit-heading" className="cp-heading mb-3" style={{ color: 'var(--cp-ink)' }}>Angebot bearbeiten</h2>
-          <OfferForm orgSlug={orgSlug} offer={offer} />
+          <OfferForm orgSlug={orgSlug} offer={offer} memberPrice={hasModule(org, 'members')} />
         </section>
       </main>
     </>

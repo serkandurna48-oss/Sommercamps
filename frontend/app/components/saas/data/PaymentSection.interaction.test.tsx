@@ -45,9 +45,9 @@ afterEach(async () => {
   vi.resetAllMocks()
 })
 
-async function render(entries: PaymentEntry[] = [entry], organization = org) {
+async function render(entries: PaymentEntry[] = [entry], organization = org, memberPrices = true) {
   await act(() => root.render(<PaymentSection entries={entries} org={organization} orgSlug="demo"
-    emptyLabel="Keine Anmeldungen" csvFilename="payments.csv" xlsxHref="/export" />))
+    emptyLabel="Keine Anmeldungen" csvFilename="payments.csv" xlsxHref="/export" memberPrices={memberPrices} />))
 }
 
 function button(label: string) {
@@ -344,4 +344,13 @@ describe('compact payment rows', () => {
     expect(head.getAttribute('aria-hidden')).toBe('true')
     expect(container.querySelectorAll('.cp-pay-head')).toHaveLength(1)
   })
+})
+
+it('ohne Mitglieder-Modul kein Mitgliederpreis-Label in den Details', async () => {
+  const member: PaymentEntry = { ...entry, registration: { ...entry.registration, member_match: true, applied_price_cents: 3000 } }
+  await render([member], org, false)
+  await expand(0)
+  const region = container.querySelector('[role="region"]')
+  expect(region).not.toBeNull()
+  expect(region!.textContent).not.toContain('Mitgliederpreis')
 })

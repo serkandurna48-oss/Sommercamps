@@ -1,3 +1,4 @@
+import { hasModule } from '../../../lib/orgModules'
 import PageHeader from '../shell/PageHeader'
 import StatusChip, { type StatusTone } from '../data/StatusChip'
 import EmptyState from '../state/EmptyState'
@@ -13,7 +14,7 @@ import { IconPlus } from '../icons'
 
 const STATUS_TONE: Record<TrainingOffer['status'], StatusTone> = { draft: 'neutral', published: 'ok', archived: 'neutral' }
 
-export default function TrainingsScreen({ orgSlug, offers }: OrganizationIdentityProps & { offers: TrainingOffer[] }) {
+export default function TrainingsScreen({ orgSlug, org, offers }: OrganizationIdentityProps & { offers: TrainingOffer[] }) {
   const published = offers.filter(offer => offer.status === 'published').length
 
   return (
@@ -45,7 +46,9 @@ export default function TrainingsScreen({ orgSlug, offers }: OrganizationIdentit
                   </p>
                 </div>
                 <p className="cp-chip cp-num" style={{ color: 'var(--cp-ink-2)' }}>
-                  Mitglieder {formatEuro(offer.price_member_cents)}<br className="max-lg:hidden" /><span className="lg:hidden"> · </span>Nichtmitglieder {formatEuro(offer.price_nonmember_cents)}
+                  {hasModule(org, 'members')
+                    ? <>Mitglieder {formatEuro(offer.price_member_cents)}<br className="max-lg:hidden" /><span className="lg:hidden"> · </span>Nichtmitglieder {formatEuro(offer.price_nonmember_cents)}</>
+                    : formatEuro(offer.price_nonmember_cents)}
                 </p>
                 <div><StatusChip tone={STATUS_TONE[offer.status]} label={offerStatusLabel[offer.status]} /></div>
                 <ShareActions orgSlug={orgSlug} offerSlug={offer.slug} title={offer.title} published={offer.status === 'published'} />

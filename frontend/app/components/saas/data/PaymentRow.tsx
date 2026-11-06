@@ -23,6 +23,7 @@ export default function PaymentRow({
   expanded,
   onToggle,
   onPaid,
+  memberPrices = true,
 }: {
   registration: PaymentRegistration
   camp: CampAdmin
@@ -31,6 +32,8 @@ export default function PaymentRow({
   expanded: boolean
   onToggle: () => void
   onPaid: () => void
+  /** Members module on: show the member/non-member price label. */
+  memberPrices?: boolean
 }) {
   const detailId = useId()
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle')
@@ -64,7 +67,7 @@ export default function PaymentRow({
   const isTraining = camp.organization_id === ''
   const when = isTraining ? camp.title : `${camp.title} · ${formatDateRange(camp.start_date, camp.end_date)}`
   const priceCents = registrationPriceCents(camp, registration)
-  const memberLabel = registration.member_match === true ? 'Mitgliederpreis' : registration.member_match === false ? 'Nichtmitgliederpreis' : null
+  const memberLabel = !memberPrices ? null : registration.member_match === true ? 'Mitgliederpreis' : registration.member_match === false ? 'Nichtmitgliederpreis' : null
 
   function onRowClick(event: React.MouseEvent<HTMLDivElement>) {
     // Clicks on buttons, links and forms keep their own meaning.

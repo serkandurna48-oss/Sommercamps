@@ -23,6 +23,7 @@ import TrainingOfferFlow from './TrainingOfferFlow'
 import TrainingDoneScreen from './TrainingDoneScreen'
 
 const org: OrganizationPublic = {
+  modules: ['camps', 'trainings', 'members'],
   slug: 'testverein', name: 'Testverein', legal_name: 'Testverein e. V.', legal_address: null,
   contact_person_name: null, contact_email: 'kontakt@testverein.example', contact_phone: null,
   logo_url: null, primary_color: null, theme: 'tradition', iban: 'DE89370400440532013000',
@@ -95,6 +96,20 @@ describe('Angebotsliste', () => {
 })
 
 describe('Angebotsdetail', () => {
+  it('ohne Mitglieder-Modul (API liefert einen Preis): nur ein Preis, kein Mitgliederhinweis', async () => {
+    const single = { ...offer, price_member_cents: 4500,
+      sessions: offer.sessions.map(sess => ({ ...sess, price_member_cents: 4500 })) }
+    vi.mocked(getPublicOrganization).mockResolvedValue({ ...org, modules: ['camps', 'trainings'] })
+    vi.mocked(getPublicTrainingOffer).mockResolvedValue(single)
+    vi.mocked(getPublicTrainingOffers).mockResolvedValue([{ ...single, from_price_member_cents: 4500, from_price_nonmember_cents: 4500 }])
+    const detail = renderToStaticMarkup(await TrainingOfferPage({ params: offerParams }))
+    expect(detail).toContain('45 €')
+    expect(detail).not.toContain('für Mitglieder')
+    const list = renderToStaticMarkup(await TrainingOffersPage({ params: listParams }))
+    expect(list).toContain('ab 45 €')
+    expect(list).not.toContain('für Mitglieder')
+  })
+
   it('shows description, duration, location, price text, cancellation note and sessions with time', async () => {
     const html = renderToStaticMarkup(await TrainingOfferPage({ params: offerParams }))
     expect(html).toContain('Individuelles Training mit dem Torwarttrainer.')

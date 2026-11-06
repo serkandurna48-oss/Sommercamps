@@ -46,6 +46,7 @@ export default function PaymentSection({
   csvFilename,
   xlsxHref,
   initialFilter = 'open',
+  memberPrices = true,
 }: {
   entries: PaymentEntry[]
   org: ReminderOrganization
@@ -55,6 +56,8 @@ export default function PaymentSection({
   csvFilename: string
   xlsxHref: string
   initialFilter?: Filter
+  /** Members module on: label training rows "Mitgliederpreis"/"Nichtmitgliederpreis". */
+  memberPrices?: boolean
 }) {
   const [filter, setFilter] = useState<Filter>(initialFilter)
   const [search, setSearch] = useState('')
@@ -182,6 +185,7 @@ export default function PaymentSection({
               camp={e.camp}
               org={org}
               orgSlug={orgSlug}
+              memberPrices={memberPrices}
               expanded={expandedId === e.registration.id}
               onToggle={() => setExpandedId(id => (id === e.registration.id ? null : e.registration.id))}
               onPaid={() => { setLastPaid(e); setUndoMessage(null) }}

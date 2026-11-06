@@ -119,10 +119,12 @@ export function parseOfferInput(input: Record<string, string>, mode: 'create' | 
   const duration = parseInteger(input.duration_minutes ?? '')
   if (duration === null || duration < 1 || duration > 600) errors.duration_minutes = 'Dauer in vollen Minuten, 1 bis 600.'
 
-  const priceMember = parseEuroToCents(input.price_member_euros ?? '')
-  if (priceMember === null) errors.price_member_euros = 'Bitte einen Preis in Euro eintragen, z. B. 30,00.'
+  // single_price=1 (members module off): one price, stored as member and non-member price.
+  const singlePrice = input.single_price === '1'
   const priceNonmember = parseEuroToCents(input.price_nonmember_euros ?? '')
   if (priceNonmember === null) errors.price_nonmember_euros = 'Bitte einen Preis in Euro eintragen, z. B. 40,00.'
+  const priceMember = singlePrice ? priceNonmember : parseEuroToCents(input.price_member_euros ?? '')
+  if (!singlePrice && priceMember === null) errors.price_member_euros = 'Bitte einen Preis in Euro eintragen, z. B. 30,00.'
 
   const status = (input.status ?? '').trim()
   if (!(OFFER_STATUSES as readonly string[]).includes(status)) errors.status = 'Bitte einen Status wählen.'

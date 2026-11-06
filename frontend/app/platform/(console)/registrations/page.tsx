@@ -14,6 +14,7 @@ const STATUS_LABEL: Record<string, string> = {
 const PAYMENT_LABEL: Record<string, string> = {
   open: 'Offen',
   paid: 'Bezahlt',
+  partially_refunded: 'Teilweise erstattet',
   refunded: 'Erstattet',
   waived: 'Kostenlos',
   cancelled: 'Storniert',

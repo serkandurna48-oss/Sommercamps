@@ -509,6 +509,11 @@ class RegistrationAdminOut(RegistrationCreated):
     # Spielerakte: link to the player record ("Doku schreiben"); null for unlinked legacy rows.
     player_id: Optional[UUID] = None
     documentation_consent: Optional[bool] = None
+    # Player record deleted: child data removed ("Gelöscht"), no age to show.
+    anonymized_at: Optional[datetime] = None
+    # Delete guard (GoBD): an invoice/storno exists, or the platform fee is recorded.
+    has_invoice: bool = False
+    fee_recorded: bool = False
 
 
 class GlobalRegistrationOut(RegistrationAdminOut):

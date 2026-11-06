@@ -468,12 +468,15 @@ def delete_player(organization_id: UUID, player_id: UUID) -> dict:
     row, in one transaction scoped by organization. Refused while an active
     (registered, confirmed or waitlisted) registration references the player.
     Cancelled registrations are unlinked (player_id = null) and anonymized in
-    the same transaction: child name -> "Gelöscht", birth date -> a neutral
-    placeholder (the column is NOT NULL with a plausibility CHECK of today minus
-    100 years .. today, so NULL and 1900 are impossible; the placeholder is
-    today minus 99 years), allergies, medical notes, jersey size, pickup list,
-    emergency contact and extra answers -> NULL / {}. Payment, status and parent
-    contact fields stay for the books. Returns record counts only.
+    the same transaction: child name -> "Gelöscht", birth date -> the booking
+    date (the column is NOT NULL with a plausibility CHECK of today minus 100
+    years .. today; the booking date stays inside it for any later update, a
+    fixed "today minus 99 years" would fall out after a year), allergies,
+    medical notes, jersey size, pickup list, emergency contact and extra
+    answers -> NULL / {}, anonymized_at -> now (the linker and the player
+    matching skip such rows). Payment, status and parent contact fields stay
+    for the books. Invoices are not touched: their snapshot and PDF keep the
+    child's name as issued (retention duty, GoBD). Returns record counts only.
 
     Lock order matches the registration delete: registration rows first, then
     the player row.
@@ -499,10 +502,11 @@ def delete_player(organization_id: UUID, player_id: UUID) -> dict:
         cur.execute(
             """update camp_registrations
                set child_first_name = 'Gelöscht', child_last_name = 'Gelöscht',
-                   child_birth_date = (current_date - interval '99 years')::date,
+                   child_birth_date = created_at::date,
                    allergies = null, medical_notes = null, jersey_size = null, pickup_authorized = null,
                    emergency_contact_name = null, emergency_contact_phone = null,
-                   extra_answers = '{}'::jsonb, player_id = null
+                   extra_answers = '{}'::jsonb, player_id = null,
+                   anonymized_at = coalesce(anonymized_at, now())
                where player_id = %s and organization_id = %s""",
             (player_id, organization_id),
         )

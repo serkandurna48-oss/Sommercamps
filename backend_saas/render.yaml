@@ -59,3 +59,11 @@ services:
                                # weil sonst alle Eltern hinter der Proxy-IP gemeinsam gesperrt würden.
       - key: REGISTRATION_RATE_LIMIT_PER_HOUR
         sync: false           # optional, Standard 30 Elternanmeldungen pro IP und Stunde
+      - key: STRIPE_CHECKOUT_ENABLED
+        sync: false           # "true" nur, wenn die Stripe-Variablen darunter gesetzt sind (Staging: Testmodus)
+      - key: STRIPE_SECRET_KEY
+        sync: false           # sk_test_… (Staging) – sk_live_… nur mit APP_ENV=production
+      - key: STRIPE_CONNECT_WEBHOOK_SECRET
+        sync: false           # whsec_… des Connect-Endpunkts /api/v1/payments/stripe/webhook
+      - key: STRIPE_PLATFORM_WEBHOOK_SECRET
+        sync: false           # whsec_… des Plattform-Endpunkts /api/v1/payments/stripe/platform-webhook (Express)

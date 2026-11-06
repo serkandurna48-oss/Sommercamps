@@ -18,6 +18,17 @@ vi.mock('../../components/saas/orgAdminData', () => ({
   loadOrgAdminData: vi.fn(), loadOrgPaymentsData: vi.fn(), loadCampAdminData: vi.fn(), getOrganizationAdmin: vi.fn(),
 }))
 vi.mock('../../lib/adminSession', () => ({ getAdminToken: vi.fn() }))
+vi.mock('../../lib/saasAdminApi', async importOriginal => ({
+  ...await importOriginal<typeof import('../../lib/saasAdminApi')>(),
+  fetchBillingProfileAdmin: vi.fn(async () => null),
+  fetchStripePaymentStatusAdmin: vi.fn(async () => ({
+    state: 'not_set_up', platform_enabled: false, charges_enabled: false, payouts_enabled: false, details_submitted: false,
+    requirements_due: 0, synced_at: null, legacy_account_linked: false, legacy_active: false,
+    online_payment_mode: null, service_ready: true,
+  })),
+  syncStripePaymentStatusAdmin: vi.fn(),
+  fetchInvoicesAdmin: vi.fn(async () => ({ billing_profile_complete: true, invoices: [], pending: [], open: { invoices: 0, missing_profile: 0, failed: 0, stornos: 0, unsent_mails: 0, total: 0 } })),
+}))
 vi.mock('../../components/saas/trainingAdminData', () => ({ isModuleDisabled: vi.fn(async () => false), loadTrainingOverview: vi.fn(async () => ({ offers: [], upcoming: [], error: false })) }))
 vi.mock('next/navigation', () => ({
   notFound: () => { throw new Error('notFound') },

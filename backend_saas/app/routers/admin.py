@@ -70,6 +70,7 @@ from ..admin_schemas import (
     WaitlistPromoteResponse,
 )
 from ..modules import normalize_modules
+from .. import invoices
 from ..registration_lifecycle import InvalidStatusTransitionError
 from ..notifications import sending as notifications_sending
 from ..repositories import camps as camps_repo
@@ -79,7 +80,12 @@ from ..repositories import platform_stats as platform_stats_repo
 from ..repositories import registrations as registrations_repo
 from ..repositories.camps import CampSlugConflictError
 from ..repositories.organizations import OrganizationSlugConflictError
-from ..repositories.registrations import RegistrationNotFoundError, RegistrationPaidOnlineError
+from ..repositories.registrations import (
+    RegistrationFeeRecordedError,
+    RegistrationHasInvoiceError,
+    RegistrationNotFoundError,
+    RegistrationPaidOnlineError,
+)
 from .payments import CheckoutPaidError, CheckoutUnavailableError, close_checkout_before_delete, expire_open_checkout
 from ..tenancy import TenantContext
 
@@ -585,6 +591,8 @@ def cancel_registration(
         "cancelled",
     )
     background_tasks.add_task(expire_open_checkout, organization["id"], registration_token)
+    # A cancelled paid booking gets a storno invoice (no-op without an invoice).
+    background_tasks.add_task(invoices.sync_by_token, registration_token, organization["id"])
     if result["promoted"] is not None:
         background_tasks.add_task(
             notifications_sending.send_status_change_notification,
@@ -593,6 +601,18 @@ def cancel_registration(
             "promoted",
         )
     return CancelRegistrationResponse(**result)
+
+
+def _delete_refused(exc: Exception) -> HTTPException:
+    if isinstance(exc, RegistrationHasInvoiceError):
+        detail = {"code": "has_invoice",
+                  "message": "Für diese Buchung gibt es eine Rechnung. Bitte stornieren statt löschen."}
+    elif isinstance(exc, RegistrationFeeRecordedError):
+        detail = {"code": "has_fee_record",
+                  "message": "Diese Buchung ist bereits abgerechnet. Bitte stornieren statt löschen."}
+    else:
+        detail = {"code": "paid_online", "message": "Erst erstatten oder stornieren."}
+    return HTTPException(status_code=409, detail=detail)
 
 
 @router.delete(
@@ -610,13 +630,21 @@ def delete_registration(
     Hard-deletes one registration of a camp or a training session (both
     live in camp_registrations; `camp_slug` is the session slug for
     trainings). Scoped by organization AND camp, looked up by the public
-    registration_token. Refused with 409 `paid_online` when the booking was
-    paid online: refund or cancel it instead. A freed place goes to the next
+    registration_token. Refused with 409 `has_invoice` when an invoice or
+    storno exists (GoBD: invoices and their booking stay), `paid_online` when
+    the booking was paid online (also partially refunded) and
+    `has_fee_record` when its platform fee is recorded: cancel instead. A freed place goes to the next
     waitlisted registration, like on cancel. The audit entry carries status
     facts only, no personal data.
     """
     organization = require_organization(organization_slug)
     camp = require_camp(organization, camp_slug)
+
+    # Invoices and fee records block the delete before Stripe is asked at all.
+    try:
+        registrations_repo.check_registration_deletable(organization["id"], camp["id"], registration_token)
+    except (RegistrationPaidOnlineError, RegistrationHasInvoiceError, RegistrationFeeRecordedError) as exc:
+        raise _delete_refused(exc) from exc
 
     # An open Stripe Checkout is closed first, so nobody can pay a deleted booking.
     try:
@@ -637,11 +665,8 @@ def delete_registration(
         )
     except RegistrationNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Registration not found") from exc
-    except RegistrationPaidOnlineError as exc:
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "paid_online", "message": "Erst erstatten oder stornieren."},
-        ) from exc
+    except (RegistrationPaidOnlineError, RegistrationHasInvoiceError, RegistrationFeeRecordedError) as exc:
+        raise _delete_refused(exc) from exc
 
     logger.info(
         "Registration deleted (organization_slug=%s, camp_slug=%s, promoted=%s)",
@@ -755,6 +780,9 @@ def update_registration_payment_status(
     if data.payment_status != "open":
         # Paid by transfer, free or refunded: close an open online checkout.
         background_tasks.add_task(expire_open_checkout, organization["id"], registration_token)
+    if data.payment_status in ("paid", "refunded"):
+        # Parent invoice (or storno) in the club's name, best effort after the response.
+        background_tasks.add_task(invoices.sync_by_token, registration_token, organization["id"])
     return RegistrationAdminOut.model_validate({**row, "camp_title": camp["title"]})
 
 

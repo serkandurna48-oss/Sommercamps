@@ -5,6 +5,7 @@
  */
 
 import type { CampAdmin, RegistrationAdmin, TrainingPaymentRegistration } from '../../lib/saasAdminApi'
+import { de } from '../../lib/i18n/de'
 
 /** The registration fields the payment views read; full RegistrationAdmin rows fit as well. */
 export type PaymentRegistration = TrainingPaymentRegistration
@@ -24,6 +25,30 @@ export function registrationPriceCents(camp: Pick<CampAdmin, 'price_cents'>, r: 
 /** Only active registrations carry an outstanding payment obligation. */
 export function isOpenPayment(r: Pick<RegistrationAdmin, 'status' | 'payment_status'>): boolean {
   return isActiveRegistration(r) && r.payment_status === 'open'
+}
+
+/** Display name of the child; an anonymized booking (player record deleted) shows "Gelöscht". */
+export function childDisplayName(r: Pick<RegistrationAdmin, 'child_first_name' | 'child_last_name' | 'anonymized_at'>): string {
+  return r.anonymized_at ? 'Gelöscht' : `${r.child_first_name} ${r.child_last_name}`
+}
+
+/** Birth year for lists and exports; empty for an anonymized booking (its date is a placeholder). */
+export function childBirthYear(r: Pick<RegistrationAdmin, 'child_birth_date' | 'anonymized_at'>): string {
+  return r.anonymized_at ? '' : r.child_birth_date.slice(0, 4)
+}
+
+/** Why a registration cannot be hard-deleted (null = deletable). Same order as
+ * the backend guard: invoice first (GoBD), then money still held online, then
+ * a recorded platform fee. The backend re-checks; this only picks the hint. */
+export function deleteBlockedHint(
+  r: Pick<RegistrationAdmin, 'payment_status' | 'payment_method' | 'has_invoice' | 'fee_recorded'>,
+): string | null {
+  if (r.has_invoice) return de.adminActions.deleteHasInvoice
+  if (['paid', 'partially_refunded'].includes(r.payment_status) && r.payment_method === 'online') {
+    return 'Online bezahlt: erst erstatten oder stornieren, dann löschen.'
+  }
+  if (r.fee_recorded) return de.adminActions.deleteHasFeeRecord
+  return null
 }
 
 /** Any manual payment decision (paid, free, refunded) can be undone while the registration is active. */

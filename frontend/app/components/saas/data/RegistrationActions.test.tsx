@@ -15,6 +15,7 @@ vi.mock('../actions/waitlistActions', () => ({ resendRegistrationMailAction: vi.
   updateRegistrationDetailsAction: vi.fn(),
 }))
 vi.mock('../actions/paymentActions', () => ({ setPaymentStatusAction: vi.fn() }))
+vi.mock('../actions/invoiceActions', () => ({ loadRegistrationInvoicesAction: vi.fn(async () => ({ invoices: [], pending_reason: null, can_create: false, refund: { possible: false, remaining_cents: 0 } })) }))
 
 const child: RegistrationAdmin = {
   id: 'child', registration_token: 'child-token', payment_reference: 'CP-CHILDTOK', status: 'registered', payment_status: 'paid',
@@ -99,6 +100,17 @@ it('offers no delete button for a booking paid online, only the refund hint', as
   await renderParticipants([{ ...child, payment_method: 'online' }])
   expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Anmeldung löschen')).toBe(false)
   expect(container.querySelector('[data-delete-blocked]')?.textContent).toContain('erst erstatten oder stornieren')
+})
+
+it.each([
+  [{ has_invoice: true, fee_recorded: true, payment_status: 'refunded' as const, payment_method: 'online' }, 'Für diese Buchung gibt es eine Rechnung. Bitte stornieren statt löschen.'],
+  [{ has_invoice: true, fee_recorded: true, payment_method: 'ueberweisung' }, 'Für diese Buchung gibt es eine Rechnung. Bitte stornieren statt löschen.'],
+  [{ payment_status: 'partially_refunded' as const, payment_method: 'online' }, 'erst erstatten oder stornieren'],
+  [{ fee_recorded: true, payment_status: 'refunded' as const, payment_method: 'online' }, 'bereits abgerechnet'],
+])('shows the delete hint instead of the button (%o)', async (overrides, hint) => {
+  await renderParticipants([{ ...child, ...overrides }])
+  expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Anmeldung löschen')).toBe(false)
+  expect(container.querySelector('[data-delete-blocked]')?.textContent).toContain(hint)
 })
 
 it('shows the backend refusal when a delete is blocked', async () => {

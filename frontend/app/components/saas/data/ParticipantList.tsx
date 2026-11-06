@@ -19,9 +19,9 @@ import RegistrationActionFeedback from '../ui/RegistrationActionFeedback'
 const PARTICIPANT_COLUMNS: ExportColumn<RegistrationAdmin>[] = [
   { header: 'Status', value: r => registrationStatusLabel[r.status] ?? r.status },
   { header: 'Zahlung', value: r => paymentStatusLabel[r.payment_status] ?? r.payment_status },
-  { header: 'Kind Vorname', value: r => r.child_first_name },
-  { header: 'Kind Nachname', value: r => r.child_last_name },
-  { header: 'Geburtsdatum', value: r => formatDate(r.child_birth_date) },
+  { header: 'Kind Vorname', value: r => r.anonymized_at ? 'Gelöscht' : r.child_first_name },
+  { header: 'Kind Nachname', value: r => r.anonymized_at ? '' : r.child_last_name },
+  { header: 'Geburtsdatum', value: r => r.anonymized_at ? '' : formatDate(r.child_birth_date) },
   { header: 'Elternteil Vorname', value: r => r.parent_first_name },
   { header: 'Elternteil Nachname', value: r => r.parent_last_name },
   { header: 'E-Mail', value: r => r.parent_email },

@@ -22,6 +22,7 @@ import base64
 import binascii
 import hashlib
 import json
+import logging
 import math
 import threading
 import time
@@ -30,6 +31,8 @@ from collections import OrderedDict
 import httpx
 
 from .config import get_settings
+
+logger = logging.getLogger(__name__)
 
 _client: httpx.Client | None = None
 _client_lock = threading.Lock()
@@ -401,10 +404,10 @@ def get_user_email(user_id: str) -> str | None:
     Returns None when the service-role key is not configured, the account is
     unknown or Supabase Auth is unreachable; a missing e-mail must never
     break a list. Nothing is logged beyond the error type."""
-    settings = get_settings()
-    if not settings.supabase_service_role_key:
-        return None
     try:
+        settings = get_settings()
+        if not settings.supabase_service_role_key:
+            return None
         response = get_client().get(
             f"{settings.supabase_url}/auth/v1/admin/users/{user_id}",
             headers={
@@ -413,13 +416,11 @@ def get_user_email(user_id: str) -> str | None:
             },
             timeout=3.0,
         )
-    except httpx.HTTPError:
-        return None
-    if response.status_code != 200:
-        return None
-    try:
+        if response.status_code != 200:
+            return None
         email = response.json().get("email")
-    except (ValueError, AttributeError):
+    except Exception as exc:  # noqa: BLE001 - a missing e-mail must never break a list
+        logger.warning("Member e-mail lookup failed (error_type=%s)", type(exc).__name__)
         return None
     return email if isinstance(email, str) and email else None
 

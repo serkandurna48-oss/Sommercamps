@@ -16,6 +16,7 @@ export const registrationStatusLabel: Record<string, string> = {
 export const paymentStatusLabel: Record<string, string> = {
   open: 'Zahlung offen',
   paid: 'Bezahlt',
+  partially_refunded: 'Teilweise erstattet',
   refunded: 'Erstattet',
   waived: 'Kostenlos',
   cancelled: 'Storniert',
@@ -52,6 +53,8 @@ export const de = {
     deletedPlayerKept: "Anmeldung gelöscht. Die Spielerakte bleibt bestehen.",
     deletePaymentPending: "Zahlung wird gerade geprüft, bitte später erneut versuchen.",
     deletePaidOnline: "Erst erstatten oder stornieren: Online bezahlte Anmeldungen kannst du nicht löschen.",
+    deleteHasInvoice: "Für diese Buchung gibt es eine Rechnung. Bitte stornieren statt löschen.",
+    deleteHasFeeRecord: "Diese Buchung ist bereits abgerechnet. Bitte stornieren statt löschen.",
     namesRequired: "Vor- und Nachname dürfen nicht leer sein.",
     detailsFailed: "Konnte nicht gespeichert werden – Angaben prüfen und erneut versuchen.",
     parentEmailInvalid: "Bitte eine gültige E-Mail-Adresse der Eltern eingeben.",

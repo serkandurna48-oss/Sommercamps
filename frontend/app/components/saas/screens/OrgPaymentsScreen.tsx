@@ -5,8 +5,9 @@ import { de, formatEuro } from '../../../lib/i18n/de'
 import type { OrgPaymentsScreenProps } from './types'
 import { ADMIN_PAGE } from '../ui/pageLayout'
 import { hasModule } from '../../../lib/orgModules'
+import InvoiceList from '../billing/InvoiceList'
 
-export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsByCamp, trainingPayments = [], trainingPaymentsError = false }: OrgPaymentsScreenProps) {
+export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsByCamp, trainingPayments = [], trainingPaymentsError = false, invoices }: OrgPaymentsScreenProps) {
   const trainingsOn = hasModule(org, 'trainings')
 
   const groups = [
@@ -57,6 +58,8 @@ export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsBy
           xlsxHref={`/pilot/${orgSlug}/export?view=payments`}
           memberPrices={hasModule(org, 'members')}
         />
+
+        {invoices !== undefined && <InvoiceList orgSlug={orgSlug} data={invoices} />}
       </main>
     </>
   )

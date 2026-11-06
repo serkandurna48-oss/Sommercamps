@@ -1,6 +1,7 @@
 import type { ExportColumn } from '../../lib/exportCsv'
 import { paymentStatusLabel, registrationStatusLabel } from '../../lib/i18n/de'
 import type { CampAdmin, RegistrationAdmin, RegistrationQuestion } from '../../lib/saasAdminApi'
+import { childBirthYear, childDisplayName } from './commandCenterLogic'
 import { campAttendanceColumns } from './dayListExport'
 
 export type PrintPurpose = 'daylist' | 'participants'
@@ -22,8 +23,8 @@ export const DEFAULT_PRINT_FIELDS: Record<PrintPurpose, string[]> = {
 /** Only explicit fields from the existing admin contract are offered. */
 export function participantPrintFields(questions: RegistrationQuestion[] = []): ParticipantPrintField[] {
   return [
-    { id: 'name', header: 'Name', group: 'Teilnahme', size: 'l', value: r => `${r.child_first_name} ${r.child_last_name}` },
-    { id: 'year', header: 'Jahrgang', group: 'Teilnahme', size: 's', value: r => r.child_birth_date.slice(0, 4) },
+    { id: 'name', header: 'Name', group: 'Teilnahme', size: 'l', value: r => childDisplayName(r) },
+    { id: 'year', header: 'Jahrgang', group: 'Teilnahme', size: 's', value: r => childBirthYear(r) },
     { id: 'status', header: 'Anmeldestatus', group: 'Teilnahme', size: 'm', value: r => registrationStatusLabel[r.status] ?? r.status },
     { id: 'payment', header: 'Zahlungsstatus', group: 'Teilnahme', size: 'm', value: r => paymentStatusLabel[r.payment_status] ?? r.payment_status },
     { id: 'jersey', header: 'Trikotgröße', group: 'Teilnahme', size: 's', value: r => r.jersey_size },

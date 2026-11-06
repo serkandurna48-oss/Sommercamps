@@ -191,8 +191,12 @@ def test_signed_webhook_credits_only_verified_amount_and_account(monkeypatch):
     ))
     monkeypatch.setattr(payments, "_stripe_client", lambda: stripe)
     monkeypatch.setattr(payments, "_fully_refunded", lambda *_: False)
+    # Fee snapshot (billing B1) and invoices (B3) are covered against real Postgres.
+    monkeypatch.setattr(payments.fees, "snapshot_paid_registration", lambda *_: None)
+    monkeypatch.setattr(payments.invoices, "sync_registration", lambda *_: None)
+    monkeypatch.setattr(payments.invoices, "sync_registration", lambda *_: None)  # covered in test_invoices
     flagged = []
-    monkeypatch.setattr(payments, "_flag_for_review", lambda org, token, reason: flagged.append(reason))
+    monkeypatch.setattr(payments, "_flag_for_review", lambda org, token, reason, *_: flagged.append(reason))
     cursor = _Cursor({
         "id": uuid4(), "organization_id": uuid4(), "registration_token": uuid4(),
         "status": "registered", "payment_status": "open",
@@ -309,8 +313,10 @@ def webhook_env(monkeypatch):
         app_env="staging", stripe_checkout_enabled=True, stripe_webhook_secret=SECRET,
     ))
     monkeypatch.setattr(payments, "_stripe_client", lambda: stripe)
+    monkeypatch.setattr(payments.fees, "snapshot_paid_registration", lambda *_: None)
+    monkeypatch.setattr(payments.invoices, "sync_registration", lambda *_: None)  # covered in test_invoices
     flagged = []
-    monkeypatch.setattr(payments, "_flag_for_review", lambda org, token, reason: flagged.append(reason))
+    monkeypatch.setattr(payments, "_flag_for_review", lambda org, token, reason, *_: flagged.append(reason))
     cursor = _Cursor({
         "id": uuid4(), "organization_id": uuid4(), "registration_token": uuid4(),
         "status": "registered", "payment_status": "open", "stripe_payment_intent_id": None,

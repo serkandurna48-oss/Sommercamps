@@ -35,6 +35,7 @@ def _setup(monkeypatch):
     camp = _camp_row(org["id"])
     monkeypatch.setattr(organizations, "get_organization_by_slug", lambda slug: org)
     monkeypatch.setattr(camps_repo, "get_camp_by_slug", lambda org_id, slug: camp)
+    monkeypatch.setattr(registrations_repo, "check_registration_deletable", lambda *a: None)
     return org, camp
 
 

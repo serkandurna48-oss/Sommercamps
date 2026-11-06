@@ -125,3 +125,20 @@ describe('campAttendanceColumns', () => {
     expect(cols.map(c => c.header)).toEqual(['Mo 05.07.', 'Di 06.07.', 'Mi 07.07.', 'Do 08.07.'])
   })
 })
+
+describe('anonymisierte Buchungen (Spielerakte gelöscht)', () => {
+  const anonymized: RegistrationAdmin = { ...registration, child_first_name: 'Gelöscht', child_last_name: 'Gelöscht',
+    child_birth_date: '2027-01-01', anonymized_at: '2027-02-01T00:00:00Z' }
+  it('Tagesliste, Druck und Warteliste zeigen "Gelöscht" ohne Jahrgang', async () => {
+    const { participantPrintFields } = await import('./participantPrint')
+    const { waitlistExportColumns } = await import('./waitlistExport')
+    const day = DAY_LIST_COLUMNS.slice(0, 2).map(c => c.value(anonymized))
+    expect(day).toEqual(['Gelöscht', ''])
+    const print = Object.fromEntries(participantPrintFields().filter(f => f.id === 'name' || f.id === 'year').map(f => [f.id, f.value(anonymized)]))
+    expect(print).toEqual({ name: 'Gelöscht', year: '' })
+    const waitlist = waitlistExportColumns(false).filter(c => c.header === 'Kind' || c.header === 'Geburtsjahr')
+      .map(c => c.value({ camp: {} as never, position: 1, registration: anonymized }))
+    expect(waitlist).toEqual(['Gelöscht', ''])
+    expect(DAY_LIST_COLUMNS[1].value(registration)).toBe('2018')
+  })
+})

@@ -72,6 +72,15 @@ it('renders the expand trigger with a transparent border (no double-border in th
   expect(trigger.style.border).toBe('1px solid transparent')
 })
 
+it('shows an anonymized booking as "Gelöscht" without birth year', async () => {
+  await render({ ...registration, status: 'cancelled', child_first_name: 'Gelöscht', child_last_name: 'Gelöscht',
+    child_birth_date: '2027-01-01', anonymized_at: '2027-02-01T00:00:00Z' })
+  const summary = container.querySelector('.cp-participant-summary')!.textContent ?? ''
+  expect(summary).toContain('Gelöscht')
+  expect(summary).not.toContain('Gelöscht Gelöscht')
+  expect(summary).not.toContain('(2027)')
+})
+
 it('shows configured position and origin answers in participant detail', async () => {
   const questions = [
     { key: 'position', label: 'Position', type: 'choice' as const, options: ['Feldspieler', 'Torwart'], other_label: null, required: true },

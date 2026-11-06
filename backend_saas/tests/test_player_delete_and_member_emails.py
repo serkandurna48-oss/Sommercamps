@@ -109,8 +109,9 @@ def test_get_user_email_needs_the_service_role_key(monkeypatch):
     assert supabase_auth.get_user_email(str(uuid4())) is None
 
 
-def test_unmatched_payment_is_flagged_with_club_and_token_from_the_session(monkeypatch, audit):
-    """After a delete the webhook finds no row; the review entry must still name club and booking."""
+def test_unmatched_payment_is_flagged_with_club_and_session_but_never_the_token(monkeypatch, audit):
+    """After a delete the webhook finds no row; the review entry must still name the club and
+    the Stripe session (to find the payment), but never the registration token (bearer capability)."""
     org, token = str(uuid4()), str(uuid4())
 
     class _Cur:
@@ -121,12 +122,14 @@ def test_unmatched_payment_is_flagged_with_club_and_token_from_the_session(monke
 
     monkeypatch.setattr(payments.db, "get_cursor", lambda: _Cur())
     monkeypatch.setattr(payments, "_fully_refunded", lambda *a: False)
-    obj = {"id": "cs_x", "amount_total": 1000, "currency": "eur", "payment_intent": "pi_" + "a" * 20,
+    obj = {"id": "cs_test_abc", "amount_total": 1000, "currency": "eur", "payment_intent": "pi_" + "a" * 20,
            "metadata": {"campspilot": "1", "organization_id": org}, "client_reference_id": token}
     monkeypatch.setattr(payments, "PAYMENT_INTENT_ID", __import__("re").compile(r"pi_[a-z]+"))
     result = payments._settle_checkout(None, obj, "acct_1", created=1)
     assert result == {"received": True, "settled": False}
-    assert audit[0]["organization_id"] == org and audit[0]["target_id"] == token
+    assert audit[0]["organization_id"] == org and audit[0]["target_id"] is None
+    assert audit[0]["metadata"]["checkout_session_id"] == "cs_test_abc"
+    assert token not in repr(audit)
 
 
 def test_delete_player_record_anonymizes_child_data_in_cancelled_bookings(real_db, audit):

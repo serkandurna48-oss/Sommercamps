@@ -5,7 +5,7 @@ import ListRow from '../ui/ListRow'
 import { useId, useState } from 'react'
 import { paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import type { RegistrationAdmin, RegistrationQuestion } from '../../../lib/saasAdminApi'
-import { birthYear, hasNotes } from '../commandCenterLogic'
+import { birthYear, childDisplayName, hasNotes } from '../commandCenterLogic'
 import ParticipantDetail from './ParticipantDetail'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from './StatusChip'
 import { IconChevronDown } from '../icons'
@@ -66,10 +66,12 @@ export default function ParticipantRow({
           style={{ border: '1px solid transparent' }}
         >
           <ListRow className="cp-participant-summary" main={<p className="cp-subheading min-w-0 truncate" style={{ color: 'var(--cp-ink)' }}>
-              {effective.child_first_name} {effective.child_last_name}
-              <span className="cp-num ml-1.5" style={{ color: 'var(--cp-muted)' }}>
-                ({birthYear(effective.child_birth_date)})
-              </span>
+              {childDisplayName(effective)}
+              {!effective.anonymized_at && (
+                <span className="cp-num ml-1.5" style={{ color: 'var(--cp-muted)' }}>
+                  ({birthYear(effective.child_birth_date)})
+                </span>
+              )}
               {hasNotes(effective) && (
                 <span className="cp-chip ml-2" style={{ color: 'var(--cp-info)' }}>
                   Hinweis

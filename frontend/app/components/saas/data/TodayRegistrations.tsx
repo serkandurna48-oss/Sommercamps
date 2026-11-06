@@ -5,9 +5,9 @@ import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from './Sta
 import { ButtonLink } from '../ui/Button'
 import RowOverflow from '../ui/RowOverflow'
 
-export default function TodayRegistrations({ entries, orgSlug, fullList = false }: { entries: TodayEntry[]; orgSlug: string; fullList?: boolean }) {
+export default function TodayRegistrations({ entries, orgSlug, fullList = false, className = 'mb-8' }: { entries: TodayEntry[]; orgSlug: string; fullList?: boolean; className?: string }) {
   return (
-    <section className="mb-8 cp-card" style={{ background: 'var(--cp-surface)', borderColor: 'var(--cp-line)' }} aria-labelledby="today-registrations">
+    <section className={`${className} cp-card`} style={{ background: 'var(--cp-surface)', borderColor: 'var(--cp-line)' }} aria-labelledby="today-registrations">
       <h2 id="today-registrations" className="cp-heading">Heute neu: {entries.length} Anmeldungen</h2>
       {entries.length === 0 ? (
         <p className="cp-body mt-3">Heute noch keine neuen Anmeldungen</p>

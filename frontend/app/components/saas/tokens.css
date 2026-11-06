@@ -1319,7 +1319,7 @@
 .cp-table-row {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   padding: 14px 16px;
   border-top: 1px solid var(--cp-line-2);
 }

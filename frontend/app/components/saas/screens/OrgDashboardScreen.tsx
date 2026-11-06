@@ -180,6 +180,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
             )}
           </section>
 
+          <div className="flex min-w-0 flex-col gap-4 lg:gap-5">
           <section className="cp-card cp-card-list" aria-labelledby="dashboard-sessions">
             <div className="cp-card-head">
               <h2 id="dashboard-sessions" className="cp-heading">Nächste Termine</h2>
@@ -208,9 +209,9 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
               </ul>
             )}
           </section>
+          {!showOnboarding && <TodayRegistrations entries={today} orgSlug={orgSlug} className="" />}
+          </div>
         </div>
-
-        {!showOnboarding && <TodayRegistrations entries={today} orgSlug={orgSlug} />}
 
         <DashboardCampsCard camps={campsWithStats} orgSlug={orgSlug} action={
           <ButtonLink href={`/pilot/${orgSlug}/camps/new`} variant="secondary">+ Camp anlegen</ButtonLink>

@@ -1,6 +1,6 @@
 import type { ExportColumn } from '../../lib/exportCsv'
 import type { RegistrationAdmin, RegistrationQuestion } from '../../lib/saasAdminApi'
-import { filterRegistrations, isActiveRegistration, type ParticipantFilter } from './commandCenterLogic'
+import { childBirthYear, childDisplayName, filterRegistrations, isActiveRegistration, type ParticipantFilter } from './commandCenterLogic'
 
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'] as const
 
@@ -37,8 +37,8 @@ export function dayListRows(registrations: RegistrationAdmin[], filter: Particip
 }
 
 export const DAY_LIST_COLUMNS: ExportColumn<RegistrationAdmin>[] = [
-  { header: 'Kind', value: r => `${r.child_first_name} ${r.child_last_name}` },
-  { header: 'Jahrgang/Alter', value: r => r.child_birth_date.slice(0, 4) },
+  { header: 'Kind', value: r => childDisplayName(r) },
+  { header: 'Jahrgang/Alter', value: r => childBirthYear(r) },
   { header: 'Notfallkontakt Telefon', value: r => [r.emergency_contact_name, r.emergency_contact_phone].filter(Boolean).join(' · ') },
   { header: 'Abholberechtigt', value: r => r.pickup_authorized },
   { header: 'Hinweise/Allergien', value: r => [r.medical_notes, r.allergies].filter(Boolean).join(' · ') },

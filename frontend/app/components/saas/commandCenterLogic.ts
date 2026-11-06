@@ -32,6 +32,11 @@ export function childDisplayName(r: Pick<RegistrationAdmin, 'child_first_name' |
   return r.anonymized_at ? 'Gelöscht' : `${r.child_first_name} ${r.child_last_name}`
 }
 
+/** Birth year for lists and exports; empty for an anonymized booking (its date is a placeholder). */
+export function childBirthYear(r: Pick<RegistrationAdmin, 'child_birth_date' | 'anonymized_at'>): string {
+  return r.anonymized_at ? '' : r.child_birth_date.slice(0, 4)
+}
+
 /** Why a registration cannot be hard-deleted (null = deletable). Same order as
  * the backend guard: invoice first (GoBD), then money still held online, then
  * a recorded platform fee. The backend re-checks; this only picks the hint. */

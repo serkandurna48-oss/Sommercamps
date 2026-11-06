@@ -116,7 +116,7 @@ def _is_campspilot(obj: dict) -> bool:
     return isinstance(metadata, dict) and metadata.get("campspilot") == "1"
 
 
-def _flag_for_review(organization_id, registration_id, reason: str) -> None:
+def _flag_for_review(organization_id, registration_id, reason: str, checkout_session_id=None) -> None:
     """Money arrived that CampsPilot did not book as paid. Make it findable for
     the platform owner (audit log) instead of only a log line. No PII; the
     internal row id, never the registration token (a bearer capability)."""
@@ -127,7 +127,8 @@ def _flag_for_review(organization_id, registration_id, reason: str) -> None:
         organization_id=str(organization_id) if organization_id else None,
         target_type="registration",
         target_id=str(registration_id) if registration_id else None,
-        metadata={"reason": reason},
+        metadata={"reason": reason, **({"checkout_session_id": checkout_session_id}
+                                        if isinstance(checkout_session_id, str) and CHECKOUT_ID.fullmatch(checkout_session_id) else {})},
     )
 
 
@@ -625,6 +626,7 @@ def _settle_checkout(client, obj: dict, account: str | None, created=None, mode:
             row["organization_id"] if row else metadata.get("organization_id"),
             row["id"] if row else None,
             review,
+            None if row else obj.get("id"),
         )
         return {"received": True, "settled": False}
     return {"received": True, "settled": True, **({"_sync": settled} if settled else {})}

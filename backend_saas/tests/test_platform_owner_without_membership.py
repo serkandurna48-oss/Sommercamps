@@ -40,6 +40,8 @@ def test_owner_reads_every_org_admin_route_exactly_like_the_clubs_own_admin(iden
         for template, operations in app.openapi()["paths"].items():
             if "get" not in operations or "{organization_slug}" not in template or not template.startswith("/admin"):
                 continue
+            if template.startswith("/admin/platform/"):
+                continue  # owner-only by design (e.g. fee rules), members get 403
             path = template.replace("{organization_slug}", tenant.slug).replace("{camp_slug}", "summer-1")
             path = re.sub(r"\{[^}]+\}", str(uuid4()), path)
             owner = _call(client, "owner", "GET", path)

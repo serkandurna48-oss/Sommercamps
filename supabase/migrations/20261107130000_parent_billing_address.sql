@@ -12,6 +12,10 @@
 --     drop column if exists parent_street, drop column if exists parent_postal_code,
 --     drop column if exists parent_city;
 -- Rechte: kein Spaltenrecht fuer authenticated (siehe 20261106160000).
+-- Voraussetzung: 20261106160000 ist angewendet (Tabellen-SELECT fuer authenticated entzogen).
+-- Solange das Tabellenrecht noch besteht, hat das Spalten-REVOKE unten keine Wirkung.
+-- Release-Reihenfolge: diese Migration -> Backend -> Frontend (das Backend liest die Spalten
+-- in jeder Buchung; ohne Migration scheitert jede Anmeldung mit 500).
 -- Idempotent: IF NOT EXISTS / DROP ... IF EXISTS Guards.
 
 begin;

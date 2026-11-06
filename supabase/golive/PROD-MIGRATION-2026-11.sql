@@ -4,7 +4,7 @@
 -- Ziel:    Supabase "CampsPilot Production" (Ref wkmckfbzhmihyfwiekct). NICHT Legacy-KSV/JK.
 -- Prod-Stand (Annahme, siehe docs/cto/golive-2026-11.md): origin/feat/platform-foundation @ dbd0c09
 --          = 16 Migrationen, letzte 20261027120000_health_data_consent.sql
--- Ziel-Stand: feat/rechnungsanschrift @ dbf824e = 30 Migrationen
+-- Ziel-Stand: origin/demo/jan @ d489e82 = 30 Migrationen
 -- Inhalt:  14 fehlende Migrationen, in Anwendungsreihenfolge, unveraendert eingebettet.
 --          Jede Datei laeuft in EINER eigenen Transaktion: Dateien mit eigenem
 --          begin;/commit; unveraendert, alle anderen hier mit begin;/commit; umschlossen.

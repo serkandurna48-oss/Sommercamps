@@ -11,10 +11,14 @@ import hashlib
 import hmac
 import json
 import time
+from datetime import datetime
+from pathlib import Path
+from zoneinfo import ZoneInfo
 from decimal import Decimal
 from types import SimpleNamespace
 from uuid import uuid4
 
+import psycopg2
 import pytest
 import stripe
 from fastapi.testclient import TestClient
@@ -40,6 +44,10 @@ class FakeStripe:
         self.account_state = {"charges_enabled": False, "payouts_enabled": False, "details_submitted": False,
                               "requirements": {"currently_due": ["external_account"], "past_due": []}}
         self.sessions = {}
+        # latest_charge of the PaymentIntent (expanded application_fee)
+        self.charge = {"amount": 1000, "amount_refunded": 0, "refunded": False, "application_fee_amount": 50,
+                       "application_fee": {"amount": 50, "amount_refunded": 0}}
+        self.refund_error = None
         outer = self
 
         class Account:
@@ -81,12 +89,14 @@ class FakeStripe:
             @staticmethod
             def retrieve(intent, **kw):
                 outer.calls.append(("PaymentIntent.retrieve", intent, kw))
-                return {"latest_charge": {"refunded": False, "amount_refunded": 0, "amount": 1}}
+                return {"latest_charge": dict(outer.charge)}
 
         class Refund:
             @staticmethod
             def create(**kw):
                 outer.calls.append(("Refund.create", kw))
+                if outer.refund_error:
+                    raise outer.refund_error
                 return {"id": "re_test_1", "status": "succeeded", "amount": kw.get("amount", 1000)}
 
         self.Account, self.AccountLink, self.PaymentIntent, self.Refund = Account, AccountLink, PaymentIntent, Refund
@@ -117,6 +127,7 @@ def env(real_db, monkeypatch):
     monkeypatch.setattr(payments, "get_settings", lambda: state["settings"])
     monkeypatch.setattr(payments, "_stripe_client", lambda: fake)
     payments.checkout_limiter.reset()
+    payments.stripe_admin_limiter.reset()
     other, actor = uuid4(), uuid4()
     with cursor() as cur:
         cur.execute("insert into auth.users(id) values (%s)", (actor,))
@@ -140,9 +151,10 @@ def _org(env, **values):
         cur.execute(f"update organizations set {sets} where id = %s", (*values.values(), env.org))
 
 
-def _activate_express(env):
+def _activate_express(env, enabled=True):
     _org(env, stripe_express_account_id=env.express, stripe_express_charges_enabled=True,
-         stripe_express_payouts_enabled=True, stripe_express_details_submitted=True)
+         stripe_express_payouts_enabled=True, stripe_express_details_submitted=True,
+         online_payment_enabled=enabled)
 
 
 def _activate_legacy(env):
@@ -223,7 +235,7 @@ def test_onboarding_creates_express_account_once_and_returns_link(env):
 
 
 def test_status_check_and_account_updated_webhook(env):
-    _org(env, stripe_express_account_id=env.express)
+    _org(env, stripe_express_account_id=env.express, online_payment_enabled=True)
     path = f"/admin/organizations/{env.slug}/payments/stripe"
     env.fake.account_state = {"charges_enabled": True, "payouts_enabled": True, "details_submitted": True,
                               "requirements": {"currently_due": [], "past_due": []}}
@@ -371,7 +383,7 @@ def test_platform_webhook_marks_paid_with_snapshot_idempotently(env):
     assert (row["fee_plan"], row["fee_percent"], row["fee_base_cents"], row["fee_cents"], row["fee_collection"]) == (
         "individuell", Decimal("5.00"), 1000, 50, "application_fee")
     # PaymentIntent of a platform charge is read without stripe_account.
-    assert env.fake.named("PaymentIntent.retrieve")[0][2] == {"expand": ["latest_charge"]}
+    assert env.fake.named("PaymentIntent.retrieve")[0][2] == {"expand": ["latest_charge.application_fee"]}
     snapshot_at = row["fee_snapshot_at"]
     # Replay: no change, no error.
     assert _post_webhook(env, PLATFORM_HOOK, event, PLATFORM_SECRET).json() == {"received": True, "settled": True}
@@ -421,48 +433,142 @@ def test_platform_webhook_unknown_session_and_foreign_event(env):
 
 # ---------- refunds ----------
 
-def test_refund_reverses_transfer_and_application_fee(env):
+def _refund(env, token, amount=None, request_id=None, headers=None):
+    body = {"request_id": str(request_id or uuid4())}
+    if amount is not None:
+        body["amount_cents"] = amount
+    return env.client.post(f"/admin/organizations/{env.slug}/registrations/{token}/refund",
+                           headers=headers or env.admin(), json=body)
+
+
+def _charge_refunded(env, refunded, fee_refunded):
+    env.fake.charge = {**env.fake.charge, "amount_refunded": refunded, "refunded": refunded >= 1000,
+                       "application_fee": {"amount": 50, "amount_refunded": fee_refunded}}
+    event = {"id": f"evt_{uuid4().hex}", "type": "charge.refunded", "livemode": False, "created": int(time.time()),
+             "data": {"object": {"payment_intent": env.intent, "refunded": refunded >= 1000,
+                                 "amount_refunded": refunded, "amount": 1000}}}
+    return _post_webhook(env, PLATFORM_HOOK, event, PLATFORM_SECRET)
+
+
+def _fee_month(env):
+    month = datetime.now(ZoneInfo("Europe/Berlin")).strftime("%Y-%m")
+    r = env.client.get(f"/admin/platform/organizations/{env.slug}/fees", params={"month": month}, headers=owner_headers())
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_partial_then_full_refund_reaches_fee_data(env):
     token, session_id = _paid_destination(env)
     _post_webhook(env, PLATFORM_HOOK, _completed(session_id, intent=env.intent), PLATFORM_SECRET)
-    path = f"/admin/organizations/{env.slug}/registrations/{token}/refund"
-    assert env.client.post(path, headers=org_admin_headers(str(env.other))).status_code == 403
-    r = env.client.post(path, headers=env.admin(), json={"amount_cents": 400})
+    assert _refund(env, token, headers=org_admin_headers(str(env.other))).status_code == 403
+    request_id = uuid4()
+    r = _refund(env, token, 400, request_id)
     assert r.status_code == 200, r.text
     (_, kw), = env.fake.named("Refund.create")
     assert kw["payment_intent"] == env.intent and kw["amount"] == 400
     assert kw["refund_application_fee"] is True and kw["reverse_transfer"] is True
     assert "stripe_account" not in kw
-    assert kw["idempotency_key"] == f"campspilot-refund-{token}-400"
-    assert _reg(env, token)["payment_status"] == "paid"  # partial: stays paid
-    assert env.client.post(path, headers=env.admin(), json={"amount_cents": 1001}).status_code == 422
-    # Full refund confirmed by the platform webhook.
-    refunded = {"id": "evt_r", "type": "charge.refunded", "livemode": False, "created": int(time.time()),
-                "data": {"object": {"payment_intent": env.intent, "refunded": True,
-                                    "amount_refunded": 1000, "amount": 1000}}}
-    assert _post_webhook(env, PLATFORM_HOOK, refunded, PLATFORM_SECRET).status_code == 200
     row = _reg(env, token)
-    assert row["payment_status"] == "refunded" and row["fee_cents"] == 50  # snapshot kept for the fee invoice
+    assert kw["idempotency_key"] == f"campspilot-refund-{row['id']}-400-{request_id}"
+    assert str(token) not in kw["idempotency_key"]
+    assert row["payment_status"] == "paid"  # booked only from Stripe's webhook
+
+    assert _charge_refunded(env, 400, 20).status_code == 200
+    row = _reg(env, token)
+    assert (row["payment_status"], row["refunded_cents"], row["fee_refunded_cents"]) == ("partially_refunded", 400, 20)
+    month = _fee_month(env)
+    assert month["collected"] == {"bookings": 1, "fee_cents": 50, "fee_refunded_cents": 20, "fee_net_cents": 30}
+    assert month["bookings"][0]["fee_net_cents"] == 30 and month["bookings"][0]["refunded_cents"] == 400
+    assert "Kind" not in json.dumps(month) and str(token) not in json.dumps(month)
+
+    # Same amount again on purpose (new request id): a separate Stripe refund.
+    assert _refund(env, token, 400).status_code == 200
+    keys = [c[1]["idempotency_key"] for c in env.fake.named("Refund.create")]
+    assert len(set(keys)) == 2
+    # More than the remaining 600 is refused before reaching Stripe.
+    assert _refund(env, token, 601).status_code == 422
+    assert len(env.fake.named("Refund.create")) == 2
+
+    # Rest (no amount = remaining 600), then Stripe reports the full refund.
+    assert _refund(env, token).status_code == 200
+    assert env.fake.named("Refund.create")[-1][1]["amount"] == 600
+    assert _charge_refunded(env, 1000, 50).status_code == 200
+    row = _reg(env, token)
+    assert (row["payment_status"], row["refunded_cents"], row["fee_refunded_cents"]) == ("refunded", 1000, 50)
+    assert _fee_month(env)["collected"]["fee_net_cents"] == 0
+    # An older partial event arriving late does not reopen it.
+    assert _charge_refunded(env, 400, 20).status_code == 200
+    assert _reg(env, token)["payment_status"] == "refunded"
     with env.cursor() as cur:
-        cur.execute("select metadata from audit_log where action='stripe.refund_requested' and organization_id=%s",
-                    (env.org,))
-        assert cur.fetchone()["metadata"] == {"amount_cents": 400, "full": False}
+        cur.execute("select target_id, metadata from audit_log where action='stripe.refund_requested' "
+                    "and organization_id=%s order by created_at", (env.org,))
+        entries = cur.fetchall()
+    assert entries[0]["metadata"] == {"amount_cents": 400, "full": False}
+    assert {e["target_id"] for e in entries} == {str(row["id"])}  # never the bearer token
+
+
+def test_refund_before_settlement_is_stored(env):
+    token, session_id = _paid_destination(env)
+    env.fake.charge = {**env.fake.charge, "amount_refunded": 300, "application_fee": {"amount": 50, "amount_refunded": 15}}
+    assert _post_webhook(env, PLATFORM_HOOK, _completed(session_id, intent=env.intent), PLATFORM_SECRET).status_code == 200
+    row = _reg(env, token)
+    assert (row["payment_status"], row["refunded_cents"], row["fee_refunded_cents"], row["fee_cents"]) == (
+        "partially_refunded", 300, 15, 50)
+
+
+def test_refund_error_mapping(env):
+    token, session_id = _paid_destination(env)
+    _post_webhook(env, PLATFORM_HOOK, _completed(session_id, intent=env.intent), PLATFORM_SECRET)
+    env.fake.refund_error = stripe.error.InvalidRequestError("no funds", "amount", code="insufficient_funds")
+    r = _refund(env, token)
+    assert r.status_code == 409 and "Guthaben" in r.json()["detail"]
+    env.fake.refund_error = stripe.error.InvalidRequestError("x", "x", code="charge_already_refunded")
+    assert "bereits vollständig" in _refund(env, token).json()["detail"]
+    env.fake.refund_error = stripe.error.InvalidRequestError("x", "x", code="something_new")
+    assert _refund(env, token).status_code == 502
+    env.fake.refund_error = stripe.error.APIConnectionError("down")
+    assert _refund(env, token).status_code == 503
+    # Refunds do not depend on FRONTEND_BASE_URL.
+    env.fake.refund_error = None
+    env.state["settings"] = SimpleNamespace(**{**vars(_settings()), "frontend_base_is_usable": lambda: False})
+    assert _refund(env, token).status_code == 200
 
 
 def test_refund_only_for_paid_destination_payments(env):
     _activate_legacy(env)
     token = _register(env)
-    path = f"/admin/organizations/{env.slug}/registrations/{token}/refund"
     _checkout(env, token)
     with env.cursor() as cur:
-        cur.execute("update camp_registrations set payment_status='paid', stripe_payment_intent_id='pi_legacy000001' "
-                    "where registration_token=%s", (token,))
-    assert env.client.post(path, headers=env.admin()).status_code == 409  # legacy direct charge
+        cur.execute("update camp_registrations set payment_status='paid', stripe_payment_intent_id=%s "
+                    "where registration_token=%s", (f"pi_legacy{uuid4().hex[:12]}", token))
+    assert _refund(env, token).status_code == 409  # legacy direct charge
     token2, _ = _paid_destination(env)
+    assert _refund(env, token2).status_code == 409  # not paid yet
+    assert _refund(env, uuid4()).status_code == 404
     assert env.client.post(f"/admin/organizations/{env.slug}/registrations/{token2}/refund",
-                           headers=env.admin()).status_code == 409  # not paid yet
-    assert env.client.post(f"/admin/organizations/{env.slug}/registrations/{uuid4()}/refund",
-                           headers=env.admin()).status_code == 404
+                           headers=env.admin(), json={}).status_code == 422  # request_id required
     assert env.fake.named("Refund.create") == []
+
+
+def test_manual_refund_of_transfer_payment_nets_fee_to_zero(env):
+    token = _register(env)
+    path = f"/admin/organizations/{env.slug}/camps/summer-1/registrations/{token}/payment-status"
+    env.client.patch(path, headers=env.admin(), json={"payment_status": "paid"})
+    assert _fee_month(env)["not_collected"] == {"bookings": 1, "fee_cents": 50, "fee_refunded_cents": 0, "fee_net_cents": 50}
+    env.client.patch(path, headers=env.admin(), json={"payment_status": "refunded"})
+    row = _reg(env, token)
+    assert (row["refunded_cents"], row["fee_refunded_cents"]) == (1000, 50)
+    assert _fee_month(env)["not_collected"]["fee_net_cents"] == 0
+    env.client.patch(path, headers=env.admin(), json={"payment_status": "paid"})  # undo
+    assert _fee_month(env)["not_collected"]["fee_net_cents"] == 50
+
+
+def test_fee_month_is_owner_only_and_validated(env):
+    path = f"/admin/platform/organizations/{env.slug}/fees"
+    assert env.client.get(path, params={"month": "2026-11"}, headers=env.admin()).status_code == 403
+    assert env.client.get(path, params={"month": "2026-13"}, headers=owner_headers()).status_code == 422
+    assert env.client.get(f"/admin/platform/organizations/{env.other_slug}/fees", params={"month": "2026-11"},
+                          headers=owner_headers()).json()["bookings"] == []
 
 
 def test_destination_rows_not_touched_by_connect_refund(env):
@@ -482,3 +588,83 @@ def test_expire_open_destination_checkout_uses_platform(env):
     expire, = env.fake.named("Session.expire")
     assert expire[1] == session_id and expire[2] == {}
     assert _reg(env, token)["fee_collection"] == "not_collected"  # paid by transfer: fee owed, not withheld
+
+
+# ---------- fix round 1: owner kill switch (I1), hardening (M1, M6, M8) ----------
+
+def test_express_needs_platform_owner_switch(env):
+    _activate_express(env, enabled=False)
+    status_path = f"/admin/organizations/{env.slug}/payments/stripe"
+    status = env.client.get(status_path, headers=env.admin()).json()
+    assert status["state"] == "awaiting_approval" and status["platform_enabled"] is False
+    assert status["online_payment_mode"] is None
+    options = f"/api/v1/organizations/{env.slug}/camps/summer-1/payment-options"
+    assert env.client.get(options).json() == {"online_payment_available": False}
+    token = _register(env)
+    assert _checkout(env, token).status_code == 503
+    assert env.fake.named("Session.create") == []
+
+    switch = f"/admin/platform/organizations/{env.slug}/online-payment"
+    assert env.client.patch(switch, headers=env.admin(), json={"enabled": True}).status_code == 403
+    r = env.client.patch(switch, headers=owner_headers(), json={"enabled": True})
+    assert r.status_code == 200 and r.json()["state"] == "active"
+    assert env.client.get(options).json() == {"online_payment_available": True}
+    assert _checkout(env, token).status_code == 200
+    # Switching off again stops new checkouts at once.
+    env.client.patch(switch, headers=owner_headers(), json={"enabled": False})
+    payments.checkout_limiter.reset()
+    assert _checkout(env, _register(env)).status_code == 503
+
+
+def test_connect_account_refuses_an_express_account_of_any_club(env):
+    _org(env, stripe_express_account_id=env.express)
+    r = env.client.post(f"/admin/organizations/{env.other_slug}/stripe/connect-account",
+                        headers=owner_headers(), json={"stripe_account_id": env.express})
+    assert r.status_code == 409
+    _activate_legacy(env)
+    r = env.client.post(f"/admin/organizations/{env.other_slug}/stripe/connect-account",
+                        headers=owner_headers(), json={"stripe_account_id": LEGACY})
+    assert r.status_code == 409
+    assert env.fake.named("Account.retrieve") == []
+
+
+def test_stripe_admin_calls_are_rate_limited(env, monkeypatch):
+    from app.ratelimit import SlidingWindowLimiter
+    monkeypatch.setattr(payments, "stripe_admin_limiter", SlidingWindowLimiter(1, 3600.0))
+    path = f"/admin/organizations/{env.slug}/payments/stripe"
+    assert env.client.post(f"{path}/onboarding", headers=env.admin()).status_code == 200
+    assert env.client.post(f"{path}/sync", headers=env.admin()).status_code == 429
+    assert len(env.fake.named("Account.retrieve")) == 0
+
+
+GRANTS = Path(__file__).resolve().parents[2] / "supabase" / "migrations" / "20261106160000_billing_refunds_and_grants.sql"
+
+
+def test_fee_and_stripe_columns_not_readable_by_authenticated(env):
+    """M1: column grants on camp_registrations (the test DB fixture re-grants
+    every table after migrations, so the migration is applied again here)."""
+    user = uuid4()
+    with env.cursor() as cur:
+        cur.execute("insert into auth.users(id) values (%s)", (user,))
+        cur.execute("insert into organization_members(user_id, organization_id) values (%s, %s)", (user, env.org))
+    token = _register(env)
+    try:
+        with env.cursor() as cur:
+            cur.execute(GRANTS.read_text(encoding="utf-8"))
+            cur.execute(GRANTS.read_text(encoding="utf-8"))  # idempotent
+        for column in ("fee_cents", "fee_percent", "fee_refunded_cents", "refunded_cents",
+                       "stripe_checkout_fee", "stripe_charge_type", "stripe_payment_intent_id"):
+            with pytest.raises(psycopg2.errors.InsufficientPrivilege):
+                with env.cursor() as cur:
+                    cur.execute("select set_config('request.jwt.claims', %s, true)", (json.dumps({"sub": str(user)}),))
+                    cur.execute("set local role authenticated")
+                    cur.execute(f"select {column} from camp_registrations")
+        with env.cursor() as cur:
+            cur.execute("select set_config('request.jwt.claims', %s, true)", (json.dumps({"sub": str(user)}),))
+            cur.execute("set local role authenticated")
+            cur.execute("select registration_token, payment_status from camp_registrations where registration_token=%s",
+                        (token,))
+            assert cur.fetchone()["payment_status"] == "open"
+    finally:
+        with env.cursor() as cur:
+            cur.execute("grant select on public.camp_registrations to authenticated")

@@ -47,6 +47,7 @@ _PAYMENT_STATUS_LABEL = {
     "open": "Zahlung offen",
     "paid": "Bezahlt",
     "refunded": "Erstattet",
+    "partially_refunded": "Teilweise erstattet",
     "waived": "Kostenlos",
     "cancelled": "Storniert",
 }

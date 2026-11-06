@@ -135,3 +135,36 @@ class FeeRulesOut(BaseModel):
 
     current: FeeRuleOut
     history: list[FeeRuleOut]
+
+
+class FeeBookingOut(BaseModel):
+    """One paid booking with its platform fee. No parent or child data."""
+
+    registration_id: UUID
+    camp_title: str
+    paid_at: datetime
+    payment_status: str
+    fee_collection: str
+    fee_base_cents: int
+    fee_cents: int
+    refunded_cents: int
+    fee_refunded_cents: int
+    fee_net_cents: int
+
+
+class FeeTotals(BaseModel):
+    bookings: int = 0
+    fee_cents: int = 0
+    fee_refunded_cents: int = 0
+    fee_net_cents: int = 0
+
+
+class FeeMonthOut(BaseModel):
+    """Basis for the monthly fee invoice. `collected` = withheld by Stripe
+    (application fee), `not_collected` = owed, not withheld (transfer/cash,
+    legacy direct charges). Month = paid date in Europe/Berlin."""
+
+    month: str
+    collected: FeeTotals
+    not_collected: FeeTotals
+    bookings: list[FeeBookingOut]

@@ -54,14 +54,14 @@ export default function ParticipantExport({ registrations, camp, orgSlug, orgNam
         {(filter !== 'all' || search.trim()) && <p>{filterText}</p>}
       </>}
       configuration={<>
-        <label htmlFor={purposeId} className="mb-1 block">Was möchten Sie exportieren?</label>
+        <label htmlFor={purposeId} className="mb-1 block">Was möchtest du exportieren?</label>
         <select id={purposeId} value={purpose} onChange={e => setPurpose(e.target.value)} className="min-h-[44px] w-full rounded border px-2 text-base">
           <option value="daylist">Camp-Tagesliste</option>
           <option value="payments">Zahlungsübersicht</option>
           <option value="participants">Alle Anmeldungen</option>
         </select>
         <p className="mt-2 text-sm">{purpose === 'daylist' ? 'Angemeldet und bestätigt · alphabetisch nach Nachname, Vorname.' : 'Aktuelle Suche und Filter gelten auch hier.'} Die Auswahl einzelner Anmeldungen in der Liste hat keinen Einfluss auf den Export.</p>
-        {purpose !== 'payments' && <p className="mt-2 text-sm">Für den Browserdruck oder das Speichern als PDF können Sie die sichtbaren Spalten im nächsten Schritt auswählen.</p>}
+        {purpose !== 'payments' && <p className="mt-2 text-sm">Für den Browserdruck oder das Speichern als PDF kannst du die sichtbaren Spalten im nächsten Schritt auswählen.</p>}
       </>}
       onReset={onReset}
       onPrint={() => setPrinting(purpose === 'daylist' ? 'daylist' : 'participants')}

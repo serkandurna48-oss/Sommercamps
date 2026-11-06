@@ -93,7 +93,7 @@ it('erkennt ungültige Anmeldezeiten vor dem Anlegen', async () => {
 it('ergänzt bei einem Adresskonflikt kein bestehendes Camp', async () => {
   vi.mocked(createCampAdmin).mockRejectedValueOnce(new SlugConflictError('sommer'))
   const result = await createCampAction('demo', { error: null }, makeFormData(COPY_FIELDS))
-  expect(result.error).toContain('wählen Sie')
+  expect(result.error).toContain('wähle')
   expect(updateCampAdmin).not.toHaveBeenCalled()
   expect(redirect).not.toHaveBeenCalled()
 })
@@ -108,7 +108,7 @@ it('führt bei fehlgeschlagenem PATCH zum bestehenden Entwurf mit Warnhinweis', 
 it('describes address conflicts without technical slug wording and does not redirect', async () => {
   vi.mocked(createCampAdmin).mockRejectedValueOnce(new SlugConflictError('sommer'))
   const state = await createCampAction('demo', { error: null }, makeFormData(CAMP_FIELDS))
-  expect(state.error).toBe('Die Web-Adresse „sommer“ ist bereits vergeben – wählen Sie eine andere.')
+  expect(state.error).toBe('Die Web-Adresse „sommer“ ist bereits vergeben – wähle eine andere.')
   expect(redirect).not.toHaveBeenCalled()
 })
 

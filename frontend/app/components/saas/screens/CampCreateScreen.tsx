@@ -12,7 +12,7 @@ export default function CampCreateScreen({ orgSlug, initialValues, sourceMissing
         backHref={`/pilot/${orgSlug}/camps`}
         backLabel="Alle Camps"
         title={initialValues ? 'Camp duplizieren' : 'Neues Camp'}
-        subtitle="Tragen Sie die Eckdaten für Ihr neues Camp ein."
+        subtitle="Trag die Eckdaten für dein neues Camp ein."
       />
 
       <main className={PAGE_FORM}>

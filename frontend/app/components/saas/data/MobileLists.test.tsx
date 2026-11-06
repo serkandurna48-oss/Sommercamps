@@ -129,7 +129,7 @@ it('preserves parent e-mail copy and the BCC hint alongside the mobile participa
   const copy = [...host.querySelectorAll('button')].find(button => button.textContent === 'E-Mail-Adressen kopieren')!
   await act(async () => copy.click())
   expect(writeText).toHaveBeenCalledExactlyOnceWith(registration.parent_email.toLocaleLowerCase('de').trim())
-  expect(host.textContent).toContain('fügen Sie sie in Ihrem E-Mail-Programm in das BCC-Feld ein.')
+  expect(host.textContent).toContain('füg sie in deinem E-Mail-Programm in das BCC-Feld ein.')
 })
 
 it('keeps confirmation and its result inside the overflow, and closes when focus leaves', async () => {

@@ -101,7 +101,7 @@ export default function OrganizationConfigForm({
                 <input id="logo_url" name="logo_url" type="text" inputMode="url" value={logoUrl} onChange={event => setLogoUrl(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
               </Field>
               <ColorField id="primary_color" value={color} onChange={setColor} />
-              <Field label="Theme für die Vorschau" htmlFor="preview-theme" hint="Vergleichen Sie hier die Gestaltung. Diese Auswahl wird nicht gespeichert; Ihre Vereinsseite behält das bisherige Theme.">
+              <Field label="Theme für die Vorschau" htmlFor="preview-theme" hint="Vergleiche hier die Gestaltung. Diese Auswahl wird nicht gespeichert; deine Vereinsseite behält das bisherige Theme.">
                 <select id="preview-theme" value={theme} onChange={event => setTheme(previewTheme(event.target.value))} className={INPUT_CLASS} style={INPUT_STYLE}>
                   <option value="tradition">Tradition</option>
                   <option value="akademie">Akademie</option>

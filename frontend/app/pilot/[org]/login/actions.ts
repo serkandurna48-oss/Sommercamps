@@ -21,7 +21,7 @@ export async function loginAction(orgSlug: string, _prev: LoginState, formData: 
   const email = String(formData.get('email') ?? '').trim()
   const password = String(formData.get('password') ?? '')
   if (!email || !password) {
-    return { error: 'Bitte geben Sie Ihre E-Mail-Adresse und Ihr Passwort ein.' }
+    return { error: 'Bitte gib deine E-Mail-Adresse und dein Passwort ein.' }
   }
 
   let accessToken: string
@@ -31,13 +31,13 @@ export async function loginAction(orgSlug: string, _prev: LoginState, formData: 
     const supabase = getSupabaseServerClient()
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error || !data.session) {
-      return { error: 'Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre E-Mail-Adresse und Ihr Passwort sowie die Bestätigung Ihrer E-Mail-Adresse. Versuchen Sie es anschließend erneut.' }
+      return { error: 'Anmeldung fehlgeschlagen. Bitte prüf deine E-Mail-Adresse und dein Passwort sowie die Bestätigung deiner E-Mail-Adresse. Versuch es anschließend erneut.' }
     }
     accessToken = data.session.access_token
     expiresIn = data.session.expires_in
     refreshToken = data.session.refresh_token
   } catch {
-    return { error: 'Die Anmeldung ist gerade nicht möglich. Bitte versuchen Sie es später erneut.' }
+    return { error: 'Die Anmeldung ist gerade nicht möglich. Bitte versuch es später erneut.' }
   }
 
   const store = await cookies()

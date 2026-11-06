@@ -65,13 +65,13 @@ it('Veröffentlichte Vereinsseite: Camp-Prüfung, Elternlink und Kopierbestätig
   expect(container.querySelector('[role="status"]')?.textContent).toBe('Anmeldelink kopiert.')
   writeText.mockRejectedValueOnce(new Error('denied'))
   await act(async () => copy.click())
-  expect(container.querySelector('[role="alert"]')?.textContent).toContain('Bitte öffnen Sie die Elternseite')
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain('Bitte öffne die Elternseite')
   expect(container.querySelector('[role="status"]')).toBeNull()
 })
 
 it('Entwurf: erklärt den nächsten Schritt ohne technische 404-Meldung und ohne teilbaren Elternlink', async () => {
   await act(() => root.render(<PublishToggle orgSlug="testverein" published={false} />))
-  expect(container.textContent).toContain('Veröffentlichen Sie die Seite nach der Freigabe.')
+  expect(container.textContent).toContain('Veröffentliche die Seite nach der Freigabe.')
   expect(container.textContent).not.toContain('nicht gefunden')
   expect(container.querySelector('a[href="/pilot/testverein"]')).toBeNull()
 })

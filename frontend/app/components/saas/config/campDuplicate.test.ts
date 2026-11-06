@@ -33,6 +33,6 @@ it('erhält leere optionale Angaben', () => {
     .toMatchObject({ location: null, care_info: null, meals_info: null, includes: null, registration_start: null, registration_end: null })
 })
 
-it('verwendet keine Du-Anrede in neuen Hinweisen', () => {
-  expect(`${DUPLICATE_MISSING} ${DUPLICATE_SUCCESS}`).not.toMatch(/\b(du|dein\w*|dir|dich|prüfe|ergänze|wähle)\b/i)
+it('verwendet keine Sie-Anrede in neuen Hinweisen (Admin-Texte duzen)', () => {
+  expect(`${DUPLICATE_MISSING} ${DUPLICATE_SUCCESS}`).not.toMatch(/\b(Sie|Ihr\w*)\b/)
 })

@@ -209,7 +209,7 @@ describe('participant list print dialog', () => {
     const print = vi.spyOn(window, 'print').mockImplementation(() => {})
     await openParticipantPrint()
     await click('Alle abwählen')
-    expect(document.querySelector('dialog [role="alert"]')?.textContent).toBe('Bitte wählen Sie mindestens eine Spalte für die Druckausgabe.')
+    expect(document.querySelector('dialog [role="alert"]')?.textContent).toBe('Bitte wähle mindestens eine Spalte für die Druckausgabe.')
     expect(document.querySelector('dialog table')).toBeNull()
     expect(button('Drucken / Als PDF speichern').disabled).toBe(true)
     await click('Drucken / Als PDF speichern')

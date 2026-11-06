@@ -167,7 +167,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
               </div>
             )}
             {showOnboarding ? (
-              <p className="cp-body cp-dash-pad" style={{ color: 'var(--cp-muted)' }}>Schließen Sie zuerst die Einrichtung oben ab.</p>
+              <p className="cp-body cp-dash-pad" style={{ color: 'var(--cp-muted)' }}>Schließ zuerst die Einrichtung oben ab.</p>
             ) : firstTask ? (
               <ul>
                 {tasks.slice(0, 5).map((task, index) => (
@@ -184,7 +184,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
             ) : showLaunchSuccess ? (
               <div className="cp-dash-pad"><LaunchSuccessCard orgSlug={orgSlug} /></div>
             ) : missingFields.length === 0 ? (
-              <p className="cp-body cp-dash-pad" style={{ color: 'var(--cp-muted)' }}>Keine offenen Aufgaben. Ihre Anmeldeseite ist live.</p>
+              <p className="cp-body cp-dash-pad" style={{ color: 'var(--cp-muted)' }}>Keine offenen Aufgaben. Deine Anmeldeseite ist live.</p>
             ) : null}
             {tasks.length > 5 && (
               <p className="cp-hint cp-dash-pad">+ {tasks.length - 5} weitere unter „Aufgaben“</p>

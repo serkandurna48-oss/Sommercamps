@@ -12,7 +12,7 @@ export default function TrainingOfferCreateScreen({ orgSlug, org }: Organization
         backHref={`/pilot/${orgSlug}/trainings`}
         backLabel="Alle Trainings"
         title="Neues Trainingsangebot"
-        subtitle="Startet als Entwurf. Termine fügen Sie danach hinzu; öffentlich sichtbar erst nach dem Veröffentlichen."
+        subtitle="Startet als Entwurf. Termine fügst du danach hinzu; öffentlich sichtbar erst nach dem Veröffentlichen."
       />
       <main className={PAGE_FORM}>
         <h2 className="sr-only">Angebot anlegen</h2>

@@ -61,7 +61,7 @@ export default function MeasurementsSection({ orgSlug, playerId, measurements, m
       <div id={bodyId} className={`flex flex-col gap-3 ${expanded ? '' : 'max-lg:hidden'}`}>
         <Notice notice={notice} />
         {groups.length === 0 ? (
-          <EmptyState title="Noch keine Messwerte." body="Tragen Sie z. B. Sprintzeiten ein. Der Verlauf erscheint hier als Grafik." />
+          <EmptyState title="Noch keine Messwerte." body="Trag z. B. Sprintzeiten ein. Der Verlauf erscheint hier als Grafik." />
         ) : (
           <ul className="flex flex-col">
             {groups.map(group => {

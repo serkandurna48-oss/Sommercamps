@@ -50,7 +50,7 @@ export default function PublishToggle({
         <p id={hintId} className="cp-chip mt-0.5" style={{ color: 'var(--cp-muted)' }}>
           {published
             ? 'Die Vereinsseite ist für Eltern erreichbar.'
-            : 'Ihre Vereinsseite ist noch nicht für Eltern sichtbar. Veröffentlichen Sie die Seite nach der Freigabe.'}
+            : 'Deine Vereinsseite ist noch nicht für Eltern sichtbar. Veröffentliche die Seite nach der Freigabe.'}
         </p>
         {state.error && (
           <p className="cp-chip mt-1" style={{ color: 'var(--cp-error)' }} id={feedbackId} role="alert">

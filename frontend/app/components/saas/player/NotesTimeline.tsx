@@ -113,7 +113,7 @@ export default function NotesTimeline({ orgSlug, playerId, notes, bookings, init
       <NoteComposerSlot orgSlug={orgSlug} playerId={playerId} bookings={bookings} initialDate={initialDate} initialCampId={initialCampId} />
       {notes.length === 0 ? (
         <div className="flex flex-col items-center gap-3">
-          <EmptyState title="Noch keine Notizen." body="Halten Sie nach dem Training kurz fest, was gut lief und woran gearbeitet wird." />
+          <EmptyState title="Noch keine Notizen." body="Halte nach dem Training kurz fest, was gut lief und woran gearbeitet wird." />
           <WriteNoteButton />
         </div>
       ) : (

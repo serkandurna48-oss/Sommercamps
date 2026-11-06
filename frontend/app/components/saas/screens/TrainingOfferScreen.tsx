@@ -33,7 +33,7 @@ export default function TrainingOfferScreen({ orgSlug, org, offer, sessions, reg
       />
 
       <main className={ADMIN_PAGE}>
-        {justCreated && <div className="mb-6"><SuccessNote>Angebot angelegt. Fügen Sie jetzt Termine hinzu.</SuccessNote></div>}
+        {justCreated && <div className="mb-6"><SuccessNote>Angebot angelegt. Füge jetzt Termine hinzu.</SuccessNote></div>}
 
         <div className="cp-split mb-10">
           <section className="flex min-w-0 flex-col gap-3" aria-labelledby="sessions-heading">
@@ -42,7 +42,7 @@ export default function TrainingOfferScreen({ orgSlug, org, offer, sessions, reg
               <StatusChip tone="neutral" label={`${sessions.length}`} />
             </div>
             {sorted.length === 0 ? (
-              <EmptyState title="Noch keine Termine." body="Legen Sie rechts den ersten Termin an. Zeiten gelten in Berliner Zeit." />
+              <EmptyState title="Noch keine Termine." body="Leg rechts den ersten Termin an. Zeiten gelten in Berliner Zeit." />
             ) : (
               <ul className="flex flex-col gap-3">
                 {sorted.map(session => (

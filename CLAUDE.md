@@ -229,3 +229,14 @@ Umsetzung, sondern in vermeidbare Abgleich- und Zugangsrunden.
 | Neuen Verein onboarden (Subagent, Plan-only, `backend/`-Ansatz — vor Nutzung gegen die neue Zielarchitektur prüfen) | [`.claude/agents/customer-onboarding.md`](.claude/agents/customer-onboarding.md) |
 | Frühere Shared-Schema-Roadmap, Stand vor JK-102 (historischer Ansatz — inhaltlich wieder relevant als Vorstufe der jetzigen Zielarchitektur, siehe Vorbehalt oben) | [`docs/archive/multi-tenant-roadmap-legacy.md`](docs/archive/multi-tenant-roadmap-legacy.md) |
 | Archiviertes Phase-1-Abschlussprotokoll | [`docs/archive/session-notes-phase1-2026-05-19.md`](docs/archive/session-notes-phase1-2026-05-19.md) |
+
+---
+
+## WEYS-weiter Agentic-Development-Standard (Review-Entwurf)
+
+Die ergänzende, firmenweite Methodik für Claude/Codex-Work-Orders, unabhängiges QA,
+Zeit-/Kostenlimits und Ergebnisnachweise liegt unter
+[`docs/WEYS_ENGINEERING_STANDARD.md`](docs/WEYS_ENGINEERING_STANDARD.md).
+Sie ist **noch nicht abschließend von beiden Co-Foundern abgenommen** und ersetzt
+keine der oben genannten projektspezifischen Regeln, Sicherheitsgates oder
+Freigabeanforderungen. Bei Konflikten gelten die strengeren bestehenden Regeln.

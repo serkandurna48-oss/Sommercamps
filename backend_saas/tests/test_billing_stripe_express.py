@@ -241,7 +241,7 @@ def test_onboarding_creates_v2_managed_risk_account_once_and_returns_link(env):
     assert r.json()["url"].startswith("https://accounts.stripe.com/")
     assert env.fake.named("Account.create") == [] and env.fake.named("AccountLink.create") == []
     (_, created, options), = env.fake.named("v2.accounts.create")
-    assert options == {"idempotency_key": f"campspilot-acct-v2-{env.org}"}
+    assert options == {"idempotency_key": f"campspilot-acct-v2-{env.org}-{payments._params_hash(created)}"}
     assert created["dashboard"] == "full"
     assert created["identity"] == {"country": "de", "entity_type": "non_profit"}
     assert created["defaults"]["responsibilities"] == {"fees_collector": "stripe", "losses_collector": "stripe"}
@@ -307,6 +307,18 @@ def test_onboarding_shows_stripe_reason_for_config_errors(env):
         "Use Accounts v2 and set `losses_collector` to `stripe`", None, code="account_creation_invalid")
     r = env.client.post(path, headers=env.admin())
     assert r.status_code == 409 and "losses_collector" in r.json()["detail"]
+    # Typed v2 errors are no InvalidRequestError: still Stripe's reason, 409.
+    env.fake.account_error = stripe.error.FeatureNotEnabledError("Accounts v2 is not enabled", http_status=400)
+    r = env.client.post(path, headers=env.admin())
+    assert r.status_code == 409 and r.json()["detail"].endswith("Accounts v2 is not enabled")
+    env.fake.account_error = stripe.error.RateLimitError("slow down", http_status=429)
+    assert env.client.post(path, headers=env.admin()).status_code == 503
+    # A corrected retry (other legal form) uses another idempotency key; a repeat the same one.
+    env.fake.account_error = stripe.error.APIConnectionError("down")
+    env.client.post(path, headers=env.admin(), json={"business_type": "company"})
+    env.client.post(path, headers=env.admin(), json={"business_type": "company"})
+    keys = [c[2]["idempotency_key"] for c in env.fake.named("v2.accounts.create")]
+    assert keys[-1] == keys[-2] and keys[-1] != keys[0]
     with env.cursor() as cur:
         cur.execute("select stripe_express_account_id from organizations where id=%s", (env.org,))
         assert cur.fetchone()["stripe_express_account_id"] is None
@@ -465,7 +477,7 @@ def test_platform_webhook_marks_paid_with_snapshot_idempotently(env):
     assert (row["fee_plan"], row["fee_percent"], row["fee_base_cents"], row["fee_cents"], row["fee_collection"]) == (
         "individuell", Decimal("5.00"), 1000, 50, "application_fee")
     # PaymentIntent of a platform charge is read without stripe_account.
-    assert env.fake.named("PaymentIntent.retrieve")[0][2] == {"expand": ["latest_charge.application_fee"]}
+    assert env.fake.named("PaymentIntent.retrieve")[0][2] == {"expand": ["latest_charge"]}
     snapshot_at = row["fee_snapshot_at"]
     # Replay: no change, no error.
     assert _post_webhook(env, PLATFORM_HOOK, event, PLATFORM_SECRET).json() == {"received": True, "settled": True}

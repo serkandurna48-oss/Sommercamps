@@ -13,6 +13,8 @@ import time
 from decimal import Decimal
 from uuid import uuid4
 
+import stripe
+
 from app.routers import payments
 from .auth_helpers import org_admin_headers, owner_headers
 from .test_billing_stripe_express import (  # noqa: F401
@@ -214,8 +216,7 @@ def test_connect_webhook_marks_paid_with_snapshot_and_invoice(env, mail):
     assert (row["fee_plan"], row["fee_percent"], row["fee_base_cents"], row["fee_cents"], row["fee_collection"]) == (
         "individuell", Decimal("5.00"), 1000, 50, "application_fee")
     # The PaymentIntent lives on the club's account.
-    assert env.fake.named("PaymentIntent.retrieve")[0][2] == {
-        "expand": ["latest_charge.application_fee"], "stripe_account": env.express}
+    assert env.fake.named("PaymentIntent.retrieve")[0][2] == {"expand": ["latest_charge"], "stripe_account": env.express}
     invoices = _invoices(env, token)
     assert [i["kind"] for i in invoices] == ["invoice"] and invoices[0]["gross_cents"] == 1000
     assert len(mail.invoices) == 1
@@ -335,3 +336,65 @@ def test_refund_waits_for_unexpanded_fee_object(env):
     env.fake.charge = {**env.fake.charge, "amount_refunded": 400, "application_fee": None}
     assert _post_webhook(env, CONNECT_HOOK, _connect_refund_event(env, 400), CONNECT_SECRET).status_code == 503
     assert _reg(env, token)["refunded_cents"] in (None, 0)
+
+
+# ---------- fix round 1 ----------
+
+def test_fee_lookup_failure_never_blocks_paid(env, monkeypatch):
+    """I1: a refund before the completed event, and the ApplicationFee cannot be
+    read yet: the payment is still booked, the fee refund comes later."""
+    _activate_direct_fee(env)
+    token = _register(env)
+    _checkout(env, token)
+    env.fake.charge = {**env.fake.charge, "amount_refunded": 400, "application_fee": "fee_test_1"}
+
+    working = env.fake.ApplicationFee.retrieve
+
+    def broken(fee_id, **kw):
+        env.fake.calls.append(("ApplicationFee.retrieve", fee_id, kw))
+        raise stripe.error.InvalidRequestError("No such application fee", "id")
+    monkeypatch.setattr(env.fake.ApplicationFee, "retrieve", staticmethod(broken))
+    event = _completed_dfee(_reg(env, token)["stripe_checkout_session_id"], intent=env.intent, account=env.express)
+    assert _post_webhook(env, CONNECT_HOOK, event, CONNECT_SECRET).json() == {"received": True, "settled": True}
+    row = _reg(env, token)
+    assert (row["payment_status"], row["refunded_cents"], row["fee_refunded_cents"], row["fee_cents"]) == (
+        "partially_refunded", 400, 0, 50)
+    assert env.fake.named("PaymentIntent.retrieve")[0][2] == {"expand": ["latest_charge"], "stripe_account": env.express}
+    # The refund event retries until the fee is readable, then books it.
+    assert _post_webhook(env, CONNECT_HOOK, _connect_refund_event(env, 400), CONNECT_SECRET).status_code == 503
+    monkeypatch.setattr(env.fake.ApplicationFee, "retrieve", staticmethod(working))
+    env.fake.application_fee = {"id": "fee_test_1", "amount": 50, "amount_refunded": 20}
+    assert _post_webhook(env, CONNECT_HOOK, _connect_refund_event(env, 400), CONNECT_SECRET).status_code == 200
+    assert _reg(env, token)["fee_refunded_cents"] == 20
+
+
+def test_no_fee_lookup_without_refund(env):
+    _paid_direct_fee(env)
+    assert env.fake.named("ApplicationFee.retrieve") == []
+
+
+def test_fee_is_capped_below_the_charge_amount(env):
+    """M2: application_fee_amount must be less than the charge."""
+    _activate_direct_fee(env)
+    with env.cursor() as cur:
+        cur.execute("insert into organization_fee_rules (organization_id, plan, percent, min_fee_cents, valid_from, "
+                    "created_at) values (%s,'individuell',5,5000,'2000-01-01', now() + interval '1 second')", (env.org,))
+    token = _register(env)
+    assert _checkout(env, token).status_code == 200
+    (_, kw), = env.fake.named("Session.create")
+    assert kw["payment_intent_data"]["application_fee_amount"] == 999
+    assert _reg(env, token)["stripe_checkout_fee"]["fee_cents"] == 999
+
+
+def test_fee_mismatch_is_flagged_but_paid(env, monkeypatch):
+    """M3: Stripe withholds another fee than the quote: paid, flagged."""
+    flagged = []
+    monkeypatch.setattr(payments, "_flag_for_review", lambda org, reg, reason, *_: flagged.append(reason))
+    env.fake.charge = {**env.fake.charge, "application_fee_amount": 40}
+    token, _ = _paid_direct_fee(env)
+    assert _reg(env, token)["payment_status"] == "paid" and flagged == ["fee_mismatch"]
+    flagged.clear()
+    env.intent = f"pi_test{uuid4().hex[:16]}"
+    env.fake.charge = {**env.fake.charge, "application_fee_amount": 50}
+    _paid_direct_fee(env)
+    assert flagged == []

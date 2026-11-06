@@ -27,6 +27,8 @@ Safety:
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import re
 import time
@@ -343,6 +345,12 @@ def create_checkout(
         # Fee valid on the booking date, computed on the amount actually charged.
         rule = fees.effective_fee(tenant.organization_id, booking["created_at"])
         quote = fees.fee_quote(rule, amount)
+        if quote["fee_cents"] >= amount:
+            # Stripe: application_fee_amount must be less than the charge.
+            # Only possible with an extreme minimum fee; the snapshot keeps
+            # the capped value, which is what Stripe withholds.
+            logger.warning("Platform fee capped below the charge amount (organization_slug=%s)", tenant.slug)
+            quote = {**quote, "fee_cents": amount - 1}
 
     existing = booking.get("stripe_checkout_session_id")
     if existing:
@@ -649,12 +657,14 @@ def _settle_checkout(client, obj: dict, account: str | None, created=None, mode:
     refund_state = None
     if mode in FEE_MODES:
         # account is None for destination (platform charge).
-        refund_state = _fee_refund_state(client, payment_intent, account if mode == DIRECT_FEE else None)
+        refund_state = _fee_refund_state(client, payment_intent, account if mode == DIRECT_FEE else None,
+                                         strict=False)
         refunded = refund_state["status"] == "refunded"
     else:
         refunded = _fully_refunded(client, payment_intent, account)
     review = None
     settled = None
+    fee_mismatch = False
     with db.get_cursor() as cur:
         if mode == DESTINATION:
             cur.execute(_SETTLE_DESTINATION, (session_id,))
@@ -696,6 +706,12 @@ def _settle_checkout(client, obj: dict, account: str | None, created=None, mode:
                 # A refund that arrived before this event (retries, outages).
                 _store_refund(cur, row["id"], refund_state)
             settled = (row["id"], row["organization_id"])
+            fee_mismatch = mode in FEE_MODES and _fee_differs(row.get("stripe_checkout_fee"), refund_state)
+    if settled and fee_mismatch:
+        # Paid is right (the money arrived); the withheld fee differs from the
+        # quote the snapshot keeps. Never expected, since only CampsPilot
+        # creates these sessions: flag it for a human, no retry.
+        _flag_for_review(settled[1], settled[0], "fee_mismatch")
     if review:
         # Row gone (e.g. deleted): the session still names the club. Never log
         # the registration token (client_reference_id), it is a bearer capability.
@@ -708,6 +724,15 @@ def _settle_checkout(client, obj: dict, account: str | None, created=None, mode:
         )
         return {"received": True, "settled": False}
     return {"received": True, "settled": True, **({"_sync": settled} if settled else {})}
+
+
+def _fee_differs(quote, refund_state: dict | None) -> bool:
+    """Application fee Stripe actually holds vs. the quote sent at checkout
+    (application_fee_amount is omitted when the quote is 0)."""
+    if not isinstance(quote, dict) or not isinstance(quote.get("fee_cents"), int) or not refund_state:
+        return False
+    actual = refund_state.get("application_fee_amount")
+    return (actual if isinstance(actual, int) else 0) != quote["fee_cents"]
 
 
 def _snapshot_settled(cur, row: dict, mode: str) -> None:
@@ -764,46 +789,64 @@ def _record_refund(obj: dict, account: str):
     return (row["id"], row["organization_id"])
 
 
-def _fee_refund_state(client, payment_intent: str, account: str | None = None) -> dict:
+def _fee_refund_state(client, payment_intent: str, account: str | None = None, strict: bool = True) -> dict:
     """Current refund state of a charge with platform fee, read from Stripe
     (event order is not guaranteed; charge.refunded is cumulative anyway).
     account=None: platform charge (destination); otherwise the club's
     connected account (direct_fee). fee_refunded_cents is what Stripe actually
     returned of the application fee (refund_application_fee=true refunds it
-    proportionally)."""
+    proportionally).
+
+    Only latest_charge is expanded. The ApplicationFee (on the platform
+    account, created asynchronously for direct charges) is read only when
+    something was refunded. strict=False (booking a payment): a failed fee
+    lookup never blocks the paid state; fee_refunded_cents stays 0 and the
+    next refund event (strict) records it."""
     scope = {"stripe_account": account} if account else {}
     try:
-        intent = _stripe_dict(client.PaymentIntent.retrieve(
-            payment_intent, expand=["latest_charge.application_fee"], **scope,
-        ))
+        intent = _stripe_dict(client.PaymentIntent.retrieve(payment_intent, expand=["latest_charge"], **scope))
     except stripe.error.StripeError:
         raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
     charge = intent.get("latest_charge")
     charge = _stripe_dict(charge) if charge is not None and not isinstance(charge, (str, dict)) else charge
     if not isinstance(charge, dict):
-        return {"status": "paid", "refunded_cents": 0, "fee_refunded_cents": 0}
+        return {"status": "paid", "refunded_cents": 0, "fee_refunded_cents": 0, "application_fee_amount": None}
     amount = charge.get("amount") if isinstance(charge.get("amount"), int) else 0
     refunded = charge.get("amount_refunded") if isinstance(charge.get("amount_refunded"), int) else 0
-    fee = charge.get("application_fee")
-    fee = _stripe_dict(fee) if fee is not None and not isinstance(fee, (str, dict)) else fee
-    if isinstance(fee, str) and fee.startswith("fee_"):
-        # Not expanded (direct charge: the ApplicationFee lives on the platform
-        # account). Read it there, without the Stripe-Account header.
+    fee_amount = charge.get("application_fee_amount") if isinstance(charge.get("application_fee_amount"), int) else 0
+    fee_refunded = 0
+    if refunded > 0 and fee_amount > 0:
         try:
-            fee = _stripe_dict(client.ApplicationFee.retrieve(fee))
-        except stripe.error.StripeError:
-            raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
-    fee_refunded = fee.get("amount_refunded") if isinstance(fee, dict) and isinstance(fee.get("amount_refunded"), int) else 0
-    if refunded > 0 and not isinstance(fee, dict) and charge.get("application_fee_amount"):
-        # Fee object not expanded: never guess, let Stripe retry.
-        raise HTTPException(503, "Gebührenerstattung noch nicht abrufbar")
+            fee_refunded = _application_fee_refunded(client, charge.get("application_fee"))
+        except HTTPException:
+            if strict:
+                raise
+            logger.warning("Application fee refund not readable yet; booked later (mode=%s)",
+                           DIRECT_FEE if account else DESTINATION)
     if amount > 0 and refunded >= amount:
         status = "refunded"
     elif refunded > 0:
         status = "partially_refunded"
     else:
         status = "paid"
-    return {"status": status, "refunded_cents": refunded, "fee_refunded_cents": fee_refunded}
+    return {"status": status, "refunded_cents": refunded, "fee_refunded_cents": fee_refunded,
+            "application_fee_amount": charge.get("application_fee_amount")}
+
+
+def _application_fee_refunded(client, fee) -> int:
+    """amount_refunded of the charge's ApplicationFee. It lives on the
+    platform account: read without the Stripe-Account header. Not created yet
+    or not readable: 503, Stripe retries the event."""
+    fee = _stripe_dict(fee) if fee is not None and not isinstance(fee, (str, dict)) else fee
+    if isinstance(fee, str) and fee.startswith("fee_"):
+        try:
+            fee = _stripe_dict(client.ApplicationFee.retrieve(fee))
+        except stripe.error.StripeError:
+            raise HTTPException(503, "Gebührenerstattung noch nicht abrufbar") from None
+    if not isinstance(fee, dict) or not isinstance(fee.get("amount_refunded"), int):
+        # Never guess the returned fee.
+        raise HTTPException(503, "Gebührenerstattung noch nicht abrufbar")
+    return fee["amount_refunded"]
 
 
 def _store_refund(cur, registration_id, state: dict) -> bool:
@@ -1061,8 +1104,13 @@ def _stripe_setup_error(error: Exception, step: str, organization_slug: str) -> 
         "Stripe %s failed (organization_slug=%s, error_type=%s, code=%s, reason=%s)",
         step, organization_slug, type(error).__name__, code, reason,
     )
+    status = getattr(error, "http_status", None)
     if isinstance(error, (stripe.error.InvalidRequestError, stripe.error.PermissionError,
-                          stripe.error.AuthenticationError, stripe.error.IdempotencyError)):
+                          stripe.error.AuthenticationError, stripe.error.IdempotencyError)) or (
+        # Typed v2 errors (feature not enabled, blocked by Stripe, ...) are no
+        # InvalidRequestError but still a configuration answer from Stripe.
+        isinstance(status, int) and 400 <= status < 500 and status != 429
+    ):
         return HTTPException(409, f"Stripe hat die Einrichtung abgelehnt: {reason}")
     return HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar")
 
@@ -1083,6 +1131,10 @@ def _club_contact(organization_id) -> tuple[Optional[str], Optional[str]]:
                   if isinstance(e, str) and "@" in e and len(e.strip()) <= 254), None)
     name = (row.get("name") or "").strip()[:100] or None
     return name, email
+
+
+def _params_hash(params: dict) -> str:
+    return hashlib.sha256(json.dumps(params, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:12]
 
 
 def account_v2_params(organization_id, business_type: str, name: Optional[str], email: Optional[str]) -> dict:
@@ -1128,11 +1180,14 @@ def start_express_onboarding(
     created = False
     if not account_id:
         name, email = _club_contact(organization["id"])
+        params = account_v2_params(organization["id"], business_type, name, email)
         try:
             account = _stripe_dict(_stripe_v2().v2.core.accounts.create(
-                account_v2_params(organization["id"], business_type, name, email),
-                # Two clicks (or a retry after a lost response) get the same account.
-                {"idempotency_key": f"campspilot-acct-v2-{organization['id']}"},
+                params,
+                # Two clicks (or a retry after a lost response) get the same
+                # account. Changed data (legal form, e-mail) gets a new key, so
+                # a corrected retry is not refused as idempotency_error.
+                {"idempotency_key": f"campspilot-acct-v2-{organization['id']}-{_params_hash(params)}"},
             ))
         except stripe.error.StripeError as error:
             raise _stripe_setup_error(error, "account creation", organization_slug) from None

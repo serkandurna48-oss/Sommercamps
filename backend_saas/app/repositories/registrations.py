@@ -398,7 +398,7 @@ _ADMIN_REGISTRATION_FIELDS = """
     photo_permission, created_at, extra_answers,
     email_sent_at, email_error,
     applied_price_cents, member_match, payment_method,
-    player_id, documentation_consent
+    player_id, documentation_consent, anonymized_at
 """
 
 _LIST_REGISTRATIONS_FOR_CAMP = f"""
@@ -587,11 +587,14 @@ def update_registration_details(
             # A corrected spelling must follow the player record (same transaction),
             # otherwise the next booking with the right name creates a second player.
             cur.execute(
-                "select child_birth_date from camp_registrations"
+                "select child_birth_date, anonymized_at from camp_registrations"
                 " where registration_token = %s and organization_id = %s",
                 (registration_token, organization_id),
             )
-            birth_date = cur.fetchone()["child_birth_date"]
+            current = cur.fetchone()
+            if current["anonymized_at"] is not None:
+                return row  # anonymized (player record deleted): never linked to a player again
+            birth_date = current["child_birth_date"]
             player_id = players.find_or_create_player(
                 cur, organization_id, child_first_name, child_last_name, birth_date)
             cur.execute(

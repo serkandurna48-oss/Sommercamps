@@ -22,12 +22,13 @@ vi.mock('../shell/logoutAction', () => ({ logoutAction: vi.fn() }))
 vi.mock('../actions/playerActions', () => ({
   createNoteAction: vi.fn(), updateNoteAction: vi.fn(), deleteNoteAction: vi.fn(), createGoalAction: vi.fn(),
   setGoalStatusAction: vi.fn(), createMeasurementAction: vi.fn(), deleteMeasurementAction: vi.fn(),
+  deletePlayerRecordAction: vi.fn(),
 }))
 vi.mock('../actions/trainingActions', () => ({
   createOfferAction: vi.fn(), updateOfferAction: vi.fn(), createSessionAction: vi.fn(), deleteSessionAction: vi.fn(),
   cancelSessionAction: vi.fn(), createMemberAction: vi.fn(), setMemberActiveAction: vi.fn(), importMembersAction: vi.fn(),
 }))
-vi.mock('../actions/waitlistActions', () => ({ cancelRegistrationAction: vi.fn() }))
+vi.mock('../actions/waitlistActions', () => ({ cancelRegistrationAction: vi.fn(), deleteRegistrationAction: vi.fn() }))
 vi.mock('../actions/paymentActions', () => ({ setPaymentStatusAction: vi.fn() }))
 
 const org = { ...organization, name: 'Testverein', slug: 'demo', logo_url: null, primary_color: null }
@@ -206,6 +207,36 @@ describe('Spielerakte (Darstellung)', () => {
       { id: 'b', player_id: 'p1', measured_on: '2027-03-29', metric: 'sprint_10m', value: 2.3, unit: 's', note: null, created_at: '2027-03-29T19:00:00Z', updated_at: '' },
     ] })))
     expect(worse.querySelector('[data-trend="worse"]')?.textContent).toContain('+0,2 s schlechter')
+  })
+
+  it('Messwerte: eigene Zeitmetrik (Einheit s) wird bei sinkender Zeit grün gewertet, mit einem Minuszeichen', () => {
+    const custom = (id: string, measured_on: string, value: number, unit = 's') => ({ id, player_id: 'p1', measured_on, metric: 'Dribbling-Parcours', value, unit, note: null, created_at: `${measured_on}T19:00:00Z`, updated_at: '' })
+    const better = html(screen(record({ measurements: [custom('a', '2027-01-10', 14.2), custom('b', '2027-03-29', 13.4)] })))
+    const figure = better.querySelector('figure[data-metric="Dribbling-Parcours"]')!
+    const chip = figure.querySelector('[data-trend]')!
+    expect(chip.getAttribute('data-trend')).toBe('better')
+    expect(chip.textContent).toContain('\u22120,8 s besser')
+    expect(chip.textContent).not.toMatch(/[-\u2212]{2}/)
+    expect(chip.getAttribute('style')).toContain('--cp-ok')
+    expect(figure.textContent).toContain('Niedriger ist besser')
+    const worse = html(screen(record({ measurements: [custom('a', '2027-01-10', 13.4), custom('b', '2027-03-29', 14.2)] })))
+    const bad = worse.querySelector('figure[data-metric="Dribbling-Parcours"] [data-trend]')!
+    expect(bad.getAttribute('data-trend')).toBe('worse')
+    expect(bad.getAttribute('style')).toContain('--cp-error')
+    // Counts stay "higher is better".
+    const reps = html(screen(record({ measurements: [custom('a', '2027-01-10', 20, 'Anzahl'), custom('b', '2027-03-29', 25, 'Anzahl')] })))
+    expect(reps.querySelector('figure[data-metric="Dribbling-Parcours"] [data-trend]')?.getAttribute('data-trend')).toBe('better')
+    expect(reps.querySelector('figure[data-metric="Dribbling-Parcours"]')?.textContent).toContain('Höher ist besser')
+  })
+
+  it('Spielerakte löschen: Knopf nur ohne aktive Buchung, sonst Hinweis', () => {
+    const blocked = html(screen(record({ bookings: [booking({ status: 'registered' })] })))
+    expect(blocked.querySelector('section[aria-label="Spielerakte löschen"] button')).toBeNull()
+    expect(blocked.querySelector('[data-delete-blocked]')?.textContent).toContain('1 aktive Buchung')
+    const free = html(screen(record({ bookings: [booking({ status: 'cancelled' })] })))
+    const section = free.querySelector('section[aria-label="Spielerakte löschen"]')!
+    expect([...section.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Spielerakte löschen'])
+    expect(free.body.textContent).not.toContain('Stornierte Buchungen bleiben') // shown only in the confirm step
   })
 
   it('Buchungen mit Titel, lokalem Datum/Uhrzeit und Zahlstatus', () => {

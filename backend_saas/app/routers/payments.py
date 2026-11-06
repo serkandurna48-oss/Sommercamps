@@ -442,7 +442,13 @@ def _settle_checkout(client, obj: dict, account: str, created=None) -> dict:
                 ("refunded" if refunded else "paid", payment_intent, row["id"]),
             )
     if review:
-        _flag_for_review(row["organization_id"] if row else None, row["registration_token"] if row else None, review)
+        # Row gone (e.g. deleted): the session still names the club and the token.
+        metadata = obj.get("metadata") if isinstance(obj.get("metadata"), dict) else {}
+        _flag_for_review(
+            row["organization_id"] if row else metadata.get("organization_id"),
+            row["registration_token"] if row else obj.get("client_reference_id"),
+            review,
+        )
         return {"received": True, "settled": False}
     return {"received": True, "settled": True}
 
@@ -491,13 +497,60 @@ def expire_open_checkout(organization_id, registration_token) -> None:
             return
         if row["payment_status"] == "open" and row["status"] in ("registered", "confirmed"):
             return  # still payable: keep the session
-        client = _stripe_client()
-        session = _stripe_dict(client.checkout.Session.retrieve(
-            row["stripe_checkout_session_id"], stripe_account=row["stripe_checkout_account_id"],
-        ))
-        if session.get("status") == "open":
-            client.checkout.Session.expire(
-                row["stripe_checkout_session_id"], stripe_account=row["stripe_checkout_account_id"],
-            )
+        _expire_session(row["stripe_checkout_session_id"], row["stripe_checkout_account_id"])
     except Exception:  # noqa: BLE001 - best effort, the webhook flags late payments
         logger.warning("Could not expire open Stripe checkout")
+
+
+def _expire_session(session_id: str, account_id: str) -> None:
+    client = _stripe_client()
+    session = _stripe_dict(client.checkout.Session.retrieve(session_id, stripe_account=account_id))
+    if session.get("status") == "open":
+        client.checkout.Session.expire(session_id, stripe_account=account_id)
+
+
+class CheckoutPaidError(Exception):
+    """Stripe reports the checkout of this registration as completed or paid."""
+
+
+class CheckoutUnavailableError(Exception):
+    """Stripe could not be asked or did not confirm the session is closed."""
+
+
+def close_checkout_before_delete(organization_id, camp_id, registration_token) -> None:
+    """Runs BEFORE a registration is deleted: an open Stripe Checkout must be
+    expired synchronously, otherwise a parent could pay a booking that no
+    longer exists. Complete or paid -> CheckoutPaidError (the admin must refund
+    or cancel instead). Any Stripe failure -> CheckoutUnavailableError, and the
+    caller must not delete. No Stripe configuration or no checkout -> no-op."""
+    settings = get_settings()
+    if not (settings.stripe_checkout_enabled and settings.stripe_secret_key and settings.stripe_webhook_secret):
+        return
+    with db.get_cursor() as cur:
+        cur.execute(
+            """select stripe_checkout_session_id, stripe_checkout_account_id, payment_status
+               from camp_registrations
+               where organization_id = %s and camp_id = %s and registration_token = %s""",
+            (organization_id, camp_id, registration_token),
+        )
+        row = cur.fetchone()
+    # Only a still-open booking can have a payment in flight. A refunded
+    # checkout stays "complete/paid" in Stripe forever, and paid-online is
+    # already refused by the database guard; cash, transfer and waived have no checkout to close.
+    if not row or row["payment_status"] != "open":
+        return
+    if not row["stripe_checkout_session_id"] or not row["stripe_checkout_account_id"]:
+        return  # legacy rows without a connected account (pre v11) cannot be asked
+    session_id, account_id = row["stripe_checkout_session_id"], row["stripe_checkout_account_id"]
+    try:
+        client = _stripe_client()
+        session = _stripe_dict(client.checkout.Session.retrieve(session_id, stripe_account=account_id))
+        if session.get("status") == "complete" or session.get("payment_status") == "paid":
+            raise CheckoutPaidError()
+        if session.get("status") == "open":
+            client.checkout.Session.expire(session_id, stripe_account=account_id)
+    except CheckoutPaidError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - any Stripe/network failure blocks the delete
+        logger.warning("Could not close Stripe checkout before delete (error_type=%s)", type(exc).__name__)
+        raise CheckoutUnavailableError() from exc

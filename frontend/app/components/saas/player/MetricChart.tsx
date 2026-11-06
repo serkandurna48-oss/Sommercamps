@@ -9,15 +9,17 @@ const TREND: Record<TrendDirection, { arrow: string; word: string; color: string
 }
 
 /** Eine Messgröße kompakt: letzter Wert, Veränderung zum vorherigen Wert (Richtung nach „besser/schlechter“,
- * bei Sprintzeiten sinkt der Wert beim Verbessern) und ein kleiner Verlauf als Inline-SVG (keine Abhängigkeit).
+ * bei Zeiten und Sprints sinkt der Wert beim Verbessern) und ein kleiner Verlauf als Inline-SVG (keine Abhängigkeit).
  * Zeit läuft von links nach rechts, größere Werte liegen weiter oben. Der Pfeil zeigt die Bewertung, nicht die Richtung der Zahl. */
-export default function MetricChart({ metric, unit, points, color }: {
+export default function MetricChart({ metric, unit, points, color, lowerIsBetter }: {
   metric: string
   unit: string
   points: SeriesPoint[]
   color: string
+  /** Ausdrückliche Angabe der Messgröße; sonst Zeiteinheit oder Name (siehe isLowerBetter). */
+  lowerIsBetter?: boolean | null
 }) {
-  const trend = metricTrend(metric, points)
+  const trend = metricTrend(metric, points, unit, lowerIsBetter)
   if (!trend) return null
   const scaled = scaleSeries(points, AREA)
   const first = points[0]
@@ -51,7 +53,7 @@ export default function MetricChart({ metric, unit, points, color }: {
         ))}
       </svg>
       <p className="cp-chip col-span-2" style={{ color: 'var(--cp-muted)' }}>
-        {isLowerBetter(metric) ? 'Niedriger ist besser' : 'Höher ist besser'} · {formatDay(last.date)}
+        {isLowerBetter(metric, unit, lowerIsBetter) ? 'Niedriger ist besser' : 'Höher ist besser'} · {formatDay(last.date)}
         {points.length > 1 ? ` · ${points.length} Messungen` : ''}
       </p>
     </figure>

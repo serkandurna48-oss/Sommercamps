@@ -5,8 +5,10 @@ import { de } from '../../../lib/i18n/de'
 import { revalidatePath } from 'next/cache'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
 import {
+  AdminActionError,
   AdminConnectionError,
   cancelRegistrationAdmin,
+  deleteRegistrationAdmin,
   promoteWaitlistAdmin,
   resendRegistrationMailAdmin,
   updateRegistrationDetailsAdmin,
@@ -70,6 +72,33 @@ export async function cancelRegistrationAction(
     }
   } catch (error) {
     return { error: error instanceof AdminConnectionError ? error.message : de.adminActions.cancelFailed, success: null }
+  }
+}
+
+/**
+ * Löscht eine einzelne Anmeldung endgültig. Online bezahlte Anmeldungen
+ * lehnt das Backend mit 409 ab (Hinweistext kommt aus saasAdminApi). Ein
+ * frei werdender Platz geht serverseitig an die Warteliste.
+ */
+export async function deleteRegistrationAction(
+  orgSlug: string,
+  campSlug: string,
+  registrationToken: string,
+  _prev: ActionFormState,
+): Promise<ActionFormState> {
+  const token = await getValidAccessToken()
+  if (!token) return { error: de.adminActions.sessionExpired, success: null }
+
+  try {
+    const result = await deleteRegistrationAdmin(orgSlug, campSlug, registrationToken, token)
+    revalidatePath(`/pilot/${orgSlug}`, 'layout')
+    return {
+      error: null,
+      success: result.player_kept ? de.adminActions.deletedPlayerKept : de.adminActions.deleted,
+      promoted: result.promoted,
+    }
+  } catch (error) {
+    return { error: error instanceof AdminActionError ? error.message : de.adminActions.deleteFailed, success: null }
   }
 }
 

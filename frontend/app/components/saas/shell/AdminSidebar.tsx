@@ -72,8 +72,9 @@ function NavLink({ item, active, rail, onNavigate }: { item: TabItem; active: bo
   )
 }
 
-function OrgIdentity({ orgSlug, orgName, orgLogoUrl, clubColor, rail }: AdminSidebarProps & { rail: boolean }) {
+function OrgIdentity({ orgSlug, orgName, orgLogoUrl, clubColor, rail, modules = ALL_MODULES }: AdminSidebarProps & { rail: boolean }) {
   const isPlatformOwner = useIsPlatformOwner()
+  const lockedModules = ALL_MODULES.filter(module => !modules.includes(module)).length
   const initial = orgName.trim().charAt(0).toUpperCase()
   return (
     <div className="flex min-w-0 items-center gap-2.5">
@@ -93,6 +94,11 @@ function OrgIdentity({ orgSlug, orgName, orgLogoUrl, clubColor, rail }: AdminSid
         {isPlatformOwner && (
           <NextLink href={`/platform/${orgSlug}`} className="cp-focus cp-chip underline" style={{ color: 'var(--cp-on-band-2)' }}>
             ← Zur Plattform
+          </NextLink>
+        )}
+        {isPlatformOwner && lockedModules > 0 && (
+          <NextLink href={`/platform/${orgSlug}#module`} className="cp-focus cp-chip underline" style={{ color: 'var(--cp-on-band-2)' }}>
+            Module freischalten
           </NextLink>
         )}
       </div>

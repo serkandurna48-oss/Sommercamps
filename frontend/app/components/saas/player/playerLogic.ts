@@ -117,9 +117,28 @@ export function metricLabel(metric: string): string {
   return METRIC_LABEL[metric] ?? metric
 }
 
-/** Bei Sprintzeiten ist ein niedrigerer Wert besser. */
-export function isLowerBetter(metric: string): boolean {
-  return metric.startsWith('sprint_')
+/** Zeiteinheiten: bei Zeiten ist ein niedrigerer Wert besser. "m/s" (Tempo) steht bewusst nicht dabei. */
+const TIME_UNITS = new Set([
+  's', 'sek', 'sec', 'sekunde', 'sekunden', 'second', 'seconds', 'ms',
+  'min', 'minute', 'minuten', 'minutes', 'h', 'std', 'stunde', 'stunden', 'hour', 'hours',
+])
+
+/**
+ * Ist bei dieser Messgröße ein niedrigerer Wert besser? Reihenfolge:
+ * 1. ausdrückliche Angabe (`explicit`, z. B. Metadaten der Messgröße), falls vorhanden;
+ * 2. Zeiteinheit (s, sek, sec, ms);
+ * 3. Name enthält "sprint" (Standard-Schlüssel sprint_10m ebenso wie eigene Namen).
+ * Alles andere: höher ist besser.
+ * Es gibt kein Metrik-Definitionsmodell im Backend (nur die festen Standardmetriken sprint_10m,
+ * sprint_30m, standweitsprung, jonglieren; eigene Metriken sind freier Text mit Einheit). Deshalb
+ * bleibt es bei dieser Heuristik. Prozentwerte mit "niedriger ist besser" (Fehlerquote) erkennt sie
+ * nicht; dafür greift `explicit`, sobald das Backend je Metrik ein Flag liefert.
+ */
+export function isLowerBetter(metric: string, unit?: string | null, explicit?: boolean | null): boolean {
+  if (typeof explicit === 'boolean') return explicit
+  const normalizedUnit = (unit ?? '').trim().toLowerCase().replace(/\.$/, '')
+  if (TIME_UNITS.has(normalizedUnit)) return true
+  return metric.trim().toLowerCase().includes('sprint')
 }
 
 const NUMBER = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 })
@@ -134,10 +153,11 @@ export interface SeriesPoint {
   value: number
 }
 
-/** Messwerte einer Metrik, älteste zuerst. */
-export function buildMetricSeries(measurements: PlayerMeasurement[], metric: string): (SeriesPoint & { id: string })[] {
+/** Messwerte einer Metrik (optional nur einer Einheit), älteste zuerst. */
+export function buildMetricSeries(measurements: PlayerMeasurement[], metric: string, unit?: string): (SeriesPoint & { id: string })[] {
   return measurements
-    .filter(m => m.metric === metric)
+    // Only one unit per series: s and ms (or cm and m) must never be compared raw.
+    .filter(m => m.metric === metric && (unit === undefined || m.unit === unit))
     .map(m => ({ id: m.id, date: m.measured_on, value: m.value, created: m.created_at }))
     .sort((a, b) => a.date.localeCompare(b.date) || a.created.localeCompare(b.created))
     .map(({ id, date, value }) => ({ id, date, value }))
@@ -150,26 +170,29 @@ export interface MetricTrend {
   previous: SeriesPoint | null
   /** Letzter minus vorletzter Wert, auf zwei Stellen gerundet; null bei nur einer Messung. */
   delta: number | null
-  /** Bewertet die Richtung: bei Sprintzeiten ist ein sinkender Wert besser. */
+  /** Bewertet die Richtung: bei Zeiten (isLowerBetter) ist ein sinkender Wert besser. */
   direction: TrendDirection | null
 }
 
 /** Letzter Wert einer (älteste zuerst sortierten) Reihe und Veränderung zum vorherigen. */
-export function metricTrend(metric: string, series: SeriesPoint[]): MetricTrend | null {
+export function metricTrend(metric: string, series: SeriesPoint[], unit?: string | null, lowerIsBetter?: boolean | null): MetricTrend | null {
   if (series.length === 0) return null
   const latest = series[series.length - 1]
   const previous = series.length > 1 ? series[series.length - 2] : null
   if (!previous) return { latest, previous: null, delta: null, direction: null }
   const delta = Number((latest.value - previous.value).toFixed(2))
   if (delta === 0) return { latest, previous, delta: 0, direction: 'same' }
-  const improved = isLowerBetter(metric) ? delta < 0 : delta > 0
+  const improved = isLowerBetter(metric, unit, lowerIsBetter) ? delta < 0 : delta > 0
   return { latest, previous, delta, direction: improved ? 'better' : 'worse' }
 }
 
-/** "+0,12 s" / "−0,26 s" (echtes Minuszeichen). */
+/** "+0,12 s" / "−0,26 s" (echtes Minuszeichen, genau ein Vorzeichen; "−0,8 %" mit Leerzeichen). Die Farbe
+ * hängt nie am Vorzeichen, sondern an `metricTrend().direction`. */
 export function formatDelta(delta: number, unit: string): string {
-  const sign = delta > 0 ? '+' : delta < 0 ? '\u2212' : ''
-  return `${sign}${NUMBER.format(Math.abs(delta))} ${unit}`
+  const magnitude = NUMBER.format(Math.abs(delta)).replace(/^[-\u2212+]+/, '')
+  // A change that rounds to zero carries no sign ("0 s", never "−0 s").
+  const sign = magnitude === '0' ? '' : delta > 0 ? '+' : '\u2212'
+  return `${sign}${magnitude} ${unit}`.trim()
 }
 
 export interface ScaledPoint extends SeriesPoint {

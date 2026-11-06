@@ -17,6 +17,7 @@ vi.mock('next/image', () => ({ default: (props: { alt: string }) => <span data-i
 vi.mock('./logoutAction', () => ({ logoutAction: vi.fn() }))
 
 const { default: AdminSidebar } = await import('./AdminSidebar')
+const { ViewerProvider } = await import('./ViewerContext')
 
 let container: HTMLDivElement
 let root: Root
@@ -181,4 +182,24 @@ it('mirrors a toggle into the cookie so the next server render matches', async (
   const cookie = document.cookie.split('; ').find(c => c.startsWith('cp-admin-sidebar='))!
   expect(parseSidebarPrefs(decodeURIComponent(cookie.split('=')[1])).collapsed).toBe(true)
   document.cookie = 'cp-admin-sidebar=; path=/; max-age=0'
+})
+
+it('offers the platform owner the module switch of this club while a module is off', async () => {
+  await act(() => root.render(
+    <ViewerProvider isPlatformOwner>
+      <AdminSidebar orgSlug="demoverein" orgName="Demoverein" orgLogoUrl={null} modules={['camps']} />
+    </ViewerProvider>,
+  ))
+  const hrefs = [...sidebar().querySelectorAll('a')].map(a => a.getAttribute('href'))
+  expect(hrefs).toContain('/platform/demoverein')
+  expect(hrefs).toContain('/platform/demoverein#module')
+})
+
+it('shows no module link to the owner when all modules are on, nor to club admins', async () => {
+  await act(() => root.render(
+    <ViewerProvider isPlatformOwner><AdminSidebar orgSlug="demoverein" orgName="Demoverein" orgLogoUrl={null} /></ViewerProvider>,
+  ))
+  expect([...sidebar().querySelectorAll('a')].map(a => a.getAttribute('href'))).not.toContain('/platform/demoverein#module')
+  await act(() => root.render(<AdminSidebar orgSlug="demoverein" orgName="Demoverein" orgLogoUrl={null} modules={['camps']} />))
+  expect([...sidebar().querySelectorAll('a')].map(a => a.getAttribute('href'))).not.toContain('/platform/demoverein#module')
 })

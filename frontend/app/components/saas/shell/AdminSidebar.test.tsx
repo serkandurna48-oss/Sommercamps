@@ -136,6 +136,27 @@ it('opens the mobile drawer as a modal dialog with focus trap, Escape, overlay c
   expect(container.querySelector('[role="dialog"]')).toBeNull()
 })
 
+it('closes the open drawer and releases the scroll lock when the viewport grows to desktop width', async () => {
+  let listener: ((e: { matches: boolean }) => void) | null = null
+  vi.stubGlobal('matchMedia', (q: string) => ({
+    matches: false, media: q,
+    addEventListener: (_: string, l: (e: { matches: boolean }) => void) => { listener = l },
+    removeEventListener: () => { listener = null },
+  }))
+  try {
+    await render()
+    const menu = container.querySelector<HTMLButtonElement>('header.cp-topbar button[aria-label="Menü öffnen"]')!
+    await act(() => menu.click())
+    expect(container.querySelector('[role="dialog"]')).not.toBeNull()
+    expect(document.body.style.overflow).toBe('hidden')
+    await act(() => listener!({ matches: true }))
+    expect(container.querySelector('[role="dialog"]')).toBeNull()
+    expect(document.body.style.overflow).toBe('')
+  } finally {
+    vi.unstubAllGlobals()
+  }
+})
+
 it('renders the remembered rail from the cookie on the server and hydrates without a flash or mismatch', async () => {
   const { renderToString } = await import('react-dom/server')
   const { hydrateRoot } = await import('react-dom/client')

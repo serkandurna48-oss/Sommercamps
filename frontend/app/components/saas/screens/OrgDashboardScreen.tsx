@@ -68,7 +68,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
   const totalRegistrations = registrationsByCamp.reduce((sum, r) => sum + r.length, 0)
   const showLaunchSuccess = publishedCamps.length === 1 && totalRegistrations === 0
 
-  // KPI: occupancy across published camps that are not over yet.
+  // KPI: occupancy across published camps that are not over yet (running or upcoming, hence "aktiv").
   const todayIso = now.toISOString().slice(0, 10)
   const activeCamps = campsWithStats.filter(c => c.camp.status === 'published' && c.camp.end_date >= todayIso)
   const occupied = activeCamps.reduce((sum, c) => sum + c.registeredCount, 0)
@@ -123,7 +123,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
             label="Belegte Plätze"
             value={capacity > 0 ? `${occupied}/${capacity}` : '–'}
             bar={capacity > 0 ? occupied / capacity : undefined}
-            detail={activeCamps.length === 1 ? 'in 1 laufenden Camp' : `in ${activeCamps.length} laufenden Camps`}
+            detail={activeCamps.length === 1 ? 'in 1 aktiven Camp' : `in ${activeCamps.length} aktiven Camps`}
             href={`/pilot/${orgSlug}/camps`}
           />
           <KpiTile

@@ -196,6 +196,13 @@ function NavDrawer({ open, onClose, returnFocusRef, children, labelId }: {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     panel?.querySelector<HTMLElement>('[data-autofocus]')?.focus()
+    // Rotating/resizing to desktop width hides the drawer via CSS: close it so the scroll lock goes too.
+    const desktop = typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 1024px)') : null
+    function onViewport(event: MediaQueryListEvent) {
+      if (event.matches) onClose()
+    }
+    if (desktop?.matches) onClose()
+    desktop?.addEventListener('change', onViewport)
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
@@ -218,6 +225,7 @@ function NavDrawer({ open, onClose, returnFocusRef, children, labelId }: {
     }
     document.addEventListener('keydown', onKeyDown)
     return () => {
+      desktop?.removeEventListener('change', onViewport)
       document.removeEventListener('keydown', onKeyDown)
       document.body.style.overflow = previousOverflow
       returnTo?.focus()

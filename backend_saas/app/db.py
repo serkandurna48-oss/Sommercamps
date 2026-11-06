@@ -128,6 +128,8 @@ class RetainingConnectionPool(psycopg2.pool.ThreadedConnectionPool):
     def __init__(self, minconn: int, maxconn: int, *args, ping_after: float = 30.0, **kwargs):
         self._ping_after = float(ping_after)
         self._idle_since: dict[int, float] = {}
+        # Own lock: psycopg2's self._lock is a plain Lock held inside super() calls.
+        self._idle_lock = threading.Lock()
         super().__init__(minconn, maxconn, *args, **kwargs)
         # psycopg2 keeps a returned connection only while len(idle) < minconn.
         self.minconn = self.maxconn
@@ -137,7 +139,8 @@ class RetainingConnectionPool(psycopg2.pool.ThreadedConnectionPool):
         # last attempt opens a fresh connection.
         for _ in range(self.maxconn + 1):
             conn = super().getconn(key)
-            idle_since = self._idle_since.pop(id(conn), None)
+            with self._idle_lock:
+                idle_since = self._idle_since.pop(id(conn), None)
             if self._usable(conn, idle_since):
                 return conn
             logger.info("Discarding stale pooled database connection")
@@ -148,22 +151,24 @@ class RetainingConnectionPool(psycopg2.pool.ThreadedConnectionPool):
         raise psycopg2.OperationalError("No usable database connection")
 
     def putconn(self, conn=None, key=None, close=False):
-        if not close and conn is not None:
-            self._idle_since[id(conn)] = time.monotonic()
-        else:
-            self._idle_since.pop(id(conn), None)
+        with self._idle_lock:
+            if not close and conn is not None:
+                self._idle_since[id(conn)] = time.monotonic()
+            else:
+                self._idle_since.pop(id(conn), None)
         super().putconn(conn, key, close)
         if conn is not None and conn.closed:
             # psycopg2 closes a lost connection itself (status UNKNOWN).
-            self._idle_since.pop(id(conn), None)
+            with self._idle_lock:
+                self._idle_since.pop(id(conn), None)
 
     def mark_idle_suspect(self) -> None:
         """Ping every currently idle connection on its next checkout. Called
         when a connection turned out to be broken: without it, each of up to
         maxconn recently used (so unpinged) dead connections would fail one
         request in turn."""
-        with self._lock:
-            for key in self._idle_since:
+        with self._idle_lock:
+            for key in list(self._idle_since):
                 self._idle_since[key] = float("-inf")
 
     def _usable(self, conn, idle_since: float | None) -> bool:

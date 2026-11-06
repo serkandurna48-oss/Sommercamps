@@ -158,3 +158,12 @@ describe('Kennzahl offene Zahlungen', () => {
     expect(text).toContain('nur Camps, Trainings nicht geladen')
   })
 })
+
+describe('Kennzahl Belegte Plätze', () => {
+  it('nennt laufende und anstehende Camps "aktiv", nicht "laufend"', () => {
+    const camps = [camp('anstehend', '2027-02-01', '2027-02-05'), camp('später', '2027-03-01', '2027-03-05'), camp('vorbei', '2026-09-01', '2026-09-05')]
+    const html = renderToStaticMarkup(<OrgDashboardScreen orgSlug="demo" org={{ ...organization, name: 'Testverein', slug: 'demo', logo_url: null, primary_color: null }} camps={camps} registrationsByCamp={camps.map(() => [])} />)
+    expect(html).toContain('in 2 aktiven Camps')
+    expect(html).not.toContain('laufenden')
+  })
+})

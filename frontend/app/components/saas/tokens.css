@@ -415,7 +415,7 @@
 .cp-pay-status { grid-area: status; display: flex; flex-wrap: wrap; gap: 6px; justify-self: end; }
 .cp-pay-action { grid-area: action; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: flex-end; gap: 8px; }
 .cp-pay-fallback { grid-area: fallback; }
-.cp-scope:where(.cp-admin) .cp-pay-copy { min-height: 32px; min-width: 0; padding: 2px 10px; font-size: 13px; }
+.cp-scope:where(.cp-admin) .cp-pay-copy { min-height: 44px; min-width: 0; padding: 2px 10px; font-size: 13px; }
 .cp-scope:where(.cp-admin) .cp-pay-list { overflow: visible; }
 .cp-pay-list > .cp-pay-row:first-of-type { border-top: 0; }
 @media (min-width: 1024px) {
@@ -1064,7 +1064,7 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-height: 30px;
+  min-height: 44px;
   padding: 0 12px;
   border: 0;
   border-radius: var(--cp-r-chip);
@@ -1113,9 +1113,8 @@
 }
 .cp-nav-item[data-active='true'] svg { color: var(--cp-accent-strong); }
 .cp-nav-hint { margin-left: auto; flex: none; }
-/* Group headings are dense for mouse users; touch screens and the drawer get 44 px. */
-@media (pointer: coarse) { .cp-nav-group-head { min-height: 44px; } }
-.cp-drawer .cp-nav-group-head { min-height: 44px; }
+/* 44 px hit target for every pointer; the visual stays compact via the label's own size. */
+.cp-nav-group-head { min-height: 44px; }
 
 .cp-nav-foot {
   display: flex;

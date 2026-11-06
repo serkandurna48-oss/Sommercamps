@@ -529,8 +529,8 @@ class MeOut(BaseModel):
 
 
 class OrganizationModulesUpdate(BaseModel):
-    """Platform owner: the full set of enabled modules. camps may be sent or
-    omitted, it is always kept; unknown names are a 422."""
+    """Platform owner: the full set of enabled modules. Must contain camps
+    (422 camps_required); unknown names are a 422; duplicates are dropped."""
 
     model_config = ConfigDict(extra="forbid")
 

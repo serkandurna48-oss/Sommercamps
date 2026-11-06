@@ -106,7 +106,7 @@ def test_column_default_and_check_constraint(ctx):
                     (new, f"n-{new.hex}"))
         cur.execute("select modules from organizations where id=%s", (new,))
         assert cur.fetchone()["modules"] == ["camps"]
-    for bad in (["trainings"], ["camps", "shop"], []):
+    for bad in (["trainings"], ["camps", "shop"], [], ["camps", "camps"], ["camps", "trainings", "trainings"]):
         with pytest.raises(psycopg2.errors.CheckViolation):
             with c["cursor"]() as cur:
                 cur.execute("update organizations set modules=%s where id=%s", (bad, new))
@@ -140,8 +140,9 @@ def test_backfill_rules_and_idempotency(ctx):
             cur.execute(sql)
         assert _modules(c, orgs["plain"]) == ["camps"]
         assert _modules(c, orgs["player_only"]) == ["camps"]  # auto-created players do not count
-        assert _modules(c, orgs["train"]) == ["camps", "trainings"]
-        assert _modules(c, orgs["member"]) == ["camps", "members"]
+        # premium bundle: trainings or members also bring the player file
+        assert _modules(c, orgs["train"]) == ["camps", "trainings", "players"]
+        assert _modules(c, orgs["member"]) == ["camps", "members", "players"]
         for name in ("note", "goal", "measure"):
             assert _modules(c, orgs[name]) == ["camps", "players"]
 
@@ -289,7 +290,7 @@ def _patch(c, modules, headers=None, slug=None):
 def test_owner_sets_modules_with_audit(ctx):
     c = ctx
     _set_modules(c, ["camps"])
-    r = _patch(c, ["players", "trainings"])
+    r = _patch(c, ["players", "camps", "trainings", "players"])
     assert r.status_code == 200, r.text
     assert r.json()["modules"] == ["camps", "trainings", "players"]
     assert _modules(c) == ["camps", "trainings", "players"]
@@ -306,6 +307,9 @@ def test_owner_sets_modules_with_audit(ctx):
 def test_modules_endpoint_validation_and_access(ctx):
     c = ctx
     assert _patch(c, ["camps", "shop"]).status_code == 422
+    for without_camps in ([], ["trainings"]):
+        r = _patch(c, without_camps)
+        assert r.status_code == 422 and r.json()["detail"] == {"code": "camps_required"}
     assert c["client"].patch(f"/admin/platform/organizations/{c['slug']}/modules", headers=owner_headers(),
                              json={"modules": ["camps"], "x": 1}).status_code == 422
     assert _patch(c, ["camps"], slug="does-not-exist").status_code == 404
@@ -335,3 +339,49 @@ def test_org_update_cannot_set_modules(ctx):
     r = c["client"].patch(f"/admin/organizations/{c['slug']}", headers=c["headers"], json={"modules": ["camps"]})
     assert r.status_code == 422
     assert _modules(c) == ["camps", "trainings", "members", "players"]
+
+
+# ---------- members module off: one price, no membership info ----------
+
+def test_public_prices_single_without_members_module(ctx):
+    c = ctx
+    offer, session = _offer_and_session(c["org"])
+    base = f"/api/v1/organizations/{c['slug']}/training-offers"
+    on_list = c["client"].get(base).json()[0]
+    assert (on_list["price_member_cents"], on_list["price_nonmember_cents"]) == (3000, 4500)
+    _set_modules(c, ["camps", "trainings"])
+    listed = c["client"].get(base).json()[0]
+    assert listed["price_member_cents"] == listed["price_nonmember_cents"] == 4500
+    assert listed["from_price_member_cents"] == listed["from_price_nonmember_cents"]
+    detail = c["client"].get(f"{base}/{offer['slug']}").json()
+    assert detail["price_member_cents"] == detail["price_nonmember_cents"] == 4500
+    assert all(s["price_member_cents"] == s["price_nonmember_cents"] for s in detail["sessions"])
+
+
+def test_member_books_at_the_shown_price_without_members_module(ctx):
+    """Live-like: a real member, members module off. Page shows one price and the booking charges exactly it."""
+    c = ctx
+    offer, session = _offer_and_session(c["org"])
+    r = c["client"].post(f"/admin/organizations/{c['slug']}/club-members", headers=c["headers"],
+                         json={"first_name": "Lena", "last_name": "Mustermann", "birth_date": "2015-03-04"})
+    assert r.status_code == 201
+    _set_modules(c, ["camps", "trainings"])
+    shown = c["client"].get(f"/api/v1/organizations/{c['slug']}/training-offers/{offer['slug']}").json()["sessions"][0]
+    assert shown["price_member_cents"] == shown["price_nonmember_cents"]
+    booked = _book(c, session["slug"])
+    assert booked.status_code == 201
+    assert booked.json()["applied_price_cents"] == shown["price_nonmember_cents"]
+
+
+def test_players_api_omits_membership_without_members_module(ctx):
+    c = ctx
+    r = c["client"].post(f"/admin/organizations/{c['slug']}/club-members", headers=c["headers"],
+                         json={"first_name": "Lena", "last_name": "Mustermann", "birth_date": "2015-03-04"})
+    assert r.status_code == 201
+    pid = players.find_or_create_player_id(c["org"], "Lena", "Mustermann", date(2015, 3, 4))
+    base = f"/admin/organizations/{c['slug']}/players"
+    assert c["client"].get(base, headers=c["headers"]).json()[0]["is_member"] is True
+    assert c["client"].get(f"{base}/{pid}", headers=c["headers"]).json()["player"]["is_member"] is True
+    _set_modules(c, ["camps", "players"])
+    assert c["client"].get(base, headers=c["headers"]).json()[0]["is_member"] is None
+    assert c["client"].get(f"{base}/{pid}", headers=c["headers"]).json()["player"]["is_member"] is None

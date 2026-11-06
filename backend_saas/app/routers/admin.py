@@ -256,15 +256,18 @@ def set_organization_modules(
     auth: AuthContext = Depends(require_platform_owner),
 ) -> OrganizationAdminOut:
     """Platform owner switches premium modules (trainings, members, players)
-    for one organization. camps always stays on. Turning a module off hides
+    for one organization. The list must contain camps (422 camps_required). Turning a module off hides
     its routes (admin 403 module_disabled, public 404); no data is deleted."""
-    before = require_organization(organization_slug)
+    if "camps" not in data.modules:
+        # An empty or camps-less list is almost certainly a client bug, not an intent.
+        raise HTTPException(status_code=422, detail={"code": "camps_required"})
     modules = normalize_modules(data.modules)
-    row = organizations_repo.set_modules(organization_slug, modules)
-    if row is None:
+    result = organizations_repo.set_modules(organization_slug, modules)
+    if result is None:
         raise HTTPException(status_code=404, detail="Organization not found")
     forget_organization(organization_slug)
-    previous = normalize_modules(before.get("modules"))
+    before_modules, row = result
+    previous = normalize_modules(before_modules)
     logger.info("Organization modules changed (slug=%s, modules=%s)", organization_slug, ",".join(modules))
     platform_roles.write_audit_log(
         actor_user_id=auth.user_id,

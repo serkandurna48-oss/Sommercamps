@@ -557,16 +557,26 @@ def list_training_payments(
 
 # ------------------------------------------------------------------- public
 
+def _single_price(row: dict, member: str, nonmember: str) -> dict:
+    """Members module off: booking never applies a member price, so the public
+    API shows the non-member price in both fields (the page then shows one price)."""
+    return {**row, member: row[nonmember]}
+
+
 @public_router.get("", response_model=list[OfferListPublicOut])
 def list_public_offers(tenant: TenantContext = Depends(get_tenant_context)) -> list[dict]:
     offers = repo.list_offers(tenant.organization_id, status="published")
     lowest = repo.lowest_public_session_prices(tenant.organization_id)
-    return [
+    out = [
         {**offer,
          "from_price_member_cents": lowest[offer["id"]][0] if offer["id"] in lowest else None,
          "from_price_nonmember_cents": lowest[offer["id"]][1] if offer["id"] in lowest else None}
         for offer in offers
     ]
+    if "members" not in tenant.modules:
+        out = [_single_price(_single_price(o, "price_member_cents", "price_nonmember_cents"),
+                             "from_price_member_cents", "from_price_nonmember_cents") for o in out]
+    return out
 
 
 @public_router.get("/{offer_slug}", response_model=OfferDetailPublicOut)
@@ -575,5 +585,8 @@ def get_public_offer(offer_slug: str, tenant: TenantContext = Depends(get_tenant
     if offer is None or offer["status"] != "published":
         # unknown, draft, archived and other organizations' slugs are indistinguishable
         raise HTTPException(status_code=404, detail="Offer not found")
-    sessions = repo.list_public_sessions(tenant.organization_id, offer["id"])
-    return {**offer, "sessions": [_session_public(s) for s in sessions]}
+    sessions = [_session_public(s) for s in repo.list_public_sessions(tenant.organization_id, offer["id"])]
+    if "members" not in tenant.modules:
+        offer = _single_price(offer, "price_member_cents", "price_nonmember_cents")
+        sessions = [s.model_copy(update={"price_member_cents": s.price_nonmember_cents}) for s in sessions]
+    return {**offer, "sessions": sessions}

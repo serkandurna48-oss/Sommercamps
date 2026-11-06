@@ -222,12 +222,18 @@ def update_organization(slug: str, data: OrganizationUpdate) -> Optional[dict]:
         return cur.fetchone()
 
 
-def set_modules(slug: str, modules: list[str]) -> Optional[dict]:
+def set_modules(slug: str, modules: list[str]) -> Optional[tuple[list[str], dict]]:
     """Platform-owner only. `modules` must already be normalized
     (app.modules.normalize_modules: known names, camps included); the DB
-    check constraint enforces the same rule. Returns None if no organization
-    has this slug."""
+    check constraint enforces the same rule. Reads the previous value under
+    a row lock in the same transaction, so concurrent changes cannot mix up
+    the audit diff. Returns (previous modules, updated row), or None if no
+    organization has this slug."""
     with db.get_cursor() as cur:
+        cur.execute("select modules from organizations where slug = %s for update", (slug,))
+        before = cur.fetchone()
+        if before is None:
+            return None
         cur.execute(
             f"""
             update organizations
@@ -237,7 +243,7 @@ def set_modules(slug: str, modules: list[str]) -> Optional[dict]:
             """,
             (list(modules), slug),
         )
-        return cur.fetchone()
+        return list(before["modules"] or []), cur.fetchone()
 
 
 def submit_for_review(slug: str, avv_version: str) -> Optional[dict]:

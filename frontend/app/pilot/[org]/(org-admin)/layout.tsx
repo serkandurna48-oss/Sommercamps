@@ -1,10 +1,12 @@
 import AdminLayoutUnavailable from '../../../components/saas/screens/AdminLayoutUnavailable'
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import AdminShell from '../../../components/saas/shell/AdminShell'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { AdminAuthError, fetchMe } from '../../../lib/saasAdminApi'
 import { getOrganizationAdmin } from '../../../components/saas/orgAdminData'
+import { SIDEBAR_COOKIE, parseSidebarPrefs, serializeSidebarPrefs } from '../../../components/saas/shell/sidebarPrefs'
 
 /**
  * Tab title for all org-admin pages: static on purpose. A `generateMetadata` that loads
@@ -81,7 +83,10 @@ export default async function OrgAdminLayout({
   // AdminShell reserves the measured navigation and selection heights, including the safe area.
   const identity = await identityPromise
   if (identity === AUTH_EXPIRED) redirect(`/pilot/${org}/login`)
+  // UI-only cookie (collapsed rail, closed groups), normalised before it reaches the client.
+  const sidebarCookie = (await cookies()).get(SIDEBAR_COOKIE)?.value
+  const sidebarPrefsRaw = sidebarCookie ? serializeSidebarPrefs(parseSidebarPrefs(sidebarCookie)) : null
   return (
-    <AdminShell orgSlug={org} org={identity ?? undefined} isPlatformOwner={me.is_platform_owner}>{children}</AdminShell>
+    <AdminShell orgSlug={org} org={identity ?? undefined} isPlatformOwner={me.is_platform_owner} sidebarPrefsRaw={sidebarPrefsRaw}>{children}</AdminShell>
   )
 }

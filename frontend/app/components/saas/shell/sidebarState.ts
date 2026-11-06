@@ -1,41 +1,32 @@
 'use client'
 
-import { useCallback, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useSyncExternalStore } from 'react'
 
 /**
  * Per-browser sidebar preferences (collapsed rail, closed groups). Stored in
  * localStorage, which can throw or be empty (private mode, blocked storage),
  * so every access is guarded and the UI falls back to the expanded default.
  */
-export const SIDEBAR_STORAGE_KEY = 'cp-admin-sidebar'
+import { SIDEBAR_COOKIE, SIDEBAR_STORAGE_KEY, parseSidebarPrefs, serializeSidebarPrefs, type SidebarPrefs } from './sidebarPrefs'
+
+export { SIDEBAR_STORAGE_KEY, parseSidebarPrefs, type SidebarPrefs }
 const CHANGE_EVENT = 'cp-admin-sidebar-change'
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 
-export interface SidebarPrefs {
-  collapsed: boolean
-  closedGroups: string[]
-}
-
-const DEFAULT_PREFS: SidebarPrefs = { collapsed: false, closedGroups: [] }
-
-export function parseSidebarPrefs(raw: string | null): SidebarPrefs {
-  if (!raw) return DEFAULT_PREFS
+function writeCookie(raw: string) {
   try {
-    const value = JSON.parse(raw) as Partial<SidebarPrefs>
-    return {
-      collapsed: value.collapsed === true,
-      closedGroups: Array.isArray(value.closedGroups) ? value.closedGroups.filter((g): g is string => typeof g === 'string') : [],
-    }
+    document.cookie = `${SIDEBAR_COOKIE}=${encodeURIComponent(raw)}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`
   } catch {
-    return DEFAULT_PREFS
+    // Cookies blocked: the server falls back to the expanded layout.
   }
 }
 
 // Fallback for this page view when storage is blocked: the toggle still works, it is just not remembered.
 let memoryRaw: string | null = null
 
-function readRaw(): string | null {
+function readStored(): string | null {
   try {
-    return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) ?? memoryRaw
+    return window.localStorage.getItem(SIDEBAR_STORAGE_KEY)
   } catch {
     return memoryRaw
   }
@@ -50,12 +41,23 @@ function subscribe(onChange: () => void) {
   }
 }
 
-export function useSidebarPrefs(): [SidebarPrefs, (next: SidebarPrefs) => void] {
-  // Server and first client render use the default (expanded) layout.
-  const raw = useSyncExternalStore(subscribe, readRaw, () => null)
+/**
+ * `serverRaw` is the cookie mirror the layout read on the server. Server render and
+ * hydration use it, so a collapsed rail is collapsed from the first paint. After
+ * hydration localStorage wins; without stored prefs the cookie value stays in effect.
+ */
+export function useSidebarPrefs(serverRaw: string | null = null): [SidebarPrefs, (next: SidebarPrefs) => void] {
+  const readRaw = useCallback(() => readStored() ?? serverRaw, [serverRaw])
+  const raw = useSyncExternalStore(subscribe, readRaw, () => serverRaw)
   const prefs = parseSidebarPrefs(raw)
+  // Older browsers only have localStorage: mirror it once so the next load renders without a flash.
+  useEffect(() => {
+    const stored = readStored()
+    if (stored !== null && stored !== serverRaw) writeCookie(serializeSidebarPrefs(parseSidebarPrefs(stored)))
+  }, [serverRaw])
   const update = useCallback((next: SidebarPrefs) => {
-    memoryRaw = JSON.stringify(next)
+    memoryRaw = serializeSidebarPrefs(next)
+    writeCookie(memoryRaw)
     try {
       window.localStorage.setItem(SIDEBAR_STORAGE_KEY, memoryRaw)
     } catch {

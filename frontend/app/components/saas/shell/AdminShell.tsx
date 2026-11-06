@@ -11,8 +11,10 @@ import '../tokens.css'
  * full-width content column. Pages render their own slim PageHeader and
  * main. Without `orgSlug` (e.g. fatal layout states) only the frame renders.
  */
-export default function AdminShell({ children, isPlatformOwner = false, org, orgSlug, beforeContent }: {
+export default function AdminShell({ children, isPlatformOwner = false, org, orgSlug, beforeContent, sidebarPrefsRaw = null }: {
   children: React.ReactNode
+  /** Sidebar preference cookie (see shell/sidebarPrefs.ts); null renders the expanded default. */
+  sidebarPrefsRaw?: string | null
   isPlatformOwner?: boolean
   org?: OrganizationIdentity
   orgSlug?: string
@@ -30,6 +32,7 @@ export default function AdminShell({ children, isPlatformOwner = false, org, org
               orgName={org?.name ?? orgSlug}
               orgLogoUrl={org?.logo_url ?? null}
               clubColor={org ? computeBrandTokens(org.primary_color).brand : undefined}
+              sidebarPrefsRaw={sidebarPrefsRaw}
             />
           )}
           <div className="cp-admin-content">

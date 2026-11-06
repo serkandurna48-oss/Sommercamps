@@ -27,6 +27,8 @@ export interface AdminSidebarProps {
   orgLogoUrl: string | null
   /** The club's own colour: only a thin accent under the logo tile. */
   clubColor?: string
+  /** Cookie mirror of the stored preferences, read by the layout so the rail renders collapsed without a flash. */
+  sidebarPrefsRaw?: string | null
 }
 
 /**
@@ -239,7 +241,7 @@ function NavDrawer({ open, onClose, returnFocusRef, children, labelId }: {
  */
 export default function AdminSidebar(props: AdminSidebarProps) {
   const { orgSlug, orgName } = props
-  const [prefs, setPrefs] = useSidebarPrefs()
+  const [prefs, setPrefs] = useSidebarPrefs(props.sidebarPrefsRaw ?? null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const drawerLabelId = useId()

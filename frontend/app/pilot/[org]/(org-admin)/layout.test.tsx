@@ -4,6 +4,7 @@ import { getAdminToken } from '../../../lib/adminSession'
 import { AdminAuthError, fetchMe } from '../../../lib/saasAdminApi'
 import { getOrganizationAdmin } from '../../../components/saas/orgAdminData'
 
+vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }))
 vi.mock('../../../lib/adminSession', () => ({ getAdminToken: vi.fn() }))
 vi.mock('../../../lib/saasAdminApi', async () => ({ ...await vi.importActual('../../../lib/saasAdminApi'), fetchMe: vi.fn() }))
 vi.mock('../../../components/saas/orgAdminData', () => ({ getOrganizationAdmin: vi.fn() }))

@@ -7,6 +7,7 @@ import { getAdminToken } from './adminSession'
 import { AdminAuthError, fetchMe, fetchOrganizationAdmin, fetchOrganizationsAdmin, type OrganizationAdmin } from './saasAdminApi'
 import { reviewOrg } from '../platform/reviewFixtures'
 
+vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }))
 vi.mock('./adminSession', () => ({ getAdminToken: vi.fn() }))
 vi.mock('./saasAdminApi', async () => ({ ...await vi.importActual<typeof import('./saasAdminApi')>('./saasAdminApi'), fetchMe: vi.fn(), fetchOrganizationAdmin: vi.fn(), fetchOrganizationsAdmin: vi.fn() }))
 vi.mock('../components/saas/fonts', () => ({ archivo: { variable: 'test-font' } }))

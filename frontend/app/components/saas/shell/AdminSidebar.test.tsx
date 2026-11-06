@@ -135,3 +135,29 @@ it('opens the mobile drawer as a modal dialog with focus trap, Escape, overlay c
   await act(() => [...container.querySelectorAll<HTMLAnchorElement>('[role="dialog"] a')].find(a => label(a) === 'Zahlungen')!.click())
   expect(container.querySelector('[role="dialog"]')).toBeNull()
 })
+
+it('renders the remembered rail from the cookie on the server and hydrates without a flash or mismatch', async () => {
+  const { renderToString } = await import('react-dom/server')
+  const { hydrateRoot } = await import('react-dom/client')
+  const raw = JSON.stringify({ collapsed: true, closedGroups: [] })
+  const element = <AdminSidebar orgSlug="demoverein" orgName="Demoverein" orgLogoUrl={null} sidebarPrefsRaw={raw} />
+  await act(() => root.unmount())
+  container.innerHTML = renderToString(element)
+  expect(sidebar().getAttribute('data-collapsed')).toBe('true')
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+  let hydrated!: Root
+  await act(() => { hydrated = hydrateRoot(container, element, { onRecoverableError: e => { throw e } }) })
+  expect(sidebar().getAttribute('data-collapsed')).toBe('true')
+  expect(errors).not.toHaveBeenCalled()
+  await act(() => hydrated.unmount())
+  root = createRoot(container)
+})
+
+it('mirrors a toggle into the cookie so the next server render matches', async () => {
+  hooks.pathname = '/pilot/demoverein/dashboard'
+  await render()
+  await act(() => sidebar().querySelector<HTMLButtonElement>('button[aria-label="Seitenleiste einklappen"]')!.click())
+  const cookie = document.cookie.split('; ').find(c => c.startsWith('cp-admin-sidebar='))!
+  expect(parseSidebarPrefs(decodeURIComponent(cookie.split('=')[1])).collapsed).toBe(true)
+  document.cookie = 'cp-admin-sidebar=; path=/; max-age=0'
+})

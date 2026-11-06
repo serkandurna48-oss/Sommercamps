@@ -56,6 +56,98 @@ Production erst nach erfolgreichem Staging-Test und mit Live-Schlüsseln, eigene
 - Vereine bleiben getrennt: Stripe-Event-Konto und gespeicherte Session müssen zum selben Mandanten gehören.
 - Keine Produktionstests mit realen Kinderanmeldungen.
 
+## Online-Zahlung mit Stripe Managed Risk (07.11.2026)
+
+Ersetzt B2 (Destination Charges) für alle neuen Vereinskonten. Grund: Stripe lehnt im Sandbox-Konto
+v1-Konten mit der Plattform als Verlustträger ab („Use Accounts v2 and set `losses_collector` to
+`stripe`“). Managed Risk verlangt Direct Charges.
+
+- **Konto:** `POST /v2/core/accounts` (stripe-python `StripeClient.v2.core.accounts.create`):
+  `dashboard="full"` (kein Preview-API nötig), `identity.country="de"`, `identity.entity_type` =
+  `non_profit` (e. V.) bzw. `company`, `defaults.currency="eur"`, `defaults.locales=["de-DE"]`,
+  `defaults.responsibilities.fees_collector="stripe"`, `losses_collector="stripe"`,
+  `configuration.merchant.capabilities.card_payments.requested=true`, `contact_email` =
+  Rechnungs-E-Mail, sonst Kontakt-E-Mail des Vereins, `display_name` = Vereinsname,
+  `metadata={campspilot:"1", organization_id}`, Idempotenz-Key `campspilot-acct-v2-<org_id>`.
+  Gespeichert in `organizations.stripe_express_account_id` mit `stripe_express_account_kind='direct_fee'`.
+- **Onboarding:** `POST /v2/core/account_links` mit `use_case.type="account_onboarding"`,
+  `refresh_url`/`return_url` wie bisher (`/pilot/<slug>/konfiguration?stripe=refresh|return#zahlungen`).
+  Der Link zeigt auf `https://accounts.stripe.com/…` (v1-Links: `connect.stripe.com`, beides erlaubt).
+  Bestehende B2-Konten bekommen weiter den v1-Account-Link.
+- **Status:** „Status prüfen“ liest `GET /v1/accounts/<id>` (laut Stripe für v2-Konten erlaubt, Antwort im
+  v1-Format: `charges_enabled`, `payouts_enabled`, `details_submitted`, `requirements`). Dasselbe Format
+  kommt per `account.updated` am Connect-Webhook (Stripe schickt für v2-Konten auch v1-Snapshot-Events,
+  Bereich „verbundene Konten“). Zustände wie bisher: nicht eingerichtet / Angaben fehlen / wartet auf
+  Freigabe / aktiv. Ohne Owner-Freigabe (`online_payment_enabled`) keine Online-Zahlung.
+- **Checkout (Camps und Trainings):** `checkout.Session.create(..., stripe_account=<Vereinskonto>)`,
+  `payment_intent_data={metadata, application_fee_amount}` (Gebühr aus `effective_fee` zum Buchungstag,
+  bei 0 weggelassen), kein `on_behalf_of`, kein `transfer_data`. Session-Metadaten zusätzlich
+  `charge_type="direct_fee"`. Idempotenz-Key `campspilot-dfee-<token>-<prev|first>-<betrag>-<gebühr>-<acct>`.
+  Buchung: `stripe_charge_type='direct_fee'`, Gebühren-Quote in `stripe_checkout_fee`.
+- **Geldfluss:** Der Verein ist Verkäufer, das Geld landet auf seinem Stripe-Konto abzüglich
+  Stripe-Gebühren (zahlt der Verein, `fees_collector=stripe`) und Plattformgebühr (Application Fee an die
+  Plattform). Stripe trägt Ausfälle (Managed Risk). Rechnung an Eltern weiter im Namen des Vereins.
+- **Bezahlt:** Connect-Webhook `checkout.session.completed` / `async_payment_succeeded`, idempotent; liest
+  den PaymentIntent auf dem Vereinskonto (`expand latest_charge.application_fee`), schreibt Snapshot
+  (`fee_collection='application_fee'`, exakt die Quote aus dem Checkout) und stößt die Rechnung an.
+- **Erstattung:** `POST /admin/organizations/{slug}/registrations/{token}/refund` →
+  `Refund.create(payment_intent, amount, refund_application_fee=true, stripe_account=<Vereinskonto>,
+  idempotency_key)`, kein `reverse_transfer`. Gebucht wird per Connect-Webhook `charge.refunded` bzw.
+  `charge.refund.updated`: erstatteter Betrag und zurückgegebene Application Fee werden bei Stripe gelesen
+  (Fee-Objekt liegt auf dem Plattformkonto; falls nicht expandiert, `ApplicationFee.retrieve` ohne
+  Stripe-Account-Header). Fehlt die Application Fee noch (wird bei Direct Charges asynchron angelegt),
+  antwortet der Webhook 503 und Stripe wiederholt.
+- **Bestehende Wege:** Altkonten (Standard, Direct Charge ohne Gebühr) unverändert. B2-Konten
+  (`stripe_express_account_kind='destination'` bzw. NULL vor der Migration) laufen weiter über den
+  Plattform-Webhook und brauchen `STRIPE_PLATFORM_WEBHOOK_SECRET`; es werden keine neuen angelegt.
+- **Migration:** `supabase/migrations/20261107140000_stripe_managed_risk.sql` (Kontoart-Spalte, Backfill
+  `destination` für vorhandene Express-Konten, `stripe_charge_type` erlaubt `direct_fee`, kein
+  Spaltenrecht für anon/authenticated). Vorher Backup. Nicht in `supabase/golive/PROD-MIGRATION-2026-11.sql`
+  enthalten, separat anwenden.
+
+### Webhooks
+
+| Endpunkt | Stripe-Einstellung | Events | Secret |
+|---|---|---|---|
+| `/api/v1/payments/stripe/webhook` | Ereignisse auf **verbundenen Konten** | `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded`, `charge.refund.updated`, `account.updated` | `STRIPE_CONNECT_WEBHOOK_SECRET` (Pflicht) |
+| `/api/v1/payments/stripe/platform-webhook` | Ereignisse auf **Ihrem Konto** | wie B2 | `STRIPE_PLATFORM_WEBHOOK_SECRET`, nur für B2-Konten |
+
+v2-Thin-Events (`v2.core.account[...]`) werden nicht gebraucht: Stripe schickt für v2-Konten zusätzlich
+v1-`account.updated` im Bereich „verbundene Konten“. Thin-Events liegen laut Stripe im Bereich „Ihr Konto“
+und bräuchten einen eigenen Endpunkt mit anderem Format.
+
+### Stripe einrichten (Test und Live jeweils getrennt)
+
+1. Connect aktiv, **Plattformprofil** ausgefüllt (Land DE, Geschäftsmodell SaaS/Plattform, Vereine als
+   Verkäufer). Ohne Profil lehnt Stripe die Kontoerstellung ab (`connect_profile_not_submitted`); die
+   Meldung erscheint dem Verein als „Stripe hat die Einrichtung abgelehnt: …“.
+2. Accounts v2 muss für das Konto freigeschaltet sein (sonst `accounts_v2_access_blocked`).
+3. Managed Risk: Stripe setzt es automatisch für passende Konten (Verlustträger Stripe, `card_payments`,
+   Direct Charges, Stripe-gehostetes Onboarding, volles Dashboard). Radar für verbundene Konten aktivieren.
+   Keine Verlusthaftungs-Bestätigung der Plattform nötig (die ist nur für `losses_collector=application`).
+4. Branding (Plattform) setzen; Checkout zeigt bei Direct Charges das Branding des Vereinskontos.
+5. Webhooks laut Tabelle anlegen, `whsec_…` in Render eintragen.
+6. Live zusätzlich: Live-Schlüssel `sk_live_…` (bei eingeschränktem Schlüssel Recht
+   `v2_account_storer_write` für die Kontoerstellung), Live-Connect-Webhook, `APP_ENV=production`.
+
+### Staging testen
+
+1. Backup, dann Migration `20261107140000_stripe_managed_risk.sql`; Backend deployen.
+2. Render Staging: `STRIPE_CHECKOUT_ENABLED=true`, `STRIPE_SECRET_KEY=sk_test_…`,
+   `STRIPE_CONNECT_WEBHOOK_SECRET`, `FRONTEND_BASE_URL` = Staging-Frontend.
+   `STRIPE_PLATFORM_WEBHOOK_SECRET` nur, wenn ein B2-Konto weiter getestet werden soll.
+3. Stripe (Testmodus): Connect-Webhook auf die fünf Events oben prüfen.
+4. Testverein ohne Stripe-Konto: Einstellungen → Zahlungen → „Online-Zahlung einrichten“ → Weiterleitung
+   auf `accounts.stripe.com` → Testdaten, Test-IBAN `DE89370400440532013000` → zurück → „Status prüfen“
+   → „Wartet auf Freigabe“. Plattform-Konsole → Verein → „Freigeben“ → „Aktiv“, Konsole zeigt
+   „Direct Charge mit Plattformgebühr (Managed Risk)“.
+5. Elternbuchung (Camp und Training) → Testkarte `4242 4242 4242 4242` → Buchung „Bezahlt“, Rechnung
+   erzeugt (wenn Rechnungsdaten gepflegt). Stripe-Dashboard → verbundenes Konto → Zahlung: Stripe-Gebühr
+   beim Verein, Application Fee = Plattformgebühr; Plattform → „Eingezogene Gebühren“.
+6. Teil-Erstattung per API (`request_id`, `amount_cents`) → „Teilweise erstattet“, `fee_refunded_cents`
+   anteilig; Rest → „Erstattet“, Storno-Rechnung.
+7. Gegenprobe: Verein mit Altkonto zahlt weiter ohne Gebühr; Sperren in der Konsole → keine Online-Zahlung.
+
 ## Abrechnung B1/B2: Express + Destination Charges (06.11.2026)
 
 **Nur Testmodus**, bis Weys Tech UG gegründet ist.

@@ -3,11 +3,13 @@ import Link from 'next/link'
 import { ButtonLink } from '../../../components/saas/ui/Button'
 import { notFound, redirect } from 'next/navigation'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
-import { fetchCampsAdmin, fetchOrganizationAdmin, fetchOrganizationMembersAdmin } from '../../../lib/saasAdminApi'
+import { fetchCampsAdmin, fetchFeeRulesAdmin, fetchOrganizationAdmin, fetchOrganizationMembersAdmin, fetchStripePaymentStatusAdmin } from '../../../lib/saasAdminApi'
 import PublishToggle from '../../../components/saas/config/PublishToggle'
 import MembersSection from './MembersSection'
 import BillingNotesForm from './BillingNotesForm'
 import StripeConnectForm from './StripeConnectForm'
+import FeeRuleForm from './FeeRuleForm'
+import { formatFeeRule, formatStripeStatus } from './feeFormat'
 import ModulesForm from './ModulesForm'
 import { orgModules } from '../../../lib/orgModules'
 import ReviewBox from './ReviewBox'
@@ -60,10 +62,14 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
   const org = await fetchOrganizationAdmin(orgSlug, token)
   if (!org) notFound()
 
-  const [camps, members] = await Promise.all([
+  const [camps, members, feeRules, stripeStatus] = await Promise.all([
     fetchCampsAdmin(orgSlug, token),
     fetchOrganizationMembersAdmin(orgSlug, token),
+    // Billing data must not break the rest of the console page.
+    fetchFeeRulesAdmin(orgSlug, token).catch(() => null),
+    fetchStripePaymentStatusAdmin(orgSlug, token).catch(() => null),
   ])
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(new Date())
   const steps = computeSetupSteps(org, camps.length)
   const progress = setupProgressCount(steps)
 
@@ -198,13 +204,54 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
         </div>
       </section>
 
+      <section className="mt-8" aria-labelledby="fee-heading">
+        <h2 id="fee-heading" className="cp-heading mb-3" style={{ color: 'var(--cp-ink)' }}>
+          Plattformgebühr
+        </h2>
+        <div className="rounded-[var(--cp-r-card)] border p-4" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
+          <p className="cp-body" style={{ color: 'var(--cp-ink)' }} data-testid="fee-current">
+            Aktuell: {feeRules ? formatFeeRule(feeRules.current) : 'nicht abrufbar'}
+            {feeRules && !feeRules.current.id ? ' (Standard, keine Regel hinterlegt)' : ''}
+          </p>
+          <p className="cp-body mt-1" style={{ color: 'var(--cp-ink-2)' }} data-testid="stripe-status">
+            Stripe: {formatStripeStatus(stripeStatus)}
+          </p>
+          {feeRules && feeRules.history.length > 0 && (
+            <div className="mt-4 overflow-x-auto">
+              <table className="cp-body w-full text-left">
+                <caption className="sr-only">Gebührenverlauf</caption>
+                <thead>
+                  <tr style={{ color: 'var(--cp-muted)' }}>
+                    <th className="py-1 pr-3 font-normal">Gültig ab</th>
+                    <th className="py-1 pr-3 font-normal">Gebühr</th>
+                    <th className="py-1 pr-3 font-normal">Angelegt</th>
+                    <th className="py-1 font-normal">Notiz</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {feeRules.history.map(rule => (
+                    <tr key={rule.id ?? rule.valid_from ?? ''} style={{ borderTop: '1px solid var(--cp-line)' }}>
+                      <td className="py-1 pr-3">{rule.valid_from}</td>
+                      <td className="py-1 pr-3">{formatFeeRule(rule)}</td>
+                      <td className="py-1 pr-3">{rule.created_by_email ?? 'Migration'}{rule.created_at ? ` · ${rule.created_at.slice(0, 10)}` : ''}</td>
+                      <td className="py-1">{rule.note ?? ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <FeeRuleForm orgSlug={org.slug} today={today} />
+        </div>
+      </section>
+
       <section className="mt-8">
         <h2 className="cp-heading mb-3" style={{ color: 'var(--cp-ink)' }}>
           Online-Zahlung (Stripe)
         </h2>
         <div className="rounded-[var(--cp-r-card)] border p-4" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
           <p className="cp-body" style={{ color: 'var(--cp-ink)' }}>
-            Eltern sehen nach der Anmeldung zusätzlich „Online bezahlen“, sobald das Konto verbunden ist und Stripe Zahlungen erlaubt. Die Überweisung bleibt immer möglich.
+            Neue Vereine richten die Online-Zahlung selbst ein (Einstellungen → Zahlungen, Stripe Express). Hier nur für Altkonten: ein bestehendes Standard-Konto verbinden (Direct Charges, ohne Plattformgebühr).
           </p>
           <StripeConnectForm orgSlug={org.slug} />
         </div>

@@ -163,7 +163,7 @@ function retryDelay(value: string | null): number | null {
 }
 
 /** Only reads may retry. All attempts share a single retry budget. */
-async function adminRequest(path: string, token: string, method: 'GET' | 'POST' | 'PATCH' | 'DELETE', body?: unknown): Promise<Response> {
+async function adminRequest(path: string, token: string, method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE', body?: unknown): Promise<Response> {
   const canRetry = method === 'GET'
   for (let attempt = 0; ; attempt++) {
     if (isOffline()) throw new AdminConnectionError(de.states.offline)
@@ -1181,4 +1181,144 @@ export async function createPlayerMeasurementAdmin(orgSlug: string, playerId: st
 
 export async function deletePlayerMeasurementAdmin(orgSlug: string, playerId: string, measurementId: string, token: string): Promise<void> {
   return playerDelete(`${playerPath(orgSlug, playerId)}/measurements/${encodeURIComponent(measurementId)}`, token, 'Messwert konnte nicht gelöscht werden.')
+}
+
+// --- Abrechnung: Rechnungsdaten, Gebühren, Stripe Express (B1/B2) ---------
+
+export type TaxStatus = 'ust_pflichtig' | 'kleinunternehmer' | 'steuerbefreit'
+
+export interface BillingProfile {
+  legal_name: string
+  street: string
+  postal_code: string
+  city: string
+  tax_number: string | null
+  vat_id: string | null
+  tax_status: TaxStatus
+  default_vat_rate: 7 | 19 | null
+  tax_exemption_text: string | null
+  invoice_number_prefix: string
+  invoice_email: string
+  updated_at: string
+}
+
+export type BillingProfileInput = Omit<BillingProfile, 'updated_at'>
+
+/** 422 from the backend, reduced to the field name (never the value). */
+export class BillingValidationError extends AdminActionError {
+  constructor(message: string, public readonly field?: string) {
+    super(message)
+    this.name = 'BillingValidationError'
+  }
+}
+
+/** FastAPI 422: field from `loc`, or from the "field: reason" prefix of a model rule. */
+async function invalidField(res: Response): Promise<string | undefined> {
+  try {
+    const body = await res.json() as { detail?: Array<{ loc?: unknown[]; msg?: unknown }> }
+    const first = Array.isArray(body?.detail) ? body.detail[0] : undefined
+    const loc = Array.isArray(first?.loc) ? first.loc : []
+    const last = loc[loc.length - 1]
+    if (typeof last === 'string' && last !== 'body') return last
+    const match = typeof first?.msg === 'string' ? /(?:Value error, )?([a-z_]+):/.exec(first.msg) : null
+    return match?.[1]
+  } catch {
+    return undefined
+  }
+}
+
+const billingPath = (orgSlug: string) => `/admin/organizations/${encodeURIComponent(orgSlug)}/billing-profile`
+const stripePath = (orgSlug: string) => `/admin/organizations/${encodeURIComponent(orgSlug)}/payments/stripe`
+const feeRulesPath = (orgSlug: string) => `/admin/platform/organizations/${encodeURIComponent(orgSlug)}/fee-rules`
+
+export async function fetchBillingProfileAdmin(orgSlug: string, token: string): Promise<BillingProfile | null> {
+  const res = await adminFetch(billingPath(orgSlug), token)
+  if (!res.ok) throw new AdminActionError('Rechnungsdaten konnten nicht geladen werden.')
+  return res.json() as Promise<BillingProfile | null>
+}
+
+export async function saveBillingProfileAdmin(orgSlug: string, token: string, data: BillingProfileInput): Promise<BillingProfile> {
+  const res = await adminRequest(billingPath(orgSlug), token, 'PUT', data)
+  if (res.status === 422) throw new BillingValidationError('Bitte prüfe die markierten Angaben.', await invalidField(res))
+  if (!res.ok) throw new AdminActionError('Rechnungsdaten konnten nicht gespeichert werden.')
+  return res.json() as Promise<BillingProfile>
+}
+
+export interface StripePaymentStatus {
+  state: 'not_set_up' | 'incomplete' | 'active'
+  charges_enabled: boolean
+  payouts_enabled: boolean
+  details_submitted: boolean
+  requirements_due: number
+  synced_at: string | null
+  legacy_account_linked: boolean
+  legacy_active: boolean
+  online_payment_mode: 'destination' | 'direct' | null
+  service_ready: boolean
+}
+
+export async function fetchStripePaymentStatusAdmin(orgSlug: string, token: string): Promise<StripePaymentStatus> {
+  const res = await adminFetch(stripePath(orgSlug), token)
+  if (!res.ok) throw new AdminActionError('Zahlungsstatus konnte nicht geladen werden.')
+  return res.json() as Promise<StripePaymentStatus>
+}
+
+export async function syncStripePaymentStatusAdmin(orgSlug: string, token: string): Promise<StripePaymentStatus> {
+  const res = await adminMutate(`${stripePath(orgSlug)}/sync`, token, 'POST')
+  if (!res.ok) throw new AdminActionError('Status konnte gerade nicht bei Stripe abgefragt werden.')
+  return res.json() as Promise<StripePaymentStatus>
+}
+
+/** Returns the single-use Stripe onboarding URL. */
+export async function startStripeOnboardingAdmin(
+  orgSlug: string, token: string, businessType: 'company' | 'non_profit',
+): Promise<string> {
+  const res = await adminMutate(`${stripePath(orgSlug)}/onboarding`, token, 'POST', { business_type: businessType })
+  if (!res.ok) throw new AdminActionError('Stripe-Einrichtung konnte nicht gestartet werden. Bitte versuch es gleich noch einmal.')
+  const body = await res.json() as { url?: unknown }
+  if (typeof body.url !== 'string' || !body.url.startsWith('https://connect.stripe.com/')) {
+    throw new AdminActionError('Stripe hat keinen gültigen Link geliefert.')
+  }
+  return body.url
+}
+
+export type FeePlan = 'starter' | 'verein' | 'individuell'
+
+export interface FeeRule {
+  id: string | null
+  plan: FeePlan
+  percent: string
+  fixed_cents: number | null
+  min_fee_cents: number | null
+  valid_from: string | null
+  note: string | null
+  created_at: string | null
+  created_by_email: string | null
+}
+
+export interface FeeRules {
+  current: FeeRule
+  history: FeeRule[]
+}
+
+export interface FeeRuleInput {
+  plan: FeePlan
+  percent: string | null
+  fixed_cents: number | null
+  min_fee_cents: number | null
+  valid_from: string
+  note: string | null
+}
+
+export async function fetchFeeRulesAdmin(orgSlug: string, token: string): Promise<FeeRules> {
+  const res = await adminFetch(feeRulesPath(orgSlug), token)
+  if (!res.ok) throw new AdminActionError('Gebühren konnten nicht geladen werden.')
+  return res.json() as Promise<FeeRules>
+}
+
+export async function createFeeRuleAdmin(orgSlug: string, token: string, data: FeeRuleInput): Promise<FeeRules> {
+  const res = await adminMutate(feeRulesPath(orgSlug), token, 'POST', data)
+  if (res.status === 422) throw new BillingValidationError('Bitte die Gebührenangaben prüfen.', await invalidField(res))
+  if (!res.ok) throw new AdminActionError('Gebühr konnte nicht gespeichert werden.')
+  return res.json() as Promise<FeeRules>
 }

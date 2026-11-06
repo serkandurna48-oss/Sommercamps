@@ -46,8 +46,8 @@ export default function ParentEmailCopy({ registrations }: { registrations: Regi
       <p className="cp-hint">Alle Anmeldungen dieses Camps ohne Stornierungen, unabhängig von Suche und Auswahl.</p>
       <div aria-live="polite">
         {emails.length === 0 && <p role="status">Keine E-Mail-Adressen zum Kopieren vorhanden.</p>}
-        {currentResult?.copied && <p role="status">{emails.length} Adressen kopiert – fügen Sie sie in Ihrem E-Mail-Programm in das BCC-Feld ein.</p>}
-        {currentResult && !currentResult.copied && <p role="status" id={hintId}>Fügen Sie die Adressen in Ihrem E-Mail-Programm in das BCC-Feld ein.</p>}
+        {currentResult?.copied && <p role="status">{emails.length} Adressen kopiert – füg sie in deinem E-Mail-Programm in das BCC-Feld ein.</p>}
+        {currentResult && !currentResult.copied && <p role="status" id={hintId}>Füg die Adressen in deinem E-Mail-Programm in das BCC-Feld ein.</p>}
       </div>
       {currentResult && !currentResult.copied && <div>
         <label htmlFor={fallbackId} className="cp-label mb-1 block">Bitte manuell kopieren</label>

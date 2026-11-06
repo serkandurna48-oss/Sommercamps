@@ -21,8 +21,8 @@ export default function CampConfigScreen({ orgSlug, campSlug, org, camp, created
         <p className="cp-hint mt-1 mb-6">{de.configPage.campHint}</p>
 
         {duplicate === '1' && <div className="mb-6"><SuccessNote>{DUPLICATE_SUCCESS}</SuccessNote></div>}
-        {duplicate === 'incomplete' && <p role="alert" className="cp-body mb-6" style={{ color: 'var(--cp-error)' }}>Der Entwurf wurde angelegt, aber die weiteren Angaben konnten nicht übernommen werden. Bitte ergänzen Sie Ort, Betreuung, Verpflegung, Leistungen, Währung und Anmeldezeitraum vor der Veröffentlichung.</p>}
-        {created && !duplicate && <div className="mb-6"><SuccessNote>Camp angelegt – ergänzen Sie jetzt Ort und Ablauf</SuccessNote></div>}
+        {duplicate === 'incomplete' && <p role="alert" className="cp-body mb-6" style={{ color: 'var(--cp-error)' }}>Der Entwurf wurde angelegt, aber die weiteren Angaben konnten nicht übernommen werden. Bitte ergänze Ort, Betreuung, Verpflegung, Leistungen, Währung und Anmeldezeitraum vor der Veröffentlichung.</p>}
+        {created && !duplicate && <div className="mb-6"><SuccessNote>Camp angelegt – ergänze jetzt Ort und Ablauf</SuccessNote></div>}
         <CampConfigForm orgSlug={orgSlug} org={{ site_published: org.site_published, contact_email: org.contact_email, iban: org.iban, terms_text: org.terms_text }} camp={camp} />
         {org.review_status && org.review_status !== 'approved' && (
           <div className="mt-6 flex flex-col items-start gap-3">

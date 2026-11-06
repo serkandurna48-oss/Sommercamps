@@ -60,8 +60,8 @@ it('offers no immediate publication and explains the draft', () => {
   expect(container.textContent).toContain('als Entwurf angelegt')
 })
 
-it('CampCreateForm enthält kein Du in Texten (B1 – Siezen)', () => {
-  const DU_WORDS = /\b(du|dein|deine|deinem|deinen|ergänze|prüfe)\b/i
+it('CampCreateForm enthält kein Sie in Texten (Admin-Texte duzen)', () => {
+  const DU_WORDS = /\b(Sie|Ihr|Ihre|Ihrem|Ihren|Ihres|Ihnen)\b/
   expect(container.textContent).not.toMatch(DU_WORDS)
   // Hints are in aria-describedby elements; check their text too
   const hints = Array.from(container.querySelectorAll('[id$="-hint"]'))
@@ -101,7 +101,7 @@ it('zeigt die Kopie mit leeren Pflichtterminen und übergibt bearbeitete Angaben
   expect(input('currency').value).toBe('CHF')
   expect(container.querySelector('label[for="price_euros"]')!.textContent).toBe('Preis')
   expect(container.querySelector('#price_euros-hint')!.textContent).toContain('angegebenen Währung')
-  expect(container.textContent).not.toMatch(/\b(du|dein\w*|dir|dich|prüfe|ergänze|wähle)\b/i)
+  expect(container.textContent).not.toMatch(/\b(Sie|Ihr|Ihre|Ihren|Ihrem|Ihres|Ihnen)\b/)
   await enter('title', 'Neuer Termin')
   expect(input('slug').value).toBe('neuer-termin')
   await enter('start_date', '2027-08-02')

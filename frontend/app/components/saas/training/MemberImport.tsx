@@ -121,7 +121,7 @@ export default function MemberImport({ orgSlug }: { orgSlug: string }) {
       <div>
         <h3 id={`${inputId}-title`} className="cp-subheading" style={{ color: 'var(--cp-ink)' }}>Mitglieder per CSV importieren</h3>
         <p className="cp-body mt-1" style={{ color: 'var(--cp-muted)' }}>
-          Export aus Ihrer Vereinssoftware wählen, dann die Spalten zuordnen: Vorname, Nachname, Geburtsdatum (TT.MM.JJJJ oder JJJJ-MM-TT), optional Mitgliedsnummer und bis zu 10 Zusatzfelder. Trenner Semikolon oder Komma. Bis zu 2.000 Zeilen.
+          Export aus deiner Vereinssoftware wählen, dann die Spalten zuordnen: Vorname, Nachname, Geburtsdatum (TT.MM.JJJJ oder JJJJ-MM-TT), optional Mitgliedsnummer und bis zu 10 Zusatzfelder. Trenner Semikolon oder Komma. Bis zu 2.000 Zeilen.
           Ein erneuter Import ist unbedenklich: vorhandene Mitglieder werden aktualisiert und wieder auf aktiv gesetzt. Bei einem Fehler wird nichts gespeichert.
         </p>
       </div>

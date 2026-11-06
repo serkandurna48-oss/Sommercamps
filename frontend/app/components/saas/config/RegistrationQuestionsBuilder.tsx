@@ -57,7 +57,7 @@ export default function RegistrationQuestionsBuilder({ value, theme, orgSlug, di
           {questions.length === 0 && <p className="cp-body" style={{ color: 'var(--cp-muted)' }}>Noch keine Zusatzfelder eingerichtet.</p>}
           {questions.length === 0 && template && (
             <div className="flex flex-wrap items-end gap-3">
-              <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>Vorlage: {template.label}. Sie können danach alle Felder anpassen.</p>
+              <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>Vorlage: {template.label}. Du kannst danach alle Felder anpassen.</p>
               <Button type="button" onClick={() => { setQuestions(registrationQuestionTemplate(orgSlug!) ?? []); setNotice('Vorlage übernommen. Bitte vor dem Speichern prüfen.') }}>Vorlage übernehmen</Button>
             </div>
           )}
@@ -83,7 +83,7 @@ export default function RegistrationQuestionsBuilder({ value, theme, orgSlug, di
                     <Field label="Auswahlmöglichkeiten" htmlFor={`${prefix}-options`} hint="Eine Möglichkeit pro Zeile, höchstens 20 mit je maximal 80 Zeichen.">
                       <textarea id={`${prefix}-options`} rows={3} required value={(question.options ?? []).join('\n')} onChange={event => update(index, { options: event.target.value.split('\n') })} className={INPUT_CLASS} style={INPUT_STYLE} />
                     </Field>
-                    <Field label="Freitext-Alternative (optional)" htmlFor={`${prefix}-other`} hint="Mit einer Beschriftung erlauben Sie zusätzlich eine eigene Antwort. Leer lassen, um nur die Auswahl anzubieten.">
+                    <Field label="Freitext-Alternative (optional)" htmlFor={`${prefix}-other`} hint="Mit einer Beschriftung erlaubst du zusätzlich eine eigene Antwort. Leer lassen, um nur die Auswahl anzubieten.">
                       <input id={`${prefix}-other`} value={question.other_label ?? ''} onChange={event => update(index, { other_label: event.target.value.trim() ? event.target.value : null })} className={INPUT_CLASS} style={INPUT_STYLE} />
                     </Field>
                   </>

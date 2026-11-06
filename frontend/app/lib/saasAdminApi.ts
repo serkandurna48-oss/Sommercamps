@@ -867,7 +867,7 @@ async function errorCode(res: Response): Promise<string | undefined> {
 
 const SESSION_BLOCKED: Record<string, string> = {
   session_has_active_registrations: 'Für diesen Termin gibt es noch aktive Buchungen. Bitte zuerst die Buchungen stornieren.',
-  session_has_registration_history: 'Für diesen Termin gab es schon Buchungen. Sie können ihn nur noch absagen, nicht löschen.',
+  session_has_registration_history: 'Für diesen Termin gab es schon Buchungen. Du kannst ihn nur noch absagen, nicht löschen.',
 }
 
 export async function fetchTrainingOffersAdmin(orgSlug: string, token: string): Promise<TrainingOffer[]> {

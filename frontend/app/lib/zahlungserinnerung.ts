@@ -15,7 +15,7 @@ export const reminderLabels = {
   copyAll: 'Alle offenen als Liste kopieren',
   missingIban: 'IBAN in den Vereinseinstellungen fehlt',
   copied: 'Text kopiert',
-  fallback: 'Kopieren nicht möglich. Bitte wählen Sie den Text aus und kopieren Sie ihn manuell.',
+  fallback: 'Kopieren nicht möglich. Bitte wähle den Text aus und kopier ihn manuell.',
   fallbackLabel: 'Text zum manuellen Kopieren',
 } as const
 

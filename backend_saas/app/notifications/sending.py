@@ -334,31 +334,31 @@ def send_review_decision_email(
         # FRONTEND_BASE_URL missing in a deployed env: never mail a localhost link.
         logger.error("send_review_decision_email skipped (error_type=%s)", type(exc).__name__)
         return
-    login_html = '<p>Ihr dauerhafter Login: <a href="' + login_link + '">' + login_link + '</a></p>'
+    login_html = '<p>Dein dauerhafter Login: <a href="' + login_link + '">' + login_link + '</a></p>'
     if decision == "approve":
-        subject = "Ihr Verein wurde freigeschaltet - CampsPilot"
+        subject = "Dein Verein wurde freigeschaltet - CampsPilot"
         body = (
-            "<p>Sehr geehrte Damen und Herren,</p>"
-            "<p>Ihr Antrag auf Freischaltung des Vereins <strong>"
+            "<p>Hallo,</p>"
+            "<p>Dein Antrag auf Freischaltung des Vereins <strong>"
             + escape(org_name)
-            + "</strong> wurde genehmigt. Ihr Verein ist freigeschaltet.</p>"
-            "<p>Ihr nächster Schritt: Camp prüfen und veröffentlichen, "
+            + "</strong> wurde genehmigt. Dein Verein ist freigeschaltet.</p>"
+            "<p>Dein nächster Schritt: Camp prüfen und veröffentlichen, "
             "dann den Anmeldelink an Eltern teilen.</p>"
             + login_html
-            + "<p>Mit freundlichen Grüßen<br>Ihr CampsPilot-Team</p>"
+            + "<p>Viele Grüße<br>Dein CampsPilot-Team</p>"
         )
     else:
         note_html = "<p><strong>Begründung:</strong> " + escape(note or "") + "</p>" if note else ""
-        subject = "Ihr Antrag wurde abgelehnt - CampsPilot"
+        subject = "Dein Antrag wurde abgelehnt - CampsPilot"
         body = (
-            "<p>Sehr geehrte Damen und Herren,</p>"
-            "<p>Ihr Antrag auf Freischaltung des Vereins <strong>"
+            "<p>Hallo,</p>"
+            "<p>Dein Antrag auf Freischaltung des Vereins <strong>"
             + escape(org_name)
             + "</strong> wurde leider abgelehnt.</p>"
             + note_html
-            + "<p>Bitte korrigieren Sie die genannten Punkte und reichen Sie den Antrag erneut zur Prüfung ein.</p>"
+            + "<p>Bitte korrigier die genannten Punkte und reich den Antrag erneut zur Prüfung ein.</p>"
             + login_html
-            + "<p>Mit freundlichen Grüßen<br>Ihr CampsPilot-Team</p>"
+            + "<p>Viele Grüße<br>Dein CampsPilot-Team</p>"
         )
 
     from .mail import MailMessage
@@ -383,8 +383,8 @@ def send_signup_confirmation_email(
 ) -> bool:
     """Sends the signup confirmation email after self-registration.
 
-    Subject: "Bitte bestätigen Sie Ihre Registrierung"
-    Language: German, formal (gesiezt). Includes confirmation, next steps,
+    Subject: "Bitte bestätige deine Registrierung"
+    Language: German, informal (geduzt). Includes confirmation, next steps,
     and a permanent login link.
 
     Returns True if the provider accepted the message without raising,
@@ -400,20 +400,20 @@ def send_signup_confirmation_email(
     except ValueError as exc:
         logger.error("send_signup_confirmation_email skipped (error_type=%s)", type(exc).__name__)
         return False
-    subject = "Bitte bestätigen Sie Ihre Registrierung"
+    subject = "Bitte bestätige deine Registrierung"
     body = (
-        "<p>Sehr geehrte Damen und Herren,</p>"
-        "<p>Sie haben Ihren Verein <strong>"
+        "<p>Hallo,</p>"
+        "<p>Du hast deinen Verein <strong>"
         + e_org_name
         + "</strong> bei CampsPilot registriert. So geht es weiter:</p>"
         "<ol>"
         '<li><a href="' + e_link + '">E-Mail bestätigen</a></li>'
         "<li>Verein einrichten und erstes Camp anlegen.</li>"
-        "<li>Zur Prüfung einreichen – wir prüfen Ihre Angaben und schalten Ihren Verein frei.</li>"
+        "<li>Zur Prüfung einreichen – wir prüfen deine Angaben und schalten deinen Verein frei.</li>"
         "</ol>"
         "<p>Dieser Link ist 24 Stunden gültig.</p>"
-        '<p>Ihr dauerhafter Login: <a href="' + login_link + '">' + login_link + '</a></p>'
-        "<p>Mit freundlichen Grüßen<br>Ihr CampsPilot-Team</p>"
+        '<p>Dein dauerhafter Login: <a href="' + login_link + '">' + login_link + '</a></p>'
+        "<p>Viele Grüße<br>Dein CampsPilot-Team</p>"
     )
     msg = MailMessage(to_email=to_email, subject=subject, html_content=body)
     try:
@@ -448,21 +448,21 @@ def send_member_invite_email(
     if new_account:
         subject = f"Einladung: {org_name} auf CampsPilot verwalten"
         body = (
-            "<p>Guten Tag,</p>"
-            "<p>Sie wurden eingeladen, den Verein <strong>" + e_org + "</strong> auf CampsPilot mitzuverwalten.</p>"
+            "<p>Hallo,</p>"
+            "<p>Du wurdest eingeladen, den Verein <strong>" + e_org + "</strong> auf CampsPilot mitzuverwalten.</p>"
             '<p><a href="' + e_link + '">Passwort festlegen und loslegen</a></p>'
-            "<p>Der Link ist 24 Stunden gültig. Danach können Sie auf der Anmeldeseite "
+            "<p>Der Link ist 24 Stunden gültig. Danach kannst du auf der Anmeldeseite "
             "über „Passwort vergessen?“ jederzeit einen neuen Link anfordern.</p>"
-            "<p>Wenn Sie diese Einladung nicht erwartet haben, können Sie diese E-Mail ignorieren.</p>"
-            "<p>Mit freundlichen Grüßen<br>Ihr CampsPilot-Team</p>"
+            "<p>Wenn du diese Einladung nicht erwartet hast, kannst du diese E-Mail ignorieren.</p>"
+            "<p>Viele Grüße<br>Dein CampsPilot-Team</p>"
         )
     else:
-        subject = f"Sie verwalten jetzt {org_name} auf CampsPilot"
+        subject = f"Du verwaltest jetzt {org_name} auf CampsPilot"
         body = (
-            "<p>Guten Tag,</p>"
-            "<p>Ihr bestehendes CampsPilot-Konto hat jetzt Zugriff auf den Verein <strong>" + e_org + "</strong>.</p>"
+            "<p>Hallo,</p>"
+            "<p>Dein bestehendes CampsPilot-Konto hat jetzt Zugriff auf den Verein <strong>" + e_org + "</strong>.</p>"
             '<p>Login: <a href="' + e_link + '">' + e_link + "</a></p>"
-            "<p>Mit freundlichen Grüßen<br>Ihr CampsPilot-Team</p>"
+            "<p>Viele Grüße<br>Dein CampsPilot-Team</p>"
         )
     msg = MailMessage(to_email=to_email, subject=subject, html_content=body)
     msg.sender_name = f"{org_name} über CampsPilot"

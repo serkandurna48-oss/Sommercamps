@@ -67,7 +67,7 @@ export async function createOfferAction(orgSlug: string, _prev: TrainingFormStat
     return { error: null, saved: true, redirectTo: `/pilot/${orgSlug}/trainings/${offer.id}?neu=1` }
   } catch (error) {
     if (error instanceof SlugConflictError) {
-      return { error: null, fieldErrors: { slug: `Die Web-Adresse „${slug}“ ist in Ihrem Verein bereits vergeben.` } }
+      return { error: null, fieldErrors: { slug: `Die Web-Adresse „${slug}“ ist in deinem Verein bereits vergeben.` } }
     }
     return { error: message(error, 'Angebot konnte nicht angelegt werden – Angaben prüfen und erneut versuchen.') }
   }

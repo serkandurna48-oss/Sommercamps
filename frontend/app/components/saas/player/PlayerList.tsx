@@ -42,7 +42,7 @@ export default function PlayerList({ orgSlug, players, showMembership = true }: 
       </p>
       {shown.length === 0 ? (
         <EmptyState title={filtered ? 'Keine Spieler gefunden.' : 'Noch keine Spieler.'}
-          body={filtered ? 'Passen Sie die Suche an.' : 'Spieler erscheinen automatisch, sobald jemand ein Training oder Camp bucht.'} />
+          body={filtered ? 'Pass die Suche an.' : 'Spieler erscheinen automatisch, sobald jemand ein Training oder Camp bucht.'} />
       ) : (
         <ul className="cp-card cp-card-list cp-table">
           <li className="cp-table-head cp-player-cols" aria-hidden="true">

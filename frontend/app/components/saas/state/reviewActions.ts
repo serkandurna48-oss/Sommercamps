@@ -15,7 +15,7 @@ export async function submitReviewAction(
   } catch (err) {
     return {
       ok: false,
-      error: err instanceof AdminActionError ? err.message : 'Einreichung nicht möglich. Bitte versuchen Sie es erneut.',
+      error: err instanceof AdminActionError ? err.message : 'Einreichung nicht möglich. Bitte versuch es erneut.',
     }
   }
 }

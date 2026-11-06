@@ -85,7 +85,7 @@ def test_existing_account_is_assigned_and_gets_login_link(env):
     assert response.json()["invited"] is False
     assert env["links"] == []
     mail = env["fake"].sent[0]
-    assert mail.subject == "Sie verwalten jetzt Demo FC auf CampsPilot"
+    assert mail.subject == "Du verwaltest jetzt Demo FC auf CampsPilot"
     assert "/pilot/demo-fc/login" in mail.html_content
     assert env["audits"][0]["action"] == "organization.member_assigned"
 

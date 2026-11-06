@@ -240,7 +240,7 @@ export async function createCampAction(
         status: 'draft',
       }
     } catch {
-      return { error: 'Bitte prüfen Sie die Anmeldezeiten.' }
+      return { error: 'Bitte prüf die Anmeldezeiten.' }
     }
   }
 
@@ -259,7 +259,7 @@ export async function createCampAction(
     })
   } catch (err) {
     if (err instanceof SlugConflictError) {
-      return { error: `Die Web-Adresse „${slug}“ ist bereits vergeben – wählen Sie eine andere.` }
+      return { error: `Die Web-Adresse „${slug}“ ist bereits vergeben – wähle eine andere.` }
     }
     return { error: 'Camp konnte nicht angelegt werden – Angaben prüfen und erneut versuchen.' }
   }

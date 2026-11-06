@@ -37,7 +37,7 @@ it('lädt von nur innerhalb des angemeldeten Vereins und verwendet das vorhanden
   const html = renderToStaticMarkup(page)
   expect(html).toContain('Camp duplizieren')
   expect(html).toContain('name="duplicate"')
-  expect(html).not.toMatch(/\b(du|dein\w*|dir|dich|prüfe|ergänze|wähle)\b/i)
+  expect(html).not.toMatch(/\b(Sie|Ihr|Ihre|Ihren|Ihrem|Ihres|Ihnen)\b/)
 })
 
 it('zeigt bei unbekanntem Quell-Slug ein leeres Formular mit kurzem Hinweis', async () => {

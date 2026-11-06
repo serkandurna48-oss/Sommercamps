@@ -93,7 +93,7 @@ export default function ParticipantPrintDialog({ camp, rows, filterText, orgName
             <Button type="button" onClick={() => onFieldsChange([...DEFAULT_PRINT_FIELDS[purpose]])}>Standardauswahl</Button>
             <Button type="button" onClick={() => onFieldsChange([])}>Alle abwählen</Button>
           </div>
-          <p>Position und Herkunftsverein stehen als Spalten bereit, wenn Ihr Verein diese Zusatzfragen eingerichtet hat.</p>
+          <p>Position und Herkunftsverein stehen als Spalten bereit, wenn dein Verein diese Zusatzfragen eingerichtet hat.</p>
           {purpose === 'daylist' && <div className="cp-print-date">
             <label htmlFor={dateId}>Datum der Tagesliste</label>
             <input id={dateId} type="date" value={date} min={camp.start_date} max={camp.end_date} onChange={e => setDate(e.target.value)} />
@@ -101,7 +101,7 @@ export default function ParticipantPrintDialog({ camp, rows, filterText, orgName
           <p>Im Druckdialog „Als PDF speichern“ wählen. Die Ausgabe ist für A4 vorbereitet.</p>
         </aside>
         <div className="cp-print-output" aria-label="Druckvorschau">
-          {!canPrint && <p id={hintId} role="alert">{!columns.length ? 'Bitte wählen Sie mindestens eine Spalte für die Druckausgabe.' : !rows.length ? 'Keine Treffer für diese Druckausgabe.' : 'Bitte wählen Sie ein Datum innerhalb des Camps.'}</p>}
+          {!canPrint && <p id={hintId} role="alert">{!columns.length ? 'Bitte wähle mindestens eine Spalte für die Druckausgabe.' : !rows.length ? 'Keine Treffer für diese Druckausgabe.' : 'Bitte wähle ein Datum innerhalb des Camps.'}</p>}
           {canPrint && <>
             <p className="cp-noprint cp-print-status" role="status">{fields.filter(field => selectedFields.includes(field.id)).length} Felder ausgewählt · {sections.length > 1 ? `${sections.length} Tabellenabschnitte mit gleicher Zeilennummer` : 'Vorschau der Druckausgabe'}</p>
             {sections.map((section, index) => <section key={index} className="cp-print-sheet" style={brandColor ? { '--cp-sheet-brand': printSafeBrandColor(brandColor) } as React.CSSProperties : undefined}>

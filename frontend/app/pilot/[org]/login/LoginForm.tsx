@@ -46,7 +46,7 @@ export default function LoginForm({
   async function resendConfirmation() {
     const input = formRef.current?.elements.namedItem('email') as HTMLInputElement | null
     if (!input?.value.trim() || !input.checkValidity()) {
-      setResendFeedback({ error: true, message: 'Bitte geben Sie oben Ihre gültige E-Mail-Adresse ein.' })
+      setResendFeedback({ error: true, message: 'Bitte gib oben deine gültige E-Mail-Adresse ein.' })
       input?.focus()
       return
     }
@@ -58,10 +58,10 @@ export default function LoginForm({
         body: JSON.stringify({ email: input.value.trim() }),
       })
       setResendFeedback(response.ok
-        ? { error: false, message: 'Erneuter Versand angefragt. Bitte prüfen Sie Ihren Posteingang und Spam-Ordner. Nach der Bestätigung können Sie sich hier anmelden.' }
-        : { error: true, message: response.status === 429 ? 'Zu viele Versuche. Bitte warten Sie eine Stunde und versuchen Sie es erneut.' : 'Der erneute Versand konnte nicht angefragt werden. Bitte versuchen Sie es später erneut.' })
+        ? { error: false, message: 'Erneuter Versand angefragt. Bitte prüf deinen Posteingang und Spam-Ordner. Nach der Bestätigung kannst du dich hier anmelden.' }
+        : { error: true, message: response.status === 429 ? 'Zu viele Versuche. Bitte warte eine Stunde und versuch es erneut.' : 'Der erneute Versand konnte nicht angefragt werden. Bitte versuch es später erneut.' })
     } catch {
-      setResendFeedback({ error: true, message: 'Die Verbindung ist fehlgeschlagen. Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.' })
+      setResendFeedback({ error: true, message: 'Die Verbindung ist fehlgeschlagen. Bitte prüf deine Internetverbindung und versuch es erneut.' })
     } finally {
       setResending(false)
     }
@@ -73,8 +73,8 @@ export default function LoginForm({
       {children ?? <form ref={formRef} action={formAction}>
         <h1 className="login-h1">Anmelden</h1>
         <p>{product
-          ? 'Melden Sie sich mit dem Konto an, mit dem Sie Ihren Verein registriert haben.'
-          : 'Melden Sie sich an, um Camps, Anmeldungen und Zahlungen Ihres Vereins zu verwalten.'}</p>
+          ? 'Melde dich mit dem Konto an, mit dem du deinen Verein registriert hast.'
+          : 'Melde dich an, um Camps, Anmeldungen und Zahlungen deines Vereins zu verwalten.'}</p>
 
         <label className="login-label" htmlFor="email">
           E-Mail
@@ -123,7 +123,7 @@ export default function LoginForm({
         </button>
 
         <div className="auth-links">
-          <p>Gerade registriert? Bestätigen Sie zuerst Ihre E-Mail-Adresse über den Link in der Bestätigungsmail.</p>
+          <p>Gerade registriert? Bestätige zuerst deine E-Mail-Adresse über den Link in der Bestätigungsmail.</p>
           <button type="button" onClick={resendConfirmation} disabled={resending} className="cp-focus">
             {resending ? 'Wird angefragt …' : 'Bestätigungsmail erneut anfordern'}
           </button>

@@ -23,7 +23,7 @@ import { setNewPassword } from '../neues-passwort/actions'
 import { initialPasswordState, INVALID_RECOVERY_LINK, readRecoverySession } from '../passwort-vergessen/recovery'
 vi.mock('../../../components/saas/fonts', () => ({ archivo: { variable: 'font-cp' } }))
 
-const neutral = 'Wenn ein Konto zu dieser E-Mail existiert, haben wir Ihnen einen Link geschickt.'
+const neutral = 'Wenn ein Konto zu dieser E-Mail existiert, haben wir dir einen Link geschickt.'
 const session = { access_token: 'test-access', refresh_token: 'test-refresh' }
 const recoveryHash = '#type=recovery&access_token=test-access&refresh_token=test-refresh'
 let container: HTMLDivElement
@@ -153,7 +153,7 @@ describe('Neues Passwort', () => {
     expect(auth.updateUser).toHaveBeenCalledWith({ password: 'neues-passwort' })
     expect(auth.setSession.mock.invocationCallOrder[0]).toBeLessThan(auth.updateUser.mock.invocationCallOrder[0])
     expect(auth.signOut).toHaveBeenCalledWith({ scope: 'global' })
-    expect(container.querySelector('[role="status"]')?.textContent).toContain('Ihr Passwort wurde geändert.')
+    expect(container.querySelector('[role="status"]')?.textContent).toContain('Dein Passwort wurde geändert.')
     expect(container.querySelector('a[href="/pilot/testverein/login"]')?.textContent).toBe('Zur Anmeldung')
     expect(container.querySelector('form')).toBeNull()
   })
@@ -190,7 +190,7 @@ describe('Neues Passwort', () => {
   it.each([
     [{ code: 'same_password' }, 'anderes Passwort'],
     [{ code: 'weak_password' }, 'stärkeres Passwort'],
-    [{ status: 503 }, 'Bitte versuchen Sie es später erneut.'],
+    [{ status: 503 }, 'Bitte versuch es später erneut.'],
   ])('übersetzt Supabase-Fehler ohne technische Details: %j', async (error, message) => {
     auth.updateUser.mockResolvedValue({ error })
     const result = await setNewPassword(session, initialPasswordState, data())
@@ -202,7 +202,7 @@ describe('Neues Passwort', () => {
     auth.updateUser.mockRejectedValue(new Error('offline'))
     const result = await setNewPassword(session, initialPasswordState, data())
     expect(result.success).toBe(false)
-    expect(result.error).toContain('Bitte versuchen Sie es später erneut.')
+    expect(result.error).toContain('Bitte versuch es später erneut.')
   })
 
   it('liest ausschließlich vollständige Recovery-Fragmente', () => {

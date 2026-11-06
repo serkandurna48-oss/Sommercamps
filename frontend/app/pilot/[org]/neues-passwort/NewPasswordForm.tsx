@@ -26,7 +26,7 @@ export default function NewPasswordForm({ orgSlug }: { orgSlug: string }) {
   const base = `/pilot/${encodeURIComponent(orgSlug)}`
   return <>
     <h1 className="login-h1">Neues Passwort setzen</h1>
-    {!link.ready ? <p role="status">Link wird geladen …</p> : state.success ? <p role="status">Ihr Passwort wurde geändert. Sie können sich jetzt mit Ihrem neuen Passwort anmelden.</p> : !link.session ? <p className="login-error" role="alert">{INVALID_RECOVERY_LINK}</p> : <form action={action}>
+    {!link.ready ? <p role="status">Link wird geladen …</p> : state.success ? <p role="status">Dein Passwort wurde geändert. Du kannst dich jetzt mit deinem neuen Passwort anmelden.</p> : !link.session ? <p className="login-error" role="alert">{INVALID_RECOVERY_LINK}</p> : <form action={action}>
       <label className="login-label" htmlFor="new-password">Neues Passwort</label>
       <p id="password-hint" style={{ margin: '0 0 6px', fontSize: 14 }}>Mindestens 10 Zeichen.</p>
       <input className="login-field" id="new-password" name="password" type="password" autoComplete="new-password" minLength={10} required

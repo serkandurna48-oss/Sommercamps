@@ -6,7 +6,7 @@ import {
   type ColumnChoice, type ColumnTarget,
 } from './memberMapping'
 
-export const PRIVACY_HINT = 'Nur Felder übernehmen, die Sie für Training und Preis brauchen. Keine Gesundheitsdaten, Adressen oder Telefonnummern.'
+export const PRIVACY_HINT = 'Nur Felder übernehmen, die du für Training und Preis brauchen. Keine Gesundheitsdaten, Adressen oder Telefonnummern.'
 
 const FIELD_STYLE = { borderColor: 'var(--cp-field-line)', fontSize: '16px' }
 

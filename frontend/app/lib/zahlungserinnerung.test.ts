@@ -110,7 +110,7 @@ describe('Zahlungserinnerung', () => {
   })
 
   it('uses formal German in reminder and admin texts', () => {
-    expect(Object.values(reminderLabels).join(' ')).not.toMatch(/\b(du|dein|deine|dir|dich|euch|euer)\b/i)
+    expect(Object.values(reminderLabels).join(' ')).not.toMatch(/\b(Sie|Ihr|Ihre|Ihren|Ihrem|Ihres|Ihnen)\b/)
     expect(buildPaymentReminder(entry, org)).not.toMatch(/\b(du|dein|deine|dir|dich|euch|euer)\b/i)
     expect(buildPaymentReminder(entry, org)).toContain('Bitte überweisen Sie')
   })

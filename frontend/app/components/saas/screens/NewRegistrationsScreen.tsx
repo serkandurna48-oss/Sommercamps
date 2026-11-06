@@ -9,7 +9,7 @@ export default function NewRegistrationsScreen({ orgSlug, camps, registrationsBy
     <>
       <PageHeader
         title="Neue Anmeldungen"
-        subtitle="Heute eingegangen, über alle Camps. Die vollständige Liste je Camp finden Sie unter Camps."
+        subtitle="Heute eingegangen, über alle Camps. Die vollständige Liste je Camp findest du unter Camps."
       />
       <main className={PAGE_READING}>
         <TodayRegistrations entries={todayRegistrations(camps, registrationsByCamp)} orgSlug={orgSlug} fullList />

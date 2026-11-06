@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import type { PlayerFormState } from '../actions/playerActions'
 
-const CONNECTION = 'Keine Verbindung zum Server – bitte erneut versuchen. Ihre Eingaben bleiben erhalten.'
+const CONNECTION = 'Keine Verbindung zum Server – bitte erneut versuchen. Deine Eingaben bleiben erhalten.'
 
 /** Sendet ein Formular an eine Server Action, ohne die Eingaben zurückzusetzen:
  * die Felder gehören der Komponente und werden nur nach Erfolg geleert. */

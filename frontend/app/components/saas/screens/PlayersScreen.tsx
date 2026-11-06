@@ -12,7 +12,7 @@ export default function PlayersScreen({ orgSlug, org, players }: OrganizationIde
     <>
       <PageHeader
         title="Spieler"
-        subtitle="Interne Trainingsdokumentation, Ziele und Messwerte – nur für Sie sichtbar. Enthält Daten von Kindern: bitte nicht weitergeben."
+        subtitle="Interne Trainingsdokumentation, Ziele und Messwerte – nur für dich sichtbar. Enthält Daten von Kindern: bitte nicht weitergeben."
         metrics={[{ label: 'Spieler', value: String(players.length) }, { label: 'Mit Notizen', value: String(withNotes) }]}
       />
 

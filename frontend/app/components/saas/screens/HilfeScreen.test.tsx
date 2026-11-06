@@ -80,15 +80,13 @@ it('verlinkt jeden Abschnitt genau einmal aus dem Inhaltsverzeichnis am Anfang',
   }
 })
 
-it('verwendet im gesamten Hilfetext einschließlich Vorlagen keine informelle Anrede', () => {
+it('duzt im Hilfetext die Admins, nur Vorlagen und Eltern-Antworten bleiben beim Sie', () => {
   const doc = helpDocument()
   const main = doc.querySelector('main')!
-  const walker = doc.createTreeWalker(main, window.NodeFilter.SHOW_TEXT)
-  const texts: string[] = []
-  while (walker.nextNode()) texts.push(walker.currentNode.textContent ?? '')
-  texts.push(...[...main.querySelectorAll('textarea')].map(field => field.value))
-  const text = texts.join(' ')
-  expect(text.match(/\b(?:du|dein(?:e|en|em|er|es)?)\b/giu)).toBeNull()
+  main.querySelectorAll('textarea, dl').forEach(node => node.remove())
+  const text = main.textContent ?? ''
+  expect(text.match(/\b(?:Sie|Ihr(?:e|en|em|er|es)?|Ihnen)\b/gu)).toBeNull()
+  expect(text).toMatch(/\bdu\b|\bdein/i)
 })
 
 // Launch-UX: the Hilfe link moved from the band into the sidebar footer (AdminSidebar.test.tsx).

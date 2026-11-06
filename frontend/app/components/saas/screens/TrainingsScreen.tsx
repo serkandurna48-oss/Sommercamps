@@ -29,7 +29,7 @@ export default function TrainingsScreen({ orgSlug, org, offers }: OrganizationId
       <main className={ADMIN_PAGE}>
         <h2 className="sr-only">Trainingsangebote</h2>
         {offers.length === 0 ? (
-          <EmptyState title="Noch kein Trainingsangebot." body="Legen Sie ein Angebot an, fügen Sie Termine hinzu und teilen Sie den Link." />
+          <EmptyState title="Noch kein Trainingsangebot." body="Leg ein Angebot an, füge Termine hinzu und teile den Link." />
         ) : (
           <ul className="cp-card cp-card-list cp-table cp-table-wide">
             <li className="cp-table-head cp-offer-cols" aria-hidden="true">

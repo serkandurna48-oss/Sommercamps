@@ -140,10 +140,10 @@ describe('OnboardingCard wizard links', () => {
   })
 })
 
-// ── 5. B1 – Siezen: kein Du in Admin-Texten ──────────────────────────────────
+// ── 5. Admin-Texte duzen: kein Sie in Admin-Texten ──────────────────────────────────
 
-describe('B1 – Siezen: Admin-Texte enthalten kein Du (Elternseite ausgenommen)', () => {
-  const DU_WORDS = /\b(du|dein|deine|deinem|deinen|ergänze|prüfe)\b/i
+describe('Admin-Texte duzen: kein Sie (Elternseite und Eltern-Vorlagen ausgenommen)', () => {
+  const DU_WORDS = /\b(Sie|Ihr|Ihre|Ihrem|Ihren|Ihres|Ihnen)\b/
 
   function collectStrings(obj: unknown): string[] {
     if (typeof obj === 'string') return [obj]
@@ -152,7 +152,7 @@ describe('B1 – Siezen: Admin-Texte enthalten kein Du (Elternseite ausgenommen)
     return []
   }
 
-  it('de.ts Admin-Sektionen ohne Du-Wörter (Mutationsprobe: Du einfügen → rot)', () => {
+  it('de.ts Admin-Sektionen ohne Sie-Wörter (Mutationsprobe: Sie einfügen → rot)', () => {
     const adminSections = collectStrings({
       dashboard: de.dashboard,
       tasks: de.tasks,
@@ -162,7 +162,8 @@ describe('B1 – Siezen: Admin-Texte enthalten kein Du (Elternseite ausgenommen)
       waitlistPage: de.waitlistPage,
       paymentsPage: de.paymentsPage,
       onboarding: de.onboarding,
-      hilfe: de.hilfe,
+      // Eltern-Vorlagen und -Antworten bleiben bewusst bei „Sie“
+      hilfe: { ...de.hilfe, whatsappTemplate: '', instagramTemplate: '', faq: [] },
       einrichtung: de.einrichtung,
       configPage: de.configPage,
     })

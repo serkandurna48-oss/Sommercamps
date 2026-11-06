@@ -318,7 +318,7 @@ describe('interaktive Teile', () => {
     await pickFile([CLUB_EXPORT])
     await waitForPreview()
     expect(container.querySelector('[data-testid="privacy-hint"]')?.textContent)
-      .toBe('Nur Felder übernehmen, die Sie für Training und Preis brauchen. Keine Gesundheitsdaten, Adressen oder Telefonnummern.')
+      .toBe('Nur Felder übernehmen, die du für Training und Preis brauchen. Keine Gesundheitsdaten, Adressen oder Telefonnummern.')
     // One row per CSV column, no preview table that needs horizontal scrolling.
     expect(container.querySelectorAll('[data-mapping-row]')).toHaveLength(7)
     expect(container.querySelector('table')).toBeNull()

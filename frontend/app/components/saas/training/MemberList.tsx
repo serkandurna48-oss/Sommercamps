@@ -56,7 +56,7 @@ export default function MemberList({ orgSlug, members }: { orgSlug: string; memb
       </p>
       {shown.length === 0 ? (
         <EmptyState title={filtered ? 'Keine Mitglieder gefunden.' : 'Noch keine Mitglieder.'}
-          body={filtered ? 'Passen Sie Suche oder Status an.' : 'Importieren Sie Ihre Mitgliederliste per CSV oder tragen Sie Mitglieder einzeln ein.'} />
+          body={filtered ? 'Pass Suche oder Status an.' : 'Importiere deine Mitgliederliste per CSV oder trag Mitglieder einzeln ein.'} />
       ) : (
         <div className={extraLabels.length > 0 ? 'cp-card cp-member-scroll' : undefined}>
           <ul className={extraLabels.length > 0 ? 'cp-card-list cp-table cp-member-wide' : 'cp-card cp-card-list cp-table'} style={tableStyle}>

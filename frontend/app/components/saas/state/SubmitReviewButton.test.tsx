@@ -77,7 +77,7 @@ describe('SubmitReviewButton', () => {
     expect(action).toHaveBeenCalledWith('demo', '2026-10')
   })
 
-  it('Erfolg: Banner „Wir prüfen Ihren Verein" erscheint', async () => {
+  it('Erfolg: Banner „Wir prüfen deinen Verein" erscheint', async () => {
     const action = vi.fn<SubmitAction>().mockResolvedValue({ ok: true })
     await renderBtn(action)
     await clickText('Zur Freigabe einreichen')
@@ -101,7 +101,7 @@ describe('SubmitReviewButton', () => {
     await clickText('Zur Freigabe einreichen')
     await act(() => getAvvCheckbox().click())
     await clickText('Jetzt einreichen')
-    expect(container.querySelector('[role="alert"]')?.textContent).toBe('Die Angaben konnten nicht eingereicht werden. Bitte versuchen Sie es erneut.')
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe('Die Angaben konnten nicht eingereicht werden. Bitte versuch es erneut.')
     await clickText('Zur Freigabe einreichen')
     expect(container.querySelector('[role="dialog"]')).not.toBeNull()
   })

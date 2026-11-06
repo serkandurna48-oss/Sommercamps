@@ -20,7 +20,7 @@ export default function CampsScreen({ orgSlug, camps, registrationsByCamp }: Org
     <>
       <PageHeader
         title="Camps"
-        subtitle="Feriencamps mit Anmeldung über Ihre Elternseite."
+        subtitle="Feriencamps mit Anmeldung über deine Elternseite."
         action={<ButtonLink href={`/pilot/${orgSlug}/camps/new`} variant="primary"><IconPlus size={16} />Camp anlegen</ButtonLink>}
         metrics={[
           { label: 'Laufende Camps', value: String(live.length) },

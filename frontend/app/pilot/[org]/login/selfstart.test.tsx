@@ -46,7 +46,7 @@ it.each([202, 429, 503, 0])('Verlorene Bestätigungsmail: Neuversand aus dem Log
     host.querySelector<HTMLInputElement>('#email')!.value = 'verein@example.test'
     await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent === 'Bestätigungsmail erneut anfordern')!.click())
     expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/public\/signup\/resend$/), expect.objectContaining({ method: 'POST', body: JSON.stringify({ email: 'verein@example.test' }) }))
-    expect(host.textContent).toContain(status === 202 ? 'Erneuter Versand angefragt.' : status === 429 ? 'Bitte warten Sie eine Stunde' : status === 0 ? 'Bitte prüfen Sie Ihre Internetverbindung' : 'Der erneute Versand konnte nicht angefragt werden.')
+    expect(host.textContent).toContain(status === 202 ? 'Erneuter Versand angefragt.' : status === 429 ? 'Bitte warte eine Stunde' : status === 0 ? 'Bitte prüf deine Internetverbindung' : 'Der erneute Versand konnte nicht angefragt werden.')
     expect(host.querySelector('button[type="submit"]')?.textContent).toBe('Anmelden')
     expect([...host.querySelectorAll('a')].find(a => a.textContent === 'Zurück zu CampsPilot')?.getAttribute('href')).toBe('/campspilot')
   } finally {
@@ -58,7 +58,7 @@ it.each([202, 429, 503, 0])('Verlorene Bestätigungsmail: Neuversand aus dem Log
 it('Login bietet Bestätigungshinweis und Rückweg zur Marketingseite', () => {
   const dom = document.createElement('div')
   dom.innerHTML = renderToStaticMarkup(<LoginForm orgSlug="testverein" />)
-  expect(dom.textContent).toContain('Bestätigen Sie zuerst Ihre E-Mail-Adresse')
+  expect(dom.textContent).toContain('Bestätige zuerst deine E-Mail-Adresse')
   const back = [...dom.querySelectorAll('a')].find(a => a.textContent === 'Zurück zu CampsPilot')
   expect(back?.getAttribute('href')).toBe('/campspilot')
   expect([...dom.querySelectorAll('a')].find(a => a.textContent === 'Passwort vergessen?')?.getAttribute('href')).toBe('/pilot/testverein/passwort-vergessen')
@@ -78,13 +78,13 @@ it('Vereinslogin behält seine Zielroute bei', async () => {
 it('Technischer Loginfehler erklärt die Wiederholung ohne interne Fehlermeldung', async () => {
   mocks.signIn.mockRejectedValue(new Error('Supabase not configured'))
   const result = await loginAction('testverein', { error: null }, credentials())
-  expect(result.error).toBe('Die Anmeldung ist gerade nicht möglich. Bitte versuchen Sie es später erneut.')
+  expect(result.error).toBe('Die Anmeldung ist gerade nicht möglich. Bitte versuch es später erneut.')
   expect(mocks.setCookie).not.toHaveBeenCalled()
 })
 
 it('Abgelehnter Login weist auch auf die E-Mail-Bestätigung hin', async () => {
   mocks.signIn.mockResolvedValue({ data: { session: null }, error: { message: 'Email not confirmed' } })
   const result = await loginAction('testverein', { error: null }, credentials())
-  expect(result.error).toContain('Bestätigung Ihrer E-Mail-Adresse')
-  expect(result.error).toContain('Versuchen Sie es anschließend erneut.')
+  expect(result.error).toContain('Bestätigung deiner E-Mail-Adresse')
+  expect(result.error).toContain('Versuch es anschließend erneut.')
 })

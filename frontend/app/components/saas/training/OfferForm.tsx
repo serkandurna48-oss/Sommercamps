@@ -79,7 +79,7 @@ export default function OfferForm({ orgSlug, offer, backButton, memberPrice = tr
           </>
         )}
 
-        <Field label="Art des Angebots (optional)" htmlFor="offer_category" hint="Wird Eltern als Label angezeigt. Premium-Paket ist nur ein Label; beschreiben Sie den Umfang in der Beschreibung." error={err('category')}>
+        <Field label="Art des Angebots (optional)" htmlFor="offer_category" hint="Wird Eltern als Label angezeigt. Premium-Paket ist nur ein Label; beschreib den Umfang in der Beschreibung." error={err('category')}>
           <select id="offer_category" name="category" defaultValue={value('category', offer?.category ?? '')} className={INPUT_CLASS} style={INPUT_STYLE}>
             <option value="">Keine Angabe</option>
             {OFFER_CATEGORIES.map(category => <option key={category} value={category}>{offerCategoryLabel(category)}</option>)}

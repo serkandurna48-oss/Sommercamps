@@ -31,4 +31,4 @@ export function prefillCampDuplicate(source: CampAdmin): CampDuplicate {
 }
 
 export const DUPLICATE_SUCCESS = 'Kopie angelegt – bitte Termin prüfen und veröffentlichen.'
-export const DUPLICATE_MISSING = 'Das ursprüngliche Camp wurde nicht gefunden. Sie können ein neues Camp anlegen.'
+export const DUPLICATE_MISSING = 'Das ursprüngliche Camp wurde nicht gefunden. Du kannst ein neues Camp anlegen.'

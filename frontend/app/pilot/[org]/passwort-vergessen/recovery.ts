@@ -1,5 +1,5 @@
-export const RESET_CONFIRMATION = 'Wenn ein Konto zu dieser E-Mail existiert, haben wir Ihnen einen Link geschickt.'
-export const INVALID_RECOVERY_LINK = 'Dieser Link ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen Link an.'
+export const RESET_CONFIRMATION = 'Wenn ein Konto zu dieser E-Mail existiert, haben wir dir einen Link geschickt.'
+export const INVALID_RECOVERY_LINK = 'Dieser Link ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.'
 
 export interface RecoverySession {
   access_token: string

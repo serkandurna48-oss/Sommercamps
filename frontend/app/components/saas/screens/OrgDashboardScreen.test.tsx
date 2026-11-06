@@ -32,7 +32,7 @@ beforeEach(() => {
 })
 afterEach(() => vi.useRealTimers())
 
-describe('Ihre Camps auf dem Dashboard', () => {
+describe('Deine Camps auf dem Dashboard', () => {
   it('sortiert veröffentlichte Camps nach Start und klappt vergangene Camps ein; Enddatum heute bleibt aktuell', () => {
     const camps = [
       camp('später', '2026-12-01', '2026-12-05'),
@@ -43,7 +43,7 @@ describe('Ihre Camps auf dem Dashboard', () => {
     ]
     const original = camps.map(c => c.slug)
     const card = render(camps)
-    expect(card.querySelector('h2')?.textContent).toBe('Ihre Camps')
+    expect(card.querySelector('h2')?.textContent).toBe('Deine Camps')
     expect([...card.querySelectorAll(':scope > ul > li h3')].map(h => h.textContent)).toEqual(['läuft', 'früher', 'später'])
     const past = card.querySelector('details')!
     expect(past.open).toBe(false)

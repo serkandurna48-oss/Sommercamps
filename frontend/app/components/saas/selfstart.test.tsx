@@ -68,13 +68,13 @@ it('Wartende Übersicht: Dauer, Hilfe und Status-Aktualisierung statt voreiliger
 
 it('Wartender Wizard: bietet eine erneute Statusabfrage auf derselben Route', () => {
   const dom = wizard({ review_status: 'submitted' })
-  expect(dom.textContent).toContain('Sie müssen nichts erneut einreichen.')
+  expect(dom.textContent).toContain('Du musst nichts erneut einreichen.')
   link(dom, 'Freigabestatus aktualisieren', '/pilot/testverein/einrichtung?schritt=4')
 })
 
 it('Erstes Camp angelegt: erklärt Speichern und verlinkt zurück zum vierten Einrichtungsschritt', () => {
   const dom = markup(<CampConfigScreen orgSlug={org.slug} campSlug={camp.slug} org={org} camp={camp} created />)
-  expect(dom.textContent).toContain('Speichern Sie zuerst Ihre Camp-Angaben.')
+  expect(dom.textContent).toContain('Speicher zuerst deine Camp-Angaben.')
   link(dom, 'Weiter zur Einrichtung und Freigabe', '/pilot/testverein/einrichtung?schritt=4')
 })
 

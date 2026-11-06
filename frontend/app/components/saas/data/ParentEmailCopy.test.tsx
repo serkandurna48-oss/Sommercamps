@@ -75,7 +75,7 @@ function button() {
 async function copy() { await act(async () => { button().click() }) }
 async function toggle() { await act(() => container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click()) }
 function expectFormalText() {
-  expect(container.textContent).not.toMatch(/\b(du|dein\w*|dir|dich)\b/i)
+  expect(container.textContent).not.toMatch(/\b(Sie|Ihr|Ihre|Ihren|Ihrem|Ihres|Ihnen)\b/)
 }
 
 describe('Elternadressen kopieren', () => {
@@ -86,7 +86,7 @@ describe('Elternadressen kopieren', () => {
     expectFormalText()
     await copy()
     expect(writeText).toHaveBeenCalledExactlyOnceWith('familie@example.com; zweite@example.com')
-    expect(container.querySelector('[role="status"]')!.textContent).toBe('2 Adressen kopiert – fügen Sie sie in Ihrem E-Mail-Programm in das BCC-Feld ein.')
+    expect(container.querySelector('[role="status"]')!.textContent).toBe('2 Adressen kopiert – füg sie in deinem E-Mail-Programm in das BCC-Feld ein.')
     expectFormalText()
   })
   it('schaltet die Warteliste ein und wieder aus und entfernt dabei alte Rückmeldungen', async () => {

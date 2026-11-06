@@ -698,7 +698,7 @@ def test_signup_sends_confirmation_email_with_link(monkeypatch):
         assert body["confirmation_email_sent"] is True
         assert len(fake_provider.sent) == 1
         msg = fake_provider.sent[0]
-        assert "Bitte bestätigen" in msg.subject
+        assert "Bitte bestätige" in msg.subject
         assert fake_link in msg.html_content
         assert "24 Stunden" in msg.html_content
         assert link_calls == [{"org_slug": "testverein-fc"}]

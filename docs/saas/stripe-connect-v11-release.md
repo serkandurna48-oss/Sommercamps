@@ -73,9 +73,20 @@ Production erst nach erfolgreichem Staging-Test und mit Live-Schlüsseln, eigene
 ### Staging einrichten (Serkan, Testmodus)
 
 1. Stripe-Dashboard (Testmodus) → Connect: Express-Konten aktivieren, Plattformprofil + Branding ausfüllen, Land DE.
-2. **Plattform-Webhook** anlegen: URL `https://<staging-backend>/api/v1/payments/stripe/platform-webhook`, „Ereignisse auf **Ihrem Konto**“, Events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded` → `whsec_…` = `STRIPE_PLATFORM_WEBHOOK_SECRET`.
+2. **Plattform-Webhook** anlegen: URL `https://<staging-backend>/api/v1/payments/stripe/platform-webhook`, „Ereignisse auf **Ihrem Konto**“, Events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded`, `charge.refund.updated` → `whsec_…` = `STRIPE_PLATFORM_WEBHOOK_SECRET`.
 3. **Connect-Webhook** (bestehend, `…/api/v1/payments/stripe/webhook`, „Ereignisse auf verbundenen Konten“) um `account.updated` ergänzen.
 4. Render Staging: `STRIPE_CHECKOUT_ENABLED=true`, `STRIPE_SECRET_KEY=sk_test_…`, `STRIPE_CONNECT_WEBHOOK_SECRET`, `STRIPE_PLATFORM_WEBHOOK_SECRET`, `FRONTEND_BASE_URL` = Staging-Frontend (Rücksprung aus Stripe).
-5. Staging-DB: Migrationen `20261106140000_billing_profile_fee_rules.sql`, `20261106150000_stripe_express_destination.sql`, `20261106160000_billing_refunds_and_grants.sql` (vorher Backup; die erste ändert Daten per Backfill).
+5. Staging-DB: Migrationen `20261106140000_billing_profile_fee_rules.sql`, `20261106150000_stripe_express_destination.sql`, `20261106160000_billing_refunds_and_grants.sql`, `20261107100000_parent_invoices.sql` (vorher Backup; die erste und die letzte ändern Daten per Backfill). Render installiert die neue Abhängigkeit `fpdf2` beim Build aus `requirements.txt`.
 6. Plattform-Konsole: JK-Gebühr „Individuell 5 %“ (Stichtag siehe oben) und „Freigeben“.
 7. Test: Vereinsadmin → Einstellungen → Zahlungen → einrichten (Stripe-Testdaten, Test-IBAN `DE89370400440532013000`) → zurück → „Aktiv“. Elternbuchung → Testkarte `4242 4242 4242 4242` → „Bezahlt“; im Stripe-Dashboard die Application Fee prüfen (z. B. 5 % bei JK). Erstattung per API → „Erstattet“, Gebühr anteilig zurück.
+
+## Abrechnung B3: Elternrechnung (07.11.2026)
+
+- **Wann:** automatisch einmal je bezahlter Buchung – nach Online-Zahlung (Plattform- und Connect-Webhook, Express und Altkonto) und wenn der Verein „bezahlt“ (bar/Überweisung) setzt. Kostenlose Buchungen bekommen keine Rechnung. Webhook-Wiederholungen erzeugen nichts Neues (eine Rechnung je Buchung, DB-Unique-Index).
+- **Aussteller** ist der Verein (Rechnungsdaten aus Einstellungen, zum Ausstellungszeitpunkt eingefroren). Empfänger: Elternname + E-Mail (Adressen werden nicht erhoben). Leistung: Camp/Training, Zeitraum, Vor- und Nachname des Kindes – sonst keine Kinderdaten. Steuerblock je Status (netto/USt/brutto bei 19/7 %, § 19-Hinweis, Befreiungstext). Die Plattformgebühr erscheint nie.
+- **Nummer:** `<Präfix><Jahr>-<0001>` je Verein und Kalenderjahr, lückenlos (Zähler in derselben Transaktion). Rechnungen sind unveränderlich (Trigger); Korrektur nur per **Stornorechnung** (negativ, eigene Nummer, Verweis auf das Original) bei Teil-/Vollerstattung und bei Storno einer bezahlten Buchung. Löschen bezahlter Buchungen gibt es nicht.
+- **Versand:** PDF als Anhang über Brevo (`attachment`), `sent_at`/`send_error` je Rechnung; Fehler berühren die Buchung nicht, „Erneut senden“ im Admin. Außerhalb Production gilt weiter `NOTIFICATION_ALLOWED_RECIPIENTS`.
+- **Ohne Rechnungsdaten:** keine Rechnung, Buchung „Rechnung ausstehend – Rechnungsdaten fehlen“; Hinweis in Einstellungen und Zahlungen, danach „Ausstehende Rechnungen erstellen“.
+- **Buchungspreis:** `camp_registrations.booked_price_cents` (Trigger beim Anlegen, Backfill = bisheriger Preis). Gebühr, Rechnung und Camp-Checkout nutzen ihn; eine spätere Preisänderung trifft bestehende Buchungen nicht.
+- **Gebührenrechnung (B4):** Erstattungen werden im Monat der Erstattung gebucht (`registration_refund_events`), nicht im Monat der Zahlung. `GET /admin/platform/organizations/{slug}/fees?month=` liefert dafür `refunds_in_month`.
+- **Staging-Test:** Rechnungsdaten in Einstellungen speichern → Buchung „bezahlt“ setzen → Rechnung unter Zahlungen → PDF öffnen (Absender, Nummer, Steuerblock) → Mail an eine erlaubte Testadresse prüfen → Erstattung (Teilbetrag) im Buchungsdetail → Stornorechnung.

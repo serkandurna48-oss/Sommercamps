@@ -132,3 +132,29 @@ describe('Ihre Camps auf dem Dashboard', () => {
     expect(card.textContent).toContain('ausgebucht')
   })
 })
+
+describe('Kennzahl offene Zahlungen', () => {
+  const org = { ...organization, name: 'Testverein', slug: 'demo', logo_url: null, primary_color: null }
+  const open = { ...registrations[0], status: 'registered' as const, payment_status: 'open' as const, applied_price_cents: null }
+  const trainingGroup = {
+    camp: { ...camp('training'), price_cents: 4050 },
+    registrations: [{ ...open, id: 't1', applied_price_cents: 3000 }, { ...open, id: 't2', payment_status: 'paid' as const, applied_price_cents: 3000 }],
+  }
+  function kpi(props: Partial<React.ComponentProps<typeof OrgDashboardScreen>>) {
+    const doc = document.implementation.createHTMLDocument()
+    doc.body.innerHTML = renderToStaticMarkup(<OrgDashboardScreen orgSlug="demo" org={org} camps={[{ ...camp('c'), price_cents: 10000 }]} registrationsByCamp={[[open]]} {...props} />)
+    return [...doc.querySelectorAll('.cp-kpi-tile')].find(t => t.textContent?.includes('Offene Zahlungen'))!.textContent!.replace(/ /g, ' ')
+  }
+
+  it('zählt offene Trainingsbuchungen mit (angewandter Preis)', () => {
+    const text = kpi({ trainingPayments: [trainingGroup] })
+    expect(text).toContain('130,00')
+    expect(text).toContain('2 Anmeldungen · Camps und Trainings')
+  })
+
+  it('sagt ehrlich, wenn Trainingszahlungen fehlen', () => {
+    const text = kpi({ trainingPaymentsError: true })
+    expect(text).toContain('100,00')
+    expect(text).toContain('nur Camps, Trainings nicht geladen')
+  })
+})

@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { de, formatDateRange, formatEuro, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
-import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
+import type { CampAdmin } from '../../../lib/saasAdminApi'
 import { isActiveRegistration, isOpenPayment, canReopenPayment, registrationPriceCents } from '../commandCenterLogic'
+import type { PaymentRegistration } from '../commandCenterLogic'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import ActionForm from '../ui/ActionForm'
 import type { ActionFormState } from '../ui/ActionForm'
@@ -22,7 +23,7 @@ export default function PaymentRow({
   orgSlug,
   onPaid,
 }: {
-  registration: RegistrationAdmin
+  registration: PaymentRegistration
   camp: CampAdmin
   org: ReminderOrganization
   orgSlug: string

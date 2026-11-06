@@ -34,3 +34,13 @@ it('keeps an unavailable backend out of the login redirect and hides protected c
   expect(layout.type).toBe(AdminLayoutUnavailable)
   expect(layout.props.children).toBeUndefined()
 })
+
+it('loads the club identity in the same round as the access check, but renders it only after the check', async () => {
+  let releaseMe!: (value: Awaited<ReturnType<typeof fetchMe>>) => void
+  vi.mocked(fetchMe).mockReturnValue(new Promise(resolve => { releaseMe = resolve }))
+  vi.mocked(getOrganizationAdmin).mockResolvedValue({ slug: 'demo', name: 'Demo' } as Awaited<ReturnType<typeof getOrganizationAdmin>>)
+  const pending = OrgAdminLayout({ children: 'private', params: Promise.resolve({ org: 'demo' }) })
+  await vi.waitFor(() => expect(getOrganizationAdmin).toHaveBeenCalledWith('demo', 'test'))
+  releaseMe({ is_platform_owner: false, admin_organization_slugs: ['other'] } as Awaited<ReturnType<typeof fetchMe>>)
+  await expect(pending).rejects.toThrow('redirect:/pilot/other/dashboard')
+})

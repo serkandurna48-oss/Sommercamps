@@ -755,6 +755,27 @@ export interface TrainingSessionSeriesResult {
   sessions: TrainingSessionAdmin[]
 }
 
+/** Buchung aus `GET …/training-payments`: nur die Felder, die die Zahlungsseite braucht
+ * (keine Gesundheits-, Notfall- oder Telefonangaben). */
+export type TrainingPaymentRegistration = Pick<RegistrationAdmin,
+  | 'id' | 'registration_token' | 'status' | 'payment_status' | 'payment_reference'
+  | 'parent_first_name' | 'parent_last_name' | 'parent_email'
+  | 'child_first_name' | 'child_last_name' | 'created_at'
+  | 'payment_method' | 'member_match' | 'applied_price_cents'>
+
+/** Ein Termin mit mindestens einer Buchung (jeder Status), sortiert nach Angebot und Beginn. */
+export interface TrainingPaymentSessionGroup {
+  offer: Pick<TrainingOffer, 'id' | 'title' | 'kind' | 'status'>
+  session: TrainingSessionAdmin
+  registrations: TrainingPaymentRegistration[]
+}
+
+/** `GET …/training-offers/{id}/overview`: Angebot, Termine und je Termin die vollen Buchungen. */
+export interface TrainingOfferOverview {
+  offer: TrainingOffer
+  sessions: (TrainingSessionAdmin & { registrations: RegistrationAdmin[] })[]
+}
+
 export interface ClubMember {
   id: string
   first_name: string
@@ -886,6 +907,22 @@ export async function fetchSessionRegistrationsAdmin(orgSlug: string, offerId: s
   const res = await adminFetch(`${TRAINING_BASE(orgSlug)}/${encodeURIComponent(offerId)}/sessions/${encodeURIComponent(sessionId)}/registrations`, token)
   if (!res.ok) throw new TrainingAdminError('Buchungen konnten nicht geladen werden.')
   return res.json() as Promise<RegistrationAdmin[]>
+}
+
+/** Alle Trainingsbuchungen des Vereins für die Zahlungsseite, eine Anfrage statt Angebote → Termine → Buchungen. */
+export async function fetchTrainingPaymentsAdmin(orgSlug: string, token: string): Promise<TrainingPaymentSessionGroup[]> {
+  const res = await adminFetch(`/admin/organizations/${encodeURIComponent(orgSlug)}/training-payments`, token)
+  if (!res.ok) throw new TrainingAdminError('Trainingszahlungen konnten nicht geladen werden.')
+  return res.json() as Promise<TrainingPaymentSessionGroup[]>
+}
+
+/** Angebot samt Terminen und Buchungen in einer Anfrage; `null` bei unbekanntem Angebot. */
+export async function fetchTrainingOfferOverviewAdmin(orgSlug: string, offerId: string, token: string): Promise<TrainingOfferOverview | null> {
+  const res = await adminFetch(`${TRAINING_BASE(orgSlug)}/${encodeURIComponent(offerId)}/overview`, token)
+  // 422: keine gültige ID in der URL, für den Nutzer ebenfalls "nicht gefunden".
+  if (res.status === 404 || res.status === 422) return null
+  if (!res.ok) throw new TrainingAdminError('Angebot konnte nicht geladen werden.')
+  return res.json() as Promise<TrainingOfferOverview>
 }
 
 export async function fetchClubMembersAdmin(orgSlug: string, token: string, filter: { q?: string; active?: boolean } = {}): Promise<ClubMember[]> {

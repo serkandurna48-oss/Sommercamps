@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import OrgAdminLayout, { generateMetadata } from '../pilot/[org]/(org-admin)/layout'
+import OrgAdminLayout, { metadata as orgAdminMetadata } from '../pilot/[org]/(org-admin)/layout'
 import PlatformLayout from '../platform/(console)/layout'
 import { getAdminToken } from './adminSession'
 import { AdminAuthError, fetchMe, fetchOrganizationAdmin, fetchOrganizationsAdmin, type OrganizationAdmin } from './saasAdminApi'
@@ -71,10 +71,8 @@ describe('admin navigation and role context', () => {
     await expect(orgLayout('club-a')).rejects.toThrow('redirect:/pilot/club-a/login')
   })
 
-  it('loads draft metadata through the authenticated admin endpoint', async () => {
-    vi.mocked(fetchOrganizationAdmin).mockResolvedValue({ name: 'Draft club', site_published: false } as OrganizationAdmin)
-    const metadata = await generateMetadata({ params: Promise.resolve({ org: 'draft-club' }) })
-    expect(metadata.title).toBe('Draft club – Verwaltung')
-    expect(fetchOrganizationAdmin).toHaveBeenCalledWith('draft-club', 'local-test-token')
+  it('uses a static admin title so link prefetches never call the admin API', () => {
+    // Prefetches resolve metadata per visible link; a backend call here cost one admin request each.
+    expect(orgAdminMetadata.title).toEqual({ default: 'CampsPilot – Verwaltung', template: '%s – CampsPilot' })
   })
 })

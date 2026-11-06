@@ -1,5 +1,8 @@
 import { loadPlayerRecord } from '../../../../../components/saas/playerAdminData'
 import PlayerRecordScreen from '../../../../../components/saas/screens/PlayerRecordScreen'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Spielerakte' }
 
 export default async function PlayerRecordPage({ params, searchParams }: {
   params: Promise<{ org: string; playerId: string }>

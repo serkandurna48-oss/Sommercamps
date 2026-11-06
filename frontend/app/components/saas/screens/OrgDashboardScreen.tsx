@@ -15,6 +15,7 @@ import { formatSessionWhen } from '../training/trainingLogic'
 import { de, formatDateRange, formatEuro } from '../../../lib/i18n/de'
 import type { OrganizationScreenProps } from './types'
 import type { TrainingOverview } from '../trainingAdminData'
+import type { TrainingPaymentGroup } from '../training/trainingPayments'
 import { ADMIN_PAGE } from '../ui/pageLayout'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -48,9 +49,12 @@ function KpiTile({ label, value, detail, href, bar }: { label: string; value: st
   )
 }
 
-export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsByCamp, training, now = new Date() }: OrganizationScreenProps & {
+export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsByCamp, training, trainingPayments = [], trainingPaymentsError = false, now = new Date() }: OrganizationScreenProps & {
   /** Offers and upcoming sessions; undefined where the caller did not load trainings (preview). */
   training?: TrainingOverview
+  /** Training bookings for the open-payments KPI (same source as the payments page). */
+  trainingPayments?: TrainingPaymentGroup[]
+  trainingPaymentsError?: boolean
   now?: Date
 }) {
   const campsWithStats = camps.map((camp, i) => computeCampStats(camp, registrationsByCamp[i] ?? []))
@@ -70,9 +74,11 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
   const occupied = activeCamps.reduce((sum, c) => sum + c.registeredCount, 0)
   const capacity = activeCamps.reduce((sum, c) => sum + c.camp.capacity, 0)
 
-  // KPI: open camp payments in euro (training payments live on the payments page).
-  const openCents = camps.reduce((sum, camp, i) => sum + computeMoneyStats(camp, registrationsByCamp[i] ?? []).openCents, 0)
-  const openCount = registrationsByCamp.reduce((sum, regs) => sum + regs.filter(isOpenPayment).length, 0)
+  // KPI: open payments in euro across camps and trainings (same rules as the payments page).
+  const paymentGroups = [...camps.map((camp, i) => ({ camp, registrations: registrationsByCamp[i] ?? [] })), ...trainingPayments]
+  const openCents = paymentGroups.reduce((sum, g) => sum + computeMoneyStats(g.camp, g.registrations).openCents, 0)
+  const openCount = paymentGroups.reduce((sum, g) => sum + g.registrations.filter(isOpenPayment).length, 0)
+  const openScope = trainingPaymentsError ? 'nur Camps, Trainings nicht geladen' : 'Camps und Trainings'
 
   // KPI: camp registrations today / last 7 days (Berlin calendar day).
   const today = todayRegistrations(camps, registrationsByCamp, now)
@@ -123,7 +129,7 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
           <KpiTile
             label="Offene Zahlungen"
             value={formatEuro(openCents)}
-            detail={openCount === 1 ? '1 Anmeldung · Camps' : `${openCount} Anmeldungen · Camps`}
+            detail={`${openCount === 1 ? '1 Anmeldung' : `${openCount} Anmeldungen`} · ${openScope}`}
             href={`/pilot/${orgSlug}/zahlungen`}
           />
           <KpiTile

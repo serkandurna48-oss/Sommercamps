@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PaymentSection, { type PaymentEntry } from './PaymentSection'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import { buildPaymentReminder, type ReminderOrganization } from '../../../lib/zahlungserinnerung'
+import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
 
 vi.mock('../actions/paymentActions', () => ({ setPaymentStatusAction: vi.fn() }))
 
@@ -16,7 +17,7 @@ const entry: PaymentEntry = {
     parent_first_name: 'Alex', parent_last_name: 'Beispiel', parent_email: 'alex@example.com', parent_phone: '123',
     emergency_contact_name: null, emergency_contact_phone: null, medical_notes: null, allergies: null,
     jersey_size: null, pickup_authorized: null, photo_permission: false, created_at: '2027-01-01T00:00:00Z',
-  },
+  } satisfies RegistrationAdmin as RegistrationAdmin,
   camp: {
     id: 'camp-1', organization_id: 'org-1', slug: 'summer', title: 'Sommercamp',
     start_date: '2027-07-05', end_date: '2027-07-09', registration_start: null, registration_end: null,

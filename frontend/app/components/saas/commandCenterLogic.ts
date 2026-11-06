@@ -4,32 +4,35 @@
  * Begründung wie dashboardLogic.ts.
  */
 
-import type { CampAdmin, RegistrationAdmin } from '../../lib/saasAdminApi'
+import type { CampAdmin, RegistrationAdmin, TrainingPaymentRegistration } from '../../lib/saasAdminApi'
+
+/** The registration fields the payment views read; full RegistrationAdmin rows fit as well. */
+export type PaymentRegistration = TrainingPaymentRegistration
 
 const ACTIVE_STATUSES = new Set(['registered', 'confirmed'])
 
-export function isActiveRegistration(r: RegistrationAdmin): boolean {
+export function isActiveRegistration(r: Pick<RegistrationAdmin, 'status'>): boolean {
   return ACTIVE_STATUSES.has(r.status)
 }
 
 /** Price owed for this registration: the applied price if set (0 is valid),
  * otherwise the camp price (legacy registrations). */
-export function registrationPriceCents(camp: CampAdmin, r: RegistrationAdmin): number {
+export function registrationPriceCents(camp: Pick<CampAdmin, 'price_cents'>, r: Pick<RegistrationAdmin, 'applied_price_cents'>): number {
   return r.applied_price_cents ?? camp.price_cents
 }
 
 /** Only active registrations carry an outstanding payment obligation. */
-export function isOpenPayment(r: RegistrationAdmin): boolean {
+export function isOpenPayment(r: Pick<RegistrationAdmin, 'status' | 'payment_status'>): boolean {
   return isActiveRegistration(r) && r.payment_status === 'open'
 }
 
 /** Any manual payment decision (paid, free, refunded) can be undone while the registration is active. */
-export function canReopenPayment(r: RegistrationAdmin): boolean {
+export function canReopenPayment(r: Pick<RegistrationAdmin, 'status' | 'payment_status'>): boolean {
   return isActiveRegistration(r) && ['paid', 'waived', 'refunded'].includes(r.payment_status)
 }
 
 /** Amounts are calculated by the caller using each camp's price. */
-export function openPaymentStats(registrations: RegistrationAdmin[]): { count: number } {
+export function openPaymentStats(registrations: readonly Pick<RegistrationAdmin, 'status' | 'payment_status'>[]): { count: number } {
   return { count: registrations.filter(isOpenPayment).length }
 }
 
@@ -49,7 +52,7 @@ export interface MoneyStats {
 /** "Eingegangen/Offen" (Abschnitt 4.3) — Summe bezahlt vs. Summe offen,
  * nur über aktive Registrierungen (eine stornierte Anmeldung zählt für
  * keine der beiden Summen). */
-export function computeMoneyStats(camp: CampAdmin, registrations: RegistrationAdmin[]): MoneyStats {
+export function computeMoneyStats(camp: Pick<CampAdmin, 'price_cents'>, registrations: readonly Pick<RegistrationAdmin, 'status' | 'payment_status' | 'applied_price_cents'>[]): MoneyStats {
   let collectedCents = 0
   let openCents = 0
   for (const r of registrations) {

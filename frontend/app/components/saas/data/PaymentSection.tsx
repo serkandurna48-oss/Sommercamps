@@ -4,8 +4,9 @@
 import { useId, useMemo, useState } from 'react'
 import { de, formatEuro, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import { xlsxHrefWithFilter, type ExportColumn } from '../../../lib/exportCsv'
-import type { CampAdmin, RegistrationAdmin } from '../../../lib/saasAdminApi'
+import type { CampAdmin } from '../../../lib/saasAdminApi'
 import { isActiveRegistration, isOpenPayment, registrationPriceCents } from '../commandCenterLogic'
+import type { PaymentRegistration } from '../commandCenterLogic'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import ActionForm, { type ActionFormState } from '../ui/ActionForm'
 import Button from '../ui/Button'
@@ -17,7 +18,7 @@ import PaymentTextCopy from './PaymentTextCopy'
 import { buildOpenPaymentList, reminderLabels, type ReminderOrganization } from '../../../lib/zahlungserinnerung'
 
 export interface PaymentEntry {
-  registration: RegistrationAdmin
+  registration: PaymentRegistration
   camp: CampAdmin
 }
 

@@ -7,27 +7,15 @@ import { AdminAuthError, fetchMe } from '../../../lib/saasAdminApi'
 import { getOrganizationAdmin } from '../../../components/saas/orgAdminData'
 
 /**
- * Gemeinsamer Titel-Fix für alle Org-Admin-Seiten (Dashboard, Teilnehmer,
- * Zahlungen, Warteliste, Aufgaben, Konfiguration) — ohne dies erben sie
- * alle den hart codierten KSV-Titel aus dem Root-Layout, siehe
- * pilot/[org]/page.tsx's generateMetadata für die volle Begründung.
- *
- * Nutzt die ADMIN-Sicht (getOrganizationAdmin), nicht die öffentliche
- * fetchOrganization: seit dem Betreiber-Builder ist ein Verein während der
- * Einrichtung ein Entwurf (site_published=false) und für die öffentliche
- * API unsichtbar (tenancy.py) — ein Admin, der genau diesen Entwurf gerade
- * bearbeitet, muss trotzdem den echten Vereinsnamen im Tab sehen.
+ * Tab title for all org-admin pages: static on purpose. A `generateMetadata` that loads
+ * the organisation runs for every metadata prefetch of a nav or content link, i.e. one
+ * extra admin request (auth + DB) per visible link (perf-analysis.md F4: dashboard +9).
+ * Pages set their own static name through the template ("Zahlungen – CampsPilot"). The
+ * club name stays visible in the sidebar/top bar, which loads it once per navigation.
+ * Static here also keeps the hard-coded KSV title of the root layout out of the admin.
  */
-export async function generateMetadata({ params }: { params: Promise<{ org: string }> }): Promise<Metadata> {
-  const { org: orgSlug } = await params
-  const token = await getValidAccessToken()
-  if (!token) return { title: 'CampsPilot – Verwaltung' }
-  try {
-    const org = await getOrganizationAdmin(orgSlug, token)
-    return { title: org ? `${org.name} – Verwaltung` : 'CampsPilot – Verwaltung' }
-  } catch {
-    return { title: 'CampsPilot – Verwaltung' }
-  }
+export const metadata: Metadata = {
+  title: { default: 'CampsPilot – Verwaltung', template: '%s – CampsPilot' },
 }
 
 /**
@@ -68,6 +56,15 @@ export default async function OrgAdminLayout({
     redirect(`/pilot/${org}/login`)
   }
 
+  // Identity loads in the same round as the access check (shared per request via cache()
+  // with the page loaders). It is only rendered after the check below has passed; a
+  // foreign club answers 403 there anyway (the backend stays the boundary).
+  const AUTH_EXPIRED = Symbol('auth')
+  const identityPromise = getOrganizationAdmin(org, token).catch(error => {
+    if (error instanceof AdminAuthError) return AUTH_EXPIRED
+    // Page loaders report API failures inside the route error boundary.
+    return null
+  })
   const me = await fetchMe(token).catch(error => {
     if (error instanceof AdminAuthError) return null
     return undefined
@@ -82,11 +79,8 @@ export default async function OrgAdminLayout({
   }
 
   // AdminShell reserves the measured navigation and selection heights, including the safe area.
-  const identity = await getOrganizationAdmin(org, token).catch(error => {
-    if (error instanceof AdminAuthError) redirect(`/pilot/${org}/login`)
-    // Page loaders report API failures inside the route error boundary.
-    return null
-  })
+  const identity = await identityPromise
+  if (identity === AUTH_EXPIRED) redirect(`/pilot/${org}/login`)
   return (
     <AdminShell orgSlug={org} org={identity ?? undefined} isPlatformOwner={me.is_platform_owner}>{children}</AdminShell>
   )

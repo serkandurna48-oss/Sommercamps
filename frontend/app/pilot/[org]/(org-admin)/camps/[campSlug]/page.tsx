@@ -1,5 +1,8 @@
 import { loadCampAdminData } from '../../../../../components/saas/orgAdminData'
 import CampDetailScreen from '../../../../../components/saas/screens/CampDetailScreen'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Camp' }
 
 export default async function CampCommandCenterPage({
   params,

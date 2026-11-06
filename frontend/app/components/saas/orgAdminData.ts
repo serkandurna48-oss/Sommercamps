@@ -7,9 +7,7 @@ import {
   fetchCampsAdmin,
   fetchOrganizationAdmin,
   fetchRegistrationsAdmin,
-  fetchSessionRegistrationsAdmin,
-  fetchTrainingOffersAdmin,
-  fetchTrainingSessionsAdmin,
+  fetchTrainingPaymentsAdmin,
   type CampAdmin,
   type OrganizationAdmin,
   type RegistrationAdmin,
@@ -79,32 +77,42 @@ export async function loadOrgAdminData(orgSlug: string): Promise<OrgAdminData> {
   return { token, org, camps, registrationsByCamp }
 }
 
-const TRAINING_FETCH_BATCH = 5
+export interface TrainingPaymentsResult {
+  trainingPayments: TrainingPaymentGroup[]
+  /** Trainingszahlungen konnten nicht geladen werden; Camp-Teile bleiben nutzbar. */
+  trainingPaymentsError: boolean
+}
 
-/** Zahlungsseite: Camps wie bisher plus Trainingstermine mit Buchungen. Die Camp-Liste
- * schliesst Termine absichtlich aus, deshalb werden sie über die Trainings-Endpunkte
- * geladen. Nur Entwürfe ohne Buchungen werden übersprungen. Scheitert das Laden der
- * Trainings (kein Auth-Fehler), bleibt die Camp-Seite nutzbar: `trainingPaymentsError`
- * zeigt dann einen Hinweis. Anfragen laufen in kleinen Blöcken. */
-export async function loadOrgPaymentsData(orgSlug: string): Promise<OrgAdminData & { trainingPayments: TrainingPaymentGroup[]; trainingPaymentsError: boolean }> {
-  const data = await loadOrgAdminData(orgSlug)
+/** Trainingsbuchungen aller Termine in EINER Anfrage (`GET …/training-payments`). Der
+ * Endpunkt liefert nur Termine mit mindestens einer Buchung. Scheitert er (kein
+ * Auth-Fehler), degradiert die Seite: leere Liste plus `trainingPaymentsError`. */
+export async function loadTrainingPayments(orgSlug: string): Promise<TrainingPaymentsResult> {
+  const token = await getValidAccessToken()
+  if (!token) redirect(`/pilot/${orgSlug}/login`)
   try {
-    const offers = await fetchTrainingOffersAdmin(orgSlug, data.token)
-    const perOffer = await Promise.all(offers.map(async offer =>
-      (await fetchTrainingSessionsAdmin(orgSlug, offer.id, data.token))
-        .filter(s => !(s.status === 'draft' && s.booked_count === 0))
-        .map(session => ({ offer, session }))))
-    const targets = perOffer.flat()
-    const groups: TrainingPaymentGroup[] = []
-    for (let i = 0; i < targets.length; i += TRAINING_FETCH_BATCH) {
-      groups.push(...await Promise.all(targets.slice(i, i + TRAINING_FETCH_BATCH).map(async ({ offer, session }) =>
-        trainingPaymentGroup(offer, session, await fetchSessionRegistrationsAdmin(orgSlug, offer.id, session.id, data.token)))))
+    const rows = await fetchTrainingPaymentsAdmin(orgSlug, token)
+    return {
+      trainingPayments: rows
+        .map(({ offer, session, registrations }) => trainingPaymentGroup(offer, session, registrations))
+        .filter(g => g.registrations.length > 0),
+      trainingPaymentsError: false,
     }
-    return { ...data, trainingPayments: groups.filter(g => g.registrations.length > 0), trainingPaymentsError: false }
   } catch (err) {
     if (err instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
-    return { ...data, trainingPayments: [], trainingPaymentsError: true }
+    return { trainingPayments: [], trainingPaymentsError: true }
   }
+}
+
+/** Zahlungsseite: Camps wie bisher plus Trainingstermine mit Buchungen. Die Camp-Liste
+ * schliesst Termine absichtlich aus, deshalb kommen sie aus dem eigenen Endpunkt. Beide
+ * Teile laufen parallel; ein Trainingsfehler lässt die Camp-Zahlungen nutzbar. */
+export async function loadOrgPaymentsData(orgSlug: string): Promise<OrgAdminData & TrainingPaymentsResult> {
+  // Started first; its outcome is captured right away, so no unhandled rejection while the camps load.
+  const training = loadTrainingPayments(orgSlug).then(value => ({ value }), (error: unknown) => ({ error }))
+  const data = await loadOrgAdminData(orgSlug)
+  const outcome = await training
+  if ('error' in outcome) throw outcome.error
+  return { ...data, ...outcome.value }
 }
 
 export interface CampAdminData {
@@ -120,20 +128,22 @@ export async function loadCampAdminData(orgSlug: string, campSlug: string): Prom
   const token = await getValidAccessToken()
   if (!token) redirect(`/pilot/${orgSlug}/login`)
 
-  const org = await getOrganizationAdmin(orgSlug, token)
-  if (!org) redirect(`/pilot/${orgSlug}/login`)
-
-  let camps: CampAdmin[]
-  let registrations: RegistrationAdmin[]
-  try {
-    ;[camps, registrations] = await Promise.all([
-      fetchCampsAdmin(orgSlug, token),
-      fetchRegistrationsAdmin(orgSlug, campSlug, token),
-    ])
-  } catch (err) {
-    if (err instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
-    throw err
+  // Organisation, Camps und Anmeldungen in einer Runde; geprüft wird in der alten Reihenfolge.
+  const [orgOutcome, dataOutcome] = await Promise.allSettled([
+    getOrganizationAdmin(orgSlug, token),
+    Promise.all([fetchCampsAdmin(orgSlug, token), fetchRegistrationsAdmin(orgSlug, campSlug, token)]),
+  ])
+  if (orgOutcome.status === 'rejected') {
+    if (orgOutcome.reason instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
+    throw orgOutcome.reason
   }
+  const org = orgOutcome.value
+  if (!org) redirect(`/pilot/${orgSlug}/login`)
+  if (dataOutcome.status === 'rejected') {
+    if (dataOutcome.reason instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
+    throw dataOutcome.reason
+  }
+  const [camps, registrations]: [CampAdmin[], RegistrationAdmin[]] = dataOutcome.value
 
   const camp = camps.find(c => c.slug === campSlug)
   if (!camp) notFound()

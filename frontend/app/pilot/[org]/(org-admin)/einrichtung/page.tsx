@@ -1,5 +1,8 @@
 import { loadOrgAdminData } from '../../../../components/saas/orgAdminData'
 import EinrichtungScreen from '../../../../components/saas/screens/EinrichtungScreen'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Einrichtung' }
 
 type Props = {
   params: Promise<{ org: string }>

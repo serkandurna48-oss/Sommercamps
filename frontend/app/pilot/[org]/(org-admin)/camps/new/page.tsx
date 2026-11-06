@@ -4,6 +4,9 @@ import { getOrganizationAdmin } from '../../../../../components/saas/orgAdminDat
 import CampCreateScreen from '../../../../../components/saas/screens/CampCreateScreen'
 import { AdminAuthError, fetchCampsAdmin } from '../../../../../lib/saasAdminApi'
 import { prefillCampDuplicate } from '../../../../../components/saas/config/campDuplicate'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Camp anlegen' }
 
 export default async function NewCampPage({ params, searchParams }: { params: Promise<{ org: string }>; searchParams?: Promise<{ von?: string | string[] }> }) {
   const { org: orgSlug } = await params

@@ -1,5 +1,8 @@
 import { loadOrgAdminData } from '../../../../components/saas/orgAdminData'
 import NewRegistrationsScreen from '../../../../components/saas/screens/NewRegistrationsScreen'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Anmeldungen' }
 
 export default async function NewRegistrationsPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params

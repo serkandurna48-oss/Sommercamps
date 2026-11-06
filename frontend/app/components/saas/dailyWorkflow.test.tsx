@@ -20,7 +20,7 @@ import TasksPage from '../../pilot/[org]/(org-admin)/camps/[campSlug]/aufgaben/p
 import ConfigPage from '../../pilot/[org]/(org-admin)/camps/[campSlug]/konfiguration/page'
 import NewRegistrationsPage from '../../pilot/[org]/(org-admin)/anmeldungen/page'
 
-vi.mock('./orgAdminData', () => ({ loadOrgAdminData: vi.fn(), loadCampAdminData: vi.fn() }))
+vi.mock('./orgAdminData', () => ({ loadOrgAdminData: vi.fn(), loadCampAdminData: vi.fn(), loadTrainingPayments: vi.fn(async () => ({ trainingPayments: [], trainingPaymentsError: false })) }))
 vi.mock('next/navigation', () => ({ usePathname: () => '/pilot/demo/dashboard' }))
 vi.mock('next/link', () => ({ default: ({ children, ...props }: { children: React.ReactNode }) => <a {...props}>{children}</a>, useLinkStatus: () => ({ pending: false }) }))
 vi.mock('./trainingAdminData', () => ({ loadTrainingOverview: vi.fn(async () => ({ offers: [], upcoming: [], error: false })) }))

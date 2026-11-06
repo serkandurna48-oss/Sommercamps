@@ -1,9 +1,10 @@
-import type { CampAdmin, RegistrationAdmin, TrainingOffer, TrainingSessionAdmin } from '../../../lib/saasAdminApi'
+import type { CampAdmin, TrainingOffer, TrainingSessionAdmin } from '../../../lib/saasAdminApi'
+import type { PaymentRegistration } from '../commandCenterLogic'
 
 /** Ein Trainingstermin samt Buchungen für die Zahlungsseite. */
 export interface TrainingPaymentGroup {
   camp: CampAdmin
-  registrations: RegistrationAdmin[]
+  registrations: PaymentRegistration[]
 }
 
 function germanDate(isoDay: string): string {
@@ -18,7 +19,7 @@ function germanDate(isoDay: string): string {
 export function trainingPaymentGroup(
   offer: Pick<TrainingOffer, 'id' | 'title'>,
   session: TrainingSessionAdmin,
-  registrations: RegistrationAdmin[],
+  registrations: PaymentRegistration[],
 ): TrainingPaymentGroup {
   const camp: CampAdmin = {
     id: session.id,

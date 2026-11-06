@@ -27,6 +27,7 @@ import RegistrationFormScreen from './RegistrationFormScreen'
 import DoneScreen from './DoneScreen'
 import PaymentSection, { type PaymentEntry } from '../../components/saas/data/PaymentSection'
 import { setPaymentStatusAction } from '../../components/saas/actions/paymentActions'
+import type { RegistrationAdmin } from '../../lib/saasAdminApi'
 
 vi.mock('../../lib/saasApi', () => ({ submitRegistration: vi.fn() }))
 vi.mock('./motion', () => ({ useParentFlowMotion: () => {} }))
@@ -255,7 +256,7 @@ describe('Admin-Camp-Seite: Zahlung markieren', () => {
       pickup_authorized: null,
       photo_permission: false,
       created_at: '2027-01-01T00:00:00Z',
-    },
+    } satisfies RegistrationAdmin as RegistrationAdmin,
     camp: {
       id: 'camp-1',
       organization_id: 'org-1',

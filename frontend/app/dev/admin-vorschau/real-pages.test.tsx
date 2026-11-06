@@ -14,6 +14,7 @@ import { getOrganizationAdmin, loadCampAdminData, loadOrgAdminData, loadOrgPayme
 import { getPreviewFixtures } from './fixtures'
 
 vi.mock('../../components/saas/orgAdminData', () => ({
+  loadTrainingPayments: vi.fn(async () => ({ trainingPayments: [], trainingPaymentsError: false })),
   loadOrgAdminData: vi.fn(), loadOrgPaymentsData: vi.fn(), loadCampAdminData: vi.fn(), getOrganizationAdmin: vi.fn(),
 }))
 vi.mock('../../lib/adminSession', () => ({ getAdminToken: vi.fn() }))

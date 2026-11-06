@@ -1,5 +1,8 @@
 import { loadTrainingOffers } from '../../../../components/saas/trainingAdminData'
 import TrainingsScreen from '../../../../components/saas/screens/TrainingsScreen'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Trainings' }
 
 export default async function TrainingsPage({ params }: { params: Promise<{ org: string }> }) {
   const { org: orgSlug } = await params

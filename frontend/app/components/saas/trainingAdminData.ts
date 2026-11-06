@@ -3,8 +3,7 @@ import { getValidAccessToken } from '../../lib/supabaseServer'
 import {
   AdminAuthError,
   fetchClubMembersAdmin,
-  fetchSessionRegistrationsAdmin,
-  fetchTrainingOfferAdmin,
+  fetchTrainingOfferOverviewAdmin,
   fetchTrainingOffersAdmin,
   fetchTrainingSessionsAdmin,
   type ClubMember,
@@ -31,18 +30,34 @@ export async function loadBase(orgSlug: string): Promise<{ token: string; org: O
   return { token, org }
 }
 
+/**
+ * Like `loadBase`, but the page data starts in the same round as the organisation
+ * (both need only the token). Checks keep the old order: organisation first (auth ->
+ * login, unknown club -> login), then the page data (auth -> login, else rethrow, which
+ * also passes `notFound()` through).
+ */
+export async function loadWithBase<T>(orgSlug: string, load: (token: string) => Promise<T>): Promise<{ token: string; org: OrganizationAdmin; data: T }> {
+  const token = await getValidAccessToken()
+  if (!token) redirect(`/pilot/${orgSlug}/login`)
+  const [orgOutcome, dataOutcome] = await Promise.allSettled([getOrganizationAdmin(orgSlug, token), load(token)])
+  if (orgOutcome.status === 'rejected') {
+    if (orgOutcome.reason instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
+    throw orgOutcome.reason
+  }
+  const org = orgOutcome.value
+  if (!org) redirect(`/pilot/${orgSlug}/login`)
+  if (dataOutcome.status === 'rejected') return rethrowAuth(orgSlug, dataOutcome.reason)
+  return { token, org, data: dataOutcome.value }
+}
+
 export function rethrowAuth(orgSlug: string, error: unknown): never {
   if (error instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
   throw error
 }
 
 export async function loadTrainingOffers(orgSlug: string): Promise<{ org: OrganizationAdmin; offers: TrainingOffer[] }> {
-  const { token, org } = await loadBase(orgSlug)
-  try {
-    return { org, offers: await fetchTrainingOffersAdmin(orgSlug, token) }
-  } catch (error) {
-    return rethrowAuth(orgSlug, error)
-  }
+  const { org, data: offers } = await loadWithBase(orgSlug, token => fetchTrainingOffersAdmin(orgSlug, token))
+  return { org, offers }
 }
 
 export async function loadTrainingOrg(orgSlug: string): Promise<OrganizationAdmin> {
@@ -58,27 +73,22 @@ export interface TrainingOfferData {
 }
 
 export async function loadTrainingOffer(orgSlug: string, offerId: string): Promise<TrainingOfferData> {
-  const { token, org } = await loadBase(orgSlug)
-  try {
-    const offer = await fetchTrainingOfferAdmin(orgSlug, offerId, token)
-    if (!offer) notFound()
-    const sessions = await fetchTrainingSessionsAdmin(orgSlug, offer.id, token)
-    const lists = await Promise.all(sessions.map(session => fetchSessionRegistrationsAdmin(orgSlug, offer.id, session.id, token)))
-    return { org, offer, sessions, registrationsBySession: Object.fromEntries(sessions.map((session, i) => [session.id, lists[i]])) }
-  } catch (error) {
-    if (error instanceof AdminAuthError) return rethrowAuth(orgSlug, error)
-    throw error
+  // One request (offer + sessions + bookings) next to the organisation instead of 2 + N in 4 rounds.
+  const { org, data: overview } = await loadWithBase(orgSlug, token => fetchTrainingOfferOverviewAdmin(orgSlug, offerId, token))
+  if (!overview) notFound()
+  const sessions: TrainingSessionAdmin[] = overview.sessions.map(({ registrations, ...session }) => { void registrations; return session })
+  return {
+    org,
+    offer: overview.offer,
+    sessions,
+    registrationsBySession: Object.fromEntries(overview.sessions.map(session => [session.id, session.registrations])),
   }
 }
 
 /** Alle Mitglieder; Suche und Statusfilter laufen im Browser (kein Suchbegriff in URL oder Server-Logs). */
 export async function loadClubMembers(orgSlug: string): Promise<{ org: OrganizationAdmin; members: ClubMember[] }> {
-  const { token, org } = await loadBase(orgSlug)
-  try {
-    return { org, members: await fetchClubMembersAdmin(orgSlug, token) }
-  } catch (error) {
-    return rethrowAuth(orgSlug, error)
-  }
+  const { org, data: members } = await loadWithBase(orgSlug, token => fetchClubMembersAdmin(orgSlug, token))
+  return { org, members }
 }
 
 export interface UpcomingSession {

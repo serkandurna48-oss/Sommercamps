@@ -5,6 +5,9 @@ export interface ParentDetails {
   parentPhone: string
   emergencyPhone: string
   pickupAuthorized: string
+  billingStreet?: string
+  billingPostalCode?: string
+  billingCity?: string
 }
 
 export function parentDetailsOnly(source: ParentDetails): ParentDetails {
@@ -14,5 +17,8 @@ export function parentDetailsOnly(source: ParentDetails): ParentDetails {
     parentPhone: source.parentPhone,
     emergencyPhone: source.emergencyPhone,
     pickupAuthorized: source.pickupAuthorized,
+    billingStreet: source.billingStreet ?? '',
+    billingPostalCode: source.billingPostalCode ?? '',
+    billingCity: source.billingCity ?? '',
   }
 }

@@ -155,7 +155,7 @@ async function filledForm() {
     orgLogoUrl={org.logo_url} contactEmail={org.contact_email} hasBankDetails={false} camp={camp}
     questions={[{ key: 'hinweis', label: 'Zusatzangabe', type: 'text', required: false, options: null, other_label: null }]}
     onBack={vi.fn()} onSubmitted={vi.fn()} />))
-  const values = ['Mia', 'Muster', '01012018', 'Eva Muster', 'eva@example.org', '0123456', '0654321', 'Eva Muster']
+  const values = ['Mia', 'Muster', '01012018', 'Eva Muster', 'eva@example.org', '0123456', '0654321', 'Eva Muster', 'Musterweg 1', '34117', 'Kassel']
   await act(async () => {
     host.querySelectorAll<HTMLInputElement>('input:not([type=checkbox])').forEach((input, index) => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, values[index] ?? 'Zusatzantwort')

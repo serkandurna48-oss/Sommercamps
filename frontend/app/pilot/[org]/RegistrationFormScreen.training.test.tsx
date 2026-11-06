@@ -67,7 +67,7 @@ function checkbox(nodes: ElementNode[], heading: string) {
 }
 function fill(nodes: ElementNode[]) {
   const inputs = nodes.filter((node) => node.type === 'input' && node.props.type !== 'checkbox' && node.props.type !== 'radio')
-  const values = ['Mia', 'Muster', '01.01.2018', 'Eva Muster', 'eva@example.de', '12345', '67890', '']
+  const values = ['Mia', 'Muster', '01.01.2018', 'Eva Muster', 'eva@example.de', '12345', '67890', '', 'Musterweg 1', '34117', 'Kassel']
   inputs.forEach((input, index) => change(input, values[index]))
   change(checkbox(nodes, 'Teilnahmebedingungen'), true)
   change(checkbox(nodes, 'Datenschutz'), true)

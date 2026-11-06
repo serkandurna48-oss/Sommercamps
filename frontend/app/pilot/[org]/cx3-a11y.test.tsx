@@ -83,7 +83,8 @@ async function fill(id: string, value: string) {
 async function fillBase() {
   for (const [id, value] of Object.entries({ child_first_name: 'Mia', child_last_name: 'Muster',
     child_birth_date: '01.01.2018', parent_name: 'Eva Muster', parent_email: 'eva@example.com',
-    parent_phone: '0123456', emergency_phone: '0654321' })) await fill(id, value)
+    parent_phone: '0123456', emergency_phone: '0654321', parent_street: 'Musterweg 1', parent_postal_code: '34117',
+    parent_city: 'Kassel' })) await fill(id, value)
 }
 function assertLabels() {
   const inputs = host.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea')

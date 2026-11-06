@@ -18,6 +18,7 @@ const required = {
   child_first_name: 'Mia', child_last_name: 'Muster', child_birth_date: '04.01.2017',
   parent_name: 'Eva Muster', parent_email: 'eva@example.test', parent_phone: '+49 561 12345',
   emergency_phone: '0561 67890',
+  parent_street: 'Musterweg 1', parent_postal_code: '34117', parent_city: 'Kassel',
 }
 let host: HTMLDivElement
 let root: Root

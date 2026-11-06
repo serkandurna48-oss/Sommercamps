@@ -33,10 +33,12 @@ const result: RegistrationCreated = {
 const parents = {
   parentName: 'Eva Muster', parentEmail: 'eva@example.test', parentPhone: '0561 12345',
   emergencyPhone: '0561 67890', pickupAuthorized: 'Eva Muster, Alex Muster',
+  billingStreet: 'Musterweg 1', billingPostalCode: '34117', billingCity: 'Kassel',
 }
 const parentFields = {
   parent_name: parents.parentName, parent_email: parents.parentEmail, parent_phone: parents.parentPhone,
   emergency_phone: parents.emergencyPhone, pickup_authorized: parents.pickupAuthorized,
+  parent_street: parents.billingStreet, parent_postal_code: parents.billingPostalCode, parent_city: parents.billingCity,
 }
 let host: HTMLDivElement
 let root: Root

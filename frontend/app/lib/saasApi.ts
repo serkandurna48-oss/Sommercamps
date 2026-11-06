@@ -106,7 +106,15 @@ export interface RegistrationCreateInput {
   payment_method?: TrainingPaymentMethod
   // Nur Trainingsbuchungen: freiwillige Einwilligung zur internen Trainingsdoku. Bei Camps nicht senden.
   documentation_consent?: boolean
+  // Rechnungsanschrift: Pflicht bei kostenpflichtigen Buchungen (Server prüft den Preis).
+  parent_street?: string
+  parent_postal_code?: string
+  parent_city?: string
 }
+
+/** Server-Antwort (422), wenn eine kostenpflichtige Buchung ohne Rechnungsanschrift kommt. */
+export const BILLING_ADDRESS_REQUIRED_DETAIL = 'Bitte geben Sie Ihre Rechnungsanschrift an.'
+
 
 export type TrainingPaymentMethod = 'ueberweisung' | 'bar' | 'online'
 
@@ -219,6 +227,12 @@ export async function submitRegistration(
             : 'Bitte prüfen Sie diese Angabe.'
         }
       }
+    }
+    if (res.status === 422 && body?.detail === BILLING_ADDRESS_REQUIRED_DETAIL) {
+      for (const field of ['parent_street', 'parent_postal_code', 'parent_city'] as const) {
+        if (!payload[field]?.trim()) fieldErrors[field] = BILLING_ADDRESS_REQUIRED_DETAIL
+      }
+      if (Object.keys(fieldErrors).length === 0) fieldErrors.parent_street = BILLING_ADDRESS_REQUIRED_DETAIL
     }
     if (body?.detail === "Child's age does not meet this camp's age requirements") {
       fieldErrors.child_birth_date = 'Das Alter Ihres Kindes passt zum Campbeginn nicht zur angegebenen Altersgruppe.'

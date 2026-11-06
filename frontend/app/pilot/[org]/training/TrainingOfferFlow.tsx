@@ -79,6 +79,7 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
           dateTimeLabel: formatSessionDateTime(selected.local_date, selected.local_time),
           priceText: memberPriceText(selected.price_member_cents, selected.price_nonmember_cents),
           onlinePaymentAvailable: onlineAvailable,
+          billingAddressRequired: Math.max(selected.price_member_cents, selected.price_nonmember_cents) > 0,
           onSlotTaken: (conflict) => {
             setNotice(SLOT_TAKEN_NOTICE[conflict])
             setScreen('detail')

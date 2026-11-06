@@ -36,7 +36,7 @@ afterEach(async () => {
 })
 
 async function fill() {
-  const values = ['Mia', 'Muster', '01012018', 'Eva Muster', 'eva@example.com', '0561 1234', '0561 5678', '']
+  const values = ['Mia', 'Muster', '01012018', 'Eva Muster', 'eva@example.com', '0561 1234', '0561 5678', '', 'Musterweg 1', '34117', 'Kassel']
   await act(async () => {
     host.querySelectorAll<HTMLInputElement>('input:not([type=checkbox])').forEach((input, index) => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, values[index])
@@ -52,11 +52,14 @@ async function submit() {
 
 it('marks required inputs, supplies keyboard/autofill metadata and exposes both legal links', () => {
   const required = host.querySelectorAll<HTMLInputElement>('input[required]')
-  expect(required).toHaveLength(9)
+  expect(required).toHaveLength(12) // incl. billing address (paid camp)
   required.forEach(input => expect(input.closest('label')!.textContent).toContain('*'))
   expect(host.querySelector('input[type=email]')?.getAttribute('inputmode')).toBe('email')
   expect(host.querySelector('input[autocomplete="section-emergency tel"]')?.getAttribute('type')).toBe('tel')
   expect(host.querySelector('input[autocomplete="section-child bday"]')?.getAttribute('inputmode')).toBe('numeric')
+  expect(host.querySelector('input[autocomplete="street-address"]')?.id).toBe('parent_street')
+  expect(host.querySelector('input[autocomplete="postal-code"]')?.getAttribute('inputmode')).toBe('numeric')
+  expect(host.querySelector('input[autocomplete="address-level2"]')?.id).toBe('parent_city')
   for (const route of ['datenschutz', 'teilnahmebedingungen']) {
     const link = host.querySelector<HTMLAnchorElement>(`a[href="/pilot/demo/${route}"]`)!
     expect(link.target).toBe('_blank')
@@ -69,7 +72,7 @@ it('focuses the first error and connects every invalid input to its field messag
   await submit()
   expect(document.activeElement).toBe(host.querySelector('input'))
   const invalid = host.querySelectorAll('input[aria-invalid=true]')
-  expect(invalid).toHaveLength(9)
+  expect(invalid).toHaveLength(12)
   invalid.forEach(input => {
     const id = input.getAttribute('aria-describedby')!.split(' ')[0]
     expect(document.getElementById(id)?.textContent).toBeTruthy()

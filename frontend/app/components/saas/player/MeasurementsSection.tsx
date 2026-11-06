@@ -69,7 +69,7 @@ export default function MeasurementsSection({ orgSlug, playerId, measurements, m
               const rows = measurements.filter(m => m.metric === group.metric)
               return (
                 <li key={group.metric} className="flex flex-col border-t py-3 first:border-t-0 first:pt-0" style={{ borderTopColor: 'var(--cp-line-2)' }}>
-                  <MetricChart metric={group.metric} unit={group.unit} points={series} color="var(--cp-accent-ink)" />
+                  <MetricChart metric={group.metric} unit={group.unit} points={series} color="var(--cp-accent-ink)" lowerIsBetter={metrics.find(entry => entry.metric === group.metric)?.lower_is_better} />
                   <details className="group mt-1">
                     <summary className={DISCLOSURE_SUMMARY} style={{ color: 'var(--cp-ink-2)' }}>Einzelwerte ({rows.length})</summary>
                     <ul className="flex flex-col">

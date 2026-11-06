@@ -1101,6 +1101,8 @@ export interface PlayerMeasurement {
 export interface PlayerMetric {
   metric: string
   unit: string
+  /** Optional, ausdrücklich: niedriger ist besser (sonst: Zeiteinheit oder "sprint" im Namen). */
+  lower_is_better?: boolean
 }
 
 export interface PlayerDetail {

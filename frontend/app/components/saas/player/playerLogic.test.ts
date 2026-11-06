@@ -110,6 +110,16 @@ describe('Messwert-Verlauf', () => {
     expect(isLowerBetter('standweitsprung')).toBe(false)
     expect(isLowerBetter('Dribbling-Parcours')).toBe(false)
   })
+  it('erkennt „niedriger ist besser“ an ausdrücklicher Angabe, Zeiteinheit oder Name', () => {
+    for (const unit of ['s', 'S', 'sek', 'Sek.', 'sec', ' sec ', 'Sekunden', 'ms']) expect(isLowerBetter('Dribbling-Parcours', unit), unit).toBe(true)
+    expect(isLowerBetter('Antritt 20 m', 'cm')).toBe(false)
+    expect(isLowerBetter('Tempo', 'm/s')).toBe(false)
+    expect(isLowerBetter('Sprint 20 m', 'm')).toBe(true)
+    expect(isLowerBetter('Standweitsprung', 'cm')).toBe(false)
+    expect(isLowerBetter('Dribbling-Parcours', 'Anzahl', true)).toBe(true)
+    expect(isLowerBetter('sprint_10m', 's', false)).toBe(false)
+    expect(isLowerBetter('Dribbling-Parcours', 's', null)).toBe(true)
+  })
   it('benennt Metriken und formatiert Werte mit Einheit (de-DE)', () => {
     expect(metricLabel('sprint_10m')).toBe('Sprint 10 m')
     expect(metricLabel('jonglieren')).toBe('Jonglieren')
@@ -129,6 +139,17 @@ describe('Trend und Kopfzahlen', () => {
     expect(metricTrend('standweitsprung', [pt('2027-01-01', 150), pt('2027-03-01', 140)])).toMatchObject({ direction: 'worse' })
     expect(metricTrend('jonglieren', [pt('2027-01-01', 5), pt('2027-03-01', 5)])).toMatchObject({ delta: 0, direction: 'same' })
   })
+  it('eigene Zeitmetriken: sinkende Sekunden sind besser, steigende schlechter (auch ohne "sprint" im Namen)', () => {
+    expect(metricTrend('Dribbling-Parcours', [pt('2027-01-01', 14.2), pt('2027-03-01', 13.4)], 's')).toMatchObject({ delta: -0.8, direction: 'better' })
+    expect(metricTrend('Dribbling-Parcours', [pt('2027-01-01', 13.4), pt('2027-03-01', 14.2)], 'sek')).toMatchObject({ delta: 0.8, direction: 'worse' })
+    expect(metricTrend('Sprint 20 m', [pt('2027-01-01', 3.4), pt('2027-03-01', 3.1)], 'Sek.')).toMatchObject({ direction: 'better' })
+    expect(metricTrend('Liegestütze', [pt('2027-01-01', 20), pt('2027-03-01', 25)], 'Anzahl')).toMatchObject({ direction: 'better' })
+    expect(metricTrend('Liegestütze', [pt('2027-01-01', 25), pt('2027-03-01', 20)], 'Anzahl')).toMatchObject({ direction: 'worse' })
+  })
+  it('ausdrückliche Angabe schlägt Einheit und Name', () => {
+    expect(metricTrend('Ballkontakte', [pt('2027-01-01', 30), pt('2027-03-01', 20)], 'Anzahl', true)).toMatchObject({ direction: 'better' })
+    expect(metricTrend('sprint_10m', [pt('2027-01-01', 2.4), pt('2027-03-01', 2.1)], 's', false)).toMatchObject({ direction: 'worse' })
+  })
   it('einzelne Messung: kein Vergleich; leere Reihe: null', () => {
     expect(metricTrend('sprint_10m', [pt('2027-01-01', 2.4)])).toMatchObject({ previous: null, delta: null, direction: null })
     expect(metricTrend('sprint_10m', [])).toBeNull()
@@ -137,6 +158,12 @@ describe('Trend und Kopfzahlen', () => {
     expect(formatDelta(-0.26, 's')).toBe('\u22120,26 s')
     expect(formatDelta(8, 'cm')).toBe('+8 cm')
     expect(formatDelta(0, 's')).toBe('0 s')
+  })
+  it('zeigt genau ein Vorzeichen, auch bei Prozent und krummen Werten (kein „−−0,8 %“)', () => {
+    expect(formatDelta(-0.8, '%')).toBe('\u22120,8 %')
+    expect(formatDelta(0.8, '%')).toBe('+0,8 %')
+    expect(formatDelta(-0.004, 's')).toBe('0 s')
+    for (const delta of [-0.8, 0.8, -12, 3.456]) expect(formatDelta(delta, 's')).not.toMatch(/[-\u2212+]{2}/)
   })
   it('letztes Training: jüngster nicht stornierter Termin bis heute', () => {
     const list = [

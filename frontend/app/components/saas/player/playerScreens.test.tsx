@@ -208,6 +208,26 @@ describe('Spielerakte (Darstellung)', () => {
     expect(worse.querySelector('[data-trend="worse"]')?.textContent).toContain('+0,2 s schlechter')
   })
 
+  it('Messwerte: eigene Zeitmetrik (Einheit s) wird bei sinkender Zeit grün gewertet, mit einem Minuszeichen', () => {
+    const custom = (id: string, measured_on: string, value: number, unit = 's') => ({ id, player_id: 'p1', measured_on, metric: 'Dribbling-Parcours', value, unit, note: null, created_at: `${measured_on}T19:00:00Z`, updated_at: '' })
+    const better = html(screen(record({ measurements: [custom('a', '2027-01-10', 14.2), custom('b', '2027-03-29', 13.4)] })))
+    const figure = better.querySelector('figure[data-metric="Dribbling-Parcours"]')!
+    const chip = figure.querySelector('[data-trend]')!
+    expect(chip.getAttribute('data-trend')).toBe('better')
+    expect(chip.textContent).toContain('\u22120,8 s besser')
+    expect(chip.textContent).not.toMatch(/[-\u2212]{2}/)
+    expect(chip.getAttribute('style')).toContain('--cp-ok')
+    expect(figure.textContent).toContain('Niedriger ist besser')
+    const worse = html(screen(record({ measurements: [custom('a', '2027-01-10', 13.4), custom('b', '2027-03-29', 14.2)] })))
+    const bad = worse.querySelector('figure[data-metric="Dribbling-Parcours"] [data-trend]')!
+    expect(bad.getAttribute('data-trend')).toBe('worse')
+    expect(bad.getAttribute('style')).toContain('--cp-error')
+    // Counts stay "higher is better".
+    const reps = html(screen(record({ measurements: [custom('a', '2027-01-10', 20, 'Anzahl'), custom('b', '2027-03-29', 25, 'Anzahl')] })))
+    expect(reps.querySelector('figure[data-metric="Dribbling-Parcours"] [data-trend]')?.getAttribute('data-trend')).toBe('better')
+    expect(reps.querySelector('figure[data-metric="Dribbling-Parcours"]')?.textContent).toContain('Höher ist besser')
+  })
+
   it('Buchungen mit Titel, lokalem Datum/Uhrzeit und Zahlstatus', () => {
     const doc = html(screen())
     const section = doc.querySelector('section[aria-labelledby="bookings-heading"]')!

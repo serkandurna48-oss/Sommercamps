@@ -7,7 +7,7 @@ import Button from '../ui/Button'
 import Field from '../ui/Field'
 import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 import MemberRow from './MemberRow'
-import { filterMembers, type MemberStatusFilter } from './trainingLogic'
+import { filterMembers, memberExtraLabels, type MemberStatusFilter } from './trainingLogic'
 
 /** Mitgliederliste mit Suche im Browser. Der Suchbegriff bleibt im
  * Komponentenzustand (nicht in der URL, kein Request). */
@@ -17,12 +17,18 @@ export default function MemberList({ orgSlug, members }: { orgSlug: string; memb
   const [status, setStatus] = useState<MemberStatusFilter>('alle')
   const filtered = q.trim() !== '' || status !== 'alle'
   const shown = filterMembers(members, q, status)
+  const extraLabels = memberExtraLabels(members)
+  // Extra columns widen the grid; the container scrolls horizontally on desktop.
+  const gridStyle = extraLabels.length > 0
+    ? { gridTemplateColumns: `minmax(160px, 1.6fr) 140px minmax(120px, 1fr) 88px ${extraLabels.map(() => 'minmax(120px, 1fr)').join(' ')} 180px` }
+    : undefined
+  const tableStyle = extraLabels.length > 0 ? { '--cp-member-min': `${760 + extraLabels.length * 136}px` } as React.CSSProperties : undefined
 
   return (
     <>
       <div role="search" className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="sm:w-72">
-          <Field label="Suche nach Name oder Mitgliedsnummer" htmlFor={`${id}-q`}>
+          <Field label={extraLabels.length > 0 ? 'Suche nach Name, Nummer oder Zusatzfeld' : 'Suche nach Name oder Mitgliedsnummer'} htmlFor={`${id}-q`}>
             <input id={`${id}-q`} type="search" value={q} onChange={event => setQ(event.target.value)} maxLength={100} autoComplete="off" className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
         </div>
@@ -44,12 +50,16 @@ export default function MemberList({ orgSlug, members }: { orgSlug: string; memb
         <EmptyState title={filtered ? 'Keine Mitglieder gefunden.' : 'Noch keine Mitglieder.'}
           body={filtered ? 'Passen Sie Suche oder Status an.' : 'Importieren Sie Ihre Mitgliederliste per CSV oder tragen Sie Mitglieder einzeln ein.'} />
       ) : (
-        <ul className="cp-card cp-card-list cp-table">
-          <li className="cp-table-head cp-member-cols" aria-hidden="true">
-            <span>Name</span><span>Geburtsdatum</span><span>Nummer · Quelle</span><span>Status</span><span />
-          </li>
-          {shown.map(member => <MemberRow key={member.id} orgSlug={orgSlug} member={member} />)}
-        </ul>
+        <div className={extraLabels.length > 0 ? 'cp-card cp-member-scroll' : undefined}>
+          <ul className={extraLabels.length > 0 ? 'cp-card-list cp-table cp-member-wide' : 'cp-card cp-card-list cp-table'} style={tableStyle}>
+            <li className="cp-table-head cp-member-cols" aria-hidden="true" style={gridStyle}>
+              <span>Name</span><span>Geburtsdatum</span><span>Nummer · Quelle</span><span>Status</span>
+              {extraLabels.map(label => <span key={label} className="min-w-0 break-words">{label}</span>)}
+              <span />
+            </li>
+            {shown.map(member => <MemberRow key={member.id} orgSlug={orgSlug} member={member} extraLabels={extraLabels} gridStyle={gridStyle} />)}
+          </ul>
+        </div>
       )}
     </>
   )

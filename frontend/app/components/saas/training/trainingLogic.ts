@@ -218,7 +218,19 @@ function foldName(text: string): string {
 
 /** Suche und Statusfilter laufen nur im Browser: der Suchbegriff kann ein
  * Kindername sein und gehört nicht in URL, Verlauf oder Server-Logs. */
-export function filterMembers<T extends { first_name: string; last_name: string; member_number: string | null; active: boolean }>(
+/** Labels aller Zusatzfelder in Reihenfolge des ersten Auftretens (Spalten der Liste). */
+export function memberExtraLabels(members: { extra?: Record<string, string> }[]): string[] {
+  const labels: string[] = []
+  const seen = new Set<string>()
+  for (const member of members) {
+    for (const label of Object.keys(member.extra ?? {})) {
+      if (!seen.has(label)) { seen.add(label); labels.push(label) }
+    }
+  }
+  return labels
+}
+
+export function filterMembers<T extends { first_name: string; last_name: string; member_number: string | null; active: boolean; extra?: Record<string, string> }>(
   members: T[],
   query: string,
   status: MemberStatusFilter,
@@ -231,5 +243,6 @@ export function filterMembers<T extends { first_name: string; last_name: string;
     return foldName(`${member.first_name}${member.last_name}`).includes(needle)
       || foldName(`${member.last_name}${member.first_name}`).includes(needle)
       || foldName(member.member_number ?? '').includes(needle)
+      || Object.values(member.extra ?? {}).some(value => foldName(value).includes(needle))
   })
 }

@@ -266,14 +266,103 @@ describe('interaktive Teile', () => {
     })
   }
 
-  it('Import dekodiert Excel-CSV (windows-1252) und zeigt die Zähler', async () => {
+  it('Import dekodiert Excel-CSV (windows-1252), sendet die Zuordnung und zeigt die Zähler', async () => {
     vi.mocked(importMembersAction).mockResolvedValue({ error: null, errors: [], result: { rows: 2, created: 1, updated: 1, merged_in_file: 0 } })
     await act(() => root.render(<MemberImport orgSlug="demo" />))
     // "Müller" with a CP1252 u-umlaut (0xFC) is not valid UTF-8.
-    await pickFile([new Uint8Array([0x76, 0x6f, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x3b, 0x4d, 0xfc, 0x6c, 0x6c, 0x65, 0x72])])
+    const head = new TextEncoder().encode('vorname;nachname;geburtsdatum\nAnna;')
+    await pickFile([head, new Uint8Array([0x4d, 0xfc, 0x6c, 0x6c, 0x65, 0x72]), ';01.02.2015'])
     await submitImport()
-    expect(importMembersAction).toHaveBeenCalledWith('demo', 'vorname;Müller')
+    expect(importMembersAction).toHaveBeenCalledWith('demo', 'vorname;nachname;geburtsdatum\nAnna;Müller;01.02.2015',
+      { 0: 'first_name', 1: 'last_name', 2: 'birth_date' })
     expect(container.textContent).toContain('2 Zeilen gelesen, 1 neu, 1 aktualisiert')
+  })
+
+  const CLUB_EXPORT = [
+    'Mitgl.-Nr.;Name;Vorname;Geb.-Datum;Mannschaft;Telefon;Allergien',
+    ...Array.from({ length: 7 }, (_, i) => `M-${i};Muster${i};Kind${i};0${i + 1}.02.2015;U10;0123;Nuss`),
+  ].join('\n')
+
+  function select(column: number) {
+    return container.querySelector<HTMLSelectElement>(`select[data-column="${column}"]`)!
+  }
+  async function setValue(element: HTMLSelectElement | HTMLInputElement, value: string) {
+    const proto = element instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(proto, 'value')!.set!.call(element, value)
+      element.dispatchEvent(new Event(element instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }))
+    })
+  }
+  async function waitForPreview() {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)) })
+  }
+
+  it('Zuordnung: Vorschau der ersten 5 Zeilen, Alias-Vorschläge, Datenschutzhinweis und Warnung', async () => {
+    await act(() => root.render(<MemberImport orgSlug="demo" />))
+    await pickFile([CLUB_EXPORT])
+    await waitForPreview()
+    expect(container.querySelector('[data-testid="privacy-hint"]')?.textContent)
+      .toBe('Nur Felder übernehmen, die Sie für Training und Preis brauchen. Keine Gesundheitsdaten, Adressen oder Telefonnummern.')
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(5)
+    expect(container.textContent).toContain('ersten 5 von 7 Zeilen')
+    expect([0, 1, 2, 3, 4, 5, 6].map(i => select(i).value))
+      .toEqual(['member_number', 'last_name', 'first_name', 'birth_date', 'skip', 'skip', 'skip'])
+    expect([...container.querySelectorAll('[data-sensitive]')].map(el => el.getAttribute('data-sensitive'))).toEqual(['5', '6'])
+    expect(select(0).options).toHaveLength(6)
+    expect([...select(0).options].map(o => o.textContent)).toEqual(['Vorname', 'Nachname', 'Geburtsdatum', 'Mitgliedsnummer', 'Zusatzfeld', 'Nicht importieren'])
+  })
+
+  it('Zuordnung: Zusatzfeld mit eigener Bezeichnung wird gesendet, sensible Spalte nicht', async () => {
+    vi.mocked(importMembersAction).mockResolvedValue({ error: null, errors: [], result: { rows: 7, created: 7, updated: 0, merged_in_file: 0 } })
+    await act(() => root.render(<MemberImport orgSlug="demo" />))
+    await pickFile([CLUB_EXPORT])
+    await waitForPreview()
+    await setValue(select(4), 'extra')
+    const label = container.querySelector<HTMLInputElement>('input[data-label-for="4"]')!
+    expect(label.value).toBe('Mannschaft')
+    await setValue(label, 'Team')
+    await submitImport()
+    expect(importMembersAction).toHaveBeenCalledWith('demo', CLUB_EXPORT, {
+      0: 'member_number', 1: 'last_name', 2: 'first_name', 3: 'birth_date', 4: { extra: 'Team' }, 5: null, 6: null,
+    })
+  })
+
+  it('Zuordnung: fehlendes Pflichtfeld oder doppelte Zuordnung sendet nichts', async () => {
+    await act(() => root.render(<MemberImport orgSlug="demo" />))
+    await pickFile([CLUB_EXPORT])
+    await waitForPreview()
+    await setValue(select(3), 'skip')
+    await submitImport()
+    expect(importMembersAction).not.toHaveBeenCalled()
+    expect(container.querySelector('[data-testid="mapping-errors"]')?.textContent).toContain('Bitte eine Spalte als Geburtsdatum zuordnen.')
+    await setValue(select(3), 'first_name')
+    await submitImport()
+    expect(importMembersAction).not.toHaveBeenCalled()
+    expect(container.querySelector('[data-testid="mapping-errors"]')?.textContent).toContain('Vorname ist mehreren Spalten zugeordnet')
+  })
+
+  it('Mitgliederliste zeigt Zusatzfelder als Spalten und sucht darin', async () => {
+    const members: ClubMember[] = [
+      { ...member, extra: { Mannschaft: 'U10', Beitrag: 'Familie' } },
+      { ...member, id: 'm2', first_name: 'Erika', last_name: 'Beispiel', member_number: null, extra: { Mannschaft: 'U12' } },
+    ]
+    await act(() => root.render(<MembersScreen orgSlug="demo" org={org} members={members} />))
+    const head = container.querySelector('.cp-table-head')!
+    expect([...head.querySelectorAll('span')].map(el => el.textContent)).toEqual(['Name', 'Geburtsdatum', 'Nummer · Quelle', 'Status', 'Mannschaft', 'Beitrag', ''])
+    expect(container.querySelector('.cp-member-scroll')).not.toBeNull()
+    const rows = container.querySelectorAll('li.cp-table-row')
+    expect(rows[1].querySelector('[data-extra="Beitrag"]')?.textContent).toBe('Beitrag: –')
+    expect(rows[0].querySelector('[data-extra="Mannschaft"]')?.textContent).toBe('Mannschaft: U10')
+    const search = container.querySelector<HTMLInputElement>('input[type="search"]')!
+    await setValue(search, 'u12')
+    expect(container.textContent).toContain('Erika')
+    expect(container.textContent).not.toContain('Max Mustermann')
+  })
+
+  it('Mitgliederliste ohne Zusatzfelder bleibt beim kompakten Layout', async () => {
+    await act(() => root.render(<MembersScreen orgSlug="demo" org={org} members={[member]} />))
+    expect(container.querySelector('.cp-member-scroll')).toBeNull()
+    expect(container.querySelectorAll('.cp-table-head span')).toHaveLength(5)
   })
 
   it('Importfehler erscheinen als "Zeile X: Feld Y (code)" ohne Inhalte', async () => {

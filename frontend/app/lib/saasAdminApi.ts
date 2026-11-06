@@ -784,8 +784,16 @@ export interface ClubMember {
   member_number: string | null
   active: boolean
   source: 'csv' | 'manual'
+  /** Zusatzfelder aus dem CSV-Import ({Label: Wert}); ältere Antworten ohne Feld. */
+  extra?: Record<string, string>
   created_at: string
 }
+
+/** Ziel einer CSV-Spalte im Import; null = nicht importieren. */
+export type MemberMappingTarget = 'first_name' | 'last_name' | 'birth_date' | 'member_number' | { extra: string } | null
+
+/** Spaltenindex (als String) -> Ziel. */
+export type MemberImportMapping = Record<string, MemberMappingTarget>
 
 export interface ClubMemberCreateInput {
   first_name: string
@@ -950,8 +958,8 @@ export async function setClubMemberActiveAdmin(orgSlug: string, memberId: string
 
 /** Sendet den bereits dekodierten CSV-Text. Bei Ablehnung (422/413) wird nur
  * Zeile/Feld/Code übernommen, sonst nichts aus der Antwort. */
-export async function importClubMembersAdmin(orgSlug: string, token: string, csv: string): Promise<MemberImportResult> {
-  const res = await adminMutate(`${MEMBERS_BASE(orgSlug)}/import`, token, 'POST', { csv })
+export async function importClubMembersAdmin(orgSlug: string, token: string, csv: string, mapping?: MemberImportMapping): Promise<MemberImportResult> {
+  const res = await adminMutate(`${MEMBERS_BASE(orgSlug)}/import`, token, 'POST', mapping ? { csv, mapping } : { csv })
   if (res.status === 422 || res.status === 413) {
     let errors: ImportErrorItem[] = []
     try {
@@ -997,6 +1005,8 @@ export interface PlayerSummary {
   booking_count: number
   note_count: number
   open_goal_count: number
+  /** Aktives Vereinsmitglied (gleicher Name + Geburtsdatum). */
+  is_member?: boolean
 }
 
 export interface PlayerBooking {
@@ -1055,7 +1065,7 @@ export interface PlayerMetric {
 }
 
 export interface PlayerDetail {
-  player: { id: string; first_name: string; last_name: string; birth_date: string; age: number }
+  player: { id: string; first_name: string; last_name: string; birth_date: string; age: number; is_member?: boolean }
   bookings: PlayerBooking[]
   notes: PlayerNote[]
   goals: PlayerGoal[]

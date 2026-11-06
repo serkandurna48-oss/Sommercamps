@@ -3,6 +3,7 @@
 import { useId, useState } from 'react'
 import type { PlayerSummary } from '../../../lib/saasAdminApi'
 import Link from '../preview/AdminLink'
+import StatusChip from '../data/StatusChip'
 import EmptyState from '../state/EmptyState'
 import Button from '../ui/Button'
 import Field from '../ui/Field'
@@ -46,7 +47,10 @@ export default function PlayerList({ orgSlug, players }: { orgSlug: string; play
             <li key={player.id} className="cp-player-item">
               <Link href={`/pilot/${orgSlug}/spieler/${player.id}`} prefetch={false}
                 className="cp-focus cp-table-row cp-player-cols cp-row-link min-h-[56px]">
-                <span className="cp-subheading min-w-0 break-words" style={{ color: 'var(--cp-ink)' }}>{player.first_name} {player.last_name}</span>
+                <span className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="cp-subheading min-w-0 break-words" style={{ color: 'var(--cp-ink)' }}>{player.first_name} {player.last_name}</span>
+                  {player.is_member && <StatusChip tone="ok" label="Mitglied" />}
+                </span>
                 <span className="cp-chip cp-num" style={{ color: 'var(--cp-muted)' }}>{plural(player.age, 'Jahr', 'Jahre')}</span>
                 <span className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
                   {player.last_booking_at ? `zuletzt gebucht am ${formatDay(player.last_booking_at)}` : 'noch keine Buchung'}

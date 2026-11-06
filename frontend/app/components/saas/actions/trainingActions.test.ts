@@ -143,6 +143,17 @@ it('Import: reicht Text an die API und gibt Zähler zurück', async () => {
   expect(state.error).toBeNull()
 })
 
+it('Import: reicht die Spaltenzuordnung weiter und lehnt kaputte Zuordnungen ab', async () => {
+  vi.mocked(importClubMembersAdmin).mockResolvedValue({ rows: 1, created: 1, updated: 0, merged_in_file: 0 })
+  const mapping = { 0: 'last_name', 1: 'first_name', 2: 'birth_date', 3: { extra: 'Team' }, 4: null } as const
+  await importMembersAction('ksv', 'Name;Vorname;Geb;Team;Tel\nB;A;01.01.2015;U10;1\n', mapping)
+  expect(importClubMembersAdmin).toHaveBeenCalledWith('ksv', 'tok', expect.any(String), mapping)
+  vi.mocked(importClubMembersAdmin).mockClear()
+  const bad = await importMembersAction('ksv', 'a\nb\n', { x: 'password' } as never)
+  expect(bad.error).toContain('Spaltenzuordnung')
+  expect(importClubMembersAdmin).not.toHaveBeenCalled()
+})
+
 it('Import: Fehlerliste enthält nur Zeile/Feld/Code', async () => {
   vi.mocked(importClubMembersAdmin).mockRejectedValue(new MemberImportError([{ row: 2, field: 'geburtsdatum', code: 'invalid_date' }]))
   const state = await importMembersAction('ksv', 'a;b\nGeheim;Name\n')

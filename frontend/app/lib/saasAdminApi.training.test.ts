@@ -164,6 +164,12 @@ it('importiert CSV als JSON {csv} und liefert die Zähler', async () => {
   expect(lastCall(fn).body).toEqual({ csv: 'vorname;nachname\n' })
 })
 
+it('sendet die Spaltenzuordnung mit, wenn vorhanden', async () => {
+  const fn = stubFetch(200, { rows: 1, created: 1, updated: 0, merged_in_file: 0 })
+  await importClubMembersAdmin('ksv', 'tok', 'Name;Vorname\n', { 0: 'last_name', 1: { extra: 'Team' }, 2: null })
+  expect(lastCall(fn).body).toEqual({ csv: 'Name;Vorname\n', mapping: { 0: 'last_name', 1: { extra: 'Team' }, 2: null } })
+})
+
 it('Importfehler (422) tragen nur Zeile/Feld/Code, nie Inhalte', async () => {
   stubFetch(422, { detail: { code: 'import_invalid', errors: [{ row: 3, field: 'geburtsdatum', code: 'invalid_date', value: 'Geheim' }, { row: 4, field: 'row', code: 'column_count' }] } })
   const err = await importClubMembersAdmin('ksv', 'tok', 'x').catch(e => e)

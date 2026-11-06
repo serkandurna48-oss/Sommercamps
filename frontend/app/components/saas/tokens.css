@@ -1380,6 +1380,13 @@
   .cp-player-cols { grid-template-columns: minmax(0, 1.6fr) 90px minmax(0, 1.2fr) minmax(0, 1fr); }
 }
 
+/* Member list with extra-field columns: the card scrolls horizontally on desktop. */
+.cp-scope:where(.cp-admin) .cp-member-scroll { padding: 0; overflow: clip; }
+@media (min-width: 1024px) {
+  .cp-scope:where(.cp-admin) .cp-member-scroll { overflow-x: auto; }
+  .cp-member-wide { min-width: var(--cp-member-min, 100%); }
+}
+
 .cp-player-item + .cp-player-item > .cp-table-row { border-top: 1px solid var(--cp-line-2); }
 .cp-player-item:first-of-type > .cp-table-row { border-top: 0; }
 @media (max-width: 1023px) { .cp-player-item > .cp-table-row { gap: 2px; } }

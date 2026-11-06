@@ -122,6 +122,26 @@ class RegistrationPaidOnlineError(RegistrationRejectedError):
         super().__init__("Registration was paid online and cannot be deleted")
 
 
+class RegistrationHasInvoiceError(RegistrationRejectedError):
+    """An invoice (or storno) exists for this registration. Invoices must be
+    kept unchanged (GoBD); the booking they refer to stays too. The admin
+    cancels instead of deleting — maps to 409 `has_invoice`."""
+
+    def __init__(self, registration_token: UUID):
+        self.registration_token = registration_token
+        super().__init__("Registration has an invoice and cannot be deleted")
+
+
+class RegistrationFeeRecordedError(RegistrationRejectedError):
+    """The platform fee of this registration is recorded (fee snapshot or
+    refund events). Deleting it would silently change a past month's fee
+    report and leave a pending invoice unissued — maps to 409 `has_fee_record`."""
+
+    def __init__(self, registration_token: UUID):
+        self.registration_token = registration_token
+        super().__init__("Registration has a recorded platform fee and cannot be deleted")
+
+
 class DuplicateRegistrationError(RegistrationRejectedError):
     """
     A registration for this exact child (first name + last name + birth
@@ -357,6 +377,18 @@ def get_registration_target(tenant: TenantContext, camp_slug: str) -> Optional[R
     return RegistrationTarget(**row)
 
 
+def _billing_flags(alias: str) -> str:
+    """has_invoice / fee_recorded of a camp_registrations row (alias), for
+    the delete guard and the admin UI. invoices and registration_refund_events
+    have no FK to camp_registrations on purpose (they must outlive the row),
+    so nothing in the database stops a delete: this check does."""
+    return f"""exists (select 1 from invoices i
+                    where i.organization_id = {alias}.organization_id and i.registration_id = {alias}.id) as has_invoice,
+        ({alias}.fee_snapshot_at is not null
+         or exists (select 1 from registration_refund_events e
+                    where e.organization_id = {alias}.organization_id and e.registration_id = {alias}.id)) as fee_recorded"""
+
+
 _ADMIN_REGISTRATION_FIELDS = """
     id, registration_token, status, payment_status,
     parent_first_name, parent_last_name, parent_email, parent_phone,
@@ -371,7 +403,8 @@ _ADMIN_REGISTRATION_FIELDS = """
 
 _LIST_REGISTRATIONS_FOR_CAMP = f"""
     select c.title as camp_title,
-        {', '.join('r.' + f.strip() for f in _ADMIN_REGISTRATION_FIELDS.strip().split(',') if f.strip())}
+        {', '.join('r.' + f.strip() for f in _ADMIN_REGISTRATION_FIELDS.strip().split(',') if f.strip())},
+        {_billing_flags("r")}
     from camp_registrations r
     join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
     where r.organization_id = %s
@@ -403,7 +436,8 @@ def list_registrations_for_camp(organization_id: UUID, camp_id: UUID) -> list[di
 
 _LIST_REGISTRATIONS_FOR_OFFER = f"""
     select r.camp_id, c.title as camp_title,
-        {', '.join('r.' + f.strip() for f in _ADMIN_REGISTRATION_FIELDS.strip().split(',') if f.strip())}
+        {', '.join('r.' + f.strip() for f in _ADMIN_REGISTRATION_FIELDS.strip().split(',') if f.strip())},
+        {_billing_flags("r")}
     from camp_registrations r
     join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
     where r.organization_id = %s
@@ -450,7 +484,8 @@ _LIST_REGISTRATIONS_GLOBAL_BASE = f"""
     select
         o.slug as organization_slug, o.name as organization_name,
         c.slug as camp_slug, c.title as camp_title,
-        {', '.join('r.' + f.strip() for f in _ADMIN_REGISTRATION_FIELDS.strip().split(',') if f.strip())}
+        {', '.join('r.' + f.strip() for f in _ADMIN_REGISTRATION_FIELDS.strip().split(',') if f.strip())},
+        {_billing_flags("r")}
     from camp_registrations r
     join organizations o on o.id = r.organization_id
     join camps c on c.id = r.camp_id
@@ -496,7 +531,7 @@ _UPDATE_PAYMENT_STATUS = f"""
     where registration_token = %s
       and organization_id = %s
       and camp_id = %s
-    returning {_ADMIN_REGISTRATION_FIELDS}
+    returning {_ADMIN_REGISTRATION_FIELDS}, {_billing_flags("camp_registrations")}
 """
 
 
@@ -511,7 +546,7 @@ _UPDATE_REGISTRATION_DETAILS = f"""
     where registration_token = %s
       and organization_id = %s
       and camp_id = %s
-    returning {_ADMIN_REGISTRATION_FIELDS}
+    returning {_ADMIN_REGISTRATION_FIELDS}, {_billing_flags("camp_registrations")}
 """
 
 
@@ -1049,14 +1084,22 @@ def cancel_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, r
         return {"cancelled": cancelled, "promoted": promoted}
 
 
-_LOAD_AND_LOCK_REGISTRATION_FOR_DELETE = """
-    select id, camp_id, status, payment_status, payment_method, player_id,
-           stripe_session_id, stripe_payment_intent_id, stripe_checkout_session_id
-    from camp_registrations
-    where registration_token = %s
-      and organization_id = %s
-      and camp_id = %s
-    for update
+_LOAD_AND_LOCK_REGISTRATION_FOR_DELETE = f"""
+    select r.id, r.camp_id, r.status, r.payment_status, r.payment_method, r.player_id,
+           r.stripe_session_id, r.stripe_payment_intent_id, r.stripe_checkout_session_id,
+           {_billing_flags("r")}
+    from camp_registrations r
+    where r.registration_token = %s
+      and r.organization_id = %s
+      and r.camp_id = %s
+    for update of r
+"""
+
+_DELETE_BLOCKER = f"""
+    select r.payment_status, r.payment_method, r.stripe_session_id, r.stripe_payment_intent_id,
+           r.stripe_checkout_session_id, {_billing_flags("r")}
+    from camp_registrations r
+    where r.registration_token = %s and r.organization_id = %s and r.camp_id = %s
 """
 
 _DELETE_REGISTRATION = "delete from camp_registrations where id = %s and organization_id = %s"
@@ -1076,9 +1119,10 @@ _DELETE_ORPHAN_PLAYER = """
 
 
 def is_paid_online(registration: dict) -> bool:
-    """True when real money moved through the online checkout. A refunded or
-    never-paid checkout is not a payment trail worth protecting."""
-    if registration["payment_status"] != "paid":
+    """True when real money moved through the online checkout and is still
+    held (paid, or partially refunded). A fully refunded checkout is guarded
+    by its invoice/storno and fee record instead (raise_if_not_deletable)."""
+    if registration["payment_status"] not in ("paid", "partially_refunded"):
         return False
     return bool(
         registration.get("payment_method") == "online"
@@ -1086,6 +1130,26 @@ def is_paid_online(registration: dict) -> bool:
         or registration.get("stripe_payment_intent_id")
         or registration.get("stripe_checkout_session_id")
     )
+
+
+def raise_if_not_deletable(registration: dict, registration_token: UUID) -> None:
+    """Order matters for the message: an invoice is the strongest reason."""
+    if registration.get("has_invoice"):
+        raise RegistrationHasInvoiceError(registration_token)
+    if is_paid_online(registration):
+        raise RegistrationPaidOnlineError(registration_token)
+    if registration.get("fee_recorded"):
+        raise RegistrationFeeRecordedError(registration_token)
+
+
+def check_registration_deletable(organization_id: UUID, camp_id: UUID, registration_token: UUID) -> None:
+    """Pre-check before any Stripe call (the delete re-checks under lock).
+    A missing row is left to the delete itself (404)."""
+    with db.get_read_cursor() as cur:
+        cur.execute(_DELETE_BLOCKER, (registration_token, organization_id, camp_id))
+        row = cur.fetchone()
+    if row is not None:
+        raise_if_not_deletable(row, registration_token)
 
 
 def delete_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, registration_token: UUID) -> dict:
@@ -1096,8 +1160,11 @@ def delete_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, r
     `organization_id` AND `camp_id`, so a foreign tenant or a URL naming the
     wrong camp finds nothing (RegistrationNotFoundError).
 
-    Raises RegistrationPaidOnlineError for a registration paid online; the
-    admin must refund or cancel it. Same lock order as cancel (registration
+    Raises RegistrationHasInvoiceError when an invoice or storno exists
+    (GoBD: the invoice and its booking stay), RegistrationPaidOnlineError for
+    a registration paid online (also partially refunded) and
+    RegistrationFeeRecordedError when its platform fee is recorded; the admin
+    must refund or cancel instead. Same lock order as cancel (registration
     row, then camp row). If the deleted row counted against capacity
     (registered/confirmed), the oldest waitlisted registration is promoted in
     the same transaction, exactly as on cancel.
@@ -1115,8 +1182,7 @@ def delete_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, r
         registration = cur.fetchone()
         if registration is None:
             raise RegistrationNotFoundError(registration_token)
-        if is_paid_online(registration):
-            raise RegistrationPaidOnlineError(registration_token)
+        raise_if_not_deletable(registration, registration_token)
 
         cur.execute(_DELETE_REGISTRATION, (registration["id"], tenant.organization_id))
 

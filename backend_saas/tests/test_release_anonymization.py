@@ -143,3 +143,41 @@ def test_get_user_email_returns_none_on_any_exception(monkeypatch, failure):
 
     monkeypatch.setattr(supabase_auth, "get_client", lambda: _Client())
     assert supabase_auth.get_user_email(str(uuid4())) is None
+
+
+def test_backfill_repairs_old_placeholder_rows_and_is_idempotent(real_db, local_database):
+    """I-1/M-1: rows anonymized by feat/admin-fixes (staging) carry the old
+    "today minus 99 years" placeholder and no anonymized_at. The migration
+    marks them and sets the booking date, once."""
+    import psycopg2
+    from pathlib import Path
+
+    cursor, tenant, camp = real_db
+    old, other = _book(tenant, camp, child_first_name="Emil"), _book(tenant, camp, child_first_name="Gelöscht")
+    with cursor() as cur:
+        cur.execute("""update camp_registrations
+                       set child_first_name = 'Gelöscht', child_last_name = 'Gelöscht', player_id = null,
+                           child_birth_date = (current_date - interval '99 years')::date, status = 'cancelled',
+                           allergies = null, medical_notes = null, emergency_contact_name = null
+                       where registration_token = %s""", (old["registration_token"],))
+    migration = (Path(__file__).resolve().parents[2] / "supabase" / "migrations"
+                 / "20261107120000_registration_anonymized_at.sql").read_text(encoding="utf-8")
+
+    def apply():
+        conn = psycopg2.connect(**local_database)
+        conn.autocommit = True  # the file has its own begin/commit
+        try:
+            with conn.cursor() as cur:
+                cur.execute(migration)
+        finally:
+            conn.close()
+
+    apply()
+    first = _row(cursor, old["registration_token"])
+    assert first["anonymized_at"] is not None and first["child_birth_date"] == first["created_at"].date()
+    apply()
+    second = _row(cursor, old["registration_token"])
+    assert (second["anonymized_at"], second["child_birth_date"]) == (first["anonymized_at"], first["child_birth_date"])
+    # A real child that still has a player record and its data is never touched.
+    untouched = _row(cursor, other["registration_token"])
+    assert untouched["anonymized_at"] is None and untouched["player_id"] is not None

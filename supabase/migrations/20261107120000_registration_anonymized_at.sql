@@ -12,7 +12,8 @@
 --
 -- Datenaenderung: Backfill fuer bereits anonymisierte Zeilen (vom Stand vor dieser
 -- Migration erkennbar an Name "Gelöscht"/"Gelöscht" ohne player_id und ohne
--- Gesundheitsdaten). Vor dem Lauf auf einer echten Datenbank ein Backup ziehen.
+-- Gesundheitsdaten); deren Geburtsdatum wird zugleich auf das Buchungsdatum gesetzt
+-- (alter Platzhalter "heute minus 99 Jahre"). Vor dem Lauf auf einer echten Datenbank ein Backup ziehen.
 -- Rollback:
 --   (Funktion link_unlinked_registrations auf den Stand aus 20261106100000 zuruecksetzen)
 --   alter table public.camp_registrations drop column if exists anonymized_at;
@@ -32,8 +33,11 @@ comment on column public.camp_registrations.anonymized_at is
 do $$
 begin
     alter table public.camp_registrations disable trigger set_updated_at;
+    -- Same UPDATE also replaces the old placeholder birth date (today minus 99 years, on
+    -- staging since feat/admin-fixes), which would leave the plausibility CHECK after a year.
     update public.camp_registrations
-       set anonymized_at = now()
+       set anonymized_at = now(),
+           child_birth_date = created_at::date
      where anonymized_at is null
        and player_id is null
        and child_first_name = 'Gelöscht' and child_last_name = 'Gelöscht'

@@ -8,6 +8,7 @@ from .pilot_request import router as pilot_request_router
 from .registrations import router as registrations_router
 from .signup import router as signup_router
 from .payments import router as payments_router
+from .billing import router as billing_router
 
 __all__ = [
     "admin_router",
@@ -20,4 +21,5 @@ __all__ = [
     "registrations_router",
     "signup_router",
     "payments_router",
+    "billing_router",
 ]

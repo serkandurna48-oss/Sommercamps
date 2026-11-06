@@ -589,7 +589,14 @@ def update_payment_status(
     """
     with db.get_cursor() as cur:
         cur.execute(_UPDATE_PAYMENT_STATUS, (payment_status, registration_token, organization_id, camp_id))
-        return cur.fetchone()
+        row = cur.fetchone()
+        if row is not None and payment_status == "paid":
+            # Billing B1: freeze the platform fee owed for this booking (not
+            # withheld: paid by transfer/cash). Same transaction as the status.
+            from .. import fees
+
+            fees.snapshot_paid_registration(cur, row["id"], organization_id)
+        return row
 
 
 def validate_registration_window(camp: RegistrationTarget) -> None:

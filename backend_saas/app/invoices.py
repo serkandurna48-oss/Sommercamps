@@ -134,7 +134,8 @@ def invoice_lines(data: dict) -> list[tuple[str, str]]:
         ("text", recipient["name"]),
     ]
     if recipient.get("address"):
-        lines.append(("text", recipient["address"]))
+        # One line per address line ("street\npostal_code city" since 20261107130000).
+        lines += [("text", part) for part in str(recipient["address"]).split("\n") if part.strip()]
     lines.append(("text", recipient["email"]))
     lines += [
         ("gap", ""),
@@ -204,6 +205,14 @@ def render_pdf(data: dict, compress: bool = True) -> bytes:
     return bytes(pdf.output())
 
 
+def recipient_address(booking: dict) -> Optional[str]:
+    """Two-line address block, or None when the booking has no complete address."""
+    street, postal_code, city = (booking.get(k) for k in ("parent_street", "parent_postal_code", "parent_city"))
+    if not (street and postal_code and city):
+        return None
+    return f"{street}\n{postal_code} {city}"
+
+
 def _service_period(start: date, end: date) -> str:
     return _de_date(start) if start == end else f"{_de_date(start)} - {_de_date(end)}"
 
@@ -217,6 +226,7 @@ _BOOKING = """
            r.applied_price_cents, r.booked_price_cents, r.stripe_payment_intent_id, r.stripe_checkout_amount_cents,
            r.refunded_cents, r.paid_at,
            r.parent_first_name, r.parent_last_name, r.parent_email,
+           r.parent_street, r.parent_postal_code, r.parent_city,
            r.child_first_name, r.child_last_name,
            c.title as camp_title, c.start_date, c.end_date, c.price_cents, c.offer_id
     from camp_registrations r
@@ -307,9 +317,10 @@ def _issue(cur, booking: dict, profile: dict, amount: int, organization_id, regi
         "service_period": _service_period(booking["start_date"], booking["end_date"]),
         "issuer": {k: profile[k] for k in ("legal_name", "street", "postal_code", "city", "tax_number",
                                            "vat_id", "invoice_email")},
-        # No address is collected from parents: name + email (allowed for small invoices).
+        # Billing address collected for paid bookings since 20261107130000; older
+        # bookings have none (name + email only, as before).
         "recipient": {"name": f"{booking['parent_first_name']} {booking['parent_last_name']}",
-                      "email": booking["parent_email"], "address": None},
+                      "email": booking["parent_email"], "address": recipient_address(booking)},
         "item": {
             "description": f"{'Training' if booking['offer_id'] else 'Camp'}: {booking['camp_title']} "
                            f"({_service_period(booking['start_date'], booking['end_date'])})",

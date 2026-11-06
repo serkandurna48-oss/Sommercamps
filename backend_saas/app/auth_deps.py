@@ -58,8 +58,9 @@ def get_auth_context(authorization: str | None = Header(default=None)) -> AuthCo
         logger.info("Rejected admin request: token verification failed (%s)", exc)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated") from exc
 
-    is_owner = platform_roles.is_platform_owner(user.id)
-    admin_org_ids = set() if is_owner else set(platform_roles.get_admin_organization_ids(user.id))
+    # One query for both role facts (was two transactions, 6 round trips).
+    is_owner, organization_ids = platform_roles.get_user_roles(user.id)
+    admin_org_ids = set() if is_owner else set(organization_ids)
     return AuthContext(user_id=user.id, email=user.email, is_owner=is_owner, admin_organization_ids=admin_org_ids)
 
 
@@ -82,6 +83,8 @@ def require_org_access(organization_slug: str, auth: AuthContext = Depends(get_a
     if auth.is_owner:
         return auth
 
+    # Resolved once per request: the handler's own require_organization()
+    # call for the same slug reuses this row (admin_resolve request memo).
     organization = admin_resolve.require_organization(organization_slug)
     if str(organization["id"]) not in auth.admin_organization_ids:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized for this organization")

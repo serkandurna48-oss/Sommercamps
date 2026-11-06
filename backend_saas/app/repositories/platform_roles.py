@@ -21,6 +21,26 @@ from psycopg2.extras import Json
 from .. import db
 
 
+def get_user_roles(user_id: str) -> tuple[bool, list[str]]:
+    """(is_platform_owner, org_admin organization ids) in one query and one
+    round trip — app/auth_deps.py runs this on every admin request. The
+    organization ids are returned for owners too; auth_deps ignores them
+    for an owner, exactly as before."""
+    with db.get_read_cursor() as cur:
+        cur.execute(
+            """
+            select exists(select 1 from platform_owners where user_id = %s) as is_owner,
+                   coalesce(array(
+                       select organization_id::text from organization_members
+                       where user_id = %s and role = 'org_admin'
+                   ), '{}') as organization_ids
+            """,
+            (user_id, user_id),
+        )
+        row = cur.fetchone()
+    return bool(row["is_owner"]), [str(org_id) for org_id in row["organization_ids"]]
+
+
 def is_platform_owner(user_id: str) -> bool:
     with db.get_cursor() as cur:
         cur.execute("select 1 from platform_owners where user_id = %s", (user_id,))

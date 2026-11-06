@@ -45,14 +45,9 @@ def test_get_auth_context_invalid_token_raises_401(monkeypatch):
 
 def test_get_auth_context_resolves_platform_owner(monkeypatch):
     _mock_user(monkeypatch, user_id="owner-1")
-    monkeypatch.setattr(platform_roles, "is_platform_owner", lambda user_id: True)
-    # An owner's admin_organization_ids must never even be queried — owners
-    # don't need membership rows (see auth_deps.get_auth_context).
-    monkeypatch.setattr(
-        platform_roles,
-        "get_admin_organization_ids",
-        lambda user_id: (_ for _ in ()).throw(AssertionError("should not be called for an owner")),
-    )
+    # One combined role query; membership rows an owner might also have are
+    # ignored (owners need none, see auth_deps.get_auth_context).
+    monkeypatch.setattr(platform_roles, "get_user_roles", lambda user_id: (True, ["org-x"]))
 
     ctx = auth_deps.get_auth_context(authorization="Bearer token")
 
@@ -63,8 +58,7 @@ def test_get_auth_context_resolves_platform_owner(monkeypatch):
 
 def test_get_auth_context_resolves_org_admin(monkeypatch):
     _mock_user(monkeypatch, user_id="admin-1")
-    monkeypatch.setattr(platform_roles, "is_platform_owner", lambda user_id: False)
-    monkeypatch.setattr(platform_roles, "get_admin_organization_ids", lambda user_id: ["org-a", "org-b"])
+    monkeypatch.setattr(platform_roles, "get_user_roles", lambda user_id: (False, ["org-a", "org-b"]))
 
     ctx = auth_deps.get_auth_context(authorization="Bearer token")
 

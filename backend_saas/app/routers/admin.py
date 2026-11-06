@@ -37,7 +37,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
-from ..admin_resolve import require_camp, require_organization
+from ..admin_resolve import forget_organization, require_camp, require_organization
 from ..auth_deps import AuthContext, get_auth_context, require_org_access, require_platform_owner
 from .. import supabase_auth
 from ..supabase_auth import SupabaseAuthError, SupabaseEmailConflictError
@@ -217,6 +217,7 @@ def submit_review(
     true; avv_version names the accepted AVV document version."""
     row = organizations_repo.submit_for_review(organization_slug, data.avv_version)
     if row is None:
+        forget_organization(organization_slug)  # read the current status, not the request memo
         org = require_organization(organization_slug)
         current_status = org.get("review_status", "unknown")
         raise HTTPException(
@@ -260,6 +261,7 @@ def review_organization(
         row = organizations_repo.reject_organization(organization_slug, data.note or "")
 
     if row is None:
+        forget_organization(organization_slug)  # read the current status, not the request memo
         org = require_organization(organization_slug)
         current_status = org.get("review_status", "unknown")
         raise HTTPException(

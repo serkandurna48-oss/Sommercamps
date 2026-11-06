@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from . import db
+from .admin_resolve import RequestMemoMiddleware
 from .db import DatabaseBusy
 from .config import get_settings
 from .routers.training import admin_router as training_admin_router, public_router as training_public_router
@@ -89,6 +90,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH"],
     allow_headers=["*"],
 )
+# Per-request memo for admin organization lookups (app/admin_resolve.py).
+app.add_middleware(RequestMemoMiddleware)
 
 app.include_router(organizations_router)
 app.include_router(camps_router)

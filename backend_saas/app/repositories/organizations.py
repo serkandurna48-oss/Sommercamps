@@ -90,7 +90,7 @@ def get_organization_by_slug(slug: str) -> Optional[dict]:
     Returns None if no organization matches. SQL is parametrized; `slug` is
     never interpolated into the query text.
     """
-    with db.get_cursor() as cur:
+    with db.get_read_cursor() as cur:
         cur.execute(_SELECT_BY_SLUG, (slug,))
         return cur.fetchone()
 
@@ -100,7 +100,7 @@ def get_organization_by_id(organization_id: str) -> Optional[dict]:
     caller only has an organization_id — app/routers/admin.py's /admin/me,
     resolving an org_admin's organization_members rows (which store
     organization_id, not slug) back to slugs the frontend can route on."""
-    with db.get_cursor() as cur:
+    with db.get_read_cursor() as cur:
         cur.execute(_SELECT_BY_ID, (organization_id,))
         return cur.fetchone()
 

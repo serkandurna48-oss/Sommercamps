@@ -386,7 +386,7 @@ def list_registrations_for_camp(organization_id: UUID, camp_id: UUID) -> list[di
     info, allergies, medical_notes) — callers must apply the same no-PII-
     in-logs discipline as app/routers/registrations.py.
     """
-    with db.get_cursor() as cur:
+    with db.get_read_cursor() as cur:
         cur.execute(_LIST_REGISTRATIONS_FOR_CAMP, (organization_id, camp_id))
         return cur.fetchall()
 

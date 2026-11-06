@@ -69,7 +69,7 @@ def create_offer(
 
 
 def get_offer(organization_id: UUID, offer_id: UUID) -> Optional[dict]:
-    with db.get_cursor() as cur:
+    with db.get_read_cursor() as cur:
         cur.execute(
             f"select {_OFFER_FIELDS} from training_offers where organization_id = %s and id = %s",
             (organization_id, offer_id),
@@ -87,7 +87,7 @@ def get_offer_by_slug(organization_id: UUID, slug: str) -> Optional[dict]:
 
 
 def list_offers(organization_id: UUID, *, status: Optional[str] = None) -> list[dict]:
-    with db.get_cursor() as cur:
+    with db.get_read_cursor() as cur:
         cur.execute(
             f"""select {_OFFER_FIELDS} from training_offers
                 where organization_id = %s and (%s::text is null or status = %s)
@@ -243,7 +243,7 @@ class SessionHasRegistrationsError(Exception):
 
 
 def get_session_with_count(organization_id: UUID, offer_id: UUID, session_id: UUID) -> Optional[dict]:
-    with db.get_cursor() as cur:
+    with db.get_read_cursor() as cur:
         cur.execute(
             _SESSION_WITH_COUNT + " where c.organization_id = %s and c.offer_id = %s and c.id = %s",
             (_COUNTING, organization_id, offer_id, session_id),
@@ -252,7 +252,7 @@ def get_session_with_count(organization_id: UUID, offer_id: UUID, session_id: UU
 
 
 def list_sessions_with_counts(organization_id: UUID, offer_id: UUID) -> list[dict]:
-    with db.get_cursor() as cur:
+    with db.get_read_cursor() as cur:
         cur.execute(
             _SESSION_WITH_COUNT
             + " where c.organization_id = %s and c.offer_id = %s order by c.starts_at asc, c.slug asc",

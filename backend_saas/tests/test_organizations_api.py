@@ -124,6 +124,8 @@ def test_get_organization_response_includes_only_declared_public_fields(monkeypa
         "iban",
         # KV1: Zusatzfragen sind öffentlich (Eltern-Flow braucht sie ohne Admin-Login)
         "registration_questions",
+        # Enabled modules (club page hides the training section when off)
+        "modules",
     }
 
 

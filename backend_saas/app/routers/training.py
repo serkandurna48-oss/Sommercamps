@@ -30,6 +30,7 @@ from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES
 from ..schemas import RegistrationCreated
 from ..auth_deps import AuthContext, require_org_access
 from ..deps import get_tenant_context
+from ..modules import require_module, require_public_module
 from ..repositories import camps as camps_repo
 from ..repositories import platform_roles
 from ..repositories import registrations as registrations_repo
@@ -38,8 +39,14 @@ from ..tenancy import TenantContext
 
 logger = logging.getLogger(__name__)
 
-admin_router = APIRouter(prefix="/admin", tags=["Admin Training"])
-public_router = APIRouter(prefix="/api/v1/organizations/{organization_slug}/training-offers", tags=["Training"])
+# Every route here belongs to the trainings module (admin 403 module_disabled, public 404).
+admin_router = APIRouter(
+    prefix="/admin", tags=["Admin Training"], dependencies=[Depends(require_module("trainings"))]
+)
+public_router = APIRouter(
+    prefix="/api/v1/organizations/{organization_slug}/training-offers", tags=["Training"],
+    dependencies=[Depends(require_public_module("trainings"))],
+)
 
 OfferKind = Literal["einzel", "gruppe"]
 OfferStatus = Literal["draft", "published", "archived"]

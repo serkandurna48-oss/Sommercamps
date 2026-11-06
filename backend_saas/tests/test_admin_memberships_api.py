@@ -25,7 +25,8 @@ def ctx(real_db):
     with cursor() as cur:
         cur.execute("INSERT INTO auth.users(id) VALUES (%s)", (actor,))  # audit_log.actor_user_id FK
         cur.execute(
-            "INSERT INTO organizations(id,slug,name,contact_email) VALUES (%s,%s,'Other','o@example.com')",
+            "INSERT INTO organizations(id,slug,name,contact_email,modules) "
+            "VALUES (%s,%s,'Other','o@example.com','{camps,members}')",
             (other, f"other-{other.hex}"),
         )
     with TestClient(app) as client:

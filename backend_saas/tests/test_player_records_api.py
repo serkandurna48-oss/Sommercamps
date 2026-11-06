@@ -25,8 +25,8 @@ def ctx(real_db):
     with cursor() as cur:
         cur.execute("INSERT INTO auth.users(id) VALUES (%s)", (actor,))
         cur.execute(
-            "INSERT INTO organizations(id,slug,name,contact_email,site_published,plan_status) "
-            "VALUES (%s,%s,'Other','o@example.com',true,'active')",
+            "INSERT INTO organizations(id,slug,name,contact_email,site_published,plan_status,modules) "
+            "VALUES (%s,%s,'Other','o@example.com',true,'active','{camps,players}')",
             (other, f"other-{other.hex}"),
         )
     with TestClient(app) as client:

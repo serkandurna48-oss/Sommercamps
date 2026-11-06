@@ -30,13 +30,16 @@ from pydantic import BaseModel
 
 from ..admin_resolve import require_organization
 from ..auth_deps import AuthContext, require_org_access
+from ..modules import require_module
 from ..repositories import platform_roles
 from ..repositories import players as repo
 from ..repositories.training import BERLIN
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/admin", tags=["Admin Players"])
+# Players module only (403 module_disabled when off). Player rows themselves are still
+# created for every registration (linking), only this API is gated.
+router = APIRouter(prefix="/admin", tags=["Admin Players"], dependencies=[Depends(require_module("players"))])
 
 _BASE = "/organizations/{organization_slug}/players"
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")

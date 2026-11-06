@@ -57,6 +57,7 @@ from ..admin_schemas import (
     OrganizationAdminOut,
     OrganizationCreate,
     OrganizationMemberOut,
+    OrganizationModulesUpdate,
     OrganizationOrgAdminOut,
     OrganizationUpdate,
     PaymentStatusUpdate,
@@ -67,6 +68,7 @@ from ..admin_schemas import (
     SubmitReviewRequest,
     WaitlistPromoteResponse,
 )
+from ..modules import normalize_modules
 from ..registration_lifecycle import InvalidStatusTransitionError
 from ..notifications import sending as notifications_sending
 from ..repositories import camps as camps_repo
@@ -92,16 +94,19 @@ def get_me(auth: AuthContext = Depends(get_auth_context)) -> MeOut:
     admin view. Any authenticated user gets a response (even one with zero
     permissions); this endpoint itself has no owner/org_admin gate."""
     admin_slugs: list[str] = []
+    modules: dict[str, list[str]] = {}
     if not auth.is_owner:
         for organization_id in auth.admin_organization_ids:
             organization = organizations_repo.get_organization_by_id(organization_id)
             if organization is not None:
                 admin_slugs.append(organization["slug"])
+                modules[organization["slug"]] = normalize_modules(organization.get("modules"))
     return MeOut(
         user_id=auth.user_id,
         email=auth.email,
         is_platform_owner=auth.is_owner,
         admin_organization_slugs=admin_slugs,
+        organization_modules=modules,
     )
 
 
@@ -239,6 +244,42 @@ def submit_review(
     )
     schema = OrganizationAdminOut if auth.is_owner else OrganizationOrgAdminOut
     return schema.model_validate(row)
+
+
+@router.patch(
+    "/platform/organizations/{organization_slug}/modules",
+    response_model=OrganizationAdminOut,
+)
+def set_organization_modules(
+    organization_slug: str,
+    data: OrganizationModulesUpdate,
+    auth: AuthContext = Depends(require_platform_owner),
+) -> OrganizationAdminOut:
+    """Platform owner switches premium modules (trainings, members, players)
+    for one organization. camps always stays on. Turning a module off hides
+    its routes (admin 403 module_disabled, public 404); no data is deleted."""
+    before = require_organization(organization_slug)
+    modules = normalize_modules(data.modules)
+    row = organizations_repo.set_modules(organization_slug, modules)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    forget_organization(organization_slug)
+    previous = normalize_modules(before.get("modules"))
+    logger.info("Organization modules changed (slug=%s, modules=%s)", organization_slug, ",".join(modules))
+    platform_roles.write_audit_log(
+        actor_user_id=auth.user_id,
+        actor_email=auth.email,
+        action="organization.modules_changed",
+        organization_id=str(row["id"]),
+        target_type="organization",
+        target_id=organization_slug,
+        metadata={
+            "modules": modules,
+            "enabled": [m for m in modules if m not in previous],
+            "disabled": [m for m in previous if m not in modules],
+        },
+    )
+    return OrganizationAdminOut.model_validate(row)
 
 
 @router.post(

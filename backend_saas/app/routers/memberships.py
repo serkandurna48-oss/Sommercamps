@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from ..admin_resolve import require_organization
 from ..db import DatabaseBusy
 from ..auth_deps import AuthContext, require_org_access
+from ..modules import require_module
 from ..membership_csv import (
     MAX_EXTRA_VALUE_LEN, MAX_ORG_EXTRA_FIELDS, MembershipCsvError, clean_extra_label, parse_membership_csv,
 )
@@ -29,7 +30,8 @@ from ..repositories import platform_roles
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/admin", tags=["Admin Memberships"])
+# Members module only (403 module_disabled when off).
+router = APIRouter(prefix="/admin", tags=["Admin Memberships"], dependencies=[Depends(require_module("members"))])
 
 MAX_CSV_CHARS = 1_000_000
 

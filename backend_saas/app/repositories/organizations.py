@@ -31,7 +31,8 @@ _ORGANIZATION_FIELDS = """
     logo_url, primary_color, plan_status, theme, iban,
     intro_heading, intro_text, hero_image_url, trainer_image_url, trainer_text, terms_text, billing_notes, site_published,
     registration_questions,
-    review_status, avv_accepted_at, avv_version, submitted_at, approved_at, approved_by, review_note
+    review_status, avv_accepted_at, avv_version, submitted_at, approved_at, approved_by, review_note,
+    modules
 """
 
 _SELECT_BY_SLUG = f"""
@@ -218,6 +219,24 @@ def update_organization(slug: str, data: OrganizationUpdate) -> Optional[dict]:
     """
     with db.get_cursor() as cur:
         cur.execute(query, (*fields.values(), slug))
+        return cur.fetchone()
+
+
+def set_modules(slug: str, modules: list[str]) -> Optional[dict]:
+    """Platform-owner only. `modules` must already be normalized
+    (app.modules.normalize_modules: known names, camps included); the DB
+    check constraint enforces the same rule. Returns None if no organization
+    has this slug."""
+    with db.get_cursor() as cur:
+        cur.execute(
+            f"""
+            update organizations
+            set modules = %s
+            where slug = %s
+            returning {_ORGANIZATION_FIELDS}
+            """,
+            (list(modules), slug),
+        )
         return cur.fetchone()
 
 

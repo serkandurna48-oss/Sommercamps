@@ -404,6 +404,16 @@ class OrganizationOrgAdminOut(BaseModel):
     submitted_at: Optional[datetime] = None
     approved_at: Optional[datetime] = None
     review_note: Optional[str] = None
+    # Enabled modules (camps always); set only by the platform owner via
+    # PATCH /admin/platform/organizations/{slug}/modules, never via OrganizationUpdate.
+    modules: list[str] = Field(default_factory=lambda: ["camps"])
+
+    @field_validator("modules", mode="before")
+    @classmethod
+    def _modules(cls, value):
+        from .modules import normalize_modules
+
+        return normalize_modules(value)
 
 
 class OrganizationAdminOut(OrganizationOrgAdminOut):
@@ -513,6 +523,18 @@ class MeOut(BaseModel):
     email: Optional[str] = None
     is_platform_owner: bool
     admin_organization_slugs: list[str] = Field(default_factory=list)
+    # Enabled modules per administered organization slug (org_admin only;
+    # the platform owner reads them from the organization detail).
+    organization_modules: dict[str, list[str]] = Field(default_factory=dict)
+
+
+class OrganizationModulesUpdate(BaseModel):
+    """Platform owner: the full set of enabled modules. camps may be sent or
+    omitted, it is always kept; unknown names are a 422."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    modules: list[Literal["camps", "trainings", "members", "players"]] = Field(max_length=8)
 
 
 class AddOrganizationMemberRequest(BaseModel):

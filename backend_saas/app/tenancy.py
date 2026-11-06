@@ -12,7 +12,7 @@ below — never a raw organization_id read straight off a request.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import UUID
 
 from .repositories import organizations
@@ -85,6 +85,9 @@ class TenantContext:
     slug: str
     name: str
     plan_status: str
+    # organizations.modules; camps is always on. Default (camps only) keeps
+    # directly constructed contexts in tests on the safe, camps-only side.
+    modules: frozenset[str] = field(default_factory=lambda: frozenset({"camps"}))
 
 
 def resolve_tenant(slug: str) -> TenantContext:
@@ -127,4 +130,5 @@ def resolve_tenant(slug: str) -> TenantContext:
         slug=org["slug"],
         name=org["name"],
         plan_status=org["plan_status"],
+        modules=frozenset({"camps", *(org.get("modules") or ())}),
     )

@@ -415,7 +415,7 @@ def test_platform_webhook_signature_and_scope(env):
 def test_platform_webhook_amount_mismatch_is_flagged(env, monkeypatch):
     token, session_id = _paid_destination(env)
     flagged = []
-    monkeypatch.setattr(payments, "_flag_for_review", lambda org, tok, reason: flagged.append(reason))
+    monkeypatch.setattr(payments, "_flag_for_review", lambda org, tok, reason, *_: flagged.append(reason))
     r = _post_webhook(env, PLATFORM_HOOK, _completed(session_id, amount=999, intent=env.intent), PLATFORM_SECRET)
     assert r.json() == {"received": True, "settled": False} and flagged == ["amount_mismatch"]
     assert _reg(env, token)["payment_status"] == "open"

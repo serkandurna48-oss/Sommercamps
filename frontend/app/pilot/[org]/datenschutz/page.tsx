@@ -72,6 +72,7 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
             <ul>
               <li>Name und Geburtsdatum des Kindes</li>
               <li>Name, E-Mail-Adresse und Telefonnummer der Eltern</li>
+              <li>Rechnungsanschrift der Eltern (Straße, PLZ, Ort), nur bei kostenpflichtigen Buchungen</li>
               <li>Notfallnummer während des Camps (Pflichtangabe)</li>
               <li>Trikotgröße, medizinische Hinweise und Allergien (optional)</li>
               <li>Wer das Kind abholen darf (optional)</li>
@@ -86,6 +87,13 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
               Bestätigung, Organisation vor Ort, Kommunikation mit den Eltern. Rechtsgrundlage ist
               Art. 6 Abs. 1 lit. b DSGVO (Vertragsanbahnung); für Allergien/medizinische Hinweise
               Art. 9 Abs. 2 lit. a DSGVO (separate ausdrückliche Einwilligung im Formular).
+            </p>
+            {/* Billing address (20261107130000). Wording: docs/datenschutz/rechnungsanschrift-textbaustein.md, legal review open. */}
+            <p>
+              Die Rechnungsanschrift wird nur für die Rechnungsstellung verwendet und steht auf der
+              Rechnung. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertrag) sowie Art. 6 Abs. 1
+              lit. c DSGVO (gesetzliche Pflicht zur Rechnungsstellung und Aufbewahrung). Sie wird wie
+              Rechnungen aufbewahrt (siehe Speicherdauer).
             </p>
           </section>
 

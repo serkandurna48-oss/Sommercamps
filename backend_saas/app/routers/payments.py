@@ -1163,7 +1163,8 @@ def close_checkout_before_delete(organization_id, camp_id, registration_token) -
         return
     with db.get_cursor() as cur:
         cur.execute(
-            """select stripe_checkout_session_id, stripe_checkout_account_id, payment_status
+            """select stripe_checkout_session_id, stripe_checkout_account_id, payment_status,
+                      stripe_charge_type
                from camp_registrations
                where organization_id = %s and camp_id = %s and registration_token = %s""",
             (organization_id, camp_id, registration_token),
@@ -1174,16 +1175,20 @@ def close_checkout_before_delete(organization_id, camp_id, registration_token) -
     # already refused by the database guard; cash, transfer and waived have no checkout to close.
     if not row or row["payment_status"] != "open":
         return
-    if not row["stripe_checkout_session_id"] or not row["stripe_checkout_account_id"]:
-        return  # legacy rows without a connected account (pre v11) cannot be asked
-    session_id, account_id = row["stripe_checkout_session_id"], row["stripe_checkout_account_id"]
+    if not row["stripe_checkout_session_id"]:
+        return  # no online payment started
+    if row.get("stripe_charge_type") != "destination" and not row["stripe_checkout_account_id"]:
+        return  # legacy direct rows without a connected account (pre v11) cannot be asked
+    session_id, scope = row["stripe_checkout_session_id"], _session_scope(row)
     try:
         client = _stripe_client()
-        session = _stripe_dict(client.checkout.Session.retrieve(session_id, stripe_account=account_id))
+        # Destination (Express): platform account, no stripe_account header.
+        # Legacy direct: the club's Standard account.
+        session = _stripe_dict(client.checkout.Session.retrieve(session_id, **scope))
         if session.get("status") == "complete" or session.get("payment_status") == "paid":
             raise CheckoutPaidError()
         if session.get("status") == "open":
-            client.checkout.Session.expire(session_id, stripe_account=account_id)
+            client.checkout.Session.expire(session_id, **scope)
     except CheckoutPaidError:
         raise
     except Exception as exc:  # noqa: BLE001 - any Stripe/network failure blocks the delete

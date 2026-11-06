@@ -59,7 +59,7 @@ export default function PaymentSetupCard({ orgSlug, status }: { orgSlug: string;
         <p className="cp-body" style={{ color: 'var(--cp-ink-2)' }}>
           Damit Eltern direkt nach der Anmeldung online bezahlen können, richtest du einmalig ein Konto bei unserem
           Zahlungspartner Stripe ein. Halte dafür die Vereinsdaten, die IBAN und die Angaben zur vertretungsberechtigten
-          Person bereit. Das Geld geht abzüglich der vereinbarten Plattformgebühr an deinen Verein; die Überweisung bleibt für Eltern immer möglich.
+          Person bereit. Die Zahlungen gehen direkt auf das Stripe-Konto deines Vereins, abzüglich der Stripe-Gebühren und der vereinbarten Plattformgebühr. Dein Verein ist Verkäufer, Stripe übernimmt die Risikoprüfung. Die Überweisung bleibt für Eltern immer möglich.
         </p>
       )}
       {state === 'incomplete' && (

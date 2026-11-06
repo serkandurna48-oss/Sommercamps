@@ -1303,7 +1303,9 @@ export interface StripePaymentStatus {
   synced_at: string | null
   legacy_account_linked: boolean
   legacy_active: boolean
-  online_payment_mode: 'destination' | 'direct' | null
+  /** direct_fee: Managed Risk direct charge with platform fee; destination: B2 Express (staging); direct: legacy Standard account. */
+  online_payment_mode: 'direct_fee' | 'destination' | 'direct' | null
+  account_kind?: 'direct_fee' | 'destination' | null
   service_ready: boolean
 }
 
@@ -1328,6 +1330,8 @@ export async function syncStripePaymentStatusAdmin(orgSlug: string, token: strin
   return res.json() as Promise<StripePaymentStatus>
 }
 
+const STRIPE_ONBOARDING_PREFIXES = ['https://connect.stripe.com/', 'https://accounts.stripe.com/']
+
 /** Returns the single-use Stripe onboarding URL. */
 /** Platform owner: switch online payment for one club on or off. */
 export async function setOnlinePaymentEnabledAdmin(orgSlug: string, token: string, enabled: boolean): Promise<StripePaymentStatus> {
@@ -1342,7 +1346,8 @@ export async function startStripeOnboardingAdmin(
   const res = await adminMutate(`${stripePath(orgSlug)}/onboarding`, token, 'POST', { business_type: businessType })
   if (!res.ok) throw await stripeSetupError(res, 'Stripe-Einrichtung konnte nicht gestartet werden. Bitte versuch es gleich noch einmal.')
   const body = await res.json() as { url?: unknown }
-  if (typeof body.url !== 'string' || !body.url.startsWith('https://connect.stripe.com/')) {
+  // v1 account links use connect.stripe.com, v2 account links accounts.stripe.com.
+  if (typeof body.url !== 'string' || !STRIPE_ONBOARDING_PREFIXES.some(prefix => (body.url as string).startsWith(prefix))) {
     throw new AdminActionError('Stripe hat keinen gültigen Link geliefert.')
   }
   return body.url

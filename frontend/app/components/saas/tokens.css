@@ -410,7 +410,7 @@
 .cp-pay-row > * { min-width: 0; }
 .cp-pay-who { grid-area: who; }
 .cp-pay-ref { grid-area: ref; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
-.cp-scope:where(.cp-admin) .cp-pay-ref .cp-code { font-size: 13px; line-height: 18px; overflow-wrap: anywhere; }
+.cp-scope:where(.cp-admin) .cp-pay-ref .cp-code { flex: 1 1 140px; min-width: 0; font-size: 13px; line-height: 18px; overflow-wrap: break-word; }
 .cp-pay-amount { grid-area: amount; justify-self: end; white-space: nowrap; }
 .cp-pay-status { grid-area: status; display: flex; flex-wrap: wrap; gap: 6px; justify-self: end; }
 .cp-pay-action { grid-area: action; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: flex-end; gap: 8px; }
@@ -420,7 +420,7 @@
 .cp-pay-list > .cp-pay-row:first-of-type { border-top: 0; }
 @media (min-width: 1024px) {
   .cp-pay-head, .cp-pay-row {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr) 104px 128px 300px;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.5fr) 96px 124px 272px;
     grid-template-areas: 'who ref amount status action' 'fallback fallback fallback fallback fallback';
   }
   .cp-pay-head {

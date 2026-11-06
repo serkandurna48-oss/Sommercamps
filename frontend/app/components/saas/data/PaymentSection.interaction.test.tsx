@@ -293,6 +293,14 @@ describe('compact payment rows', () => {
     expect(row.querySelector('[role="dialog"]')?.textContent).toContain('Wieder auf Offen setzen')
   })
 
+  it('never puts focus on a disabled action when the menu opens', async () => {
+    await render([entry], { ...org, iban: null })
+    await act(() => container.querySelector<HTMLButtonElement>('.cp-pay-row [aria-haspopup]')!.click())
+    const focused = document.activeElement as HTMLButtonElement
+    expect(focused.closest('[role="dialog"]')).not.toBeNull()
+    expect(focused.disabled).toBe(false)
+  })
+
   it('renders table column labels once, hidden from assistive tech', async () => {
     await render()
     const head = container.querySelector('.cp-pay-head')!

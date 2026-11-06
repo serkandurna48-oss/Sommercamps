@@ -25,7 +25,9 @@ export default function RowOverflow({ children, label, menu = false, triggerLabe
 
   useEffect(() => {
     if (!open) return
-    panel.current?.querySelector<HTMLElement>('button, a[href], input')?.focus()
+    // First action that is actually shown (phone-only items are hidden on wider screens).
+    const actions = [...(panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled)') ?? [])]
+    actions.find(action => action.checkVisibility?.() !== false)?.focus()
     const outside = (event: PointerEvent) => {
       if (!wrapper.current?.contains(event.target as Node)) setOpen(false)
     }

@@ -26,6 +26,7 @@ _QUESTION_KEY_RE = _re.compile(r'^[a-z][a-z0-9_]{0,29}$')
 BILLING_STREET_MAX = 120
 BILLING_POSTAL_CODE_MAX = 10
 BILLING_CITY_MAX = 80
+_CONTROL_CHARS_RE = _re.compile(r'[\x00-\x1f\x7f-\x9f\u2028\u2029]')
 _POSTAL_CODE_RE = _re.compile(r'^[0-9A-Za-z][0-9A-Za-z -]{2,8}[0-9A-Za-z]$')
 
 
@@ -223,7 +224,7 @@ class RegistrationCreate(BaseModel):
     # Billing address of the parent (migration 20261107130000). Optional in
     # the schema so old clients still validate; required for paid bookings,
     # which only the repository knows (price decided under the camp lock),
-    # see repositories/registrations.py::require_billing_address.
+    # see repositories/registrations.py::billing_address_for.
     parent_street: Optional[str] = Field(default=None, max_length=BILLING_STREET_MAX)
     parent_postal_code: Optional[str] = Field(default=None, max_length=BILLING_POSTAL_CODE_MAX)
     parent_city: Optional[str] = Field(default=None, max_length=BILLING_CITY_MAX)
@@ -241,6 +242,14 @@ class RegistrationCreate(BaseModel):
     @classmethod
     def _trim_and_limit_answers(cls, value: dict[str, str]) -> dict[str, str]:
         return {k: v.strip()[:80] for k, v in value.items()}
+
+    @field_validator("parent_street", "parent_postal_code", "parent_city", mode="after")
+    @classmethod
+    def _no_control_characters(cls, value: Optional[str]) -> Optional[str]:
+        # Newlines would add own lines to the (immutable) invoice; NUL breaks psycopg2.
+        if value and _CONTROL_CHARS_RE.search(value):
+            raise ValueError("Bitte verwenden Sie keine Zeilenumbrüche oder Steuerzeichen.")
+        return value
 
     @field_validator("parent_postal_code", mode="after")
     @classmethod

@@ -34,6 +34,8 @@ from html import escape
 from typing import Optional
 from uuid import UUID
 
+import logging
+
 import psycopg2.extras
 
 from .. import db
@@ -43,6 +45,8 @@ from ..schemas import RegistrationCreate
 from ..tenancy import ACTIVE_PLAN_STATUSES, TenantContext
 from ..utils import age_on_date, is_registration_open
 
+
+logger = logging.getLogger(__name__)
 
 # Stripe Checkout refuses charges below 0.50 EUR (same bound as routers/payments.py).
 MIN_ONLINE_PAYMENT_CENTS = 50
@@ -90,16 +94,53 @@ class BillingAddressRequiredError(RegistrationRejectedError):
     must name the recipient's address (§ 14 UStG / § 34a UStDV)."""
 
 
-def billing_address_for(data: RegistrationCreate, price_cents: Optional[int]) -> tuple[Optional[str], ...]:
-    """(street, postal_code, city) to store. Paid bookings need all three
-    (else BillingAddressRequiredError); free bookings store none, even when
-    sent (data minimisation: no invoice, no purpose)."""
+BILLING_ADDRESS_KEYS = ("parent_street", "parent_postal_code", "parent_city")
+
+
+def billing_address_legacy_until() -> Optional[date]:
+    """End of the rollout tolerance (BILLING_ADDRESS_LEGACY_UNTIL), None = strict."""
+    from ..config import get_settings
+
+    return get_settings().billing_address_legacy_until
+
+
+def _legacy_tolerance_active(today: Optional[date] = None) -> bool:
+    until = billing_address_legacy_until()
+    if until is None:
+        return False
+    if today is None:
+        from zoneinfo import ZoneInfo
+
+        today = datetime.now(ZoneInfo("Europe/Berlin")).date()
+    return today <= until
+
+
+def billing_address_for(
+    data: RegistrationCreate, price_cents: Optional[int], organization_slug: str = "", camp_slug: str = ""
+) -> tuple[Optional[str], ...]:
+    """(street, postal_code, city) to store.
+
+    - Free booking: none, even when sent (data minimisation: no invoice, no purpose).
+    - Paid booking with all three: stored.
+    - Paid booking from an old client (none of the three keys sent, explicit
+      null counts as sent) while the rollout tolerance is active: accepted
+      without address, logged without personal data.
+    - Anything else (empty or partial address, tolerance off/expired):
+      BillingAddressRequiredError.
+    """
     if not price_cents or price_cents <= 0:
         return (None, None, None)
     address = (data.parent_street, data.parent_postal_code, data.parent_city)
-    if not all(address):
-        raise BillingAddressRequiredError("Billing address required for a paid booking")
-    return address
+    if all(address):
+        return address
+    if not (set(BILLING_ADDRESS_KEYS) & data.model_fields_set) and _legacy_tolerance_active():
+        logger.info(
+            "Billing address skipped for legacy client (organization_slug=%s, camp_slug=%s, reason=legacy_client)",
+            organization_slug,
+            camp_slug,
+        )
+        return (None, None, None)
+    raise BillingAddressRequiredError("Billing address required for a paid booking")
 
 
 class RegistrationWindowClosedError(RegistrationRejectedError):
@@ -806,7 +847,7 @@ def create_registration(
 
         new_status = "registered" if active_count < locked["capacity"] else "waitlist"
         # Waitlisted bookings too: they become payable once promoted.
-        address = billing_address_for(data, locked.get("price_cents"))
+        address = billing_address_for(data, locked.get("price_cents"), tenant.slug, camp.slug)
 
         player_id = players.find_or_create_player(
             cur, tenant.organization_id, data.child_first_name, data.child_last_name, data.child_birth_date)
@@ -965,7 +1006,7 @@ def create_training_registration(
             # Free (or sub-minimum) bookings never go to checkout: choose
             # bar/ueberweisung instead (simplest correct rule, no auto-paid state).
             raise TrainingOnlinePaymentNotPossibleError(camp.slug)
-        address = billing_address_for(data, applied_price)
+        address = billing_address_for(data, applied_price, tenant.slug, camp.slug)
 
         player_id = players.find_or_create_player(
             cur, tenant.organization_id, data.child_first_name, data.child_last_name, data.child_birth_date)

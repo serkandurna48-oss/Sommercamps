@@ -5,6 +5,8 @@ storno, admin list/export, column rights. Real local Postgres, synthetic data.""
 from __future__ import annotations
 
 import json
+import logging
+from datetime import date, timedelta
 from io import BytesIO
 from pathlib import Path
 from uuid import uuid4
@@ -15,8 +17,10 @@ from openpyxl import load_workbook
 from pydantic import ValidationError
 
 from app import invoices
+from app.config import Settings
+from app.repositories import registrations as registrations_repo
 from app.schemas import RegistrationCreate
-from .auth_helpers import org_admin_headers
+from .auth_helpers import org_admin_headers, owner_headers
 from .test_billing_stripe_express import _reg, env  # noqa: F401
 from .test_invoices import _invoices, _pay_manually, _profile, extract_text, mail  # noqa: F401
 from .test_registrations_api import _valid_payload
@@ -66,6 +70,23 @@ def test_limits_and_postal_code_format(field, value):
         RegistrationCreate(**_valid_payload(**{field: value}))
 
 
+@pytest.mark.parametrize("field", ADDRESS_KEYS)
+@pytest.mark.parametrize("value", ["Musterweg 1\nZahlbar an: X", "Muster\rweg", "Muster\tweg", "Muster\x00weg",
+                                   "Muster\x7fweg", "Muster\u2028weg", "Muster\x85weg"])
+def test_control_characters_and_newlines_are_rejected(field, value):
+    if field == "parent_postal_code":
+        value = "341\n17"
+    with pytest.raises(ValidationError) as exc:
+        RegistrationCreate(**_valid_payload(**{field: value}))
+    assert "Zeilenumbrüche" in str(exc.value) or field == "parent_postal_code"
+
+
+def test_control_characters_return_422_from_api(env):
+    r = _book_camp(env, _valid_payload(parent_street="Musterweg 1\nZahlbar an: X"))
+    assert r.status_code == 422
+    assert any(e["loc"][-1] == "parent_street" for e in r.json()["detail"])
+
+
 @pytest.mark.parametrize("value", ["1010", "34117", "D-34117", "SW1A 1AA", "1234567890"])
 def test_postal_code_accepts_common_formats(value):
     assert RegistrationCreate(**_valid_payload(parent_postal_code=value)).parent_postal_code == value
@@ -78,7 +99,16 @@ def test_limits_at_the_edge_are_accepted():
 
 # ---------- camps ----------
 
-def test_paid_camp_requires_address_old_client_gets_german_422(env):
+@pytest.fixture
+def tolerance(monkeypatch):
+    """Rollout tolerance BILLING_ADDRESS_LEGACY_UNTIL; value None = unset (strict)."""
+    def set_until(value):
+        monkeypatch.setattr(registrations_repo, "billing_address_legacy_until", lambda: value)
+    return set_until
+
+
+def test_paid_camp_old_client_strict_without_tolerance(env, tolerance):
+    tolerance(None)
     r = _book_camp(env, _without_address())
     assert r.status_code == 422 and r.json()["detail"] == MSG
     partial = _without_address(parent_street="Musterweg 1", parent_city="Kassel")
@@ -87,6 +117,52 @@ def test_paid_camp_requires_address_old_client_gets_german_422(env):
     with env.cursor() as cur:
         cur.execute("select count(*) as n from camp_registrations where organization_id=%s", (env.org,))
         assert cur.fetchone()["n"] == 0
+
+
+def test_old_client_tolerated_during_rollout_and_logged(env, tolerance, caplog):
+    tolerance(date.today() + timedelta(days=7))
+    with caplog.at_level(logging.INFO, logger="app.repositories.registrations"):
+        r = _book_camp(env, _without_address())
+    assert r.status_code == 201, r.text
+    row = _reg(env, r.json()["registration_token"])
+    assert (row["parent_street"], row["parent_postal_code"], row["parent_city"]) == (None, None, None)
+    (line,) = [rec.getMessage() for rec in caplog.records if "legacy client" in rec.getMessage()]
+    assert f"organization_slug={env.slug}" in line and "camp_slug=summer-1" in line and "reason=legacy_client" in line
+    assert "Max" not in line and "max@example.com" not in line and "Mustermann" not in line
+
+
+@pytest.mark.parametrize("sent", [
+    {"parent_street": "", "parent_postal_code": "", "parent_city": ""},       # present but empty
+    {"parent_street": "Musterweg 1", "parent_city": "Kassel"},                 # partial
+    {"parent_street": None},                                                    # explicit null counts as sent
+])
+def test_new_client_with_empty_or_partial_address_is_never_tolerated(env, tolerance, sent):
+    tolerance(date.today() + timedelta(days=7))
+    r = _book_camp(env, {**_without_address(), **sent})
+    assert r.status_code == 422 and r.json()["detail"] == MSG
+
+
+def test_tolerance_expires(env, tolerance):
+    tolerance(date.today() - timedelta(days=1))
+    r = _book_camp(env, _without_address())
+    assert r.status_code == 422 and r.json()["detail"] == MSG
+    assert registrations_repo._legacy_tolerance_active(date(2026, 11, 14)) is False
+    tolerance(date(2026, 11, 14))
+    assert registrations_repo._legacy_tolerance_active(date(2026, 11, 14)) is True  # inclusive
+    assert registrations_repo._legacy_tolerance_active(date(2026, 11, 15)) is False
+
+
+def test_legacy_until_setting_parses_iso_date_and_blank(monkeypatch):
+    base = dict(DATABASE_URL="postgresql://test:test@127.0.0.1:5432/x")
+    monkeypatch.setenv("BILLING_ADDRESS_LEGACY_UNTIL", "2026-11-21")
+    assert Settings(**base).billing_address_legacy_until == date(2026, 11, 21)
+    monkeypatch.setenv("BILLING_ADDRESS_LEGACY_UNTIL", "")
+    assert Settings(**base).billing_address_legacy_until is None
+    monkeypatch.delenv("BILLING_ADDRESS_LEGACY_UNTIL")
+    assert Settings(**base).billing_address_legacy_until is None
+    monkeypatch.setenv("BILLING_ADDRESS_LEGACY_UNTIL", "morgen")
+    with pytest.raises(ValidationError):
+        Settings(**base)
 
 
 def test_paid_camp_stores_trimmed_address(env):
@@ -181,6 +257,24 @@ def test_booking_without_address_keeps_old_invoice_shape(env, mail):
     (invoice,) = _invoices(env, token)
     assert invoice["data"]["recipient"]["address"] is None
     assert "Musterweg" not in extract_text(invoices.render_pdf(invoice["data"], compress=False))
+
+
+def test_player_delete_nulls_address_but_keeps_invoice_snapshot(env, mail):
+    _profile(env)
+    r = _book_camp(env, _valid_payload(child_first_name="Loesch", parent_street="Hauptstraße 5"))
+    token = r.json()["registration_token"]
+    _pay_manually(env, token)
+    cancel = f"/admin/organizations/{env.slug}/camps/summer-1/registrations/{token}/cancel"
+    assert env.client.post(cancel, headers=env.admin()).status_code == 200
+    player_id = _reg(env, token)["player_id"]
+    assert env.client.delete(f"/admin/organizations/{env.slug}/players/{player_id}",
+                             headers=owner_headers()).status_code == 204
+    row = _reg(env, token)
+    assert row["anonymized_at"] is not None
+    assert (row["parent_street"], row["parent_postal_code"], row["parent_city"]) == (None, None, None)
+    docs = _invoices(env, token)
+    assert [d["kind"] for d in docs] == ["invoice", "storno"]
+    assert all(d["data"]["recipient"]["address"] == "Hauptstraße 5\n34117 Kassel" for d in docs)
 
 
 # ---------- admin, export, tenant isolation ----------

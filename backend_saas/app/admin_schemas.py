@@ -319,6 +319,14 @@ class CancelRegistrationResponse(BaseModel):
     promoted: Optional[RegistrationStatusOut] = None
 
 
+class DeleteRegistrationResponse(BaseModel):
+    """Result of a hard delete. `promoted` is the waitlisted registration
+    that took over the freed place, if any. No personal data."""
+
+    deleted: bool = True
+    promoted: Optional[RegistrationStatusOut] = None
+
+
 class PaymentStatusUpdate(BaseModel):
     """Manual payment bookkeeping — no Stripe/payment-provider integration
     exists in backend_saas yet, so an organizer marks a registration's

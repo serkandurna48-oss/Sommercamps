@@ -422,6 +422,28 @@ export async function cancelRegistrationAdmin(
   return res.json() as Promise<{ cancelled: RegistrationStatusResult; promoted: RegistrationStatusResult | null }>
 }
 
+/** Löscht eine einzelne Anmeldung endgültig (Camp oder Trainingstermin).
+ * 409 `paid_online` = online bezahlt: erst erstatten oder stornieren. */
+export async function deleteRegistrationAdmin(
+  orgSlug: string,
+  campSlug: string,
+  registrationToken: string,
+  token: string,
+): Promise<{ deleted: boolean; promoted: RegistrationStatusResult | null }> {
+  const res = await adminMutate(
+    `/admin/organizations/${orgSlug}/camps/${campSlug}/registrations/${encodeURIComponent(registrationToken)}`,
+    token,
+    'DELETE',
+  )
+  if (res.status === 409) {
+    const code = await errorCode(res)
+    throw new AdminActionError(code === 'paid_online' ? de.adminActions.deletePaidOnline : de.adminActions.deleteFailed)
+  }
+  if (res.status === 404) throw new AdminActionError(de.adminActions.deleteGone)
+  if (!res.ok) throw new AdminActionError(de.adminActions.deleteFailed)
+  return res.json() as Promise<{ deleted: boolean; promoted: RegistrationStatusResult | null }>
+}
+
 /** A2: Sendet die zum aktuellen Status passende Eltern-Mail erneut.
  * 422 = Mailversand abgelehnt (Grund steht danach in email_error). Bewusst
  * nicht 502: 502 deutet adminRequest als Server-Neustart. */

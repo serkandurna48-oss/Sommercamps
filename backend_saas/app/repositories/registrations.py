@@ -112,6 +112,16 @@ class RegistrationNotFoundError(RegistrationRejectedError):
         super().__init__(f"No registration found for token '{registration_token}' in this organization/camp")
 
 
+class RegistrationPaidOnlineError(RegistrationRejectedError):
+    """A registration paid online (Stripe) must not be hard-deleted: the
+    payment trail would vanish. The admin refunds or cancels it instead —
+    maps to 409."""
+
+    def __init__(self, registration_token: UUID):
+        self.registration_token = registration_token
+        super().__init__("Registration was paid online and cannot be deleted")
+
+
 class DuplicateRegistrationError(RegistrationRejectedError):
     """
     A registration for this exact child (first name + last name + birth
@@ -987,3 +997,77 @@ def cancel_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, r
             promoted = _lock_and_promote_next_waitlisted(cur, tenant, registration["camp_id"])
 
         return {"cancelled": cancelled, "promoted": promoted}
+
+
+_LOAD_AND_LOCK_REGISTRATION_FOR_DELETE = """
+    select id, camp_id, status, payment_status, payment_method,
+           stripe_session_id, stripe_payment_intent_id,
+           stripe_checkout_session_id, stripe_checkout_account_id
+    from camp_registrations
+    where registration_token = %s
+      and organization_id = %s
+      and camp_id = %s
+    for update
+"""
+
+_DELETE_REGISTRATION = "delete from camp_registrations where id = %s and organization_id = %s"
+
+
+def is_paid_online(registration: dict) -> bool:
+    """True when real money moved through the online checkout. A refunded or
+    never-paid checkout is not a payment trail worth protecting."""
+    if registration["payment_status"] != "paid":
+        return False
+    return bool(
+        registration.get("payment_method") == "online"
+        or registration.get("stripe_session_id")
+        or registration.get("stripe_payment_intent_id")
+        or registration.get("stripe_checkout_session_id")
+    )
+
+
+def delete_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, registration_token: UUID) -> dict:
+    """
+    Hard-deletes one registration (org admin clean-up of test or duplicate
+    bookings; camps and training sessions share this table). Scoped like
+    cancel_registration_and_promote_next: `registration_token` AND
+    `organization_id` AND `camp_id`, so a foreign tenant or a URL naming the
+    wrong camp finds nothing (RegistrationNotFoundError).
+
+    Raises RegistrationPaidOnlineError for a registration paid online; the
+    admin must refund or cancel it. Same lock order as cancel (registration
+    row, then camp row). If the deleted row counted against capacity
+    (registered/confirmed), the oldest waitlisted registration is promoted in
+    the same transaction, exactly as on cancel.
+
+    Returns {"deleted_status", "deleted_payment_status", "promoted",
+    "checkout"}; `checkout` holds the open Stripe Checkout (session id,
+    connected account) so the caller can expire it after the row is gone.
+    Nothing personal is returned.
+    """
+    with db.get_cursor() as cur:
+        cur.execute(_LOAD_AND_LOCK_REGISTRATION_FOR_DELETE, (registration_token, tenant.organization_id, camp_id))
+        registration = cur.fetchone()
+        if registration is None:
+            raise RegistrationNotFoundError(registration_token)
+        if is_paid_online(registration):
+            raise RegistrationPaidOnlineError(registration_token)
+
+        cur.execute(_DELETE_REGISTRATION, (registration["id"], tenant.organization_id))
+
+        promoted = None
+        if registration["status"] in CAPACITY_COUNTING_STATUSES:
+            promoted = _lock_and_promote_next_waitlisted(cur, tenant, registration["camp_id"])
+
+        checkout = None
+        if registration.get("stripe_checkout_session_id") and registration.get("stripe_checkout_account_id"):
+            checkout = {
+                "session_id": registration["stripe_checkout_session_id"],
+                "account_id": registration["stripe_checkout_account_id"],
+            }
+        return {
+            "deleted_status": registration["status"],
+            "deleted_payment_status": registration["payment_status"],
+            "promoted": promoted,
+            "checkout": checkout,
+        }

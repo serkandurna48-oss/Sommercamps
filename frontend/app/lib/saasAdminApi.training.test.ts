@@ -8,6 +8,7 @@ import {
   createClubMemberAdmin,
   createTrainingOfferAdmin,
   createTrainingSessionAdmin,
+  deleteRegistrationAdmin,
   deleteTrainingSessionAdmin,
   fetchClubMembersAdmin,
   fetchTrainingOfferAdmin,
@@ -227,4 +228,20 @@ it('kodiert Slugs und IDs in allen neuen Pfaden', async () => {
   expect(lastCall(fn).url).toMatch(/\/admin\/organizations\/a%2Fb\/club-members$/)
   await setClubMemberActiveAdmin('ksv', 'x/y', 'tok', true)
   expect(lastCall(fn).url).toMatch(/\/club-members\/x%2Fy$/)
+})
+
+it('löscht eine Anmeldung per DELETE; online bezahlt (409) bekommt den Hinweis "Erst erstatten oder stornieren"', async () => {
+  const fn = stubFetch(200, { deleted: true, promoted: null })
+  const result = await deleteRegistrationAdmin('ksv', 'einzel-1', 'reg-token', 'tok')
+  expect(result.deleted).toBe(true)
+  expect(lastCall(fn).init.method).toBe('DELETE')
+  expect(lastCall(fn).url).toMatch(/\/admin\/organizations\/ksv\/camps\/einzel-1\/registrations\/reg-token$/)
+
+  stubFetch(409, { detail: { code: 'paid_online', message: 'Erst erstatten oder stornieren.' } })
+  const paid = await deleteRegistrationAdmin('ksv', 'einzel-1', 'reg-token', 'tok').catch(e => e)
+  expect(paid).toBeInstanceOf(AdminActionError)
+  expect(paid.message).toContain('Erst erstatten oder stornieren')
+
+  stubFetch(404, { detail: 'Registration not found' })
+  expect(await deleteRegistrationAdmin('ksv', 'einzel-1', 'reg-token', 'tok').catch(e => e)).toBeInstanceOf(AdminActionError)
 })

@@ -1,13 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import { getAdminToken } from '../../../lib/adminSession'
-import { cancelRegistrationAdmin, promoteWaitlistAdmin, updateRegistrationDetailsAdmin } from '../../../lib/saasAdminApi'
-import { cancelRegistrationAction, promoteWaitlistAction, updateRegistrationDetailsAction } from './waitlistActions'
+import { AdminActionError, cancelRegistrationAdmin, deleteRegistrationAdmin, promoteWaitlistAdmin, updateRegistrationDetailsAdmin } from '../../../lib/saasAdminApi'
+import { cancelRegistrationAction, deleteRegistrationAction, promoteWaitlistAction, updateRegistrationDetailsAction } from './waitlistActions'
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('../../../lib/adminSession', () => ({ getAdminToken: vi.fn() }))
 vi.mock('../../../lib/saasAdminApi', async () => ({
   ...await vi.importActual('../../../lib/saasAdminApi'),
-  cancelRegistrationAdmin: vi.fn(), promoteWaitlistAdmin: vi.fn(), updateRegistrationDetailsAdmin: vi.fn(),
+  cancelRegistrationAdmin: vi.fn(), deleteRegistrationAdmin: vi.fn(), promoteWaitlistAdmin: vi.fn(), updateRegistrationDetailsAdmin: vi.fn(),
 }))
 
 const initial = { error: null, success: null }
@@ -68,4 +68,19 @@ it('leaves the parent email untouched when the form does not send it', async () 
   vi.mocked(updateRegistrationDetailsAdmin).mockResolvedValue({} as never)
   await updateRegistrationDetailsAction('club', 'camp', 'tok', detailsInitial, detailsForm({}))
   expect(vi.mocked(updateRegistrationDetailsAdmin).mock.calls[0][4]).not.toHaveProperty('parent_email')
+})
+
+it('reports a deleted registration and the promoted waitlist entry', async () => {
+  vi.mocked(deleteRegistrationAdmin).mockResolvedValue({ deleted: true, promoted })
+  const result = await deleteRegistrationAction('club', 'camp', 'tok', initial)
+  expect(deleteRegistrationAdmin).toHaveBeenCalledWith('club', 'camp', 'tok', 'admin-token')
+  expect(result).toMatchObject({ error: null, promoted })
+  expect(result.success).toBeTruthy()
+})
+
+it('passes the paid-online refusal on to the admin', async () => {
+  vi.mocked(deleteRegistrationAdmin).mockRejectedValue(new AdminActionError('Erst erstatten oder stornieren: nicht löschbar.'))
+  const result = await deleteRegistrationAction('club', 'camp', 'tok', initial)
+  expect(result.success).toBeNull()
+  expect(result.error).toContain('Erst erstatten oder stornieren')
 })

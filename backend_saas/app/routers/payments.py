@@ -491,13 +491,25 @@ def expire_open_checkout(organization_id, registration_token) -> None:
             return
         if row["payment_status"] == "open" and row["status"] in ("registered", "confirmed"):
             return  # still payable: keep the session
-        client = _stripe_client()
-        session = _stripe_dict(client.checkout.Session.retrieve(
-            row["stripe_checkout_session_id"], stripe_account=row["stripe_checkout_account_id"],
-        ))
-        if session.get("status") == "open":
-            client.checkout.Session.expire(
-                row["stripe_checkout_session_id"], stripe_account=row["stripe_checkout_account_id"],
-            )
+        _expire_session(row["stripe_checkout_session_id"], row["stripe_checkout_account_id"])
     except Exception:  # noqa: BLE001 - best effort, the webhook flags late payments
+        logger.warning("Could not expire open Stripe checkout")
+
+
+def _expire_session(session_id: str, account_id: str) -> None:
+    client = _stripe_client()
+    session = _stripe_dict(client.checkout.Session.retrieve(session_id, stripe_account=account_id))
+    if session.get("status") == "open":
+        client.checkout.Session.expire(session_id, stripe_account=account_id)
+
+
+def expire_checkout_session(session_id: str, account_id: str) -> None:
+    """Best effort after a registration was deleted: its row is gone, so the
+    caller passes the session it read before deleting. Never raises."""
+    settings = get_settings()
+    if not (settings.stripe_checkout_enabled and settings.stripe_secret_key and settings.stripe_webhook_secret):
+        return
+    try:
+        _expire_session(session_id, account_id)
+    except Exception:  # noqa: BLE001
         logger.warning("Could not expire open Stripe checkout")

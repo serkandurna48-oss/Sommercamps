@@ -1,6 +1,6 @@
 import { de, formatEuro, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
-import { cancelRegistrationAction } from '../actions/waitlistActions'
+import { cancelRegistrationAction, deleteRegistrationAction } from '../actions/waitlistActions'
 import { setPaymentStatusAction } from '../actions/paymentActions'
 import { canReopenPayment, isActiveRegistration, isOpenPayment } from '../commandCenterLogic'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from '../data/StatusChip'
@@ -26,6 +26,7 @@ export default function BookingRow({ orgSlug, sessionSlug, sessionId, registrati
   const markPaid = setPaymentStatusAction.bind(null, orgSlug, sessionSlug, token, 'paid', de.paymentsPage.markPaidSuccess)
   const markOpen = setPaymentStatusAction.bind(null, orgSlug, sessionSlug, token, 'open', de.paymentsPage.markOpenSuccess)
   const cancel = cancelRegistrationAction.bind(null, orgSlug, sessionSlug, token)
+  const remove = deleteRegistrationAction.bind(null, orgSlug, sessionSlug, token)
   const active = isActiveRegistration(registration)
   const memberLabel = !memberPrices ? null : registration.member_match === true ? 'Mitglied' : registration.member_match === false ? 'Nichtmitglied' : null
 
@@ -64,6 +65,8 @@ export default function BookingRow({ orgSlug, sessionSlug, sessionId, registrati
           <ActionForm action={cancel} label="Buchung stornieren" pendingLabel="Wird storniert …" variant="danger"
             requireConfirm="Buchung wirklich stornieren? Der Platz wird wieder frei." />
         )}
+        <ActionForm action={remove} label="Buchung löschen" pendingLabel="Wird gelöscht …" variant="danger"
+          requireConfirm="Buchung endgültig löschen? Das lässt sich nicht rückgängig machen. Online bezahlte Buchungen kannst du nicht löschen: Erstatte oder storniere sie zuerst." />
       </div>
     </li>
   )

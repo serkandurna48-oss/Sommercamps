@@ -6,7 +6,7 @@ import { createContext, useContext } from 'react'
  * Wer sieht diesen Vereins-Admin-Bereich gerade — platform_owner (die
  * gesamte Plattform steuert und sich hier gerade EINEN Verein ansieht) oder
  * der Verein selbst (org_admin)? Reiner Anzeige-Zustand für die "Zur
- * Plattform"-Rückkehr im Band (siehe OrgSwitcher) — KEINE Berechtigungs-
+ * Plattform"-Rückkehr in der Seitenleiste (siehe AdminSidebar) — KEINE Berechtigungs-
  * grenze. Die eigentliche Prüfung, ob der Aufruf überhaupt erlaubt ist,
  * passiert serverseitig in OrgAdminLayout (und erneut bei jedem
  * Backend-Request, siehe app/auth_deps.py) — dieser Context entscheidet nur

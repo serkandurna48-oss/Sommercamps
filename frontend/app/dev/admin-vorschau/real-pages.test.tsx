@@ -17,6 +17,7 @@ vi.mock('../../components/saas/orgAdminData', () => ({
   loadOrgAdminData: vi.fn(), loadOrgPaymentsData: vi.fn(), loadCampAdminData: vi.fn(), getOrganizationAdmin: vi.fn(),
 }))
 vi.mock('../../lib/adminSession', () => ({ getAdminToken: vi.fn() }))
+vi.mock('../../components/saas/trainingAdminData', () => ({ loadTrainingOverview: vi.fn(async () => ({ offers: [], upcoming: [], error: false })) }))
 vi.mock('next/navigation', () => ({
   notFound: () => { throw new Error('notFound') },
   redirect: (path: string) => { throw new Error(`redirect:${path}`) },
@@ -48,9 +49,10 @@ beforeEach(() => {
 for (const [name, Page] of Object.entries({ DashboardPage, CampPage, CampCreatePage, CampConfigPage, PaymentsPage, WaitlistPage, TasksPage, ConfigPage })) {
   it(`${name} renders the shared screen with its authenticated data`, async () => {
     const html = renderToStaticMarkup(await (Page as (props: { params: typeof params; searchParams: Promise<{ created?: string }> }) => Promise<React.ReactElement>)({ params, searchParams: Promise.resolve({}) }))
-    expect(html).toContain('JK Performance Academy')
-    expect(html).toContain('aria-label="Bereiche"')
-    expect(html).toContain('href="/pilot/jk-performance-academy/')
+    // Club identity and the sidebar live in the layout (layout.test.tsx); every page renders its slim header.
+    expect(html).toContain('class="cp-page-head"')
+    // Payments has no in-page link left (no back link on top-level pages); the others link within the club.
+    if (Page !== PaymentsPage) expect(html).toContain('href="/pilot/jk-performance-academy/')
     expect(html).not.toContain('/dev/admin-vorschau')
     expect(html).not.toContain('Vorschau ·')
     if (Page === CampCreatePage || Page === ConfigPage) {

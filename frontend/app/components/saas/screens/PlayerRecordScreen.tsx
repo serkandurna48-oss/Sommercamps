@@ -1,10 +1,8 @@
 import { berlinDay, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
-import { computeBrandTokens } from '../brandPipeline'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from '../data/StatusChip'
 import EmptyState from '../state/EmptyState'
-import MatchdayBand from '../shell/MatchdayBand'
-import { PAGE } from '../ui/pageLayout'
-import { orgTabs } from '../navTabs'
+import PageHeader from '../shell/PageHeader'
+import { ADMIN_PAGE } from '../ui/pageLayout'
 import GoalsSection from '../player/GoalsSection'
 import MeasurementsSection from '../player/MeasurementsSection'
 import NotesTimeline from '../player/NotesTimeline'
@@ -15,13 +13,12 @@ import type { PlayerDetail } from '../../../lib/saasAdminApi'
 
 export const NO_CONSENT_HINT = 'Keine Einwilligung zur Doku vorhanden – bitte bei den Eltern nachfragen'
 
-export default function PlayerRecordScreen({ orgSlug, org, record, query, today = berlinDay(new Date()) }: OrganizationIdentityProps & {
+export default function PlayerRecordScreen({ orgSlug, record, query, today = berlinDay(new Date()) }: OrganizationIdentityProps & {
   record: PlayerDetail
   /** searchParams der Seite: `neu=1&termin=<Termin-Id>` öffnet die Schnellerfassung vorbelegt. */
   query?: Record<string, unknown>
   today?: string
 }) {
-  const brand = computeBrandTokens(org.primary_color)
   const { player, bookings, notes, goals, measurements, metrics } = record
   const age = ageFromBirthDate(player.birth_date, today) ?? player.age
   const prefill = parseQuickPrefill(query, bookings, today)
@@ -30,18 +27,15 @@ export default function PlayerRecordScreen({ orgSlug, org, record, query, today 
 
   return (
     <>
-      <MatchdayBand backHref={`/pilot/${orgSlug}/spieler`}
-        orgSlug={orgSlug}
-        orgName={org.name}
-        orgLogoUrl={org.logo_url}
+      <PageHeader
+        backHref={`/pilot/${orgSlug}/spieler`}
+        backLabel="Alle Spieler"
         title={`${player.first_name} ${player.last_name}`}
         subtitle={`${age} Jahre · geboren ${formatDay(player.birth_date)}`}
         metrics={[{ label: 'Notizen', value: String(notes.length) }, { label: 'Offene Ziele', value: String(openGoals) }]}
-        tabs={orgTabs(orgSlug)}
-        brandColor={brand.brand}
       />
 
-      <main className={PAGE}>
+      <main className={ADMIN_PAGE}>
         {!consent && (
           <p className="cp-body mb-6 rounded-[var(--cp-r-chip)] border px-4 py-3" role="note" data-consent-hint
             style={{ color: 'var(--cp-pending)', background: 'var(--cp-pending-bg)', borderColor: 'var(--cp-pending-line)' }}>
@@ -49,41 +43,43 @@ export default function PlayerRecordScreen({ orgSlug, org, record, query, today 
           </p>
         )}
 
-        <section className="mb-10 flex flex-col gap-4" aria-labelledby="new-note-heading">
-          <h2 id="new-note-heading" className="cp-title" style={{ color: 'var(--cp-ink)' }}>Neue Notiz</h2>
-          <div className="max-w-[720px]">
+        <section className="mb-8 flex flex-col gap-3" aria-labelledby="new-note-heading">
+          <h2 id="new-note-heading" className="cp-heading" style={{ color: 'var(--cp-ink)' }}>Neue Notiz</h2>
+          <div>
             <QuickNoteForm orgSlug={orgSlug} playerId={player.id} bookings={bookings} initialDate={prefill.date}
               initialCampId={prefill.campId} autoFocus={prefill.open} />
           </div>
         </section>
 
-        <section className="mb-10 flex flex-col gap-4" aria-labelledby="notes-heading">
-          <h2 id="notes-heading" className="cp-title" style={{ color: 'var(--cp-ink)' }}>Notizen</h2>
-          <div className="max-w-[720px]">
+        <div className="cp-split">
+        <section className="flex min-w-0 flex-col gap-3" aria-labelledby="notes-heading">
+          <h2 id="notes-heading" className="cp-heading" style={{ color: 'var(--cp-ink)' }}>Notizen</h2>
+          <div>
             <NotesTimeline orgSlug={orgSlug} playerId={player.id} notes={notes} bookings={bookings} />
           </div>
         </section>
 
-        <section className="mb-10 flex flex-col gap-4" aria-labelledby="goals-heading">
-          <h2 id="goals-heading" className="cp-title" style={{ color: 'var(--cp-ink)' }}>Ziele</h2>
-          <div className="max-w-[720px]">
+        <div className="flex min-w-0 flex-col gap-8">
+        <section className="flex flex-col gap-3" aria-labelledby="goals-heading">
+          <h2 id="goals-heading" className="cp-heading" style={{ color: 'var(--cp-ink)' }}>Ziele</h2>
+          <div>
             <GoalsSection orgSlug={orgSlug} playerId={player.id} goals={goals} />
           </div>
         </section>
 
-        <section className="mb-10 flex flex-col gap-4" aria-labelledby="measurements-heading">
-          <h2 id="measurements-heading" className="cp-title" style={{ color: 'var(--cp-ink)' }}>Messwerte</h2>
-          <div className="max-w-[720px]">
+        <section className="flex flex-col gap-3" aria-labelledby="measurements-heading">
+          <h2 id="measurements-heading" className="cp-heading" style={{ color: 'var(--cp-ink)' }}>Messwerte</h2>
+          <div>
             <MeasurementsSection orgSlug={orgSlug} playerId={player.id} measurements={measurements} metrics={metrics} today={today} />
           </div>
         </section>
 
-        <section className="flex flex-col gap-4" aria-labelledby="bookings-heading">
-          <h2 id="bookings-heading" className="cp-title" style={{ color: 'var(--cp-ink)' }}>Buchungen</h2>
+        <section className="flex flex-col gap-3" aria-labelledby="bookings-heading">
+          <h2 id="bookings-heading" className="cp-heading" style={{ color: 'var(--cp-ink)' }}>Buchungen</h2>
           {bookings.length === 0 ? (
             <EmptyState title="Noch keine Buchungen." />
           ) : (
-            <ul className="cp-card cp-card-list max-w-[720px]">
+            <ul className="cp-card cp-card-list">
               {bookings.map(booking => (
                 <li key={booking.registration_id} className="flex flex-col gap-2 border-t px-4 py-3 first:border-t-0 sm:flex-row sm:items-center sm:justify-between" style={{ borderTopColor: 'var(--cp-line-2)' }}>
                   <div className="min-w-0">
@@ -103,6 +99,8 @@ export default function PlayerRecordScreen({ orgSlug, org, record, query, today 
             </ul>
           )}
         </section>
+        </div>
+        </div>
       </main>
     </>
   )

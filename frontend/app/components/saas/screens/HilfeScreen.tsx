@@ -1,7 +1,5 @@
 ﻿import type { ReactNode } from 'react'
-import { computeBrandTokens } from '../brandPipeline'
-import MatchdayBand from '../shell/MatchdayBand'
-import { orgTabs } from '../navTabs'
+import PageHeader from '../shell/PageHeader'
 import { de } from '../../../lib/i18n/de'
 import type { OrganizationIdentityProps } from './types'
 import { PAGE_READING } from '../ui/pageLayout'
@@ -35,19 +33,12 @@ function Steps({ items }: { items: readonly string[] }) {
   )
 }
 
-export default function HilfeScreen({ orgSlug, org }: OrganizationIdentityProps) {
-  const brand = computeBrandTokens(org.primary_color)
+export default function HilfeScreen({ orgSlug }: OrganizationIdentityProps) {
 
   return (
     <>
-      <MatchdayBand
-        backHref={`/pilot/${orgSlug}/dashboard`}
-        orgSlug={orgSlug}
-        orgName={org.name}
-        orgLogoUrl={org.logo_url}
+      <PageHeader
         title={de.hilfe.title}
-        tabs={orgTabs(orgSlug)}
-        brandColor={brand.brand}
       />
       <main
         className={`${PAGE_READING} space-y-10`}

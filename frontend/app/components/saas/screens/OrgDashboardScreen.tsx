@@ -2,129 +2,221 @@ import Link from '../preview/AdminLink'
 import TodayRegistrations from '../data/TodayRegistrations'
 import { todayRegistrations } from '../registrationDates'
 import { ButtonLink } from '../ui/Button'
-import { computeBrandTokens } from '../brandPipeline'
-import { buildTasks, computeCampStats, pickNextCamp } from '../dashboardLogic'
+import { buildTasks, computeCampStats, pickNextCamp, taskHref, type Task } from '../dashboardLogic'
+import { computeMoneyStats, isOpenPayment } from '../commandCenterLogic'
 import { computeOnboardingSteps, missingRequiredOrgFields } from '../onboardingSteps'
-import MatchdayBand from '../shell/MatchdayBand'
-import TaskCard from '../tasks/TaskCard'
-import TaskRow from '../tasks/TaskRow'
+import PageHeader from '../shell/PageHeader'
 import DashboardCampsCard from '../data/DashboardCampsCard'
 import OnboardingCard from '../state/OnboardingCard'
 import LaunchSuccessCard from '../state/LaunchSuccessCard'
-import SuccessNote from '../state/SuccessNote'
-import { orgTabs } from '../navTabs'
-import { de, formatDateRange } from '../../../lib/i18n/de'
+import CopyParentLinkButton from '../state/CopyParentLinkButton'
+import { IconCalendar, IconPlus } from '../icons'
+import { formatSessionWhen } from '../training/trainingLogic'
+import { de, formatDateRange, formatEuro } from '../../../lib/i18n/de'
 import type { OrganizationScreenProps } from './types'
-import { PAGE_READING } from '../ui/pageLayout'
+import type { TrainingOverview } from '../trainingAdminData'
+import { ADMIN_PAGE } from '../ui/pageLayout'
 
-export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsByCamp }: OrganizationScreenProps) {
+const DAY_MS = 24 * 60 * 60 * 1000
 
-  const campsWithStats = camps.map((camp, i) => computeCampStats(camp, registrationsByCamp[i]))
+function taskTitle(task: Task): string {
+  switch (task.kind) {
+    case 'payment': return de.tasks.payment.title(task.count, task.campTitle)
+    case 'missing-contact': return de.tasks.missingContact.title(task.count, task.campTitle)
+    case 'waitlist': return de.tasks.waitlist.title(task.count, task.campTitle)
+  }
+}
+
+function taskHint(task: Task): string {
+  switch (task.kind) {
+    case 'payment': return de.tasks.payment.hint
+    case 'missing-contact': return de.tasks.missingContact.hint
+    case 'waitlist': return de.tasks.waitlist.hint
+  }
+}
+
+function KpiTile({ label, value, detail, href, bar }: { label: string; value: string; detail: string; href: string; bar?: number }) {
+  return (
+    <Link href={href} prefetch={false} className="cp-focus cp-card cp-kpi-tile">
+      <span className="cp-kpi-tile-label">{label}</span>
+      <span className="cp-kpi-tile-value cp-num">{value}</span>
+      {typeof bar === 'number' && (
+        <span className="cp-kpi-bar" aria-hidden="true"><span style={{ width: `${Math.max(0, Math.min(1, bar)) * 100}%` }} /></span>
+      )}
+      <span className="cp-kpi-tile-detail">{detail}</span>
+    </Link>
+  )
+}
+
+export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsByCamp, training, now = new Date() }: OrganizationScreenProps & {
+  /** Offers and upcoming sessions; undefined where the caller did not load trainings (preview). */
+  training?: TrainingOverview
+  now?: Date
+}) {
+  const campsWithStats = camps.map((camp, i) => computeCampStats(camp, registrationsByCamp[i] ?? []))
   const nextCamp = pickNextCamp(campsWithStats)
   const tasks = buildTasks(campsWithStats)
-  const [firstTask, ...restTasks] = tasks
-
-  const brand = computeBrandTokens(org.primary_color)
-  const tabs = orgTabs(orgSlug)
 
   const { step3Done } = computeOnboardingSteps(org, camps)
-  const showCard = !step3Done
+  const showOnboarding = !step3Done
   const missingFields = step3Done ? missingRequiredOrgFields(org) : []
   const publishedCamps = camps.filter(c => c.status === 'published')
   const totalRegistrations = registrationsByCamp.reduce((sum, r) => sum + r.length, 0)
   const showLaunchSuccess = publishedCamps.length === 1 && totalRegistrations === 0
 
+  // KPI: occupancy across published camps that are not over yet.
+  const todayIso = now.toISOString().slice(0, 10)
+  const activeCamps = campsWithStats.filter(c => c.camp.status === 'published' && c.camp.end_date >= todayIso)
+  const occupied = activeCamps.reduce((sum, c) => sum + c.registeredCount, 0)
+  const capacity = activeCamps.reduce((sum, c) => sum + c.camp.capacity, 0)
+
+  // KPI: open camp payments in euro (training payments live on the payments page).
+  const openCents = camps.reduce((sum, camp, i) => sum + computeMoneyStats(camp, registrationsByCamp[i] ?? []).openCents, 0)
+  const openCount = registrationsByCamp.reduce((sum, regs) => sum + regs.filter(isOpenPayment).length, 0)
+
+  // KPI: camp registrations today / last 7 days (Berlin calendar day).
+  const today = todayRegistrations(camps, registrationsByCamp, now)
+  const weekStart = now.getTime() - 7 * DAY_MS
+  const lastWeek = registrationsByCamp.flat().filter(r => {
+    const t = Date.parse(r.created_at)
+    return !Number.isNaN(t) && t >= weekStart && t <= now.getTime()
+  }).length
+
+  // KPI + list: upcoming training sessions.
+  const upcoming = training?.upcoming ?? []
+  const nextWeekSessions = upcoming.filter(({ session }) => Date.parse(session.starts_at) - now.getTime() <= 7 * DAY_MS)
+  const offers = training?.offers ?? []
+  const sessionTarget = offers.length === 1 ? `/pilot/${orgSlug}/trainings/${offers[0].id}#termin-anlegen` : `/pilot/${orgSlug}/trainings`
+
+  const firstTask = tasks[0]
+
   return (
     <>
-      <MatchdayBand
-        orgSlug={orgSlug}
-        orgName={org.name}
-        orgLogoUrl={org.logo_url}
-        title={nextCamp ? nextCamp.camp.title : de.dashboard.noUpcomingCamp}
-        subtitle={
-          nextCamp
-            ? formatDateRange(nextCamp.camp.start_date, nextCamp.camp.end_date)
-            : de.dashboard.noUpcomingCampHint
-        }
-        metrics={
-          nextCamp
-            ? (() => {
-                return [
-                  {
-                    label: de.dashboard.spotsLabel,
-                    value: `${nextCamp.registeredCount}/${nextCamp.camp.capacity}`,
-                    bar: nextCamp.camp.capacity > 0 ? nextCamp.registeredCount / nextCamp.camp.capacity : 0,
-                  },
-                  { label: de.dashboard.openPaymentsLabel, value: String(nextCamp.openPaymentsCount), numericValue: nextCamp.openPaymentsCount },
-                  { label: de.dashboard.waitlistLabel, value: String(nextCamp.waitlistCount), numericValue: nextCamp.waitlistCount },
-                ]
-              })()
-            : []
-        }
-        tabs={tabs}
-        brandColor={brand.brand}
+      <PageHeader
+        title="Übersicht"
+        subtitle={nextCamp
+          ? <>{de.dashboard.nextCamp}: <span style={{ color: 'var(--cp-ink-2)' }}>{nextCamp.camp.title}</span> · {formatDateRange(nextCamp.camp.start_date, nextCamp.camp.end_date)}</>
+          : de.dashboard.noUpcomingCampHint}
+        action={showOnboarding ? undefined : (
+          <>
+            <ButtonLink href={sessionTarget} variant="secondary"><IconPlus size={16} />Termin anlegen</ButtonLink>
+            <CopyParentLinkButton orgSlug={orgSlug} label="Link teilen" />
+          </>
+        )}
       />
 
-      <main className={PAGE_READING}>
-        {!showCard && <TodayRegistrations entries={todayRegistrations(camps, registrationsByCamp)} orgSlug={orgSlug} />}
-
-        {showCard ? (
-          <section className="mb-12">
+      <main className={ADMIN_PAGE}>
+        {showOnboarding && (
+          <section className="mb-6">
             <OnboardingCard orgSlug={orgSlug} org={org} camps={camps} />
-          </section>
-        ) : (
-          <section className="mb-12">
-            <h2 className="cp-title mb-4">{de.dashboard.upNext}</h2>
-            {missingFields.length > 0 && (
-              <div
-                className="cp-body mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[var(--cp-r-card)] border px-4 py-3"
-                style={{ borderColor: 'var(--cp-pending-line)', background: 'var(--cp-pending-bg)' }}
-              >
-                <span
-                  aria-hidden
-                  className="cp-label inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border"
-                  style={{ color: 'var(--cp-pending)', borderColor: 'var(--cp-pending-line)', background: 'var(--cp-surface)' }}
-                >!</span>
-                <span>{de.onboarding.missingFieldsHint(missingFields)}</span>
-                <Link href={`/pilot/${orgSlug}/konfiguration`} className="cp-focus min-h-[44px] inline-flex items-center underline">{de.onboarding.missingFieldsAction}</Link>
-              </div>
-            )}
-            {firstTask ? (
-              <div className="flex flex-col gap-4">
-                <TaskCard task={firstTask} orgSlug={orgSlug} />
-                {restTasks.length > 0 && (
-                  <div className="flex flex-col gap-4">
-                    {restTasks.map(t => (
-                      <TaskRow key={t.id} task={t} orgSlug={orgSlug} asCard />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : showLaunchSuccess ? (
-              <LaunchSuccessCard orgSlug={orgSlug} />
-            ) : (
-              <div className="cp-card" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
-                <SuccessNote>{de.onboarding.liveLabel}</SuccessNote>
-                <p className="cp-body mt-2 break-all" style={{ color: 'var(--cp-ink-2)' }}>/pilot/{orgSlug}</p>
-                <div className="mt-4">
-                  <ButtonLink href={`/pilot/${orgSlug}`} variant="primary">
-                    {de.onboarding.liveOpen}
-                  </ButtonLink>
-                </div>
-              </div>
-            )}
           </section>
         )}
 
+        <section aria-label="Kennzahlen" className="cp-kpi-grid mb-6">
+          <KpiTile
+            label="Belegte Plätze"
+            value={capacity > 0 ? `${occupied}/${capacity}` : '–'}
+            bar={capacity > 0 ? occupied / capacity : undefined}
+            detail={activeCamps.length === 1 ? 'in 1 laufenden Camp' : `in ${activeCamps.length} laufenden Camps`}
+            href={`/pilot/${orgSlug}/camps`}
+          />
+          <KpiTile
+            label="Offene Zahlungen"
+            value={formatEuro(openCents)}
+            detail={openCount === 1 ? '1 Anmeldung · Camps' : `${openCount} Anmeldungen · Camps`}
+            href={`/pilot/${orgSlug}/zahlungen`}
+          />
+          <KpiTile
+            label="Anmeldungen heute"
+            value={String(today.length)}
+            detail={`${lastWeek} in den letzten 7 Tagen`}
+            href={`/pilot/${orgSlug}/anmeldungen`}
+          />
+          <KpiTile
+            label="Trainings 7 Tage"
+            value={training?.error ? '–' : String(nextWeekSessions.length)}
+            detail={training?.error ? 'Termine nicht geladen'
+              : upcoming[0] ? `nächster: ${formatSessionWhen(upcoming[0].session.local_date, upcoming[0].session.local_time)}` : 'keine Termine geplant'}
+            href={`/pilot/${orgSlug}/trainings`}
+          />
+        </section>
+
+        <div className="cp-dash-grid mb-6">
+          <section className="cp-card cp-card-list" aria-labelledby="dashboard-upnext">
+            <div className="cp-card-head">
+              <h2 id="dashboard-upnext" className="cp-heading">{de.dashboard.upNext}</h2>
+              {tasks.length > 0 && <Link href={`/pilot/${orgSlug}/aufgaben`} prefetch={false} className="cp-focus cp-card-link">Alle Aufgaben</Link>}
+            </div>
+            {missingFields.length > 0 && (
+              <div className="cp-dash-row" style={{ background: 'var(--cp-pending-bg)' }}>
+                <div className="min-w-0 flex-1">
+                  <p className="cp-label" style={{ color: 'var(--cp-ink)' }}>{de.onboarding.missingFieldsHint(missingFields)}</p>
+                </div>
+                <ButtonLink href={`/pilot/${orgSlug}/konfiguration`} variant="secondary">{de.onboarding.missingFieldsAction}</ButtonLink>
+              </div>
+            )}
+            {showOnboarding ? (
+              <p className="cp-body cp-dash-pad" style={{ color: 'var(--cp-muted)' }}>Schließen Sie zuerst die Einrichtung oben ab.</p>
+            ) : firstTask ? (
+              <ul>
+                {tasks.slice(0, 5).map((task, index) => (
+                  <li key={task.id} className="cp-dash-row">
+                    <span aria-hidden="true" className="cp-dash-dot" data-kind={task.kind} />
+                    <div className="min-w-0 flex-1">
+                      <p className="cp-label" style={{ color: 'var(--cp-ink)' }}>{taskTitle(task)}</p>
+                      <p className="cp-hint">{taskHint(task)}</p>
+                    </div>
+                    <ButtonLink href={taskHref(orgSlug, task)} variant={index === 0 ? 'primary' : 'secondary'}>{de.tasks.review}</ButtonLink>
+                  </li>
+                ))}
+              </ul>
+            ) : showLaunchSuccess ? (
+              <div className="cp-dash-pad"><LaunchSuccessCard orgSlug={orgSlug} /></div>
+            ) : missingFields.length === 0 ? (
+              <p className="cp-body cp-dash-pad" style={{ color: 'var(--cp-muted)' }}>Keine offenen Aufgaben. Ihre Anmeldeseite ist live.</p>
+            ) : null}
+            {tasks.length > 5 && (
+              <p className="cp-hint cp-dash-pad">+ {tasks.length - 5} weitere unter „Aufgaben“</p>
+            )}
+          </section>
+
+          <section className="cp-card cp-card-list" aria-labelledby="dashboard-sessions">
+            <div className="cp-card-head">
+              <h2 id="dashboard-sessions" className="cp-heading">Nächste Termine</h2>
+              <Link href={`/pilot/${orgSlug}/trainings`} prefetch={false} className="cp-focus cp-card-link">Trainings</Link>
+            </div>
+            {training?.error ? (
+              <p role="alert" className="cp-body cp-dash-pad" style={{ color: 'var(--cp-error)' }}>Trainingstermine konnten nicht geladen werden.</p>
+            ) : upcoming.length === 0 ? (
+              <p className="cp-body cp-dash-pad" style={{ color: 'var(--cp-muted)' }}>Keine anstehenden Trainingstermine.</p>
+            ) : (
+              <ul>
+                {upcoming.slice(0, 5).map(({ offer, session }) => (
+                  <li key={session.id}>
+                    <Link href={`/pilot/${orgSlug}/trainings/${offer.id}`} prefetch={false} className="cp-focus cp-dash-row cp-dash-link">
+                      <IconCalendar size={18} className="shrink-0" />
+                      <span className="min-w-0 flex-1">
+                        <span className="cp-label block truncate" style={{ color: 'var(--cp-ink)' }}>{offer.title}</span>
+                        <span className="cp-hint block">{formatSessionWhen(session.local_date, session.local_time)}</span>
+                      </span>
+                      <span className="cp-label cp-num shrink-0" style={{ color: session.free_spots === 0 ? 'var(--cp-ok)' : 'var(--cp-ink-2)' }}>
+                        {session.booked_count}/{session.capacity}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        {!showOnboarding && <TodayRegistrations entries={today} orgSlug={orgSlug} />}
+
         <DashboardCampsCard camps={campsWithStats} orgSlug={orgSlug} action={
-            <ButtonLink
-              href={`/pilot/${orgSlug}/camps/new`}
-              variant="secondary"
-            >
-              + Camp anlegen
-            </ButtonLink>
+          <ButtonLink href={`/pilot/${orgSlug}/camps/new`} variant="secondary">+ Camp anlegen</ButtonLink>
         } />
       </main>
     </>
   )
 }
+

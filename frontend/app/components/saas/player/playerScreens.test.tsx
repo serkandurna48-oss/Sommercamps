@@ -86,7 +86,7 @@ describe('Spielerliste', () => {
     expect(other.textContent).toContain('noch keine Buchung')
     expect(other.textContent).toContain('0 offene Ziele')
     expect(doc.querySelector('[role="search"] input[type="search"]')).not.toBeNull()
-    expect(doc.querySelector('a[href="/pilot/demo/spieler"]')).not.toBeNull() // Tab
+    expect(doc.querySelector('header.cp-page-head h1')?.textContent).toBe('Spieler') // navigation lives in the sidebar
   })
 
   it('leerer Zustand', () => {

@@ -7,7 +7,7 @@ import CampConfigScreen from './screens/CampConfigScreen'
 import OnboardingCard from './state/OnboardingCard'
 import OrgDashboardScreen from './screens/OrgDashboardScreen'
 
-vi.mock('./shell/MatchdayBand', () => ({ default: () => null }))
+vi.mock('./shell/PageHeader', () => ({ default: () => null }))
 vi.mock('./actions/wizardActions', () => ({ saveAuftrittAction: vi.fn(), saveRechtlichesAction: vi.fn() }))
 vi.mock('./actions/configActions', () => ({ createCampAction: vi.fn(), updateCampConfigAction: vi.fn() }))
 vi.mock('./state/reviewActions', () => ({ submitReviewAction: vi.fn() }))

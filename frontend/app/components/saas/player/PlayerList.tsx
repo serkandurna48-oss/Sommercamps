@@ -38,16 +38,18 @@ export default function PlayerList({ orgSlug, players }: { orgSlug: string; play
         <EmptyState title={filtered ? 'Keine Spieler gefunden.' : 'Noch keine Spieler.'}
           body={filtered ? 'Passen Sie die Suche an.' : 'Spieler erscheinen automatisch, sobald jemand ein Training oder Camp bucht.'} />
       ) : (
-        <ul className="cp-card cp-card-list">
+        <ul className="cp-card cp-card-list cp-table">
+          <li className="cp-table-head cp-player-cols" aria-hidden="true">
+            <span>Name</span><span>Alter</span><span>Letzte Buchung</span><span>Akte</span>
+          </li>
           {shown.map(player => (
-            <li key={player.id} className="border-t first:border-t-0" style={{ borderTopColor: 'var(--cp-line-2)' }}>
+            <li key={player.id} className="cp-player-item">
               <Link href={`/pilot/${orgSlug}/spieler/${player.id}`} prefetch={false}
-                className="cp-focus flex min-h-[56px] flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <span className="min-w-0">
-                  <span className="cp-subheading block break-words" style={{ color: 'var(--cp-ink)' }}>{player.first_name} {player.last_name}</span>
-                  <span className="cp-chip block" style={{ color: 'var(--cp-muted)' }}>
-                    {plural(player.age, 'Jahr', 'Jahre')} · {player.last_booking_at ? `zuletzt gebucht am ${formatDay(player.last_booking_at)}` : 'noch keine Buchung'}
-                  </span>
+                className="cp-focus cp-table-row cp-player-cols cp-row-link min-h-[56px]">
+                <span className="cp-subheading min-w-0 break-words" style={{ color: 'var(--cp-ink)' }}>{player.first_name} {player.last_name}</span>
+                <span className="cp-chip cp-num" style={{ color: 'var(--cp-muted)' }}>{plural(player.age, 'Jahr', 'Jahre')}</span>
+                <span className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
+                  {player.last_booking_at ? `zuletzt gebucht am ${formatDay(player.last_booking_at)}` : 'noch keine Buchung'}
                 </span>
                 <span className="cp-chip" style={{ color: 'var(--cp-ink-2)' }}>
                   {plural(player.note_count, 'Notiz', 'Notizen')} · {plural(player.open_goal_count, 'offenes Ziel', 'offene Ziele')}

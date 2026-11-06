@@ -48,12 +48,12 @@ export async function generateMetadata({ params }: { params: Promise<{ org: stri
  * Die eigentliche Sicherheitsgrenze bleibt trotzdem das Backend
  * (app/auth_deps.py) — das hier ist zusätzlich für klare, ehrliche UX.
  *
- * Rendert bewusst kein Band hier — Band-Inhalt unterscheidet sich zwischen
- * Dashboard (groß, Org-Kennzahlen) und Command Center (schmal, Camp-Titel),
- * siehe components/saas/shell/MatchdayBand.tsx. Jede Seite rendert ihr
- * eigenes Band. `ViewerProvider` macht nur sichtbar, ALS WER man hier
- * gerade schaut (für den "Zur Plattform"-Link im Band, OrgSwitcher.tsx) —
- * keine zweite Berechtigungsgrenze.
+ * Die Navigation (Seitenleiste ab 1024 px, sonst obere Leiste mit Schublade)
+ * sitzt hier im Layout und bleibt beim Seitenwechsel stehen; jede Seite
+ * rendert nur ihren schlanken Seitenkopf (shell/PageHeader.tsx).
+ * `ViewerProvider` macht nur sichtbar, ALS WER man hier gerade schaut (für
+ * den "Zur Plattform"-Link in der Seitenleiste) — keine zweite
+ * Berechtigungsgrenze.
  */
 export default async function OrgAdminLayout({
   children,
@@ -88,6 +88,6 @@ export default async function OrgAdminLayout({
     return null
   })
   return (
-    <AdminShell org={identity ?? undefined} isPlatformOwner={me.is_platform_owner}>{children}</AdminShell>
+    <AdminShell orgSlug={org} org={identity ?? undefined} isPlatformOwner={me.is_platform_owner}>{children}</AdminShell>
   )
 }

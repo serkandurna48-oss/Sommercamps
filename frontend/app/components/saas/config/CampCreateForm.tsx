@@ -57,14 +57,14 @@ export default function CampCreateForm({
 
   return (
     <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-4">
-      <section className="cp-card flex flex-col gap-4">
+      <section className="cp-card flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-6">
         <Field label="Titel" htmlFor="title">
           <input id="title" name="title" required value={title} onChange={event => setTitle(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
         <Field label="Web-Adresse" htmlFor="slug" hint="Aus Ihrem Titel vorgeschlagen. Sie können sie vor dem Anlegen ändern: Kleinbuchstaben, Zahlen und Bindestriche.">
           <input id="slug" name="slug" required pattern="[a-z0-9\-]+" value={customSlug ?? suggestCampSlug(title)} onChange={event => setCustomSlug(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-2 lg:grid-cols-3">
           <Field label="Beginn" htmlFor="start_date">
             <input id="start_date" name="start_date" type="date" required defaultValue={submitted.start_date ?? initialValues?.start_date ?? ''} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
@@ -84,7 +84,7 @@ export default function CampCreateForm({
             <PriceInput id="price_euros" name="price_euros" required defaultValue={submitted.price_euros ?? (initialValues ? (initialValues.price_cents / 100).toFixed(2) : '')} />
           </Field>
         </div>
-        <p className="cp-body" style={{ color: 'var(--cp-ink-2)' }}>{initialValues ? 'Die Kopie wird als Entwurf angelegt. Bitte wählen Sie einen neuen Termin und prüfen Sie den übernommenen Anmeldezeitraum. Die Zusatzfragen Ihres Vereins gelten auch für dieses Camp.' : 'Ihr Camp wird als Entwurf angelegt. Ergänzen Sie danach Ort und Ablauf, bevor Sie es veröffentlichen.'}</p>
+        <p className="cp-body lg:col-span-2" style={{ color: 'var(--cp-ink-2)' }}>{initialValues ? 'Die Kopie wird als Entwurf angelegt. Bitte wählen Sie einen neuen Termin und prüfen Sie den übernommenen Anmeldezeitraum. Die Zusatzfragen Ihres Vereins gelten auch für dieses Camp.' : 'Ihr Camp wird als Entwurf angelegt. Ergänzen Sie danach Ort und Ablauf, bevor Sie es veröffentlichen.'}</p>
       </section>
 
       {initialValues && <section className="cp-card flex flex-col gap-4">

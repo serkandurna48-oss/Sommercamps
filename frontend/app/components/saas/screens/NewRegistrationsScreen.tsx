@@ -1,17 +1,16 @@
-import { computeBrandTokens } from '../brandPipeline'
 import TodayRegistrations from '../data/TodayRegistrations'
-import { orgTabs } from '../navTabs'
 import { todayRegistrations } from '../registrationDates'
-import MatchdayBand from '../shell/MatchdayBand'
+import PageHeader from '../shell/PageHeader'
 import type { OrganizationScreenProps } from './types'
 import { PAGE_READING } from '../ui/pageLayout'
 
-export default function NewRegistrationsScreen({ orgSlug, org, camps, registrationsByCamp }: OrganizationScreenProps) {
-  const brand = computeBrandTokens(org.primary_color)
+export default function NewRegistrationsScreen({ orgSlug, camps, registrationsByCamp }: OrganizationScreenProps) {
   return (
     <>
-      <MatchdayBand backHref={`/pilot/${orgSlug}/dashboard`} orgSlug={orgSlug} orgName={org.name} orgLogoUrl={org.logo_url}
-        title="Neue Anmeldungen heute" tabs={orgTabs(orgSlug)} brandColor={brand.brand} />
+      <PageHeader
+        title="Neue Anmeldungen"
+        subtitle="Heute eingegangen, über alle Camps. Die vollständige Liste je Camp finden Sie unter Camps."
+      />
       <main className={PAGE_READING}>
         <TodayRegistrations entries={todayRegistrations(camps, registrationsByCamp)} orgSlug={orgSlug} fullList />
       </main>

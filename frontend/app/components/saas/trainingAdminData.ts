@@ -80,3 +80,39 @@ export async function loadClubMembers(orgSlug: string): Promise<{ org: Organizat
     return rethrowAuth(orgSlug, error)
   }
 }
+
+export interface UpcomingSession {
+  offer: TrainingOffer
+  session: TrainingSessionAdmin
+}
+
+export interface TrainingOverview {
+  offers: TrainingOffer[]
+  /** Published sessions that have not started yet, earliest first. */
+  upcoming: UpcomingSession[]
+  error: boolean
+}
+
+/**
+ * Dashboard: offers plus their upcoming sessions. Runs next to the camp
+ * loader (Promise.all in dashboard/page.tsx), never after it. A failure only
+ * hides the training tiles; the camp dashboard stays usable.
+ * Perf note: one request per offer for the sessions (no summary endpoint yet).
+ */
+export async function loadTrainingOverview(orgSlug: string, now = new Date()): Promise<TrainingOverview> {
+  const token = await getValidAccessToken()
+  if (!token) redirect(`/pilot/${orgSlug}/login`)
+  try {
+    const offers = (await fetchTrainingOffersAdmin(orgSlug, token)).filter(offer => offer.status !== 'archived')
+    const perOffer = await Promise.all(offers.map(async offer =>
+      (await fetchTrainingSessionsAdmin(orgSlug, offer.id, token)).map(session => ({ offer, session }))))
+    const nowIso = now.toISOString()
+    const upcoming = perOffer.flat()
+      .filter(({ session }) => session.status === 'published' && new Date(session.starts_at).toISOString() >= nowIso)
+      .sort((a, b) => Date.parse(a.session.starts_at) - Date.parse(b.session.starts_at))
+    return { offers, upcoming, error: false }
+  } catch (error) {
+    if (error instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
+    return { offers: [], upcoming: [], error: true }
+  }
+}

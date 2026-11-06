@@ -144,3 +144,111 @@ export function IconDocument({ size = 16, ...props }: IconProps) {
     </IconBase>
   )
 }
+
+export function IconTent(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M2.5 16.5L10 4l7.5 12.5h-15z" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M10 4v12.5M7.6 16.5L10 12l2.4 4.5" stroke="currentColor" strokeWidth="1.2" />
+    </IconBase>
+  )
+}
+
+export function IconWhistle(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <circle cx="7.5" cy="11.5" r="4" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M9.5 8h7.5v3h-5.6M7.5 11.5h.01" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M13 5.5l1-2" stroke="currentColor" strokeWidth="1.2" />
+    </IconBase>
+  )
+}
+
+export function IconInbox(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M3 11l2-6.5h10L17 11v4.5H3V11z" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M3 11h4l1 2h4l1-2h4" stroke="currentColor" strokeWidth="1.3" />
+    </IconBase>
+  )
+}
+
+export function IconPeople(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <circle cx="7.5" cy="7" r="2.6" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M2.8 16c.4-2.7 2.3-4.3 4.7-4.3s4.3 1.6 4.7 4.3" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M13 4.8a2.4 2.4 0 010 4.5M14.4 11.8c1.5.5 2.5 1.9 2.8 4.2" stroke="currentColor" strokeWidth="1.3" />
+    </IconBase>
+  )
+}
+
+export function IconHelp(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M8 8.1a2 2 0 113 1.7c-.7.4-1 .9-1 1.6M10 13.9v.1" stroke="currentColor" strokeWidth="1.4" />
+    </IconBase>
+  )
+}
+
+export function IconLogout(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M8 4H4.5v12H8" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M8.5 10H16M13 6.8l3.2 3.2-3.2 3.2" stroke="currentColor" strokeWidth="1.4" />
+    </IconBase>
+  )
+}
+
+export function IconMenu(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M3.5 6h13M3.5 10h13M3.5 14h13" stroke="currentColor" strokeWidth="1.6" />
+    </IconBase>
+  )
+}
+
+export function IconClose(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.6" />
+    </IconBase>
+  )
+}
+
+/** Seitenleiste ein-/ausklappen: Rahmen mit schmaler linker Spalte. */
+export function IconSidebar(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <rect x="3" y="4" width="14" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M8 4v12" stroke="currentColor" strokeWidth="1.4" />
+    </IconBase>
+  )
+}
+
+export function IconCalendar(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <rect x="3" y="4.5" width="14" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M3 8.5h14M7 3v3M13 3v3" stroke="currentColor" strokeWidth="1.4" />
+    </IconBase>
+  )
+}
+
+export function IconLink(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M8.5 11.5l3-3" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M9.5 6.5l1.2-1.2a3 3 0 014.2 4.2L13.7 10.7M10.5 13.5l-1.2 1.2a3 3 0 01-4.2-4.2L6.3 9.3" stroke="currentColor" strokeWidth="1.4" />
+    </IconBase>
+  )
+}
+
+export function IconPlus(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M10 4.5v11M4.5 10h11" stroke="currentColor" strokeWidth="1.6" />
+    </IconBase>
+  )
+}

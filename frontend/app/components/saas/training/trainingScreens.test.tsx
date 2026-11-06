@@ -68,10 +68,11 @@ describe('Trainingsangebote', () => {
     expect(doc.querySelector('a[href="/pilot/demo/trainings/new"]')?.textContent).toBe('Angebot anlegen')
   })
 
-  it('hat die Navigation zu Trainings und Mitgliedern', () => {
+  // Launch-UX: Trainings/Mitglieder are reached through the sidebar in the layout (AdminSidebar.test.tsx).
+  it('zeigt die Primäraktion im Seitenkopf und einen Leerzustand', () => {
     const doc = html(<TrainingsScreen orgSlug="demo" org={org} offers={[]} />)
-    expect(doc.querySelector('a[href="/pilot/demo/trainings"]')).not.toBeNull()
-    expect(doc.querySelector('a[href="/pilot/demo/mitglieder"]')).not.toBeNull()
+    expect(doc.querySelector('header.cp-page-head a[href="/pilot/demo/trainings/new"]')?.className).toContain('cp-btn-primary')
+    expect(doc.querySelector('header a.cp-back-link')).toBeNull()
     expect(doc.body.textContent).toContain('Noch kein Trainingsangebot.')
   })
 

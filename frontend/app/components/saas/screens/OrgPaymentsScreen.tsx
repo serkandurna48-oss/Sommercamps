@@ -1,16 +1,11 @@
-import { computeBrandTokens } from '../brandPipeline'
 import { computeMoneyStats, isOpenPayment } from '../commandCenterLogic'
-import MatchdayBand from '../shell/MatchdayBand'
+import PageHeader from '../shell/PageHeader'
 import PaymentSection, { type PaymentEntry } from '../data/PaymentSection'
-import StatCard from '../data/StatCard'
-import StatGrid from '../ui/StatGrid'
-import { orgTabs } from '../navTabs'
 import { de, formatEuro } from '../../../lib/i18n/de'
 import type { OrgPaymentsScreenProps } from './types'
-import { PAGE } from '../ui/pageLayout'
+import { ADMIN_PAGE } from '../ui/pageLayout'
 
 export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsByCamp, trainingPayments = [], trainingPaymentsError = false }: OrgPaymentsScreenProps) {
-  const brand = computeBrandTokens(org.primary_color)
 
   const groups = [
     ...camps.map((camp, i) => ({ camp, registrations: registrationsByCamp[i] })),
@@ -29,32 +24,24 @@ export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsBy
 
   return (
     <>
-      <MatchdayBand backHref={`/pilot/${orgSlug}/dashboard`}
-        orgSlug={orgSlug}
-        orgName={org.name}
-        orgLogoUrl={org.logo_url}
+      <PageHeader
         title={de.command.payments}
         subtitle={de.paymentsPage.subtitleOrg}
         metrics={[
-          { label: de.paymentsPage.collected, value: formatEuro(money.collectedCents) },
-          { label: de.paymentsPage.open, value: formatEuro(money.openCents) },
+          { label: 'Eingegangen', value: formatEuro(money.collectedCents) },
+          { label: 'Offen', value: formatEuro(money.openCents) },
+          { label: de.command.filterPaymentOpen, value: String(openCount) },
         ]}
-        tabs={orgTabs(orgSlug)}
-        brandColor={brand.brand}
       />
 
-      <main className={PAGE}>
+      <main className={ADMIN_PAGE}>
         {trainingPaymentsError && (
           <p role="alert" className="cp-body mb-4 rounded-[var(--cp-r-chip)] border px-3 py-2"
             style={{ color: 'var(--cp-error)', background: 'var(--cp-error-bg)', borderColor: 'var(--cp-error-line)' }}>
             Trainingszahlungen konnten nicht geladen werden.
           </p>
         )}
-        <StatGrid>
-          <StatCard label="Eingegangen / Offen" value={`${formatEuro(money.collectedCents)} / ${formatEuro(money.openCents)}`} wide />
-          <StatCard label={de.command.filterPaymentOpen} value={String(openCount)} numericValue={openCount} tone="pending" />
-        </StatGrid>
-        <p className="cp-hint mt-2 mb-6">Beträge berechnet aus den aktuellen Anmeldungen und dem Campreis.</p>
+        <p className="cp-hint mb-4">Beträge berechnet aus den aktuellen Anmeldungen und dem Camp- bzw. Trainingspreis.</p>
 
         <PaymentSection
           org={{ name: org.name, legal_name: org.legal_name, iban: org.iban, contact_person_name: org.contact_person_name, contact_email: org.contact_email }}

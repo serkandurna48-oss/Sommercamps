@@ -27,7 +27,9 @@ export function previewHref(href: string, empty: boolean): string {
     if (value) params.set(key, value)
   }
   let screen = path[0] || 'dashboard'
-  if (path[0] === 'camps') {
+  if (path[0] === 'camps' && !path[1]) {
+    screen = 'camps'
+  } else if (path[0] === 'camps') {
     screen = path[1] === 'new' ? 'camp-neu' : path[2] ? `camp-${path[2]}` : 'camp'
     if (!empty && path[1] !== 'new') params.set('camp', path[1])
   } else if (path[0] === 'einrichtung') {

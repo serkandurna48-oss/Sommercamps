@@ -1,33 +1,20 @@
-import { computeBrandTokens } from '../brandPipeline'
 import OrganizationConfigForm from '../config/OrganizationConfigForm'
-import MatchdayBand from '../shell/MatchdayBand'
-import { orgTabs } from '../navTabs'
+import PageHeader from '../shell/PageHeader'
 import { de } from '../../../lib/i18n/de'
 import type { OrganizationIdentityProps } from './types'
 import { PAGE_FORM } from '../ui/pageLayout'
 
 export default function OrgConfigScreen({ orgSlug, org }: OrganizationIdentityProps) {
 
-  const brand = computeBrandTokens(org.primary_color)
-
   return (
     <>
-      <MatchdayBand backHref={`/pilot/${orgSlug}/dashboard`}
-        orgSlug={orgSlug}
-        orgName={org.name}
-        orgLogoUrl={org.logo_url}
+      <PageHeader
         title="Vereinseinstellungen"
-        tabs={orgTabs(orgSlug)}
-        brandColor={brand.brand}
+        subtitle={de.configPage.orgHint}
       />
 
       <main className={PAGE_FORM}>
-        <h2 className="cp-title mb-1" style={{ color: 'var(--cp-ink)' }}>
-          {de.configPage.orgHeading}
-        </h2>
-        <p className="cp-body mb-8" style={{ color: 'var(--cp-muted)' }}>
-          {de.configPage.orgHint}
-        </p>
+        <h2 className="sr-only">{de.configPage.orgHeading}</h2>
 
         <OrganizationConfigForm orgSlug={orgSlug} org={org} />
       </main>

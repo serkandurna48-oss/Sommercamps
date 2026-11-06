@@ -52,7 +52,8 @@ export default function OfferForm({ orgSlug, offer, backButton }: {
 
   return (
     <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-4">
-      <section className="cp-card flex flex-col gap-4">
+      {/* From 1024 px: two columns (identity left, scheduling and prices right). */}
+      <section className="cp-card flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-6">
         <Field label="Titel" htmlFor="offer_title" error={err('title')}>
           <input id="offer_title" name="title" required value={title} onChange={event => setTitle(event.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
@@ -83,11 +84,13 @@ export default function OfferForm({ orgSlug, offer, backButton }: {
           </select>
         </Field>
 
+        <div className="lg:col-span-2">
         <Field label="Beschreibung (optional)" htmlFor="offer_description">
           <textarea id="offer_description" name="description" rows={3} defaultValue={value('description', offer?.description ?? '')} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
+        </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-2 lg:grid-cols-4">
           <Field label="Dauer" htmlFor="offer_duration_minutes" suffix="Minuten" error={err('duration_minutes')}>
             <input id="offer_duration_minutes" name="duration_minutes" type="number" inputMode="numeric" min={1} max={600} required
               defaultValue={value('duration_minutes', String(offer?.duration_minutes ?? 45))} className={INPUT_CLASS} style={INPUT_STYLE} />

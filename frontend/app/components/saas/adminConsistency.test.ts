@@ -24,7 +24,11 @@ it('keeps every admin date formatter in lib/i18n/de.ts (source glob)', () => {
   expect(violations).toEqual([])
 })
 
+// Launch-UX: the sidebar/drawer chrome (menu, collapse, group heads, logout as nav item) is
+// navigation, not a page action, and styles its controls as nav items (tokens.css .cp-nav-*).
+const NAV_CHROME = ['/ui/Button.tsx', '/shell/AdminSidebar.tsx']
+
 it('uses the shared Button for every admin action', () => {
-  const violations = sources.filter(file => !file.replaceAll('\\', '/').endsWith('/ui/Button.tsx') && /<button\b/.test(readFileSync(file, 'utf8')))
+  const violations = sources.filter(file => !NAV_CHROME.some(allowed => file.replaceAll('\\', '/').endsWith(allowed)) && /<button\b/.test(readFileSync(file, 'utf8')))
   expect(violations).toEqual([])
 })

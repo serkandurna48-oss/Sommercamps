@@ -44,7 +44,10 @@ export default function MemberList({ orgSlug, members }: { orgSlug: string; memb
         <EmptyState title={filtered ? 'Keine Mitglieder gefunden.' : 'Noch keine Mitglieder.'}
           body={filtered ? 'Passen Sie Suche oder Status an.' : 'Importieren Sie Ihre Mitgliederliste per CSV oder tragen Sie Mitglieder einzeln ein.'} />
       ) : (
-        <ul className="cp-card cp-card-list">
+        <ul className="cp-card cp-card-list cp-table">
+          <li className="cp-table-head cp-member-cols" aria-hidden="true">
+            <span>Name</span><span>Geburtsdatum</span><span>Nummer · Quelle</span><span>Status</span><span />
+          </li>
           {shown.map(member => <MemberRow key={member.id} orgSlug={orgSlug} member={member} />)}
         </ul>
       )}

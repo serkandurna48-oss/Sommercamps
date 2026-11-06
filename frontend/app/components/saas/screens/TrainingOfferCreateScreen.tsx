@@ -1,28 +1,20 @@
-import { computeBrandTokens } from '../brandPipeline'
-import MatchdayBand from '../shell/MatchdayBand'
+import PageHeader from '../shell/PageHeader'
 import { ButtonLink } from '../ui/Button'
 import { PAGE_FORM } from '../ui/pageLayout'
-import { orgTabs } from '../navTabs'
 import OfferForm from '../training/OfferForm'
 import type { OrganizationIdentityProps } from './types'
 
-export default function TrainingOfferCreateScreen({ orgSlug, org }: OrganizationIdentityProps) {
-  const brand = computeBrandTokens(org.primary_color)
+export default function TrainingOfferCreateScreen({ orgSlug }: OrganizationIdentityProps) {
   return (
     <>
-      <MatchdayBand backHref={`/pilot/${orgSlug}/trainings`}
-        orgSlug={orgSlug}
-        orgName={org.name}
-        orgLogoUrl={org.logo_url}
+      <PageHeader
+        backHref={`/pilot/${orgSlug}/trainings`}
+        backLabel="Alle Trainings"
         title="Neues Trainingsangebot"
-        tabs={orgTabs(orgSlug)}
-        brandColor={brand.brand}
+        subtitle="Startet als Entwurf. Termine fügen Sie danach hinzu; öffentlich sichtbar erst nach dem Veröffentlichen."
       />
       <main className={PAGE_FORM}>
-        <h2 className="cp-title mb-1" style={{ color: 'var(--cp-ink)' }}>Angebot anlegen</h2>
-        <p className="cp-body mb-8" style={{ color: 'var(--cp-muted)' }}>
-          Das Angebot startet als Entwurf. Termine fügen Sie danach hinzu; öffentlich sichtbar ist es erst, wenn Sie es veröffentlichen.
-        </p>
+        <h2 className="sr-only">Angebot anlegen</h2>
         <OfferForm orgSlug={orgSlug}
           backButton={<ButtonLink href={`/pilot/${orgSlug}/trainings`}>Abbrechen</ButtonLink>} />
       </main>

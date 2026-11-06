@@ -4,6 +4,7 @@ import { getOrganizationAdmin } from '../../../../components/saas/orgAdminData'
 import OrgConfigScreen, { type OrgBillingProps } from '../../../../components/saas/screens/OrgConfigScreen'
 import {
   fetchBillingProfileAdmin,
+  fetchInvoicesAdmin,
   fetchStripePaymentStatusAdmin,
   syncStripePaymentStatusAdmin,
   AdminAuthError,
@@ -32,7 +33,9 @@ export default async function OrgConfigPage({
   const loadStatus = stripe === 'return'
     ? syncStripePaymentStatusAdmin(orgSlug, token).catch(() => fetchStripePaymentStatusAdmin(orgSlug, token))
     : fetchStripePaymentStatusAdmin(orgSlug, token)
-  const [profile, paymentStatus] = await Promise.allSettled([fetchBillingProfileAdmin(orgSlug, token), loadStatus])
+  const [profile, paymentStatus, invoiceList] = await Promise.allSettled([
+    fetchBillingProfileAdmin(orgSlug, token), loadStatus, fetchInvoicesAdmin(orgSlug, token),
+  ])
   for (const result of [profile, paymentStatus]) {
     if (result.status === 'rejected' && result.reason instanceof AdminAuthError) redirect(`/pilot/${orgSlug}/login`)
   }
@@ -40,6 +43,7 @@ export default async function OrgConfigPage({
     profile: profile.status === 'fulfilled' ? profile.value : null,
     profileError: profile.status === 'rejected',
     paymentStatus: paymentStatus.status === 'fulfilled' ? paymentStatus.value : null,
+    pendingInvoices: invoiceList.status === 'fulfilled' ? invoiceList.value.pending.length : 0,
   }
 
   return <OrgConfigScreen orgSlug={orgSlug} org={org} billing={billing} />

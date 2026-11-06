@@ -16,6 +16,8 @@ export interface OrgPaymentsScreenProps extends OrganizationScreenProps {
   trainingPayments?: TrainingPaymentGroup[]
   /** Trainingszahlungen konnten nicht geladen werden (Camps bleiben sichtbar). */
   trainingPaymentsError?: boolean
+  /** Rechnungen des Vereins (B3); undefined = Abschnitt nicht anzeigen, null = Ladefehler. */
+  invoices?: import('../../../lib/saasAdminApi').InvoiceList | null
 }
 
 export interface CampScreenProps extends OrganizationIdentityProps {

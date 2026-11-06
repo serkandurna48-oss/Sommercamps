@@ -1331,3 +1331,86 @@ export async function createFeeRuleAdmin(orgSlug: string, token: string, data: F
   if (!res.ok) throw new AdminActionError('Gebühr konnte nicht gespeichert werden.')
   return res.json() as Promise<FeeRules>
 }
+
+// --- Elternrechnungen (B3) -------------------------------------------------
+
+export interface Invoice {
+  id: string
+  number: string
+  kind: 'invoice' | 'storno'
+  issue_date: string
+  gross_cents: number
+  net_cents: number
+  vat_cents: number
+  recipient_name: string
+  description: string
+  cancels_number: string | null
+  registration_token: string | null
+  sent_at: string | null
+  send_error: string | null
+}
+
+export interface InvoiceList {
+  billing_profile_complete: boolean
+  invoices: Invoice[]
+  pending: { registration_token: string; camp_title: string; reason: string }[]
+}
+
+export interface RegistrationInvoices {
+  invoices: Invoice[]
+  pending_reason: string | null
+  can_create: boolean
+  refund: { possible: boolean; remaining_cents: number }
+}
+
+const orgPath = (orgSlug: string) => `/admin/organizations/${encodeURIComponent(orgSlug)}`
+
+export async function fetchInvoicesAdmin(orgSlug: string, token: string): Promise<InvoiceList> {
+  const res = await adminFetch(`${orgPath(orgSlug)}/invoices`, token)
+  if (!res.ok) throw new AdminActionError('Rechnungen konnten nicht geladen werden.')
+  return res.json() as Promise<InvoiceList>
+}
+
+export async function fetchRegistrationInvoicesAdmin(orgSlug: string, registrationToken: string, token: string): Promise<RegistrationInvoices> {
+  const res = await adminFetch(`${orgPath(orgSlug)}/registrations/${encodeURIComponent(registrationToken)}/invoices`, token)
+  if (!res.ok) throw new AdminActionError('Rechnungen konnten nicht geladen werden.')
+  return res.json() as Promise<RegistrationInvoices>
+}
+
+export async function resendInvoiceAdmin(orgSlug: string, invoiceId: string, token: string): Promise<Invoice> {
+  const res = await adminMutate(`${orgPath(orgSlug)}/invoices/${encodeURIComponent(invoiceId)}/resend`, token, 'POST')
+  if (!res.ok) throw new AdminActionError('Die E-Mail konnte nicht versendet werden. Bitte versuch es später noch einmal.')
+  return res.json() as Promise<Invoice>
+}
+
+export async function createRegistrationInvoiceAdmin(orgSlug: string, registrationToken: string, token: string): Promise<Invoice> {
+  const res = await adminMutate(`${orgPath(orgSlug)}/registrations/${encodeURIComponent(registrationToken)}/invoice`, token, 'POST')
+  if (res.status === 409) {
+    const body = await res.json().catch(() => null) as { detail?: { code?: string } } | null
+    throw new AdminActionError(body?.detail?.code === 'missing_billing_profile'
+      ? 'Rechnung ausstehend – Rechnungsdaten fehlen. Trag sie unter Einstellungen ein.'
+      : 'Für diese Buchung kann keine Rechnung erstellt werden.')
+  }
+  if (!res.ok) throw new AdminActionError('Rechnung konnte nicht erstellt werden.')
+  return res.json() as Promise<Invoice>
+}
+
+export async function generatePendingInvoicesAdmin(orgSlug: string, token: string): Promise<{ created: number; blocked: number }> {
+  const res = await adminMutate(`${orgPath(orgSlug)}/invoices/generate-pending`, token, 'POST')
+  if (!res.ok) throw new AdminActionError('Ausstehende Rechnungen konnten nicht erstellt werden.')
+  return res.json() as Promise<{ created: number; blocked: number }>
+}
+
+/** Online refund through the platform. requestId makes a double submit one refund. */
+export async function refundRegistrationAdmin(
+  orgSlug: string, registrationToken: string, token: string, requestId: string, amountCents: number | null,
+): Promise<{ status: string; amount_cents: number }> {
+  const res = await adminMutate(`${orgPath(orgSlug)}/registrations/${encodeURIComponent(registrationToken)}/refund`, token, 'POST', {
+    request_id: requestId, ...(amountCents === null ? {} : { amount_cents: amountCents }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => null) as { detail?: unknown } | null
+    throw new AdminActionError(typeof body?.detail === 'string' ? body.detail : 'Erstattung fehlgeschlagen.')
+  }
+  return res.json() as Promise<{ status: string; amount_cents: number }>
+}

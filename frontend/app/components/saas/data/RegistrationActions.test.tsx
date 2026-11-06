@@ -15,6 +15,7 @@ vi.mock('../actions/waitlistActions', () => ({ resendRegistrationMailAction: vi.
   updateRegistrationDetailsAction: vi.fn(),
 }))
 vi.mock('../actions/paymentActions', () => ({ setPaymentStatusAction: vi.fn() }))
+vi.mock('../actions/invoiceActions', () => ({ loadRegistrationInvoicesAction: vi.fn(async () => ({ invoices: [], pending_reason: null, can_create: false, refund: { possible: false, remaining_cents: 0 } })) }))
 
 const child: RegistrationAdmin = {
   id: 'child', registration_token: 'child-token', payment_reference: 'CP-CHILDTOK', status: 'registered', payment_status: 'paid',

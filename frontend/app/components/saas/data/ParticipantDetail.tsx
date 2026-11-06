@@ -13,6 +13,7 @@ import { useRegistrationActionFeedback } from '../ui/RegistrationActionFeedback'
 import Button, { ButtonLink } from '../ui/Button'
 import Field from '../ui/Field'
 import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
+import InvoiceSection from '../billing/InvoiceSection'
 
 /**
  * Inline-Detail (Abschnitt 4.3) — kein Dialog, wächst an Ort und Stelle
@@ -194,6 +195,12 @@ export default function ParticipantDetail({
           </dl>
         )}
       </div>
+
+      {!previewMode && ['paid', 'partially_refunded', 'refunded'].includes(registration.payment_status) && (
+        <div className="md:col-span-2">
+          <InvoiceSection orgSlug={orgSlug} registrationToken={registration.registration_token} />
+        </div>
+      )}
 
       {questions.length > 0 && (
         <section className="md:col-span-2" aria-label="Zusatzantworten">

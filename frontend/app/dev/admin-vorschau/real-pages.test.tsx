@@ -27,6 +27,7 @@ vi.mock('../../lib/saasAdminApi', async importOriginal => ({
     online_payment_mode: null, service_ready: true,
   })),
   syncStripePaymentStatusAdmin: vi.fn(),
+  fetchInvoicesAdmin: vi.fn(async () => ({ billing_profile_complete: true, invoices: [], pending: [] })),
 }))
 vi.mock('../../components/saas/trainingAdminData', () => ({ isModuleDisabled: vi.fn(async () => false), loadTrainingOverview: vi.fn(async () => ({ offers: [], upcoming: [], error: false })) }))
 vi.mock('next/navigation', () => ({

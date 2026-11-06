@@ -396,53 +396,65 @@
   background: var(--cp-surface-2);
 }
 
-/* Zahlungen liest sich wie ein Kontoauszug: kompakte Tabellenzeilen ab
- * 1024 px (Kind/Eltern · Verwendungszweck · Betrag · Status · Aktion), auf
- * dem Handy Karten. Status steht als Text-Chip in der Zeile; keine farbige
- * Seitenkante (Brandkit: keine farbigen Seitenbalken). */
+/* Zahlungen liest sich wie ein Kontoauszug: ruhige Zeile mit Kind + Termin,
+ * Betrag, Status und der einen Hauptaktion; Details klappen inline auf
+ * (ab 1024 px Tabellenzeile, darunter Karte). Keine farbige Seitenkante. */
 .cp-pay-head { display: none; }
 .cp-pay-row {
   display: grid; gap: 8px 16px; align-items: center; padding: 12px var(--cp-card-padding, 20px);
-  border-top: 1px solid var(--cp-line-2);
+  border-top: 1px solid var(--cp-line-2); cursor: pointer;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: 'who amount' 'ref status' 'action action' 'fallback fallback';
+  grid-template-areas: 'who amount' 'status status' 'action action' 'details details';
 }
 .cp-pay-row > * { min-width: 0; }
 .cp-pay-who { grid-area: who; }
-.cp-pay-ref { grid-area: ref; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
-.cp-scope:where(.cp-admin) .cp-pay-ref .cp-code { flex: 1 1 140px; min-width: 0; font-size: 13px; line-height: 18px; overflow-wrap: break-word; }
 .cp-pay-amount { grid-area: amount; justify-self: end; white-space: nowrap; }
-.cp-pay-status { grid-area: status; display: flex; flex-wrap: wrap; gap: 6px; justify-self: end; }
+.cp-pay-status { grid-area: status; display: flex; flex-wrap: wrap; gap: 6px; }
 .cp-pay-action { grid-area: action; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: flex-end; gap: 8px; }
-.cp-pay-fallback { grid-area: fallback; }
+.cp-pay-action:empty { display: none; }
+.cp-scope:where(.cp-admin) .cp-pay-toggle {
+  display: flex; justify-content: flex-start; align-items: flex-start; gap: 10px; width: 100%; min-height: 44px; padding: 2px 0;
+  border-color: transparent; background: transparent; text-align: left; font: inherit;
+}
+.cp-pay-toggle .cp-camp-date { margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--cp-muted); overflow-wrap: anywhere; }
+.cp-pay-chevron { margin-top: 3px; color: var(--cp-muted); }
+.cp-pay-details {
+  grid-area: details; display: grid; gap: 14px; margin-top: 4px; padding: 14px 16px;
+  border: 1px solid var(--cp-line-2); border-radius: var(--cp-r-field); background: var(--cp-surface-2); cursor: default;
+}
+.cp-pay-facts { display: grid; gap: 12px 24px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin: 0; }
+.cp-pay-facts dt { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--cp-muted); }
+.cp-pay-facts dd { margin: 2px 0 0; overflow-wrap: anywhere; color: var(--cp-ink); }
+.cp-pay-ref { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.cp-scope:where(.cp-admin) .cp-pay-ref .cp-code { min-width: 0; font-size: 13px; line-height: 18px; overflow-wrap: anywhere; }
+.cp-pay-more { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
 .cp-scope:where(.cp-admin) .cp-extra-remove { min-width: 44px; padding: 2px 10px; font-size: 13px; font-weight: 600; }
 .cp-scope:where(.cp-admin) .cp-pay-copy { min-height: 44px; min-width: 0; padding: 2px 10px; font-size: 13px; }
 .cp-scope:where(.cp-admin) .cp-pay-list { overflow: visible; }
 .cp-pay-list > .cp-pay-row:first-of-type { border-top: 0; }
 @media (min-width: 1024px) {
   .cp-pay-head, .cp-pay-row {
-    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.5fr) 96px 124px 272px;
-    grid-template-areas: 'who ref amount status action' 'fallback fallback fallback fallback fallback';
+    grid-template-columns: minmax(0, 1fr) 96px 124px 224px;
+    grid-template-areas: 'who amount status action' 'details details details details';
   }
   .cp-pay-head {
     display: grid; gap: 0 16px; padding: 10px var(--cp-card-padding, 20px);
     font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--cp-muted);
     border-bottom: 1px solid var(--cp-line-2);
   }
-  .cp-pay-head > :nth-child(3), .cp-pay-head > :nth-child(5) { text-align: right; }
-  .cp-pay-ref { flex-wrap: nowrap; justify-content: space-between; }
-  .cp-pay-ref .cp-pay-copy { flex-shrink: 0; }
+  .cp-pay-head > :nth-child(2), .cp-pay-head > :nth-child(4) { text-align: right; }
   .cp-pay-row { padding-block: 10px; }
   .cp-pay-head + .cp-pay-row { border-top: 0; }
-  .cp-pay-status { justify-self: start; }
   .cp-pay-action { flex-wrap: nowrap; }
-  .cp-pay-who .cp-hint { font-size: 13px; }
+  .cp-pay-action:empty { display: block; }
 }
 @media (width < 640px) {
   .cp-pay-row { padding: var(--cp-card-padding); align-items: start; }
-  .cp-pay-row .cp-camp-date { margin-block: 4px 0; font-size: 14px; }
   .cp-pay-action { flex-direction: column; align-items: stretch; }
   .cp-pay-action :is(form, form > div, .cp-btn) { width: 100%; }
+  .cp-pay-details { padding: 12px; }
+  .cp-pay-more { flex-direction: column; align-items: stretch; }
+  .cp-pay-more :is(form, form > div, .cp-btn, a) { width: 100%; }
 }
 /* "Mehr"-Menü: Popover unter dem Knopf ab 640 px; darunter klappt es inline auf. */
 @media (width >= 640px) {

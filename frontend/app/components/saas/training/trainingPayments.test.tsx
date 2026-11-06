@@ -59,8 +59,7 @@ describe('Trainingszahlungen', () => {
       <OrgPaymentsScreen orgSlug="demo" org={org} camps={[]} registrationsByCamp={[]} trainingPayments={groups} />,
     )
     expect(html).toContain('Einzeltraining Technik · 29.03.2026, 18:00 Uhr')
-    expect(html).toContain('Zahlart: Bar')
-    expect(html).toContain('Zahlart: Überweisung')
+    expect(html).not.toContain('Zahlart')
     expect(html).toContain('Über alle Camps und Trainings')
     expect(html.replace(/ /g, ' ')).toContain('40,50')
     expect(html.replace(/ /g, ' ')).toContain('30,00')

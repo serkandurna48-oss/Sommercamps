@@ -60,6 +60,12 @@ async function click(label: string) {
   await act(async () => { button(label).click() })
 }
 
+async function expand(index = 0) {
+  const toggle = container.querySelectorAll<HTMLButtonElement>('.cp-pay-toggle')[index]
+  expect(toggle.getAttribute('aria-expanded')).toBe('false')
+  await act(async () => { toggle.click() })
+}
+
 async function search(value: string) {
   const input = container.querySelector<HTMLInputElement>('input[type="search"]')!
   await act(() => {
@@ -73,6 +79,7 @@ describe('payment workflow', () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     await render()
+    await expand()
     await click('Erinnerung kopieren')
     expect(writeText).toHaveBeenCalledWith(buildPaymentReminder(entry, org))
     expect(container.querySelector('[role="status"]')?.textContent).toBe('Text kopiert')
@@ -82,6 +89,7 @@ describe('payment workflow', () => {
 
   it.each([null, '', '   '])('disables the reminder without an IBAN (%s)', async iban => {
     await render([entry], { ...org, iban })
+    await expand()
     expect(button('Erinnerung kopieren').disabled).toBe(true)
     expect(button('Erinnerung kopieren').title).toBe('IBAN in den Vereinseinstellungen fehlt')
     expect(button('Alle offenen als Liste kopieren').disabled).toBe(false)
@@ -117,6 +125,7 @@ describe('payment workflow', () => {
     const writeText = vi.fn().mockRejectedValue(new Error('denied'))
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     await render()
+    if (label === 'Erinnerung kopieren') await expand()
     await click(label)
     const textarea = container.querySelector('textarea')!
     expect(textarea.readOnly).toBe(true)
@@ -136,6 +145,7 @@ describe('payment workflow', () => {
   it('also falls back when the Clipboard API is unavailable', async () => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined })
     await render()
+    await expand()
     await click('Erinnerung kopieren')
     expect(container.querySelector('textarea')?.value).toBe(buildPaymentReminder(entry, org))
   })
@@ -148,7 +158,7 @@ describe('payment workflow', () => {
     } }])
     await search(query)
     expect(container.querySelectorAll('.cp-ledger-row')).toHaveLength(1)
-    expect(container.querySelector('.cp-ledger-row')?.textContent).toContain('CP-1A2B3C4D')
+    expect(container.querySelector('.cp-ledger-row')?.textContent).toContain('Mia Muster')
     expect(button('Offen2').getAttribute('aria-pressed')).toBe('true')
     const input = container.querySelector('input')!
     expect(container.querySelector('label')?.htmlFor).toBe(input.id)
@@ -223,6 +233,7 @@ describe('payment workflow', () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     await render()
+    await expand()
     await click('Kopieren')
     expect(writeText).toHaveBeenCalledWith('CP-1A2B3C4D')
     expect(button('Kopiert')).toBeDefined()
@@ -231,6 +242,7 @@ describe('payment workflow', () => {
   it('requires an honest confirmation before recording an already completed refund', async () => {
     await render([paidEntry])
     await click('Alle1')
+    await expand()
     await click('Als erstattet markieren')
     expect(container.textContent).toContain('Bereits erfolgte Rückzahlung als erstattet markieren? CampsPilot überweist kein Geld.')
     expect(setPaymentStatusAction).not.toHaveBeenCalled()
@@ -259,46 +271,71 @@ describe('payment workflow', () => {
 describe('compact payment rows', () => {
   beforeEach(() => { vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))) })
   afterEach(() => { vi.unstubAllGlobals() })
-  it('shows exactly one visible action for an open payment and keeps the rest in an accessible "Mehr" menu', async () => {
-    const confirm = vi.spyOn(window, 'confirm')
+  it('shows only name, camp/date, amount, status and the primary action while collapsed', async () => {
     await render()
     const row = container.querySelector('.cp-pay-row')!
-    const outsideMenu = [...row.querySelectorAll('button')].filter(b => !b.closest('.cp-overflow-panel') && !b.closest('.cp-pay-ref') && !b.className.includes('cp-mobile-only'))
-    expect(outsideMenu.map(b => b.textContent)).toEqual(['Als bezahlt markieren', 'Mehr'])
-    const trigger = row.querySelector<HTMLButtonElement>('[aria-haspopup="dialog"]')!
-    expect(trigger.className).not.toContain('cp-mobile-only')
-    expect(trigger.getAttribute('aria-label')).toBe('Mehr Aktionen für Mia Muster')
-    expect(trigger.getAttribute('aria-expanded')).toBe('false')
-    await act(() => trigger.click())
-    expect(trigger.getAttribute('aria-expanded')).toBe('true')
-    const dialog = row.querySelector('[role="dialog"]')!
-    expect([...dialog.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Verwendungszweck kopieren', 'Erinnerung kopieren', de.paymentsPage.markWaived])
-    expect(document.activeElement).toBe(dialog.querySelector('button'))
-    await act(() => document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
-    expect(trigger.getAttribute('aria-expanded')).toBe('false')
-    expect(document.activeElement).toBe(trigger)
-    // Waiving asks inline, never via window.confirm.
-    await act(() => trigger.click())
-    await click(de.paymentsPage.markWaived)
-    expect(row.querySelector('[role="dialog"]')?.textContent).toContain(de.paymentsPage.waivedConfirm)
-    expect(confirm).not.toHaveBeenCalled()
+    expect([...row.querySelectorAll('button')].map(b => b.getAttribute('aria-label') ?? b.textContent)).toEqual(['Mia Muster, Details anzeigen', 'Als bezahlt markieren'])
+    expect(row.textContent).toContain('Mia Muster')
+    expect(row.textContent).toContain('Sommercamp')
+    expect(row.textContent).toMatch(/149,00/)
+    expect(row.textContent).not.toContain('CP-1A2B3C4D')
+    expect(row.textContent).not.toContain('alex@example.com')
+    expect(row.textContent).not.toContain('Mehr')
+    const toggle = row.querySelector<HTMLButtonElement>('.cp-pay-toggle')!
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(toggle.hasAttribute('aria-controls')).toBe(false)
   })
 
-  it('offers no "mark as paid" for a paid row, only the menu with refund and reopen', async () => {
+  it('expands details and secondary actions inline, one row at a time, and collapses with Escape', async () => {
+    const confirm = vi.spyOn(window, 'confirm')
+    const second: PaymentEntry = { ...entry, registration: { ...entry.registration, id: 'r2', payment_reference: 'CP-SECOND00', child_first_name: 'Noah',
+      created_at: '2027-01-02T10:00:00Z', payment_method: 'bar', member_match: true, applied_price_cents: 3000 } }
+    await render([entry, second])
+    await expand(0)
+    const toggle = container.querySelector<HTMLButtonElement>('.cp-pay-toggle')!
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    const region = container.querySelector<HTMLElement>(`#${CSS.escape(toggle.getAttribute('aria-controls')!)}`)!
+    expect(region.textContent).toContain('CP-1A2B3C4D')
+    expect(region.textContent).toContain('Alex Beispiel')
+    expect(region.textContent).toContain('alex@example.com')
+    expect(region.textContent).toContain('01.01.2027')
+    expect([...region.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Kopieren', 'Erinnerung kopieren', de.paymentsPage.markWaived])
+    expect(region.querySelector('a')?.getAttribute('href')).toBe('/pilot/demo/camps/summer?sort=newest')
+    // Opening another row closes the first one.
+    await expand(1)
+    expect(container.querySelectorAll('[role="region"]')).toHaveLength(1)
+    expect(container.querySelector('[role="region"]')?.textContent).toContain('Mitgliederpreis · 30,00')
+    expect(container.querySelector('[role="region"]')?.textContent).toContain('Bar')
+    // Waiving asks inline, never via window.confirm.
+    await click(de.paymentsPage.markWaived)
+    expect(container.querySelector('[role="region"]')?.textContent).toContain(de.paymentsPage.waivedConfirm)
+    expect(confirm).not.toHaveBeenCalled()
+    const second_toggle = container.querySelectorAll<HTMLButtonElement>('.cp-pay-toggle')[1]
+    second_toggle.focus()
+    await act(() => second_toggle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+    expect(container.querySelector('[role="region"]')).toBeNull()
+    expect(document.activeElement).toBe(second_toggle)
+  })
+
+  it('toggles by clicking the row but not by clicking its action', async () => {
+    await render()
+    const row = container.querySelector<HTMLElement>('.cp-pay-row')!
+    await act(() => row.querySelector<HTMLElement>('.cp-pay-amount')!.click())
+    expect(container.querySelector('[role="region"]')).not.toBeNull()
+    await act(() => row.querySelector<HTMLElement>('.cp-pay-amount')!.click())
+    expect(container.querySelector('[role="region"]')).toBeNull()
+    await click('Als bezahlt markieren')
+    expect(container.querySelector('[role="region"]')).toBeNull()
+  })
+
+  it('offers no "mark as paid" for a paid row, only refund and reopen in the details', async () => {
     await render([paidEntry])
     await click('Bezahlt1')
     const row = container.querySelector('.cp-pay-row')!
     expect(row.textContent).not.toContain('Als bezahlt markieren')
-    await act(() => row.querySelector<HTMLButtonElement>('[aria-haspopup]')!.click())
-    expect(row.querySelector('[role="dialog"]')?.textContent).toContain('Wieder auf Offen setzen')
-  })
-
-  it('never puts focus on a disabled action when the menu opens', async () => {
-    await render([entry], { ...org, iban: null })
-    await act(() => container.querySelector<HTMLButtonElement>('.cp-pay-row [aria-haspopup]')!.click())
-    const focused = document.activeElement as HTMLButtonElement
-    expect(focused.closest('[role="dialog"]')).not.toBeNull()
-    expect(focused.disabled).toBe(false)
+    await expand()
+    expect(row.querySelector('[role="region"]')?.textContent).toContain('Wieder auf Offen setzen')
+    expect(row.querySelector('[role="region"]')?.textContent).toContain('Als erstattet markieren')
   })
 
   it('renders table column labels once, hidden from assistive tech', async () => {

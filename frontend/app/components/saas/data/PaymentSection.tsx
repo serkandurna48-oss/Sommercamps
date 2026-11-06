@@ -60,6 +60,7 @@ export default function PaymentSection({
   const [search, setSearch] = useState('')
   const [lastPaid, setLastPaid] = useState<PaymentEntry | null>(null)
   const [undoMessage, setUndoMessage] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const searchId = useId()
 
   const counts = useMemo(
@@ -172,7 +173,7 @@ export default function PaymentSection({
         <div className="cp-roster cp-pay-list">
           {/* Column labels for the desktop table; each row stays self-describing for screen readers. */}
           <div className="cp-pay-head" aria-hidden="true">
-            <span>Kind · Eltern</span><span>Verwendungszweck</span><span>Betrag</span><span>Status</span><span>Aktion</span>
+            <span>Kind · Termin</span><span>Betrag</span><span>Status</span><span>Aktion</span>
           </div>
           {filtered.map(e => (
             <PaymentRow
@@ -181,6 +182,8 @@ export default function PaymentSection({
               camp={e.camp}
               org={org}
               orgSlug={orgSlug}
+              expanded={expandedId === e.registration.id}
+              onToggle={() => setExpandedId(id => (id === e.registration.id ? null : e.registration.id))}
               onPaid={() => { setLastPaid(e); setUndoMessage(null) }}
             />
           ))}

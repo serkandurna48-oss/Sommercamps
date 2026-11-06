@@ -14,7 +14,7 @@ const base = fixture.registrationsByCamp[0][1]
 function row(payment_status: 'open' | 'paid' | 'waived' | 'refunded', status = base.status) {
   return renderToStaticMarkup(
     <PaymentRow registration={{ ...base, payment_status, status }} camp={camp} org={fixture.org}
-      orgSlug="testverein" onPaid={vi.fn()} />,
+      orgSlug="testverein" expanded onToggle={vi.fn()} onPaid={vi.fn()} />,
   )
 }
 

@@ -311,8 +311,9 @@ describe('Admin-Camp-Seite: Zahlung markieren', () => {
 
     // Anmeldung ist in der offenen Liste sichtbar
     expect(container.querySelector('.cp-ledger-row')).not.toBeNull()
-    expect(container.textContent).toContain('CP-1A2B3C4D')
     expect(container.textContent).toContain('Mia Muster')
+    await act(() => container.querySelector<HTMLButtonElement>('.cp-pay-toggle')!.click())
+    expect(container.textContent).toContain('CP-1A2B3C4D')
 
     // "Als bezahlt markieren" klicken
     const button = [...container.querySelectorAll('button')].find(

@@ -207,7 +207,7 @@ export default function ParticipantDetail({
               <dd className="cp-body">
                 {billingAddressText(registration)
                   ? <>{registration.parent_street}<br />{registration.parent_postal_code} {registration.parent_city}</>
-                  : <span style={{ color: 'var(--cp-muted)' }}>Keine Anschrift angegeben (kostenlose oder ältere Buchung).</span>}
+                  : <span style={{ color: 'var(--cp-muted)' }}>Keine Anschrift angegeben (kostenlose Buchung oder vor der Umstellung gebucht). Prüf die Rechnung vor dem Versand.</span>}
               </dd>
             </div>
           </dl>

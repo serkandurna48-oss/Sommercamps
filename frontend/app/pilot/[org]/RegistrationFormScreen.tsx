@@ -16,6 +16,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const PHONE_RE = /^\+?[\d ]*\d[\d ]*$/
 // Same bounds as the backend (schemas.py / chk_camp_registrations_parent_address).
 const POSTAL_CODE_RE = /^[0-9A-Za-z][0-9A-Za-z -]{2,8}[0-9A-Za-z]$/
+// Newlines would add own lines to the invoice; same rule as the backend.
+const CONTROL_CHARS_RE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/
+const CONTROL_CHARS_MSG = 'Bitte verwenden Sie keine Zeilenumbrüche oder Steuerzeichen.'
 const STREET_MAX = 120
 const CITY_MAX = 80
 
@@ -117,10 +120,12 @@ function validateForm(form: FormState, training = false, needsAddress = false): 
     const postalCode = form.billingPostalCode.trim()
     const city = form.billingCity.trim()
     if (!street) bad.billingStreet = 'Bitte tragen Sie Straße und Hausnummer ein.'
+    else if (CONTROL_CHARS_RE.test(street)) bad.billingStreet = CONTROL_CHARS_MSG
     else if (street.length > STREET_MAX) bad.billingStreet = `Bitte höchstens ${STREET_MAX} Zeichen.`
     if (!postalCode) bad.billingPostalCode = 'Bitte tragen Sie die Postleitzahl ein.'
     else if (!POSTAL_CODE_RE.test(postalCode)) bad.billingPostalCode = 'Bitte prüfen Sie die Postleitzahl (4 bis 10 Zeichen).'
     if (!city) bad.billingCity = 'Bitte tragen Sie den Ort ein.'
+    else if (CONTROL_CHARS_RE.test(city)) bad.billingCity = CONTROL_CHARS_MSG
     else if (city.length > CITY_MAX) bad.billingCity = `Bitte höchstens ${CITY_MAX} Zeichen.`
   }
   return bad
@@ -781,7 +786,7 @@ export default function RegistrationFormScreen({
                         type="text"
                         id="parent_street"
                         name="parent_street"
-                        autoComplete="street-address"
+                        autoComplete="address-line1"
                         required
                         aria-required="true"
                         value={form.billingStreet}
@@ -800,7 +805,7 @@ export default function RegistrationFormScreen({
                           id="parent_postal_code"
                           name="parent_postal_code"
                           autoComplete="postal-code"
-                          inputMode="numeric"
+                          inputMode="text"
                           required
                           aria-required="true"
                           maxLength={10}

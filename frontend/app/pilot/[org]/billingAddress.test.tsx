@@ -72,7 +72,7 @@ async function submit() {
 it('zeigt die Rechnungsanschrift nur, wenn die Buchung Geld kostet', async () => {
   await mount(form(14900))
   expect(host.textContent).toContain('Rechnungsanschrift')
-  expect(ADDRESS_IDS.map(id => input(id)?.getAttribute('autocomplete'))).toEqual(['street-address', 'postal-code', 'address-level2'])
+  expect(ADDRESS_IDS.map(id => input(id)?.getAttribute('autocomplete'))).toEqual(['address-line1', 'postal-code', 'address-level2'])
   for (const id of ADDRESS_IDS) {
     expect(input(id)!.getAttribute('aria-required')).toBe('true')
     expect(host.querySelector(`label[for="${id}"]`)!.textContent).toContain('*')
@@ -112,6 +112,16 @@ it('prüft PLZ-Format und Länge', async () => {
   expect(document.getElementById('err-billing-street')?.textContent).toBe('Bitte höchstens 120 Zeichen.')
   expect(document.getElementById('err-billing-postal-code')?.textContent).toBe('Bitte prüfen Sie die Postleitzahl (4 bis 10 Zeichen).')
   expect(document.getElementById('err-billing-city')?.textContent).toBe('Bitte höchstens 80 Zeichen.')
+})
+
+it('lehnt Zeilenumbrüche und Steuerzeichen in Straße und Ort ab', async () => {
+  await mount(form())
+  // Text inputs strip \n in the DOM; tab and C1 controls reach the validator the same way.
+  await fill({ ...base, parent_street: 'Muster\tweg 1', parent_postal_code: '34117', parent_city: 'Kas\u0085sel' })
+  await submit()
+  expect(submitRegistration).not.toHaveBeenCalled()
+  expect(document.getElementById('err-billing-street')?.textContent).toBe('Bitte verwenden Sie keine Zeilenumbrüche oder Steuerzeichen.')
+  expect(document.getElementById('err-billing-city')?.textContent).toBe('Bitte verwenden Sie keine Zeilenumbrüche oder Steuerzeichen.')
 })
 
 it('sendet die getrimmte Anschrift bei kostenpflichtigen Buchungen', async () => {

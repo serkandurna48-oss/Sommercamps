@@ -57,8 +57,8 @@ it('marks required inputs, supplies keyboard/autofill metadata and exposes both 
   expect(host.querySelector('input[type=email]')?.getAttribute('inputmode')).toBe('email')
   expect(host.querySelector('input[autocomplete="section-emergency tel"]')?.getAttribute('type')).toBe('tel')
   expect(host.querySelector('input[autocomplete="section-child bday"]')?.getAttribute('inputmode')).toBe('numeric')
-  expect(host.querySelector('input[autocomplete="street-address"]')?.id).toBe('parent_street')
-  expect(host.querySelector('input[autocomplete="postal-code"]')?.getAttribute('inputmode')).toBe('numeric')
+  expect(host.querySelector('input[autocomplete="address-line1"]')?.id).toBe('parent_street')
+  expect(host.querySelector('input[autocomplete="postal-code"]')?.getAttribute('inputmode')).toBe('text')
   expect(host.querySelector('input[autocomplete="address-level2"]')?.id).toBe('parent_city')
   for (const route of ['datenschutz', 'teilnahmebedingungen']) {
     const link = host.querySelector<HTMLAnchorElement>(`a[href="/pilot/demo/${route}"]`)!

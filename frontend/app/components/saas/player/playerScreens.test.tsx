@@ -295,6 +295,13 @@ describe('Doku schreiben in der Buchungszeile', () => {
       expect([...render(reg(patch)).querySelectorAll('a')].some(a => a.textContent === 'Doku schreiben')).toBe(false)
     }
   })
+  it('blendet den Link ohne Spielerakte-Modul aus', () => {
+    const page = html(
+      <TrainingOfferScreen orgSlug="demo" org={{ ...org, modules: ['camps', 'trainings'] }} offer={offer} sessions={[session]}
+        registrationsBySession={{ 'sess-1': [reg({ player_id: 'player-9' })] }} />,
+    )
+    expect([...page.querySelectorAll('a')].some(a => a.textContent === 'Doku schreiben')).toBe(false)
+  })
 })
 
 describe('Schnellerfassung (interaktiv)', () => {

@@ -11,12 +11,14 @@ import { paymentMethodLabel } from './trainingLogic'
 /** Eine Buchung eines Trainingstermins. Zahlstatus wird über denselben Weg
  * gesetzt wie in den Camp-Zahlungen; die Route nimmt den Termin-Slug. Bei
  * Barzahlung markiert der Admin die Zahlung nach Erhalt selbst als bezahlt. */
-export default function BookingRow({ orgSlug, sessionSlug, sessionId, registration }: {
+export default function BookingRow({ orgSlug, sessionSlug, sessionId, registration, playerDocs = true }: {
   orgSlug: string
   sessionSlug: string
   /** Termin-Id (= camp_id der Notiz); für den Link in die Spielerakte. */
   sessionId: string
   registration: RegistrationAdmin
+  /** Players module on: show "Doku schreiben" (link into the player file). */
+  playerDocs?: boolean
 }) {
   const token = registration.registration_token
   const markPaid = setPaymentStatusAction.bind(null, orgSlug, sessionSlug, token, 'paid', de.paymentsPage.markPaidSuccess)
@@ -45,7 +47,7 @@ export default function BookingRow({ orgSlug, sessionSlug, sessionId, registrati
           <StatusChip tone={PAYMENT_STATUS_TONE[registration.payment_status] ?? 'neutral'} label={paymentStatusLabel[registration.payment_status] ?? registration.payment_status} />
           {!active && <StatusChip tone={REGISTRATION_STATUS_TONE[registration.status] ?? 'neutral'} label={registrationStatusLabel[registration.status] ?? registration.status} dot />}
         </div>
-        {registration.player_id && (
+        {playerDocs && registration.player_id && (
           <ButtonLink href={`/pilot/${orgSlug}/spieler/${encodeURIComponent(registration.player_id)}?neu=1&termin=${encodeURIComponent(sessionId)}`} prefetch={false}>
             Doku schreiben
           </ButtonLink>

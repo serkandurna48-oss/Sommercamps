@@ -5,18 +5,20 @@ import SuccessNote from '../state/SuccessNote'
 import { ADMIN_PAGE } from '../ui/pageLayout'
 import OfferForm from '../training/OfferForm'
 import SessionCard from '../training/SessionCard'
+import { hasModule } from '../../../lib/orgModules'
 import SessionForm from '../training/SessionForm'
 import ShareActions from '../training/ShareActions'
 import { offerKindLabel, offerStatusLabel } from '../training/trainingLogic'
 import type { OrganizationIdentityProps } from './types'
 import type { RegistrationAdmin, TrainingOffer, TrainingSessionAdmin } from '../../../lib/saasAdminApi'
 
-export default function TrainingOfferScreen({ orgSlug, offer, sessions, registrationsBySession, justCreated = false }: OrganizationIdentityProps & {
+export default function TrainingOfferScreen({ orgSlug, org, offer, sessions, registrationsBySession, justCreated = false }: OrganizationIdentityProps & {
   offer: TrainingOffer
   sessions: TrainingSessionAdmin[]
   registrationsBySession: Record<string, RegistrationAdmin[]>
   justCreated?: boolean
 }) {
+  const playerDocs = hasModule(org, 'players')
   const sorted = [...sessions].sort((a, b) => a.starts_at.localeCompare(b.starts_at))
   const booked = sorted.reduce((sum, session) => sum + session.booked_count, 0)
 
@@ -45,7 +47,7 @@ export default function TrainingOfferScreen({ orgSlug, offer, sessions, registra
               <ul className="flex flex-col gap-3">
                 {sorted.map(session => (
                   <SessionCard key={session.id} orgSlug={orgSlug} offerId={offer.id} session={session}
-                    registrations={registrationsBySession[session.id] ?? []} />
+                    registrations={registrationsBySession[session.id] ?? []} playerDocs={playerDocs} />
                 ))}
               </ul>
             )}

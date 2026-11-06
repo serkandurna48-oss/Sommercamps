@@ -23,7 +23,7 @@ import NewRegistrationsPage from '../../pilot/[org]/(org-admin)/anmeldungen/page
 vi.mock('./orgAdminData', () => ({ loadOrgAdminData: vi.fn(), loadCampAdminData: vi.fn(), loadTrainingPayments: vi.fn(async () => ({ trainingPayments: [], trainingPaymentsError: false })) }))
 vi.mock('next/navigation', () => ({ usePathname: () => '/pilot/demo/dashboard' }))
 vi.mock('next/link', () => ({ default: ({ children, ...props }: { children: React.ReactNode }) => <a {...props}>{children}</a>, useLinkStatus: () => ({ pending: false }) }))
-vi.mock('./trainingAdminData', () => ({ loadTrainingOverview: vi.fn(async () => ({ offers: [], upcoming: [], error: false })) }))
+vi.mock('./trainingAdminData', () => ({ isModuleDisabled: vi.fn(async () => false), loadTrainingOverview: vi.fn(async () => ({ offers: [], upcoming: [], error: false })) }))
 vi.mock('./data/ParticipantDetail', () => ({ default: () => null }))
 vi.mock('./actions/paymentActions', () => ({ setPaymentStatusAction: vi.fn() }))
 vi.mock('./actions/waitlistActions', () => ({ promoteWaitlistAction: vi.fn() }))

@@ -90,3 +90,12 @@ it('zeigt die Angebotsart als Badge, nur wenn gesetzt', async () => {
   expect(html).toContain('Athletiktraining')
   expect(html.match(/data-testid="offer-category"/g)).toHaveLength(1)
 })
+
+it('blendet den Trainingsbereich aus, wenn das Trainings-Modul nicht freigeschaltet ist', async () => {
+  vi.mocked(fetchOrganization).mockResolvedValue({ ...org, modules: ['camps'] })
+  vi.mocked(fetchTrainingOffers).mockResolvedValue([offer])
+  const html = await render()
+  expect(html).not.toContain('id="s-trainings"')
+  expect(html).not.toContain('/training/torwart')
+  expect(html).toContain('Sommercamp')
+})

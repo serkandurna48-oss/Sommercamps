@@ -1,4 +1,5 @@
 import { de } from '../../lib/i18n/de'
+import { ALL_MODULES, type OrgModule } from '../../lib/orgModules'
 
 /**
  * Icon kommt als Name (String), nicht als Komponentenreferenz: die
@@ -26,16 +27,17 @@ export interface NavGroup {
 /** Seitenleiste des Verwaltungsbereichs (Launch-UX-Brief): Übersicht,
  * Angebote, Teilnehmer, Zahlungen, Aufgaben. Einstellungen/Hilfe stehen
  * unten in {@link adminNavFooter}. */
-export function adminNav(orgSlug: string): NavGroup[] {
+export function adminNav(orgSlug: string, modules: readonly OrgModule[] = ALL_MODULES): NavGroup[] {
   const base = `/pilot/${orgSlug}`
-  return [
+  const on = (module: OrgModule) => modules.includes(module)
+  const groups: NavGroup[] = [
     { items: [{ label: 'Übersicht', href: `${base}/dashboard`, icon: 'board' }] },
     {
       id: 'angebote',
       label: 'Angebote',
       items: [
         { label: 'Camps', href: `${base}/camps`, icon: 'tent' },
-        { label: 'Trainings', href: `${base}/trainings`, icon: 'whistle' },
+        ...(on('trainings') ? [{ label: 'Trainings', href: `${base}/trainings`, icon: 'whistle' } as TabItem] : []),
       ],
     },
     {
@@ -44,8 +46,8 @@ export function adminNav(orgSlug: string): NavGroup[] {
       items: [
         { label: 'Anmeldungen', href: `${base}/anmeldungen`, icon: 'inbox' },
         { label: de.command.waitlist, href: `${base}/warteliste`, icon: 'hourglass' },
-        { label: 'Spieler', href: `${base}/spieler`, icon: 'jersey' },
-        { label: 'Mitglieder', href: `${base}/mitglieder`, icon: 'people' },
+        ...(on('players') ? [{ label: 'Spieler', href: `${base}/spieler`, icon: 'jersey' } as TabItem] : []),
+        ...(on('members') ? [{ label: 'Mitglieder', href: `${base}/mitglieder`, icon: 'people' } as TabItem] : []),
       ],
     },
     {
@@ -55,6 +57,7 @@ export function adminNav(orgSlug: string): NavGroup[] {
       ],
     },
   ]
+  return groups
 }
 
 export function adminNavFooter(orgSlug: string): TabItem[] {
@@ -65,8 +68,8 @@ export function adminNavFooter(orgSlug: string): TabItem[] {
 }
 
 /** Alle Ziele der Seitenleiste in Reihenfolge (für Aktiv-Markierung und Tests). */
-export function adminNavItems(orgSlug: string): TabItem[] {
-  return [...adminNav(orgSlug).flatMap(group => group.items), ...adminNavFooter(orgSlug)]
+export function adminNavItems(orgSlug: string, modules: readonly OrgModule[] = ALL_MODULES): TabItem[] {
+  return [...adminNav(orgSlug, modules).flatMap(group => group.items), ...adminNavFooter(orgSlug)]
 }
 
 /** Camp-Ebene: kompakte Reiterzeile im Seitenkopf jeder Camp-Seite. */

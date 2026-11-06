@@ -2,6 +2,7 @@ import { archivo } from '../fonts'
 import GrainOverlay from '../GrainOverlay'
 import { computeBrandTokens } from '../brandPipeline'
 import AdminSidebar from './AdminSidebar'
+import { orgModules } from '../../../lib/orgModules'
 import { ViewerProvider } from './ViewerContext'
 import { OrganizationProvider, type OrganizationIdentity } from './OrganizationContext'
 import '../tokens.css'
@@ -33,6 +34,7 @@ export default function AdminShell({ children, isPlatformOwner = false, org, org
               orgLogoUrl={org?.logo_url ?? null}
               clubColor={org ? computeBrandTokens(org.primary_color).brand : undefined}
               sidebarPrefsRaw={sidebarPrefsRaw}
+              modules={orgModules(org)}
             />
           )}
           <div className="cp-admin-content">

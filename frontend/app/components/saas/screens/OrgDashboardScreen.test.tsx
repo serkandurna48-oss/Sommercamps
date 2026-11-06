@@ -167,3 +167,28 @@ describe('Kennzahl Belegte Plätze', () => {
     expect(html).not.toContain('laufenden')
   })
 })
+
+describe('Module auf dem Dashboard', () => {
+  function page(modules: string[] | undefined) {
+    const doc = document.implementation.createHTMLDocument()
+    doc.body.innerHTML = renderToStaticMarkup(<OrgDashboardScreen orgSlug="demo"
+      org={{ ...organization, name: 'Testverein', slug: 'demo', logo_url: null, primary_color: null, modules }}
+      camps={[camp('herbst')]} registrationsByCamp={[[]]} training={{ offers: [], upcoming: [], error: false }} />)
+    return doc.body
+  }
+
+  it('blendet Trainings-Kennzahl und nächste Termine ohne Trainings-Modul aus', () => {
+    const body = page(['camps'])
+    expect(body.textContent).not.toContain('Trainings 7 Tage')
+    expect(body.querySelector('#dashboard-sessions')).toBeNull()
+    expect(body.textContent).not.toContain('Termin anlegen')
+    expect(body.textContent).toContain('Camps')
+    expect(body.textContent).not.toContain('Camps und Trainings')
+  })
+
+  it('zeigt Trainings-Teile mit Trainings-Modul', () => {
+    const body = page(['camps', 'trainings'])
+    expect(body.textContent).toContain('Trainings 7 Tage')
+    expect(body.querySelector('#dashboard-sessions')).not.toBeNull()
+  })
+})

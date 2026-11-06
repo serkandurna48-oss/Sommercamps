@@ -13,6 +13,7 @@ import {
   type TrainingSessionAdmin,
 } from '../../lib/saasAdminApi'
 import { getOrganizationAdmin } from './orgAdminData'
+import { hasModule, type OrgModule } from '../../lib/orgModules'
 
 /** Token + Organisation, wie in den anderen Org-Admin-Seiten: ohne Sitzung
  * oder bei 401 Weiterleitung zum Login, unbekannter Verein -> Login. */
@@ -48,6 +49,14 @@ export async function loadWithBase<T>(orgSlug: string, load: (token: string) => 
   if (!org) redirect(`/pilot/${orgSlug}/login`)
   if (dataOutcome.status === 'rejected') return rethrowAuth(orgSlug, dataOutcome.reason)
   return { token, org, data: dataOutcome.value }
+}
+
+/** True when the club has `module` switched off: the page then renders
+ * ModuleDisabledScreen instead of loading data (the API would answer 403
+ * module_disabled). The organisation comes from the per-request cache the layout filled. */
+export async function isModuleDisabled(orgSlug: string, module: OrgModule): Promise<boolean> {
+  const { org } = await loadBase(orgSlug)
+  return !hasModule(org, module)
 }
 
 export function rethrowAuth(orgSlug: string, error: unknown): never {

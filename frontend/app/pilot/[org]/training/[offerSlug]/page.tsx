@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { hasModule } from '../../../../lib/orgModules'
 import LegalShell from '../../LegalShell'
 import PublicLoadError from '../../PublicLoadError'
 import { getPublicOrganization, getPublicTrainingOffer } from '../../publicData'
@@ -28,6 +29,8 @@ export default async function TrainingOfferPage({ params }: PageProps) {
   if (orgOutcome.status === 'rejected') return <PublicLoadError title="Training gerade nicht erreichbar" message="Das Trainingsangebot konnte nicht geladen werden." />
   const org = orgOutcome.value
   if (!org) notFound()
+  // Trainings module off: the training pages do not exist for this club.
+  if (!hasModule(org, 'trainings')) notFound()
   if (offerOutcome.status === 'rejected') return <PublicLoadError org={org} title="Training gerade nicht erreichbar" message="Das Trainingsangebot konnte nicht geladen werden." />
   const offer = offerOutcome.value
   if (!offer) notFound()

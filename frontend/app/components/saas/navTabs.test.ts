@@ -41,3 +41,13 @@ it('markiert auf Unterseiten den übergeordneten Bereich (längster Präfix)', (
   expect(activeTabHref('/pilot/v/camps/c/zahlungen', camp)).toBe('/pilot/v/camps/c/zahlungen')
   expect(activeTabHref('/pilot/v/camps/c', camp)).toBe('/pilot/v/camps/c')
 })
+
+it('blendet Trainings, Spieler und Mitglieder aus, wenn das Modul nicht freigeschaltet ist', () => {
+  const labels = (modules: Parameters<typeof adminNav>[1]) =>
+    adminNav('demo', modules).flatMap(group => group.items.map(item => item.label))
+  expect(labels(['camps'])).toEqual(['Übersicht', 'Camps', 'Anmeldungen', 'Warteliste', 'Zahlungen', 'Aufgaben'])
+  expect(labels(['camps', 'players'])).toContain('Spieler')
+  expect(labels(['camps', 'players'])).not.toContain('Mitglieder')
+  expect(labels(['camps', 'trainings'])).toContain('Trainings')
+  expect(adminNavItems('demo', ['camps']).map(i => i.href)).not.toContain('/pilot/demo/trainings')
+})

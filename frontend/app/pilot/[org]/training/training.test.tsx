@@ -81,6 +81,12 @@ describe('Angebotsliste', () => {
     await expect(TrainingOffersPage({ params: listParams })).rejects.toThrow('notFound')
   })
 
+  it('is not found when the club has no trainings module', async () => {
+    vi.mocked(getPublicOrganization).mockResolvedValue({ ...org, modules: ['camps'] })
+    await expect(TrainingOffersPage({ params: listParams })).rejects.toThrow('notFound')
+    await expect(TrainingOfferPage({ params: offerParams })).rejects.toThrow('notFound')
+  })
+
   it('shows the load error page when the API fails', async () => {
     vi.mocked(getPublicTrainingOffers).mockRejectedValue(new Error('down'))
     const html = renderToStaticMarkup(await TrainingOffersPage({ params: listParams }))

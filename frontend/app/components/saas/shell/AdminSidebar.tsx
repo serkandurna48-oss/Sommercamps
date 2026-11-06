@@ -15,6 +15,7 @@ import { activeTabHref, adminNav, adminNavFooter, adminNavItems, type NavGroup, 
 import { logoutAction } from './logoutAction'
 import { useSidebarPrefs } from './sidebarState'
 import { useIsPlatformOwner } from './ViewerContext'
+import { ALL_MODULES, type OrgModule } from '../../../lib/orgModules'
 
 const ICONS: Record<NavIconName, ComponentType<IconProps>> = {
   board: IconBoard, coin: IconCoin, hourglass: IconHourglass, flag: IconFlag, gear: IconGear, jersey: IconJersey,
@@ -29,6 +30,8 @@ export interface AdminSidebarProps {
   clubColor?: string
   /** Cookie mirror of the stored preferences, read by the layout so the rail renders collapsed without a flash. */
   sidebarPrefsRaw?: string | null
+  /** Enabled modules; entries of other modules are hidden. Default: all (tests, previews). */
+  modules?: readonly OrgModule[]
 }
 
 /**
@@ -41,11 +44,11 @@ function PendingHint() {
   return <span aria-hidden="true" className="cp-tab-hint cp-nav-hint" data-pending={pending} />
 }
 
-function useActiveHref(orgSlug: string) {
+function useActiveHref(orgSlug: string, modules: readonly OrgModule[]) {
   const pathname = usePathname() ?? ''
   const preview = useAdminPreview()
   const toPath = (href: string) => (preview ? previewHref(href, preview.empty).split('?')[0] : href)
-  const active = activeTabHref(pathname, adminNavItems(orgSlug).map(item => toPath(item.href)))
+  const active = activeTabHref(pathname, adminNavItems(orgSlug, modules).map(item => toPath(item.href)))
   return (href: string) => active !== undefined && toPath(href) === active
 }
 
@@ -110,17 +113,18 @@ function LogoutItem({ orgSlug, rail }: { orgSlug: string; rail: boolean }) {
 }
 
 /** The navigation list shared by the desktop sidebar and the mobile drawer. */
-function NavBody({ orgSlug, rail, closedGroups, onToggleGroup, onNavigate, footerExtra }: {
+function NavBody({ orgSlug, modules, rail, closedGroups, onToggleGroup, onNavigate, footerExtra }: {
   orgSlug: string
+  modules: readonly OrgModule[]
   footerExtra?: React.ReactNode
   rail: boolean
   closedGroups: string[]
   onToggleGroup: (id: string) => void
   onNavigate?: () => void
 }) {
-  const isActive = useActiveHref(orgSlug)
+  const isActive = useActiveHref(orgSlug, modules)
   const baseId = useId()
-  const groups: NavGroup[] = adminNav(orgSlug)
+  const groups: NavGroup[] = adminNav(orgSlug, modules)
   return (
     <>
       <nav aria-label="Verwaltung" className="cp-nav-scroll">
@@ -249,6 +253,7 @@ function NavDrawer({ open, onClose, returnFocusRef, children, labelId }: {
  */
 export default function AdminSidebar(props: AdminSidebarProps) {
   const { orgSlug, orgName } = props
+  const modules = props.modules ?? ALL_MODULES
   const [prefs, setPrefs] = useSidebarPrefs(props.sidebarPrefsRaw ?? null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
@@ -289,7 +294,7 @@ export default function AdminSidebar(props: AdminSidebarProps) {
             <IconClose size={20} />
           </button>
         </div>
-        <NavBody orgSlug={orgSlug} rail={false} closedGroups={prefs.closedGroups} onToggleGroup={toggleGroup} onNavigate={closeDrawer} />
+        <NavBody orgSlug={orgSlug} modules={modules} rail={false} closedGroups={prefs.closedGroups} onToggleGroup={toggleGroup} onNavigate={closeDrawer} />
       </NavDrawer>
 
       {/* >= 1024 px: sidebar */}
@@ -299,6 +304,7 @@ export default function AdminSidebar(props: AdminSidebarProps) {
         </div>
         <NavBody
           orgSlug={orgSlug}
+          modules={modules}
           rail={rail}
           closedGroups={prefs.closedGroups}
           onToggleGroup={toggleGroup}

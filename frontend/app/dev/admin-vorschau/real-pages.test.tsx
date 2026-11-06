@@ -18,7 +18,7 @@ vi.mock('../../components/saas/orgAdminData', () => ({
   loadOrgAdminData: vi.fn(), loadOrgPaymentsData: vi.fn(), loadCampAdminData: vi.fn(), getOrganizationAdmin: vi.fn(),
 }))
 vi.mock('../../lib/adminSession', () => ({ getAdminToken: vi.fn() }))
-vi.mock('../../components/saas/trainingAdminData', () => ({ loadTrainingOverview: vi.fn(async () => ({ offers: [], upcoming: [], error: false })) }))
+vi.mock('../../components/saas/trainingAdminData', () => ({ isModuleDisabled: vi.fn(async () => false), loadTrainingOverview: vi.fn(async () => ({ offers: [], upcoming: [], error: false })) }))
 vi.mock('next/navigation', () => ({
   notFound: () => { throw new Error('notFound') },
   redirect: (path: string) => { throw new Error(`redirect:${path}`) },

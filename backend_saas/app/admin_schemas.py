@@ -487,6 +487,10 @@ class RegistrationAdminOut(RegistrationCreated):
     parent_last_name: str
     parent_email: str
     parent_phone: str
+    # Billing address (paid bookings since 20261107130000; null for free/older rows).
+    parent_street: Optional[str] = None
+    parent_postal_code: Optional[str] = None
+    parent_city: Optional[str] = None
     child_first_name: str
     child_last_name: str
     child_birth_date: date

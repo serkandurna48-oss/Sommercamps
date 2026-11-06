@@ -122,6 +122,10 @@ export default function InvoiceSection({ orgSlug, registrationToken }: { orgSlug
       <p className="cp-label" style={{ color: 'var(--cp-muted)' }}>Rechnung</p>
       {data.invoices.length > 0 ? (
         <ul>{data.invoices.map(invoice => <InvoiceRow key={invoice.id} orgSlug={orgSlug} invoice={invoice} onChanged={reload} />)}</ul>
+      ) : data.pending_reason === 'error' ? (
+        <p className="cp-body rounded-[var(--cp-r-chip)] border px-3 py-2" style={{ color: 'var(--cp-error)', background: 'var(--cp-error-bg)', borderColor: 'var(--cp-error-line)' }}>
+          Die Rechnung konnte nicht erzeugt werden. Versuch es mit „Rechnung erstellen“ noch einmal.
+        </p>
       ) : data.pending_reason === 'missing_billing_profile' ? (
         <p className="cp-body rounded-[var(--cp-r-chip)] border px-3 py-2" style={{ color: 'var(--cp-pending)', background: 'var(--cp-pending-bg)', borderColor: 'var(--cp-pending-line)' }}>
           Rechnung ausstehend – Rechnungsdaten fehlen. Trag sie unter <a className="underline" href={`/pilot/${orgSlug}/konfiguration#rechnungsdaten`}>Einstellungen → Rechnungsdaten</a> ein und erstelle die Rechnung dann hier.

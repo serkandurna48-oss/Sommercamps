@@ -1,5 +1,6 @@
 import type { InvoiceList as InvoiceListData } from '../../../lib/saasAdminApi'
 import { formatDate, formatEuro as euro } from '../../../lib/i18n/de'
+import PendingInvoicesNotice from './PendingInvoicesNotice'
 
 
 function status(sentAt: string | null, sendError: string | null): string {
@@ -16,13 +17,7 @@ export default function InvoiceList({ orgSlug, data }: { orgSlug: string; data: 
         <p role="alert" className="cp-body">Rechnungen konnten nicht geladen werden.</p>
       ) : (
         <>
-          {data.pending.length > 0 && (
-            <p className="cp-body mb-3 rounded-[var(--cp-r-chip)] border px-3 py-2" data-testid="invoices-pending"
-              style={{ color: 'var(--cp-pending)', background: 'var(--cp-pending-bg)', borderColor: 'var(--cp-pending-line)' }}>
-              {data.pending.length === 1 ? '1 Rechnung ausstehend' : `${data.pending.length} Rechnungen ausstehend`} – Rechnungsdaten fehlen.{' '}
-              <a className="underline" href={`/pilot/${orgSlug}/konfiguration#rechnungsdaten`}>Zu den Rechnungsdaten</a>
-            </p>
-          )}
+          <PendingInvoicesNotice orgSlug={orgSlug} open={data.open} profileComplete={data.billing_profile_complete} />
           {data.invoices.length === 0 ? (
             <p className="cp-body" style={{ color: 'var(--cp-muted)' }}>
               Noch keine Rechnungen. Sie entstehen automatisch, sobald eine Buchung bezahlt ist.

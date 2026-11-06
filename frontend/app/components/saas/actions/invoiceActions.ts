@@ -64,8 +64,16 @@ export async function generatePendingInvoicesAction(orgSlug: string, _previous: 
     const result = await generatePendingInvoicesAdmin(orgSlug, token)
     revalidatePath(`/pilot/${orgSlug}/konfiguration`)
     revalidatePath(`/pilot/${orgSlug}/zahlungen`)
-    if (result.created === 0) return { error: 'Es konnten keine Rechnungen erstellt werden. Prüfe deine Rechnungsdaten.', success: null }
-    return { error: null, success: result.created === 1 ? '1 Rechnung erstellt und gesendet.' : `${result.created} Rechnungen erstellt und gesendet.` }
+    const parts = [
+      result.created === 1 ? '1 Rechnung erstellt' : result.created > 1 ? `${result.created} Rechnungen erstellt` : '',
+      result.stornos === 1 ? '1 Stornorechnung erstellt' : result.stornos > 1 ? `${result.stornos} Stornorechnungen erstellt` : '',
+    ].filter(Boolean)
+    const rest = result.remaining > 0 ? ` Noch ${result.remaining} offen – klick bitte noch einmal auf „Rechnungen erzeugen“.` : ''
+    if (result.failed > 0) {
+      return { error: `${result.failed === 1 ? '1 Rechnung konnte' : `${result.failed} Rechnungen konnten`} nicht erzeugt werden. Versuch es später noch einmal.${rest}`, success: null }
+    }
+    if (parts.length === 0 && result.blocked > 0) return { error: 'Es fehlen noch Rechnungsdaten. Prüfe deine Angaben unter Einstellungen.', success: null }
+    return { error: null, success: `${parts.length ? parts.join(', ') : 'Offene E-Mails gesendet'}.${rest}` }
   } catch (error) {
     return { error: message(error, 'Ausstehende Rechnungen konnten nicht erstellt werden.'), success: null }
   }

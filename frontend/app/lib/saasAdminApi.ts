@@ -1350,10 +1350,22 @@ export interface Invoice {
   send_error: string | null
 }
 
+export interface InvoiceOpenWork {
+  /** Paid bookings without invoice (of which: master data missing / failed run). */
+  invoices: number
+  missing_profile: number
+  failed: number
+  stornos: number
+  unsent_mails: number
+  total: number
+}
+
 export interface InvoiceList {
   billing_profile_complete: boolean
   invoices: Invoice[]
+  /** reason: missing_billing_profile | error | not_created */
   pending: { registration_token: string; camp_title: string; reason: string }[]
+  open: InvoiceOpenWork
 }
 
 export interface RegistrationInvoices {
@@ -1395,10 +1407,18 @@ export async function createRegistrationInvoiceAdmin(orgSlug: string, registrati
   return res.json() as Promise<Invoice>
 }
 
-export async function generatePendingInvoicesAdmin(orgSlug: string, token: string): Promise<{ created: number; blocked: number }> {
+export interface GenerateInvoicesResult {
+  created: number
+  stornos: number
+  blocked: number
+  failed: number
+  remaining: number
+}
+
+export async function generatePendingInvoicesAdmin(orgSlug: string, token: string): Promise<GenerateInvoicesResult> {
   const res = await adminMutate(`${orgPath(orgSlug)}/invoices/generate-pending`, token, 'POST')
-  if (!res.ok) throw new AdminActionError('Ausstehende Rechnungen konnten nicht erstellt werden.')
-  return res.json() as Promise<{ created: number; blocked: number }>
+  if (!res.ok) throw new AdminActionError('Rechnungen konnten nicht erzeugt werden.')
+  return res.json() as Promise<GenerateInvoicesResult>
 }
 
 /** Online refund through the platform. requestId makes a double submit one refund. */

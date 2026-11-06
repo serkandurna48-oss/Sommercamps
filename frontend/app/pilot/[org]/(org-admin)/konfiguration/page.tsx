@@ -43,7 +43,7 @@ export default async function OrgConfigPage({
     profile: profile.status === 'fulfilled' ? profile.value : null,
     profileError: profile.status === 'rejected',
     paymentStatus: paymentStatus.status === 'fulfilled' ? paymentStatus.value : null,
-    pendingInvoices: invoiceList.status === 'fulfilled' ? invoiceList.value.pending.length : 0,
+    openInvoices: invoiceList.status === 'fulfilled' ? invoiceList.value.open : null,
   }
 
   return <OrgConfigScreen orgSlug={orgSlug} org={org} billing={billing} />

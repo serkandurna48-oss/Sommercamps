@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import InvoiceSection from './InvoiceSection'
 import InvoiceList from './InvoiceList'
 import PendingInvoicesNotice from './PendingInvoicesNotice'
-import type { Invoice, RegistrationInvoices } from '../../../lib/saasAdminApi'
+import type { Invoice, InvoiceOpenWork, RegistrationInvoices } from '../../../lib/saasAdminApi'
 import {
   createInvoiceAction, generatePendingInvoicesAction, loadRegistrationInvoicesAction, refundPaymentAction, resendInvoiceAction,
 } from '../actions/invoiceActions'
@@ -22,6 +22,8 @@ const invoice = (over: Partial<Invoice> = {}): Invoice => ({
   gross_cents: 14900, net_cents: 12521, vat_cents: 2379, recipient_name: 'Max Muster', description: 'Camp: Sommer',
   cancels_number: null, registration_token: TOKEN, sent_at: '2026-11-07T10:00:00Z', send_error: null, ...over,
 })
+const NONE: InvoiceOpenWork = { invoices: 0, missing_profile: 0, failed: 0, stornos: 0, unsent_mails: 0, total: 0 }
+const open = (over: Partial<InvoiceOpenWork>): InvoiceOpenWork => ({ ...NONE, ...over })
 const data = (over: Partial<RegistrationInvoices> = {}): RegistrationInvoices => ({
   invoices: [invoice()], pending_reason: null, can_create: false, refund: { possible: false, remaining_cents: 0 }, ...over,
 })
@@ -113,22 +115,39 @@ it('Rechnungsliste unter Zahlungen', () => {
     billing_profile_complete: false,
     invoices: [invoice(), invoice({ id: '44444444-4444-4444-8444-444444444444', number: 'TV-2026-0002', kind: 'storno', cancels_number: 'TV-2026-0001', gross_cents: -5000, sent_at: null })],
     pending: [{ registration_token: TOKEN, camp_title: 'Sommer', reason: 'missing_billing_profile' }],
+    open: open({ invoices: 1, missing_profile: 1, total: 1 }),
   }} />)
-  expect(html).toContain('1 Rechnung ausstehend')
+  expect(html).toContain('1 Rechnung ist ausstehend – Rechnungsdaten fehlen.')
+  expect(html).not.toContain('Rechnungen erzeugen')  // nothing the button could do yet
   expect(html).toContain('Storno zu TV-2026-0001')
   expect(html).toContain('href="/pilot/demo/rechnungen/44444444-4444-4444-8444-444444444444"')
   expect(html).toContain('Nicht gesendet')
   expect(renderToStaticMarkup(<InvoiceList orgSlug="demo" data={null} />)).toContain('nicht geladen')
-  expect(renderToStaticMarkup(<InvoiceList orgSlug="demo" data={{ billing_profile_complete: true, invoices: [], pending: [] }} />)).toContain('entstehen automatisch')
+  expect(renderToStaticMarkup(<InvoiceList orgSlug="demo" data={{ billing_profile_complete: true, invoices: [], pending: [], open: NONE }} />)).toContain('entstehen automatisch')
 })
 
-it('Einstellungen: ausstehende Rechnungen erst nach vollständigen Rechnungsdaten erzeugen', async () => {
-  vi.mocked(generatePendingInvoicesAction).mockResolvedValue({ error: null, success: '2 Rechnungen erstellt und gesendet.' })
-  await act(async () => root.render(<PendingInvoicesNotice orgSlug="demo" count={2} profileComplete={false} />))
-  expect(container.textContent).toContain('2 Rechnungen sind ausstehend')
+it('Hinweis zeigt fehlgeschlagene, fehlende und ungesendete Rechnungen mit „Rechnungen erzeugen“', async () => {
+  vi.mocked(generatePendingInvoicesAction).mockResolvedValue({ error: null, success: '2 Rechnungen erstellt. Noch 3 offen – klick bitte noch einmal auf „Rechnungen erzeugen“.' })
+  await act(async () => root.render(<PendingInvoicesNotice orgSlug="demo" open={open({ invoices: 2, missing_profile: 2, total: 2 })} profileComplete={false} />))
+  expect(container.textContent).toContain('2 Rechnungen sind ausstehend – Rechnungsdaten fehlen.')
   expect(container.querySelector('button')).toBeNull()
-  await act(async () => root.render(<PendingInvoicesNotice orgSlug="demo" count={2} profileComplete />))
+  await act(async () => root.render(<PendingInvoicesNotice orgSlug="demo" open={open({ invoices: 3, failed: 1, unsent_mails: 1, stornos: 1, total: 5 })} profileComplete />))
+  expect(container.textContent).toContain('1 Rechnung konnte nicht erzeugt werden.')
+  expect(container.textContent).toContain('2 bezahlte Buchungen haben noch keine Rechnung.')
+  expect(container.textContent).toContain('1 Stornorechnung fehlt.')
+  expect(container.textContent).toContain('1 Rechnung wurde noch nicht per E-Mail zugestellt.')
   await act(async () => container.querySelector('button')!.click())
   expect(generatePendingInvoicesAction).toHaveBeenCalledWith('demo', { error: null, success: null })
-  expect(container.querySelector('[role="status"]')!.textContent).toBe('2 Rechnungen erstellt und gesendet.')
+  expect(container.querySelector('[role="status"]')!.textContent).toContain('Noch 3 offen')
+})
+
+it('ohne offene Arbeit kein Hinweis', async () => {
+  await act(async () => root.render(<PendingInvoicesNotice orgSlug="demo" open={NONE} profileComplete />))
+  expect(container.innerHTML).toBe('')
+})
+
+it('fehlgeschlagener Rechnungslauf: Hinweis und erneut erstellen', async () => {
+  await render(data({ invoices: [], pending_reason: 'error', can_create: true }))
+  expect(container.textContent).toContain('Die Rechnung konnte nicht erzeugt werden.')
+  expect(button('Rechnung erstellen')).toBeTruthy()
 })

@@ -13,8 +13,8 @@ export interface OrgBillingProps {
   /** null = could not be loaded */
   paymentStatus: StripePaymentStatus | null
   profileError?: boolean
-  /** Paid bookings waiting for an invoice (billing master data was missing). */
-  pendingInvoices?: number
+  /** Open invoice work (missing, failed, storno, unsent mail); null = not loaded. */
+  openInvoices?: import('../../../lib/saasAdminApi').InvoiceOpenWork | null
 }
 
 const SECTION = 'rounded-[var(--cp-r-card)] border p-4 md:p-6'
@@ -45,8 +45,8 @@ export default function OrgConfigScreen({ orgSlug, org, billing }: OrganizationI
             <section id="rechnungsdaten" className="mt-10 scroll-mt-24" aria-labelledby="rechnungsdaten-heading">
               <h2 id="rechnungsdaten-heading" className="cp-heading mb-3" style={{ color: 'var(--cp-ink)' }}>Rechnungsdaten</h2>
               <div className={SECTION} style={SECTION_STYLE}>
-                {(billing.pendingInvoices ?? 0) > 0 && (
-                  <PendingInvoicesNotice orgSlug={orgSlug} count={billing.pendingInvoices ?? 0} profileComplete={Boolean(billing.profile)} />
+                {billing.openInvoices && (
+                  <PendingInvoicesNotice orgSlug={orgSlug} open={billing.openInvoices} profileComplete={Boolean(billing.profile)} />
                 )}
                 {billing.profileError
                   ? <p role="alert" className="cp-body">Die Rechnungsdaten konnten gerade nicht geladen werden. Bitte lade die Seite neu.</p>

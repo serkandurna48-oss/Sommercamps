@@ -325,6 +325,8 @@ class DeleteRegistrationResponse(BaseModel):
 
     deleted: bool = True
     promoted: Optional[RegistrationStatusOut] = None
+    # True when the child's player record (notes, other bookings) stays.
+    player_kept: bool = False
 
 
 class PaymentStatusUpdate(BaseModel):

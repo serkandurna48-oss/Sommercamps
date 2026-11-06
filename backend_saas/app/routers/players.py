@@ -260,6 +260,25 @@ def get_player(organization_slug: str, player_id: UUID, auth: AuthContext = Depe
     )
 
 
+@router.delete(_BASE + "/{player_id}", status_code=204)
+def delete_player(organization_slug: str, player_id: UUID, auth: AuthContext = Depends(require_org_access)) -> Response:
+    """Deletes the whole player record (notes, goals, measurements). 409
+    `player_has_active_registrations` while a booking is still active. The
+    audit entry carries counts only, no personal data."""
+    organization = require_organization(organization_slug)
+    try:
+        counts = repo.delete_player(organization["id"], player_id)
+    except repo.PlayerNotFoundError:
+        raise HTTPException(status_code=404, detail="Player not found") from None
+    except repo.PlayerHasActiveRegistrationsError:
+        raise HTTPException(status_code=409, detail={"code": "player_has_active_registrations"}) from None
+    platform_roles.write_audit_log(
+        actor_user_id=auth.user_id, actor_email=auth.email, action="player.deleted",
+        organization_id=str(organization["id"]), target_type="player", target_id=str(player_id), metadata=counts,
+    )
+    return Response(status_code=204)
+
+
 # ---------------------------------------------------------------- notes
 
 _NOTE_DATES = {"note_date": False}

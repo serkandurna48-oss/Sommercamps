@@ -1000,9 +1000,8 @@ def cancel_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, r
 
 
 _LOAD_AND_LOCK_REGISTRATION_FOR_DELETE = """
-    select id, camp_id, status, payment_status, payment_method,
-           stripe_session_id, stripe_payment_intent_id,
-           stripe_checkout_session_id, stripe_checkout_account_id
+    select id, camp_id, status, payment_status, payment_method, player_id,
+           stripe_session_id, stripe_payment_intent_id, stripe_checkout_session_id
     from camp_registrations
     where registration_token = %s
       and organization_id = %s
@@ -1011,6 +1010,19 @@ _LOAD_AND_LOCK_REGISTRATION_FOR_DELETE = """
 """
 
 _DELETE_REGISTRATION = "delete from camp_registrations where id = %s and organization_id = %s"
+
+# The child's player record goes with its last registration, but only when it
+# holds no documentation (notes, goals, measurements). Locked first so a
+# concurrent booking of the same child cannot slip in between check and delete.
+_DELETE_ORPHAN_PLAYER = """
+    delete from players p
+    where p.id = %s and p.organization_id = %s
+      and not exists (select 1 from camp_registrations r
+                      where r.player_id = p.id and r.organization_id = p.organization_id)
+      and not exists (select 1 from player_notes n where n.player_id = p.id and n.organization_id = p.organization_id)
+      and not exists (select 1 from player_goals g where g.player_id = p.id and g.organization_id = p.organization_id)
+      and not exists (select 1 from player_measurements m where m.player_id = p.id and m.organization_id = p.organization_id)
+"""
 
 
 def is_paid_online(registration: dict) -> bool:
@@ -1041,8 +1053,11 @@ def delete_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, r
     the same transaction, exactly as on cancel.
 
     Returns {"deleted_status", "deleted_payment_status", "promoted",
-    "checkout"}; `checkout` holds the open Stripe Checkout (session id,
-    connected account) so the caller can expire it after the row is gone.
+    "player_removed", "player_kept"}. The child's player record is deleted in
+    the same transaction when nothing else references it and it holds no
+    notes, goals or measurements (`player_removed`); otherwise it stays
+    (`player_kept`). The caller closes any open Stripe Checkout BEFORE calling
+    (payments.close_checkout_before_delete).
     Nothing personal is returned.
     """
     with db.get_cursor() as cur:
@@ -1059,15 +1074,17 @@ def delete_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, r
         if registration["status"] in CAPACITY_COUNTING_STATUSES:
             promoted = _lock_and_promote_next_waitlisted(cur, tenant, registration["camp_id"])
 
-        checkout = None
-        if registration.get("stripe_checkout_session_id") and registration.get("stripe_checkout_account_id"):
-            checkout = {
-                "session_id": registration["stripe_checkout_session_id"],
-                "account_id": registration["stripe_checkout_account_id"],
-            }
+        player_removed = player_kept = False
+        if registration.get("player_id") is not None:
+            cur.execute("select 1 from players where id = %s and organization_id = %s for update",
+                        (registration["player_id"], tenant.organization_id))
+            cur.execute(_DELETE_ORPHAN_PLAYER, (registration["player_id"], tenant.organization_id))
+            player_removed = cur.rowcount > 0
+            player_kept = not player_removed
         return {
             "deleted_status": registration["status"],
             "deleted_payment_status": registration["payment_status"],
             "promoted": promoted,
-            "checkout": checkout,
+            "player_removed": player_removed,
+            "player_kept": player_kept,
         }

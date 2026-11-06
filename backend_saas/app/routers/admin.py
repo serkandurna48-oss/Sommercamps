@@ -80,7 +80,7 @@ from ..repositories import registrations as registrations_repo
 from ..repositories.camps import CampSlugConflictError
 from ..repositories.organizations import OrganizationSlugConflictError
 from ..repositories.registrations import RegistrationNotFoundError, RegistrationPaidOnlineError
-from .payments import expire_checkout_session, expire_open_checkout
+from .payments import CheckoutPaidError, CheckoutUnavailableError, close_checkout_before_delete, expire_open_checkout
 from ..tenancy import TenantContext
 
 logger = logging.getLogger(__name__)
@@ -618,6 +618,19 @@ def delete_registration(
     organization = require_organization(organization_slug)
     camp = require_camp(organization, camp_slug)
 
+    # An open Stripe Checkout is closed first, so nobody can pay a deleted booking.
+    try:
+        close_checkout_before_delete(organization["id"], camp["id"], registration_token)
+    except CheckoutPaidError as exc:
+        raise HTTPException(
+            status_code=409, detail={"code": "paid_online", "message": "Erst erstatten oder stornieren."},
+        ) from exc
+    except CheckoutUnavailableError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "payment_pending", "message": "Zahlung wird gerade geprüft, bitte später erneut versuchen."},
+        ) from exc
+
     try:
         result = registrations_repo.delete_registration_and_promote_next(
             _admin_tenant(organization), camp["id"], registration_token
@@ -647,12 +660,9 @@ def delete_registration(
             "status": result["deleted_status"],
             "payment_status": result["deleted_payment_status"],
             "promoted": result["promoted"] is not None,
+            "player_removed": result["player_removed"],
         },
     )
-    if result["checkout"] is not None:
-        background_tasks.add_task(
-            expire_checkout_session, result["checkout"]["session_id"], result["checkout"]["account_id"]
-        )
     if result["promoted"] is not None:
         background_tasks.add_task(
             notifications_sending.send_status_change_notification,
@@ -660,7 +670,7 @@ def delete_registration(
             organization["id"],
             "promoted",
         )
-    return DeleteRegistrationResponse(promoted=result["promoted"])
+    return DeleteRegistrationResponse(promoted=result["promoted"], player_kept=result["player_kept"])
 
 
 @router.post(
@@ -868,7 +878,14 @@ def list_organization_members(
     stays owner-only (see add_organization_member below)."""
     organization = require_organization(organization_slug)
     rows = platform_roles.list_organization_members(organization["id"])
-    return [OrganizationMemberOut.model_validate({**row, "user_id": str(row["user_id"]), "email": None}) for row in rows]
+    # E-mail per admin from Supabase Auth (best effort, None when unavailable);
+    # the frontend falls back to the user id only then.
+    return [
+        OrganizationMemberOut.model_validate(
+            {**row, "user_id": str(row["user_id"]), "email": supabase_auth.get_user_email(str(row["user_id"]))}
+        )
+        for row in rows
+    ]
 
 
 @router.post(

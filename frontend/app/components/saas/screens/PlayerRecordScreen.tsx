@@ -1,4 +1,5 @@
 import { berlinDay, paymentStatusLabel, registrationStatusLabel } from '../../../lib/i18n/de'
+import { hasModule } from '../../../lib/orgModules'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from '../data/StatusChip'
 import EmptyState from '../state/EmptyState'
 import PageHeader from '../shell/PageHeader'
@@ -14,7 +15,7 @@ import type { PlayerDetail } from '../../../lib/saasAdminApi'
 
 export const NO_CONSENT_HINT = 'Keine Einwilligung zur Doku vorhanden – bitte bei den Eltern nachfragen'
 
-export default function PlayerRecordScreen({ orgSlug, record, query, today = berlinDay(new Date()) }: OrganizationIdentityProps & {
+export default function PlayerRecordScreen({ orgSlug, org, record, query, today = berlinDay(new Date()) }: OrganizationIdentityProps & {
   record: PlayerDetail
   /** searchParams der Seite: `neu=1&termin=<Termin-Id>` öffnet die Schnellerfassung vorbelegt. */
   query?: Record<string, unknown>
@@ -33,7 +34,7 @@ export default function PlayerRecordScreen({ orgSlug, record, query, today = ber
         backHref={`/pilot/${orgSlug}/spieler`}
         backLabel="Alle Spieler"
         title={`${player.first_name} ${player.last_name}`}
-        subtitle={<>{`${age} Jahre · geboren ${formatDay(player.birth_date)}`}{player.is_member && <>{' '}<StatusChip tone="ok" label="Mitglied" /></>}</>}
+        subtitle={<>{`${age} Jahre · geboren ${formatDay(player.birth_date)}`}{hasModule(org, 'members') && player.is_member && <>{' '}<StatusChip tone="ok" label="Mitglied" /></>}</>}
         metrics={[
           { label: 'Buchungen', value: String(bookingCount) },
           { label: 'Letztes Training', value: lastTraining ? formatDay(lastTraining) : '–' },

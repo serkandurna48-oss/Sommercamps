@@ -4,8 +4,10 @@ import PaymentSection, { type PaymentEntry } from '../data/PaymentSection'
 import { de, formatEuro } from '../../../lib/i18n/de'
 import type { OrgPaymentsScreenProps } from './types'
 import { ADMIN_PAGE } from '../ui/pageLayout'
+import { hasModule } from '../../../lib/orgModules'
 
 export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsByCamp, trainingPayments = [], trainingPaymentsError = false }: OrgPaymentsScreenProps) {
+  const trainingsOn = hasModule(org, 'trainings')
 
   const groups = [
     ...camps.map((camp, i) => ({ camp, registrations: registrationsByCamp[i] })),
@@ -35,13 +37,15 @@ export default function OrgPaymentsScreen({ orgSlug, org, camps, registrationsBy
       />
 
       <main className={ADMIN_PAGE}>
-        {trainingPaymentsError && (
+        {trainingsOn && trainingPaymentsError && (
           <p role="alert" className="cp-body mb-4 rounded-[var(--cp-r-chip)] border px-3 py-2"
             style={{ color: 'var(--cp-error)', background: 'var(--cp-error-bg)', borderColor: 'var(--cp-error-line)' }}>
             Trainingszahlungen konnten nicht geladen werden.
           </p>
         )}
-        <p className="cp-hint mb-4">Beträge berechnet aus den aktuellen Anmeldungen und dem Camp- bzw. Trainingspreis.</p>
+        <p className="cp-hint mb-4">{trainingsOn
+          ? 'Beträge berechnet aus den aktuellen Anmeldungen und dem Camp- bzw. Trainingspreis.'
+          : 'Beträge berechnet aus den aktuellen Anmeldungen und dem Camppreis.'}</p>
 
         <PaymentSection
           org={{ name: org.name, legal_name: org.legal_name, iban: org.iban, contact_person_name: org.contact_person_name, contact_email: org.contact_email }}

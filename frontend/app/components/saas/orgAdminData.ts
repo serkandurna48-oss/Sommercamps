@@ -106,9 +106,14 @@ export async function loadTrainingPayments(orgSlug: string): Promise<TrainingPay
 /** Zahlungsseite: Camps wie bisher plus Trainingstermine mit Buchungen. Die Camp-Liste
  * schliesst Termine absichtlich aus, deshalb kommen sie aus dem eigenen Endpunkt. Beide
  * Teile laufen parallel; ein Trainingsfehler lässt die Camp-Zahlungen nutzbar. */
-export async function loadOrgPaymentsData(orgSlug: string): Promise<OrgAdminData & TrainingPaymentsResult> {
+export async function loadOrgPaymentsData(
+  orgSlug: string, { trainings = true }: { trainings?: boolean } = {},
+): Promise<OrgAdminData & TrainingPaymentsResult> {
+  // Trainings module off: no training-payments request at all and no load-error notice.
   // Started first; its outcome is captured right away, so no unhandled rejection while the camps load.
-  const training = loadTrainingPayments(orgSlug).then(value => ({ value }), (error: unknown) => ({ error }))
+  const training = trainings
+    ? loadTrainingPayments(orgSlug).then(value => ({ value }), (error: unknown) => ({ error }))
+    : Promise.resolve({ value: { trainingPayments: [], trainingPaymentsError: false } as TrainingPaymentsResult })
   const data = await loadOrgAdminData(orgSlug)
   const outcome = await training
   if ('error' in outcome) throw outcome.error

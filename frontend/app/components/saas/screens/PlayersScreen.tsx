@@ -1,10 +1,11 @@
 import PageHeader from '../shell/PageHeader'
 import { ADMIN_PAGE } from '../ui/pageLayout'
 import PlayerList from '../player/PlayerList'
+import { hasModule } from '../../../lib/orgModules'
 import type { OrganizationIdentityProps } from './types'
 import type { PlayerSummary } from '../../../lib/saasAdminApi'
 
-export default function PlayersScreen({ orgSlug, players }: OrganizationIdentityProps & { players: PlayerSummary[] }) {
+export default function PlayersScreen({ orgSlug, org, players }: OrganizationIdentityProps & { players: PlayerSummary[] }) {
   const withNotes = players.filter(player => player.note_count > 0).length
 
   return (
@@ -17,7 +18,7 @@ export default function PlayersScreen({ orgSlug, players }: OrganizationIdentity
 
       <main className={ADMIN_PAGE}>
         <h2 className="sr-only">Spielerakten</h2>
-        <PlayerList orgSlug={orgSlug} players={players} />
+        <PlayerList orgSlug={orgSlug} players={players} showMembership={hasModule(org, 'members')} />
       </main>
     </>
   )

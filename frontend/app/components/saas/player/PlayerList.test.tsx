@@ -25,4 +25,9 @@ describe('Spielerliste: Mitglied-Chip', () => {
     const links = [...doc.querySelectorAll('a')]
     expect(links.map(link => link.textContent?.includes('Mitglied'))).toEqual([true, false, false])
   })
+
+  it('zeigt "Mitglied" nicht ohne Mitglieder-Modul', () => {
+    const html = renderToStaticMarkup(<PlayerList orgSlug="demo" showMembership={false} players={[player({ is_member: true })]} />)
+    expect(html).not.toContain('Mitglied')
+  })
 })

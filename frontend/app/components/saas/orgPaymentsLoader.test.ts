@@ -50,6 +50,13 @@ describe('loadOrgPaymentsData', () => {
     expect((await pending).trainingPayments).toEqual([])
   })
 
+  it('ohne Trainings-Modul: keine Trainingszahlungs-Anfrage, kein Fehlerhinweis', async () => {
+    const data = await loadOrgPaymentsData('demo', { trainings: false })
+    expect(api.fetchTrainingPaymentsAdmin).not.toHaveBeenCalled()
+    expect(data.trainingPayments).toEqual([])
+    expect(data.trainingPaymentsError).toBe(false)
+  })
+
   it('lässt Termine ohne Buchungen weg', async () => {
     api.fetchTrainingPaymentsAdmin.mockResolvedValue([group('a', 'published', [])])
     expect((await loadOrgPaymentsData('demo')).trainingPayments).toEqual([])

@@ -41,6 +41,14 @@ describe('Trainingszahlungen', () => {
     expect(html).toContain('Trainingszahlungen konnten nicht geladen werden.')
   })
 
+  it('ohne Trainings-Modul kein Trainings-Fehlerhinweis und Camp-Text', () => {
+    const html = renderToStaticMarkup(
+      <OrgPaymentsScreen orgSlug="demo" org={{ ...org, modules: ['camps'] }} camps={[]} registrationsByCamp={[]} trainingPaymentsError />,
+    )
+    expect(html).not.toContain('Trainingszahlungen konnten nicht geladen werden.')
+    expect(html).not.toContain('Trainingspreis')
+  })
+
   it('bildet einen Termin als Zahlungsgruppe mit Berliner Ortszeit im Titel ab', () => {
     const group = trainingPaymentGroup(offer, session, [reg({})])
     expect(group.camp.slug).toBe('einzel-2026-03-29-1800')

@@ -61,7 +61,7 @@ for (const [name, Page] of Object.entries({ DashboardPage, CampPage, CampCreateP
     } else if (Page === CampPage || Page === CampConfigPage) {
       expect(loadCampAdminData).toHaveBeenCalledWith(fixtures.orgSlug, fixtures.camps[0].slug)
     } else if (Page === PaymentsPage) {
-      expect(loadOrgPaymentsData).toHaveBeenCalledWith(fixtures.orgSlug)
+      expect(loadOrgPaymentsData).toHaveBeenCalledWith(fixtures.orgSlug, { trainings: true })
     } else {
       expect(loadOrgAdminData).toHaveBeenCalledWith(fixtures.orgSlug)
     }

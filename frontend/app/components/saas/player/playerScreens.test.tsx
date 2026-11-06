@@ -92,6 +92,13 @@ describe('Spielerliste', () => {
   it('leerer Zustand', () => {
     expect(html(<PlayersScreen orgSlug="demo" org={org} players={[]} />).body.textContent).toContain('Noch keine Spieler.')
   })
+
+  it('Spielerliste ohne Mitglieder-Modul zeigt keinen Chip „Mitglied“', () => {
+    const member = summary({ is_member: true })
+    expect(html(<PlayersScreen orgSlug="demo" org={org} players={[member]} />).body.textContent).toContain('Mitglied')
+    const off = html(<PlayersScreen orgSlug="demo" org={{ ...org, modules: ['camps', 'players'] }} players={[member]} />)
+    expect(off.querySelector('main a')?.textContent).not.toContain('Mitglied')
+  })
 })
 
 describe('Spielerakte (Darstellung)', () => {
@@ -108,6 +115,12 @@ describe('Spielerakte (Darstellung)', () => {
     expect(member.querySelector('header')?.textContent).toContain('Mitglied')
     expect(html(screen()).querySelector('header')?.textContent).not.toContain('Mitglied')
     expect(html(screen(record({ player: { ...record().player, is_member: false } }))).querySelector('header')?.textContent).not.toContain('Mitglied')
+  })
+
+  it('Kopf ohne Mitglieder-Modul: kein Chip „Mitglied“, auch bei is_member', () => {
+    const rec = record({ player: { ...record().player, is_member: true } })
+    const doc = html(<PlayerRecordScreen orgSlug="demo" org={{ ...org, modules: ['camps', 'players'] }} record={rec} today={TODAY} />)
+    expect(doc.querySelector('header')?.textContent).not.toContain('Mitglied')
   })
 
   it('angepinnter Block ist eine benannte Region (eigener Scrollbereich am Desktop)', () => {

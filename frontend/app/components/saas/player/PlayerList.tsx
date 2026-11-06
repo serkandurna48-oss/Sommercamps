@@ -16,7 +16,12 @@ function plural(count: number, one: string, many: string): string {
 
 /** Spielerliste mit Suche im Browser. Der Suchbegriff bleibt im Komponentenzustand
  * (nicht in der URL, kein Request); Namen sind Kinderdaten. */
-export default function PlayerList({ orgSlug, players }: { orgSlug: string; players: PlayerSummary[] }) {
+export default function PlayerList({ orgSlug, players, showMembership = true }: {
+  orgSlug: string
+  players: PlayerSummary[]
+  /** Members module on: show the "Mitglied" chip. */
+  showMembership?: boolean
+}) {
   const id = useId()
   const [q, setQ] = useState('')
   const filtered = q.trim() !== ''
@@ -49,7 +54,7 @@ export default function PlayerList({ orgSlug, players }: { orgSlug: string; play
                 className="cp-focus cp-table-row cp-player-cols cp-row-link min-h-[56px]">
                 <span className="flex min-w-0 flex-wrap items-center gap-2">
                   <span className="cp-subheading min-w-0 break-words" style={{ color: 'var(--cp-ink)' }}>{player.first_name} {player.last_name}</span>
-                  {player.is_member && <StatusChip tone="ok" label="Mitglied" />}
+                  {showMembership && player.is_member && <StatusChip tone="ok" label="Mitglied" />}
                 </span>
                 <span className="cp-chip cp-num" style={{ color: 'var(--cp-muted)' }}>{plural(player.age, 'Jahr', 'Jahre')}</span>
                 <span className="cp-chip" style={{ color: 'var(--cp-muted)' }}>

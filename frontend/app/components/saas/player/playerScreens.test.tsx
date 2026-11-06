@@ -142,7 +142,12 @@ describe('Spielerakte (Darstellung)', () => {
     expect(open.textContent).toContain('Verwerfen')
     const done = doc.querySelector('li[data-goal-status="erreicht"]')!
     expect(done.textContent).toContain('Wieder öffnen')
-    expect(doc.querySelector('form[aria-label="Ziel hinzufügen"]')).not.toBeNull()
+    // Neues Ziel: erst nach Klick auf „Ziel hinzufügen“ (bei vorhandenen Zielen), sonst sofort sichtbar.
+    expect(doc.querySelector('form[aria-label="Ziel hinzufügen"]')).toBeNull()
+    expect([...doc.querySelectorAll('section[aria-labelledby="goals-heading"] button')].some(b => b.textContent === 'Ziel hinzufügen')).toBe(true)
+    expect(html(screen(record({ goals: [] }))).querySelector('form[aria-label="Ziel hinzufügen"]')).not.toBeNull()
+    // Offene Ziele stehen vor erledigten.
+    expect([...doc.querySelectorAll('li[data-goal-status]')].map(li => li.getAttribute('data-goal-status'))).toEqual(['offen', 'erreicht'])
   })
 
   it('Messwerte: je Metrik ein SVG-Verlauf, Sprint als „niedriger ist besser“, Werte mit Einheit', () => {
@@ -157,7 +162,24 @@ describe('Spielerakte (Darstellung)', () => {
     expect(doc.querySelector('figure[data-metric="jonglieren"]')).toBeNull()
     expect(doc.body.textContent).toContain('2,14 s')
     expect(doc.body.textContent).toContain('150 cm')
-    expect(doc.querySelector('form[aria-label="Messwert hinzufügen"]')).not.toBeNull()
+    expect(doc.querySelector('form[aria-label="Messwert hinzufügen"]')).toBeNull()
+    expect([...doc.querySelectorAll('section[aria-labelledby="measurements-heading"] button')].some(b => b.textContent === 'Messwert hinzufügen')).toBe(true)
+    expect(html(screen(record({ measurements: [] }))).querySelector('form[aria-label="Messwert hinzufügen"]')).not.toBeNull()
+  })
+
+  it('Messwerte: letzter Wert und Veränderung nach „besser/schlechter“ (Sprint sinkend = besser)', () => {
+    const doc = html(screen())
+    const sprint = doc.querySelector('figure[data-metric="sprint_10m"]')!
+    expect(sprint.querySelector('[data-trend="better"]')?.textContent).toContain('\u22120,26 s besser')
+    expect(sprint.textContent).toContain('2,14 s')
+    expect(sprint.textContent).toContain('2 Messungen')
+    // Einzelwert: kein Vergleich.
+    expect(doc.querySelector('figure[data-metric="standweitsprung"] [data-trend]')).toBeNull()
+    const worse = html(screen(record({ measurements: [
+      { id: 'a', player_id: 'p1', measured_on: '2027-01-10', metric: 'sprint_10m', value: 2.1, unit: 's', note: null, created_at: '2027-01-10T19:00:00Z', updated_at: '' },
+      { id: 'b', player_id: 'p1', measured_on: '2027-03-29', metric: 'sprint_10m', value: 2.3, unit: 's', note: null, created_at: '2027-03-29T19:00:00Z', updated_at: '' },
+    ] })))
+    expect(worse.querySelector('[data-trend="worse"]')?.textContent).toContain('+0,2 s schlechter')
   })
 
   it('Buchungen mit Titel, lokalem Datum/Uhrzeit und Zahlstatus', () => {
@@ -181,13 +203,46 @@ describe('Spielerakte (Darstellung)', () => {
 
   it('Schnellerfassung ist vorbelegt (Datum + Termin) und fokussiert bei ?neu=1&termin=', () => {
     const doc = html(screen(record(), { neu: '1', termin: 'c2' }))
+    expect(doc.querySelector('#note-composer')).not.toBeNull()
     const form = doc.querySelector('form[aria-label="Neue Notiz"]')!
     expect(form.querySelector<HTMLInputElement>('input[type="date"]')!.getAttribute('value')).toBe('2027-03-01')
     expect(form.querySelector<HTMLOptionElement>('option[selected]')?.getAttribute('value')).toBe('c2')
     expect(form.querySelector('textarea[autofocus]')).not.toBeNull()
+    // Ohne ?neu=1 bleibt die Schnellerfassung zu; der Kopf bietet „Notiz schreiben“ an.
     const plain = html(screen())
-    expect(plain.querySelector('textarea[autofocus]')).toBeNull()
-    expect(plain.querySelector('form[aria-label="Neue Notiz"] input[type="date"]')!.getAttribute('value')).toBe(TODAY)
+    expect(plain.querySelector('form[aria-label="Neue Notiz"]')).toBeNull()
+    expect(plain.querySelector('textarea')).toBeNull()
+    expect(plain.querySelector('header [data-write-note]')?.textContent).toBe('Notiz schreiben')
+  })
+
+  it('Kopf: Kennzahlen zu Buchungen, letztem Training und Notizen', () => {
+    const text = html(screen()).querySelector('header')!.textContent ?? ''
+    expect(text).toContain('Buchungen2')
+    expect(text).toContain('Letztes Training29.03.2027')
+    expect(text).toContain('Notizen2')
+    const none = html(screen(record({ bookings: [], notes: [] }))).querySelector('header')!.textContent ?? ''
+    expect(none).toContain('Letztes Training–')
+  })
+
+  it('Reihenfolge (auch am Handy): Ziele, Messwerte, Notizen, Buchungen', () => {
+    const doc = html(screen())
+    const order = ['goals-heading', 'measurements-heading', 'notes-heading', 'bookings-heading']
+    const positions = order.map(id => [...doc.querySelectorAll('[id]')].findIndex(el => el.id === id))
+    expect(positions.every(position => position >= 0)).toBe(true)
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions)
+    // Ziele und Messwerte teilen sich den angepinnten Block.
+    expect(doc.querySelector('[data-pinned] section[aria-labelledby="goals-heading"]')).not.toBeNull()
+    expect(doc.querySelector('[data-pinned] section[aria-labelledby="measurements-heading"]')).not.toBeNull()
+    expect(doc.querySelector('[data-pinned] #notes-heading')).toBeNull()
+  })
+
+  it('lange Notizen sind gekürzt mit „mehr“, kurze nicht; Buchungen eingeklappt', () => {
+    const long = 'Lange Notiz. '.repeat(30)
+    const doc = html(screen(record({ notes: [{ ...record().notes[0], body: long }, record().notes[1]] })))
+    const [first, second] = [...doc.querySelectorAll('li[data-note-id]')]
+    expect([...first.querySelectorAll('button')].some(b => b.textContent === 'mehr')).toBe(true)
+    expect([...second.querySelectorAll('button')].some(b => b.textContent === 'mehr')).toBe(false)
+    expect(doc.querySelector('section[aria-labelledby="bookings-heading"] details:not([open])')).not.toBeNull()
   })
 
   it('alle ids sind eindeutig, Labels zeigen auf genau ein Feld', () => {
@@ -252,7 +307,9 @@ describe('Schnellerfassung (interaktiv)', () => {
     el.dispatchEvent(new Event('input', { bubbles: true }))
   }
   const button = (name: string | RegExp) => [...container.querySelectorAll('button')].find(b => (typeof name === 'string' ? b.textContent === name : name.test(b.textContent ?? '')))!
+  const noteDelete = () => [...container.querySelectorAll('li[data-note-id="n2"] button')].find(b => b.textContent === 'Löschen') as HTMLButtonElement
   const form = () => container.querySelector<HTMLFormElement>('form[aria-label="Neue Notiz"]')!
+  const openComposer = () => act(async () => container.querySelector<HTMLButtonElement>('[data-write-note]')!.click())
   async function submit() {
     await act(async () => {
       form().dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
@@ -284,6 +341,7 @@ describe('Schnellerfassung (interaktiv)', () => {
   it('behält die Eingaben bei einem Fehler und meldet ihn als alert ohne Notizinhalt', async () => {
     vi.mocked(createNoteAction).mockResolvedValue({ error: 'Notiz konnte nicht gespeichert werden.' })
     await act(() => root.render(screen()))
+    await openComposer()
     await act(async () => setValue(container.querySelector<HTMLTextAreaElement>('textarea')!, SECRET))
     await act(async () => button('Taktik').click())
     await submit()
@@ -295,6 +353,7 @@ describe('Schnellerfassung (interaktiv)', () => {
 
   it('weist einen http-Link schon im Browser mit Hinweis ab', async () => {
     await act(() => root.render(screen()))
+    await openComposer()
     const video = container.querySelector<HTMLInputElement>('input[type="url"]')!
     await act(async () => setValue(video, 'http://example.test/v'))
     expect(container.textContent).toContain('Bitte einen Link, der mit https:// beginnt.')
@@ -302,11 +361,33 @@ describe('Schnellerfassung (interaktiv)', () => {
     expect(container.textContent).not.toContain('Bitte einen Link, der mit https:// beginnt.')
   })
 
+  it('„Notiz schreiben“ öffnet das Formular oben in der Notizliste und schließen blendet es wieder aus', async () => {
+    await act(() => root.render(screen()))
+    expect(form()).toBeNull()
+    await openComposer()
+    expect(form()).not.toBeNull()
+    const list = container.querySelector('section[aria-labelledby="notes-heading"]')!
+    expect(list.contains(form())).toBe(true)
+    expect(form().compareDocumentPosition(list.querySelector('li[data-note-id]')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await act(async () => button('Schließen').click())
+    expect(form()).toBeNull()
+  })
+
+  it('„mehr“ klappt eine lange Notiz auf und „weniger“ wieder zu', async () => {
+    const long = 'Lange Notiz. '.repeat(30)
+    await act(() => root.render(screen(record({ notes: [{ ...record().notes[0], body: long }] }))))
+    const body = container.querySelector('li[data-note-id="n2"] p.cp-body')!
+    expect(body.className).toContain('line-clamp-3')
+    await act(async () => button('mehr').click())
+    expect(body.className).not.toContain('line-clamp-3')
+    expect(button('weniger').getAttribute('aria-expanded')).toBe('true')
+  })
+
   it('Löschen fragt inline nach (kein Browser-Dialog) und ruft erst nach Bestätigung die Aktion auf', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     vi.mocked(deleteNoteAction).mockResolvedValue({ error: null, success: 'Notiz gelöscht.' })
     await act(() => root.render(screen()))
-    await act(async () => button('Löschen').click())
+    await act(async () => noteDelete().click())
     expect(container.textContent).toContain('Notiz endgültig löschen?')
     expect(deleteNoteAction).not.toHaveBeenCalled()
     expect(confirm).not.toHaveBeenCalled()
@@ -321,7 +402,7 @@ describe('Schnellerfassung (interaktiv)', () => {
   it('gibt bei fehlgeschlagenem Löschen einen alert aus', async () => {
     vi.mocked(deleteNoteAction).mockResolvedValue({ error: 'Notiz konnte nicht gelöscht werden.', success: null })
     await act(() => root.render(screen()))
-    await act(async () => button('Löschen').click())
+    await act(async () => noteDelete().click())
     await act(async () => {
       container.querySelector<HTMLFormElement>('li[data-note-id="n2"] form')!.requestSubmit()
       await new Promise(resolve => setTimeout(resolve, 20))

@@ -32,7 +32,7 @@ const TOGGLE_BASE = 'min-h-[48px] px-4'
  * gehören diesem Formular und bleiben bei einem Fehler erhalten. Notiztexte
  * gelangen nie in URL, Log oder Konsole.
  */
-export default function QuickNoteForm({ orgSlug, playerId, bookings, initialDate, initialCampId = null, note, autoFocus = false, onDone }: {
+export default function QuickNoteForm({ orgSlug, playerId, bookings, initialDate, initialCampId = null, note, autoFocus = false, onDone, onClose }: {
   orgSlug: string
   playerId: string
   bookings: PlayerBooking[]
@@ -42,6 +42,8 @@ export default function QuickNoteForm({ orgSlug, playerId, bookings, initialDate
   note?: PlayerNote
   autoFocus?: boolean
   onDone?: () => void
+  /** Neue Notiz: schließt das Formular (Schaltfläche „Schließen“). */
+  onClose?: () => void
 }) {
   const id = useId()
   const bodyRef = useRef<HTMLTextAreaElement>(null)
@@ -169,6 +171,9 @@ export default function QuickNoteForm({ orgSlug, playerId, bookings, initialDate
         </Button>
         {note && (
           <Button type="button" disabled={pending} onClick={onDone} className="w-full min-h-[52px] sm:w-auto">Abbrechen</Button>
+        )}
+        {!note && onClose && (
+          <Button type="button" disabled={pending} onClick={onClose} className="w-full min-h-[52px] sm:w-auto">Schließen</Button>
         )}
       </div>
     </form>

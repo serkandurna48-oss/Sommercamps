@@ -100,7 +100,7 @@ def test_create_list_search_toggle(ctx):
     r = cl.post(_base(c), headers=c["headers"], json={"first_name": "Anna", "last_name": "Müller", "birth_date": "2015-03-05", "member_number": "7"})
     assert r.status_code == 201
     body = r.json()
-    assert set(body) == {"id", "first_name", "last_name", "birth_date", "member_number", "active", "source", "created_at"}
+    assert set(body) == {"id", "first_name", "last_name", "birth_date", "member_number", "active", "source", "extra", "created_at"}
     assert body["source"] == "manual" and body["active"] is True
     cl.post(_base(c), headers=c["headers"], json={"first_name": "Ben", "last_name": "Beispiel", "birth_date": "2014-01-01"})
     assert len(cl.get(_base(c), headers=c["headers"]).json()) == 2

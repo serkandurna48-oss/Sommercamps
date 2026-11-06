@@ -12,16 +12,18 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ..admin_resolve import require_organization
 from ..db import DatabaseBusy
 from ..auth_deps import AuthContext, require_org_access
-from ..membership_csv import MembershipCsvError, parse_membership_csv
+from ..membership_csv import (
+    MAX_EXTRA_FIELDS, MAX_EXTRA_VALUE_LEN, MembershipCsvError, clean_extra_label, parse_membership_csv,
+)
 from ..repositories import memberships as memberships_repo
 from ..repositories import platform_roles
 
@@ -42,6 +44,7 @@ class MemberOut(BaseModel):
     member_number: Optional[str]
     active: bool
     source: str
+    extra: dict[str, str] = Field(default_factory=dict)
     created_at: datetime
 
 
@@ -52,12 +55,27 @@ class MemberCreate(BaseModel):
     member_number: Optional[str] = Field(default=None, max_length=50)
 
 
-class MemberActiveUpdate(BaseModel):
-    active: bool
+# A single member may collect more labels than one import allows (merge on re-import).
+MAX_MEMBER_EXTRA_FIELDS = 2 * MAX_EXTRA_FIELDS
+
+
+class MemberUpdate(BaseModel):
+    """PATCH body: `active` and/or `extra` (replaces all extra fields)."""
+    active: Optional[bool] = None
+    extra: Optional[dict[str, str]] = Field(default=None, max_length=MAX_MEMBER_EXTRA_FIELDS)
+
+    @model_validator(mode="after")
+    def _not_empty(self) -> "MemberUpdate":
+        if self.active is None and self.extra is None:
+            raise ValueError("active or extra required")
+        return self
 
 
 class MemberImportIn(BaseModel):
     csv: str
+    # {columnIndex: "first_name"|"last_name"|"birth_date"|"member_number"|{"extra": label}|null}.
+    # Validated in membership_csv.parse_mapping so errors keep the {row, field, code} shape.
+    mapping: Optional[dict[str, Any]] = None
 
 
 class MemberImportOut(BaseModel):
@@ -116,19 +134,41 @@ def create_member(
     return row
 
 
+def _clean_extra(extra: dict[str, str]) -> dict[str, str]:
+    """Trim labels/values, drop empty values; 422 {field, code} without values."""
+    cleaned: dict[str, str] = {}
+    for raw_label, raw_value in extra.items():
+        label = clean_extra_label(raw_label)
+        if label is None:
+            raise HTTPException(status_code=422, detail={"code": "validation_error", "field": "extra", "reason": "invalid_label"})
+        if label.casefold() in {k.casefold() for k in cleaned}:
+            raise HTTPException(status_code=422, detail={"code": "validation_error", "field": "extra", "reason": "duplicate_label"})
+        value = raw_value.strip()
+        if len(value) > MAX_EXTRA_VALUE_LEN:
+            raise HTTPException(status_code=422, detail={"code": "validation_error", "field": "extra", "reason": "too_long"})
+        if value:
+            cleaned[label] = value
+    return cleaned
+
+
 @router.patch("/organizations/{organization_slug}/club-members/{member_id}", response_model=MemberOut)
-def set_member_active(
+def update_member(
     organization_slug: str,
     member_id: UUID,
-    data: MemberActiveUpdate,
+    data: MemberUpdate,
     auth: AuthContext = Depends(require_org_access),
 ) -> dict:
     organization = require_organization(organization_slug)
-    row = memberships_repo.set_member_active(organization["id"], member_id, data.active)
+    extra = _clean_extra(data.extra) if data.extra is not None else None
+    row = memberships_repo.update_member(organization["id"], member_id, active=data.active, extra=extra)
     if row is None:
         raise HTTPException(status_code=404, detail="Member not found")
-    logger.info("Member active state changed (slug=%s, active=%s)", organization_slug, data.active)
-    _audit(auth, organization, "membership.active_changed", str(row["id"]), {"active": data.active})
+    if data.active is not None:
+        logger.info("Member active state changed (slug=%s, active=%s)", organization_slug, data.active)
+        _audit(auth, organization, "membership.active_changed", str(row["id"]), {"active": data.active})
+    if extra is not None:
+        logger.info("Member extra fields changed (slug=%s, fields=%d)", organization_slug, len(extra))
+        _audit(auth, organization, "membership.extra_changed", str(row["id"]), {"fields": len(extra)})
     return row
 
 
@@ -143,7 +183,7 @@ def import_members(
             detail={"code": "import_invalid", "errors": [{"row": 1, "field": "file", "code": "file_too_large"}]},
         )
     try:
-        rows = parse_membership_csv(data.csv)
+        rows = parse_membership_csv(data.csv, data.mapping)
     except MembershipCsvError as exc:
         logger.info("Member import rejected (slug=%s, errors=%d)", organization_slug, len(exc.errors))
         raise HTTPException(
@@ -160,5 +200,10 @@ def import_members(
         logger.error("Member import failed (slug=%s, error=%s)", organization_slug, type(exc).__name__)
         raise HTTPException(status_code=500, detail="Import failed, nothing was saved") from None
     logger.info("Member import done (slug=%s, rows=%d)", organization_slug, result["rows"])
-    _audit(auth, organization, "memberships.imported", None, result)
+    metadata = dict(result)
+    if data.mapping is not None:
+        # Count only: labels are chosen by the club and stay out of the audit log.
+        metadata["mapped"] = True
+        metadata["extra_fields"] = sum(1 for t in data.mapping.values() if isinstance(t, dict))
+    _audit(auth, organization, "memberships.imported", None, metadata)
     return result

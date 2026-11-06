@@ -194,6 +194,11 @@ def find_or_create_player_id(organization_id: UUID, first_name: str, last_name: 
 
 
 _PLAYER_FIELDS = "p.id, p.organization_id, p.first_name, p.last_name, p.birth_date, p.created_at, p.updated_at"
+# Active club member with the same normalised name and birth date (same rule as the
+# member price at booking). Org-filtered on both sides.
+_IS_MEMBER = """exists (select 1 from organization_memberships m
+                     where m.organization_id = p.organization_id and m.match_key = p.match_key
+                       and m.birth_date = p.birth_date and m.active) as is_member"""
 
 
 def list_players(organization_id: UUID) -> list[dict]:
@@ -204,7 +209,7 @@ def list_players(organization_id: UUID) -> list[dict]:
     where = "where p.organization_id = %s"
     with db.get_cursor() as cur:
         cur.execute(
-            f"""select {_PLAYER_FIELDS},
+            f"""select {_PLAYER_FIELDS}, {_IS_MEMBER},
                    date_part('year', age(current_date, p.birth_date))::int as age,
                    (select max(c.start_date) from camp_registrations r
                       join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
@@ -228,7 +233,7 @@ def list_players(organization_id: UUID) -> list[dict]:
 def get_player(organization_id: UUID, player_id: UUID) -> Optional[dict]:
     with db.get_cursor() as cur:
         cur.execute(
-            f"""select {_PLAYER_FIELDS},
+            f"""select {_PLAYER_FIELDS}, {_IS_MEMBER},
                    date_part('year', age(current_date, p.birth_date))::int as age
                 from players p where p.id = %s and p.organization_id = %s""",
             (player_id, organization_id),

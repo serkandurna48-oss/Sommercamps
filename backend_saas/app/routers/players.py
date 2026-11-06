@@ -54,6 +54,7 @@ class PlayerSummaryOut(BaseModel):
     booking_count: int
     note_count: int
     open_goal_count: int
+    is_member: bool = False  # active club member (same match_key + birth date)
 
 
 class PlayerOut(BaseModel):
@@ -62,6 +63,7 @@ class PlayerOut(BaseModel):
     last_name: str
     birth_date: date
     age: int
+    is_member: bool = False  # active club member (same match_key + birth date)
 
 
 class BookingOut(BaseModel):

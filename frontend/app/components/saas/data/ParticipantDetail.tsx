@@ -14,6 +14,7 @@ import Button, { ButtonLink } from '../ui/Button'
 import Field from '../ui/Field'
 import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 import InvoiceSection from '../billing/InvoiceSection'
+import { billingAddressText } from '../participantPrint'
 
 /**
  * Inline-Detail (Abschnitt 4.3) — kein Dialog, wächst an Ort und Stelle
@@ -198,6 +199,16 @@ export default function ParticipantDetail({
                 {de.command.fieldPickupAuthorized}
               </dt>
               <dd className="cp-body">{registration.pickup_authorized ?? '–'}</dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
+                Rechnungsanschrift
+              </dt>
+              <dd className="cp-body">
+                {billingAddressText(registration)
+                  ? <>{registration.parent_street}<br />{registration.parent_postal_code} {registration.parent_city}</>
+                  : <span style={{ color: 'var(--cp-muted)' }}>Keine Anschrift angegeben (kostenlose oder ältere Buchung).</span>}
+              </dd>
             </div>
           </dl>
         )}

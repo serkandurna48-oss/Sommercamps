@@ -97,6 +97,20 @@ it('shows configured position and origin answers in participant detail', async (
   expect(section.textContent).toContain('FC Teststadt')
 })
 
+it('zeigt die Rechnungsanschrift schreibgeschützt in den Teilnehmerdetails', async () => {
+  await render({ ...registration, parent_street: 'Hauptstraße 5', parent_postal_code: '34117', parent_city: 'Kassel' })
+  await act(() => container.querySelector<HTMLButtonElement>('button[aria-expanded]')!.click())
+  const dt = [...container.querySelectorAll('dt')].find(item => item.textContent?.trim() === 'Rechnungsanschrift')!
+  expect(dt.nextElementSibling!.textContent).toBe('Hauptstraße 534117 Kassel')
+  expect(container.querySelector('[name="parent_street"]')).toBeNull()
+})
+
+it('zeigt ohne Anschrift einen ruhigen Hinweis', async () => {
+  await render()
+  await act(() => container.querySelector<HTMLButtonElement>('button[aria-expanded]')!.click())
+  expect(container.textContent).toContain('Keine Anschrift angegeben')
+})
+
 describe('participant correction workflow', () => {
   it('allows a second edit after a successful save without reloading', async () => {
     await render()

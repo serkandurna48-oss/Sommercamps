@@ -20,6 +20,12 @@ export const DEFAULT_PRINT_FIELDS: Record<PrintPurpose, string[]> = {
   participants: ['name', 'year'],
 }
 
+/** "Straße, PLZ Ort" or empty when the booking has no (complete) billing address. */
+export function billingAddressText(r: Pick<RegistrationAdmin, 'parent_street' | 'parent_postal_code' | 'parent_city'>): string {
+  if (!r.parent_street || !r.parent_postal_code || !r.parent_city) return ''
+  return `${r.parent_street}, ${r.parent_postal_code} ${r.parent_city}`
+}
+
 /** Only explicit fields from the existing admin contract are offered. */
 export function participantPrintFields(questions: RegistrationQuestion[] = []): ParticipantPrintField[] {
   return [
@@ -32,6 +38,7 @@ export function participantPrintFields(questions: RegistrationQuestion[] = []): 
     { id: 'parent', header: 'Elternteil', group: 'Kontakt und Betreuung', size: 'm', value: r => `${r.parent_first_name} ${r.parent_last_name}` },
     { id: 'email', header: 'E-Mail', group: 'Kontakt und Betreuung', size: 'l', value: r => r.parent_email },
     { id: 'phone', header: 'Telefon', group: 'Kontakt und Betreuung', size: 'm', value: r => r.parent_phone },
+    { id: 'address', header: 'Rechnungsanschrift', group: 'Kontakt und Betreuung', size: 'l', value: r => billingAddressText(r) },
     { id: 'emergency', header: 'Notfallkontakt', group: 'Kontakt und Betreuung', size: 'l', value: r => [r.emergency_contact_name, r.emergency_contact_phone].filter(Boolean).join(' · ') },
     { id: 'pickup', header: 'Abholberechtigt', group: 'Kontakt und Betreuung', size: 'l', value: r => r.pickup_authorized },
     { id: 'allergies', header: 'Allergien', group: 'Kontakt und Betreuung', size: 'l', alert: true, value: r => r.allergies },

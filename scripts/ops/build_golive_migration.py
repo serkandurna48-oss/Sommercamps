@@ -50,7 +50,8 @@ out = [
     "--   ersten Fehler ab (Annahme fuer den Editor, mit psql belegt).",
     "-- DATEN AENDERN (Backfill): 20261106100000 (players aus Anmeldungen), 20261106130000 (modules),",
     "--   20261106140000 (Gebuehrenregel starter 6,90 % fuer JEDEN Verein), 20261107100000",
-    "--   (booked_price_cents = aktueller Camp-Preis), 20261107120000 (anonymized_at fuer Platzhalter-Zeilen).",
+    "--   (booked_price_cents = aktueller Camp-Preis), 20261107120000 (anonymized_at fuer Platzhalter-Zeilen),",
+    "--   20261107140000 (Kontoart destination fuer vorhandene Express-Konten, auf Prod erwartet 0 Zeilen).",
     "-- Rollback: je Datei im Dateikopf; Gesamt-Rollback = Restore aus dem Backup.",
     "-- Erzeugt mit scripts/ops/build_golive_migration.py, geprueft mit scripts/ops/verify_golive_migration.sh.",
     "-- ============================================================",
@@ -91,7 +92,9 @@ out += [
     "       (select count(*) from information_schema.columns where table_schema = 'public'",
     "          and table_name = 'camp_registrations' and column_name = 'anonymized_at') as anonymized_at_spalte,",
     "       (select count(*) from information_schema.columns where table_schema = 'public'",
-    "          and table_name = 'camp_registrations' and column_name = 'parent_street') as rechnungsanschrift_spalte;",
+    "          and table_name = 'camp_registrations' and column_name = 'parent_street') as rechnungsanschrift_spalte,",
+    "       (select count(*) from information_schema.columns where table_schema = 'public'",
+    "          and table_name = 'organizations' and column_name = 'stripe_express_account_kind') as kontoart_spalte;",
     "",
 ]
 dest = root / "supabase/golive/PROD-MIGRATION-2026-11.sql"

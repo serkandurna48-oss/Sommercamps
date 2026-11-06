@@ -1,5 +1,6 @@
-"""Billing B2: Stripe Connect Express onboarding, destination charges with
-application fee, platform webhook, refunds.
+"""Billing B2: Stripe Connect onboarding (Accounts v2, Managed Risk), destination
+charges with application fee (B2 Express accounts, staging), platform webhook,
+refunds. Managed Risk direct charges: tests/test_billing_managed_risk.py.
 
 Stripe is always mocked (signatures are real HMACs with test secrets); real
 local Postgres, synthetic data only.
@@ -102,7 +103,30 @@ class FakeStripe:
                     raise outer.refund_error
                 return {"id": "re_test_1", "status": "succeeded", "amount": kw.get("amount", 1000)}
 
+        class ApplicationFee:
+            @staticmethod
+            def retrieve(fee_id, **kw):
+                outer.calls.append(("ApplicationFee.retrieve", fee_id, kw))
+                return dict(outer.application_fee)
+
+        class V2Accounts:
+            @staticmethod
+            def create(params, options=None):
+                outer.calls.append(("v2.accounts.create", params, options))
+                if outer.account_error is not None:
+                    raise outer.account_error
+                return {"id": outer.express, "object": "v2.core.account"}
+
+        class V2AccountLinks:
+            @staticmethod
+            def create(params, options=None):
+                outer.calls.append(("v2.account_links.create", params, options))
+                return {"object": "v2.core.account_link", "url": f"https://accounts.stripe.com/r/{params['account']}#alu_test_x"}
+
+        self.application_fee = {"id": "fee_test_1", "amount": 50, "amount_refunded": 0}
         self.Account, self.AccountLink, self.PaymentIntent, self.Refund = Account, AccountLink, PaymentIntent, Refund
+        self.ApplicationFee = ApplicationFee
+        self.v2 = SimpleNamespace(core=SimpleNamespace(accounts=V2Accounts, account_links=V2AccountLinks))
         self.checkout = SimpleNamespace(Session=Session)
         self.Webhook = stripe.Webhook  # real signature verification
 
@@ -129,6 +153,7 @@ def env(real_db, monkeypatch):
     state = {"settings": _settings()}
     monkeypatch.setattr(payments, "get_settings", lambda: state["settings"])
     monkeypatch.setattr(payments, "_stripe_client", lambda: fake)
+    monkeypatch.setattr(payments, "_stripe_v2", lambda: fake)
     payments.checkout_limiter.reset()
     payments.stripe_admin_limiter.reset()
     other, actor = uuid4(), uuid4()
@@ -208,37 +233,63 @@ def _completed(session_id, intent, amount=1000, **extra):
 
 # ---------- onboarding and status ----------
 
-def test_onboarding_creates_express_account_once_and_returns_link(env):
+def test_onboarding_creates_v2_managed_risk_account_once_and_returns_link(env):
     path = f"/admin/organizations/{env.slug}/payments/stripe"
     assert env.client.get(path, headers=env.admin()).json()["state"] == "not_set_up"
     r = env.client.post(f"{path}/onboarding", headers=env.admin(), json={"business_type": "non_profit"})
     assert r.status_code == 200, r.text
-    assert r.json()["url"].startswith("https://connect.stripe.com/")
-    (_, created), = env.fake.named("Account.create")
-    assert "type" not in created
-    assert created["controller"] == {
-        "stripe_dashboard": {"type": "express"}, "requirement_collection": "stripe",
-        "fees": {"payer": "application"}, "losses": {"payments": "application"}}
-    assert created["country"] == "DE" and created["business_type"] == "non_profit"
-    assert created["capabilities"] == {"card_payments": {"requested": True}, "transfers": {"requested": True}}
-    assert created["metadata"]["campspilot"] == "1"
-    assert created["idempotency_key"] == f"campspilot-express-v2-{env.org}"
-    (_, link), = env.fake.named("AccountLink.create")
-    assert link["account"] == env.express and link["type"] == "account_onboarding"
-    assert link["return_url"] == f"https://example.com/pilot/{env.slug}/konfiguration?stripe=return#zahlungen"
-    assert link["refresh_url"].endswith("?stripe=refresh#zahlungen")
+    assert r.json()["url"].startswith("https://accounts.stripe.com/")
+    assert env.fake.named("Account.create") == [] and env.fake.named("AccountLink.create") == []
+    (_, created, options), = env.fake.named("v2.accounts.create")
+    assert options == {"idempotency_key": f"campspilot-acct-v2-{env.org}-{payments._params_hash(created)}"}
+    assert created["dashboard"] == "full"
+    assert created["identity"] == {"country": "de", "entity_type": "non_profit"}
+    assert created["defaults"]["responsibilities"] == {"fees_collector": "stripe", "losses_collector": "stripe"}
+    assert created["defaults"]["currency"] == "eur"
+    assert created["configuration"] == {"merchant": {"capabilities": {"card_payments": {"requested": True}}}}
+    assert created["metadata"] == {"campspilot": "1", "organization_id": str(env.org)}
+    assert created["contact_email"] == "review@example.com"  # club contact (no billing profile yet)
+    assert "type" not in created and "controller" not in created and "recipient" not in created["configuration"]
+    (_, link, _), = env.fake.named("v2.account_links.create")
+    assert link == {"account": env.express, "use_case": {"type": "account_onboarding", "account_onboarding": {
+        "refresh_url": f"https://example.com/pilot/{env.slug}/konfiguration?stripe=refresh#zahlungen",
+        "return_url": f"https://example.com/pilot/{env.slug}/konfiguration?stripe=return#zahlungen"}}}
     with env.cursor() as cur:
-        cur.execute("select stripe_express_account_id, stripe_express_business_type, stripe_account_id "
-                    "from organizations where id=%s", (env.org,))
+        cur.execute("select stripe_express_account_id, stripe_express_business_type, stripe_express_account_kind, "
+                    "stripe_account_id from organizations where id=%s", (env.org,))
         row = cur.fetchone()
-    assert (row["stripe_express_account_id"], row["stripe_express_business_type"], row["stripe_account_id"]) == (
-        env.express, "non_profit", None)  # legacy column untouched
+    assert (row["stripe_express_account_id"], row["stripe_express_business_type"],
+            row["stripe_express_account_kind"], row["stripe_account_id"]) == (
+        env.express, "non_profit", "direct_fee", None)  # legacy column untouched
     status = env.client.get(path, headers=env.admin()).json()
-    assert status["state"] == "incomplete" and status["requirements_due"] == 1
+    assert status["state"] == "incomplete" and status["account_kind"] == "direct_fee"
     assert "acct_" not in json.dumps(status)  # no account ids to the club
     # Continue onboarding: new link, same account.
     assert env.client.post(f"{path}/onboarding", headers=env.admin()).status_code == 200
-    assert len(env.fake.named("Account.create")) == 1 and len(env.fake.named("AccountLink.create")) == 2
+    assert len(env.fake.named("v2.accounts.create")) == 1 and len(env.fake.named("v2.account_links.create")) == 2
+
+
+def test_onboarding_v2_uses_billing_email_and_company_type(env):
+    with env.cursor() as cur:
+        cur.execute(
+            """insert into organization_billing_profiles (organization_id, legal_name, street, postal_code, city,
+                   tax_number, tax_status, default_vat_rate, invoice_number_prefix, invoice_email)
+               values (%s, 'Test GmbH', 'Weg 1', '34225', 'Baunatal', '12/345/67890', 'ust_pflichtig', 19, 'RE',
+                       'rechnung@example.com')""", (env.org,))
+    r = env.client.post(f"/admin/organizations/{env.slug}/payments/stripe/onboarding", headers=env.admin(),
+                        json={"business_type": "company"})
+    assert r.status_code == 200, r.text
+    (_, created, _), = env.fake.named("v2.accounts.create")
+    assert created["identity"]["entity_type"] == "company" and created["contact_email"] == "rechnung@example.com"
+
+
+def test_onboarding_continues_existing_destination_account_with_v1_link(env):
+    _org(env, stripe_express_account_id=env.express, stripe_express_account_kind="destination")
+    r = env.client.post(f"/admin/organizations/{env.slug}/payments/stripe/onboarding", headers=env.admin())
+    assert r.status_code == 200 and r.json()["url"].startswith("https://connect.stripe.com/")
+    (_, link), = env.fake.named("AccountLink.create")
+    assert link["account"] == env.express and link["type"] == "account_onboarding"
+    assert env.fake.named("v2.accounts.create") == [] and env.fake.named("v2.account_links.create") == []
 
 
 def test_onboarding_shows_stripe_reason_for_config_errors(env):
@@ -251,6 +302,23 @@ def test_onboarding_shows_stripe_reason_for_config_errors(env):
         "Stripe hat die Einrichtung abgelehnt: You must complete your platform profile to create connected accounts.")
     env.fake.account_error = stripe.error.APIConnectionError("down")
     assert env.client.post(path, headers=env.admin()).status_code == 503
+    # v2 rejection of a misconfigured platform (the sandbox error that led to Managed Risk).
+    env.fake.account_error = stripe.error.InvalidRequestError(
+        "Use Accounts v2 and set `losses_collector` to `stripe`", None, code="account_creation_invalid")
+    r = env.client.post(path, headers=env.admin())
+    assert r.status_code == 409 and "losses_collector" in r.json()["detail"]
+    # Typed v2 errors are no InvalidRequestError: still Stripe's reason, 409.
+    env.fake.account_error = stripe.error.FeatureNotEnabledError("Accounts v2 is not enabled", http_status=400)
+    r = env.client.post(path, headers=env.admin())
+    assert r.status_code == 409 and r.json()["detail"].endswith("Accounts v2 is not enabled")
+    env.fake.account_error = stripe.error.RateLimitError("slow down", http_status=429)
+    assert env.client.post(path, headers=env.admin()).status_code == 503
+    # A corrected retry (other legal form) uses another idempotency key; a repeat the same one.
+    env.fake.account_error = stripe.error.APIConnectionError("down")
+    env.client.post(path, headers=env.admin(), json={"business_type": "company"})
+    env.client.post(path, headers=env.admin(), json={"business_type": "company"})
+    keys = [c[2]["idempotency_key"] for c in env.fake.named("v2.accounts.create")]
+    assert keys[-1] == keys[-2] and keys[-1] != keys[0]
     with env.cursor() as cur:
         cur.execute("select stripe_express_account_id from organizations where id=%s", (env.org,))
         assert cur.fetchone()["stripe_express_account_id"] is None
@@ -287,10 +355,14 @@ def test_onboarding_tenant_isolation_and_service_switch(env):
     assert env.client.post(f"{base}/onboarding", headers=foreign).status_code == 403
     assert env.client.post(f"{base}/sync", headers=foreign).status_code == 403
     assert env.fake.calls == []
-    env.state["settings"] = _settings(stripe_platform_webhook_secret=None)
+    env.state["settings"] = _settings(stripe_webhook_secret=None)
     assert env.client.post(f"{base}/onboarding", headers=env.admin()).status_code == 503
     assert env.client.get(base, headers=env.admin()).json()["service_ready"] is False
     assert env.fake.calls == []
+    # Managed Risk accounts do not need the platform webhook.
+    env.state["settings"] = _settings(stripe_platform_webhook_secret=None)
+    assert env.client.get(base, headers=env.admin()).json()["service_ready"] is True
+    assert env.client.post(f"{base}/onboarding", headers=env.admin()).status_code == 200
     # Platform owner may look at any club.
     assert env.client.get(base, headers=owner_headers()).status_code == 200
 
@@ -405,7 +477,7 @@ def test_platform_webhook_marks_paid_with_snapshot_idempotently(env):
     assert (row["fee_plan"], row["fee_percent"], row["fee_base_cents"], row["fee_cents"], row["fee_collection"]) == (
         "individuell", Decimal("5.00"), 1000, 50, "application_fee")
     # PaymentIntent of a platform charge is read without stripe_account.
-    assert env.fake.named("PaymentIntent.retrieve")[0][2] == {"expand": ["latest_charge.application_fee"]}
+    assert env.fake.named("PaymentIntent.retrieve")[0][2] == {"expand": ["latest_charge"]}
     snapshot_at = row["fee_snapshot_at"]
     # Replay: no change, no error.
     assert _post_webhook(env, PLATFORM_HOOK, event, PLATFORM_SECRET).json() == {"received": True, "settled": True}

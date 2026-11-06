@@ -128,8 +128,9 @@ class Settings(BaseSettings):
     stripe_secret_key: Optional[str] = Field(default=None, alias="STRIPE_SECRET_KEY")
     stripe_webhook_secret: Optional[str] = Field(default=None, alias="STRIPE_CONNECT_WEBHOOK_SECRET")
     # Billing B2: signing secret of the PLATFORM webhook endpoint
-    # (/api/v1/payments/stripe/platform-webhook). Destination charges on
-    # Express accounts are confirmed only there; without it they stay off.
+    # (/api/v1/payments/stripe/platform-webhook). Only destination charges on
+    # B2 Express accounts (staging) are confirmed there; without it they stay
+    # off. Not needed for Managed Risk direct charges (Connect webhook).
     stripe_platform_webhook_secret: Optional[str] = Field(default=None, alias="STRIPE_PLATFORM_WEBHOOK_SECRET")
 
     # Platform accounts (see app/supabase_auth.py). Replaces the previous

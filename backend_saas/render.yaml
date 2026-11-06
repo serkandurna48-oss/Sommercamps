@@ -64,8 +64,10 @@ services:
       - key: STRIPE_SECRET_KEY
         sync: false           # sk_test_… (Staging) – sk_live_… nur mit APP_ENV=production
       - key: STRIPE_CONNECT_WEBHOOK_SECRET
-        sync: false           # whsec_… des Connect-Endpunkts /api/v1/payments/stripe/webhook
+        sync: false           # whsec_… des Connect-Endpunkts /api/v1/payments/stripe/webhook („Ereignisse auf verbundenen Konten“):
+                               # checkout.session.completed, checkout.session.async_payment_succeeded, charge.refunded,
+                               # charge.refund.updated, account.updated. Bestätigt alle Direct Charges (Managed Risk + Altkonten).
       - key: STRIPE_PLATFORM_WEBHOOK_SECRET
-        sync: false           # whsec_… des Plattform-Endpunkts /api/v1/payments/stripe/platform-webhook (Express)
+        sync: false           # nur für B2-Express-Konten (Destination Charges, Staging); Managed Risk braucht ihn nicht
       - key: BILLING_ADDRESS_LEGACY_UNTIL
         sync: false           # ISO-Datum, nur im Rollout: Go-Live + 7 Tage (Prod und Staging), danach entfernen

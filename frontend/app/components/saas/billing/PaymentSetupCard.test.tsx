@@ -100,7 +100,7 @@ it('wartet auf Freigabe: keine Einrichten-Buttons, Hinweis auf CampsPilot', asyn
   expect(container.textContent).toContain('schaltet die Online-Zahlung für deinen Verein jetzt noch frei')
 })
 
-it('nennt die Plattformgebühr im Einrichtungstext', async () => {
+it('nennt Stripe-Gebühren und Plattformgebühr im Einrichtungstext', async () => {
   await act(() => root.render(<PaymentSetupCard orgSlug="demo" status={status()} />))
-  expect(container.textContent).toContain('abzüglich der vereinbarten Plattformgebühr')
+  expect(container.textContent).toContain('abzüglich der Stripe-Gebühren und der vereinbarten Plattformgebühr')
 })

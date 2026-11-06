@@ -58,9 +58,13 @@ it('formatiert Gebühr und Stripe-Status', () => {
   expect(formatStripeStatus({
     state: 'active', platform_enabled: true, charges_enabled: true, payouts_enabled: true, details_submitted: true, requirements_due: 0,
     synced_at: null, legacy_account_linked: true, legacy_active: false, online_payment_mode: 'destination', service_ready: true,
-  })).toBe('Express aktiv · Altkonto verbunden, inaktiv · Zahlungen über die Plattform')
+  })).toBe('Stripe-Konto aktiv · Altkonto verbunden, inaktiv · Zahlungen über die Plattform (Express)')
+  expect(formatStripeStatus({
+    state: 'active', platform_enabled: true, charges_enabled: true, payouts_enabled: true, details_submitted: true, requirements_due: 0,
+    synced_at: null, legacy_account_linked: false, legacy_active: false, online_payment_mode: 'direct_fee', account_kind: 'direct_fee', service_ready: true,
+  })).toBe('Stripe-Konto aktiv · Direct Charge mit Plattformgebühr (Managed Risk)')
   expect(formatStripeStatus({
     state: 'awaiting_approval', platform_enabled: false, charges_enabled: true, payouts_enabled: true, details_submitted: true,
     requirements_due: 0, synced_at: null, legacy_account_linked: false, legacy_active: false, online_payment_mode: null, service_ready: true,
-  })).toBe('Express bereit, wartet auf Freigabe · keine Online-Zahlung · Online-Zahlung gesperrt')
+  })).toBe('Stripe-Konto bereit, wartet auf Freigabe · keine Online-Zahlung · Online-Zahlung gesperrt')
 })

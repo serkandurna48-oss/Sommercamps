@@ -4,8 +4,8 @@ import { useActionState } from 'react'
 import Button from '../../../components/saas/ui/Button'
 import { setOnlinePaymentEnabledAction, type OnlinePaymentSwitchState } from './stripeActions'
 
-/** Owner only. The platform carries chargebacks of destination charges, so
- * online payment for a club starts only after this approval. */
+/** Owner only. Online payment for a club starts only after this approval
+ * (Managed Risk direct charges, legacy and B2 destination accounts alike). */
 export default function OnlinePaymentToggle({ orgSlug, enabled }: { orgSlug: string; enabled: boolean }) {
   const [state, formAction, pending] = useActionState<OnlinePaymentSwitchState, FormData>(
     previous => setOnlinePaymentEnabledAction(orgSlug, !enabled, previous),

@@ -120,6 +120,8 @@ export interface RegistrationAdmin {
   // Spielerakte: Verknüpfung zum Spieler und Doku-Einwilligung der Buchung.
   player_id?: string | null
   documentation_consent?: boolean | null
+  // Spielerakte gelöscht: Kinddaten entfernt, Geburtsdatum ist nur Platzhalter.
+  anonymized_at?: string | null
   // Löschschutz (GoBD): Rechnung/Storno vorhanden bzw. Plattformgebühr erfasst.
   has_invoice?: boolean
   fee_recorded?: boolean

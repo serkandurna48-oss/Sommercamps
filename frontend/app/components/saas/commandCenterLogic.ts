@@ -27,6 +27,11 @@ export function isOpenPayment(r: Pick<RegistrationAdmin, 'status' | 'payment_sta
   return isActiveRegistration(r) && r.payment_status === 'open'
 }
 
+/** Display name of the child; an anonymized booking (player record deleted) shows "Gelöscht". */
+export function childDisplayName(r: Pick<RegistrationAdmin, 'child_first_name' | 'child_last_name' | 'anonymized_at'>): string {
+  return r.anonymized_at ? 'Gelöscht' : `${r.child_first_name} ${r.child_last_name}`
+}
+
 /** Why a registration cannot be hard-deleted (null = deletable). Same order as
  * the backend guard: invoice first (GoBD), then money still held online, then
  * a recorded platform fee. The backend re-checks; this only picks the hint. */

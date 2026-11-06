@@ -105,13 +105,28 @@ def _participants_sheet(camp: dict, registrations: list[dict], org: dict = None)
         rows.append([
             _STATUS_LABEL.get(r["status"], r["status"]),
             _PAYMENT_STATUS_LABEL.get(r["payment_status"], r["payment_status"]),
-            r["child_first_name"], r["child_last_name"], r["child_birth_date"],
+            *_child_columns(r),
             r["parent_first_name"], r["parent_last_name"], r["parent_email"], r["parent_phone"],
             r["emergency_contact_name"], r["emergency_contact_phone"],
             r["allergies"], r["medical_notes"], r["jersey_size"], r["pickup_authorized"],
             "Ja" if r["photo_permission"] else "Nein", r["created_at"],
         ] + extra_vals)
     return headers, rows
+
+
+ANONYMIZED = "Gelöscht"
+
+
+def _child_columns(r: dict) -> tuple:
+    """First name, last name, birth date; an anonymized booking (player record
+    deleted) shows "Gelöscht" and no birth date (it is a placeholder)."""
+    if r.get("anonymized_at"):
+        return ANONYMIZED, "", None
+    return r["child_first_name"], r["child_last_name"], r["child_birth_date"]
+
+
+def _child_name(r: dict) -> str:
+    return ANONYMIZED if r.get("anonymized_at") else f"{r['child_first_name']} {r['child_last_name']}"
 
 
 def _payments_sheet(camp_registrations: list[tuple[dict, list[dict]]], include_camp_column: bool) -> tuple[list[str], list[list[object]]]:
@@ -131,7 +146,7 @@ def _payments_sheet(camp_registrations: list[tuple[dict, list[dict]]], include_c
             row = (
                 ([camp["title"]] if include_camp_column else [])
                 + [
-                    f"{r['child_first_name']} {r['child_last_name']}",
+                    _child_name(r),
                     f"{r['parent_first_name']} {r['parent_last_name']}",
                     r["parent_email"],
                     price_eur,

@@ -2,7 +2,7 @@ import { de, formatEuro, paymentStatusLabel, registrationStatusLabel } from '../
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { cancelRegistrationAction, deleteRegistrationAction } from '../actions/waitlistActions'
 import { setPaymentStatusAction } from '../actions/paymentActions'
-import { canReopenPayment, deleteBlockedHint, isActiveRegistration, isOpenPayment } from '../commandCenterLogic'
+import { canReopenPayment, childDisplayName, deleteBlockedHint, isActiveRegistration, isOpenPayment } from '../commandCenterLogic'
 import StatusChip, { PAYMENT_STATUS_TONE, REGISTRATION_STATUS_TONE } from '../data/StatusChip'
 import ActionForm from '../ui/ActionForm'
 import { ButtonLink } from '../ui/Button'
@@ -34,7 +34,7 @@ export default function BookingRow({ orgSlug, sessionSlug, sessionId, registrati
   return (
     <li className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-start sm:justify-between" style={{ borderTopColor: 'var(--cp-line-2)' }} data-payment-status={registration.payment_status}>
       <div className="min-w-0 flex-1">
-        <p className="cp-subheading" style={{ color: 'var(--cp-ink)' }}>{registration.child_first_name} {registration.child_last_name}</p>
+        <p className="cp-subheading" style={{ color: 'var(--cp-ink)' }}>{childDisplayName(registration)}</p>
         <p className="cp-chip break-words" style={{ color: 'var(--cp-muted)' }}>
           {registration.parent_first_name} {registration.parent_last_name} · {registration.parent_email} · {registration.parent_phone}
         </p>

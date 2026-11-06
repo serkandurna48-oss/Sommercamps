@@ -505,6 +505,8 @@ def delete_player(organization_id: UUID, player_id: UUID) -> dict:
                    child_birth_date = created_at::date,
                    allergies = null, medical_notes = null, jersey_size = null, pickup_authorized = null,
                    emergency_contact_name = null, emergency_contact_phone = null,
+                   -- Billing address: the invoice snapshot (invoices.data) is the record that is kept.
+                   parent_street = null, parent_postal_code = null, parent_city = null,
                    extra_answers = '{}'::jsonb, player_id = null,
                    anonymized_at = coalesce(anonymized_at, now())
                where player_id = %s and organization_id = %s""",

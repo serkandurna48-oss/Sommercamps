@@ -1309,9 +1309,18 @@ export async function fetchStripePaymentStatusAdmin(orgSlug: string, token: stri
   return res.json() as Promise<StripePaymentStatus>
 }
 
+/** 409 from the Stripe setup endpoints carries Stripe's own reason (config problem in the dashboard). */
+async function stripeSetupError(res: Response, fallback: string): Promise<AdminActionError> {
+  if (res.status === 409) {
+    const body = await res.json().catch(() => null) as { detail?: unknown } | null
+    if (body && typeof body.detail === 'string' && body.detail.trim()) return new AdminActionError(body.detail)
+  }
+  return new AdminActionError(fallback)
+}
+
 export async function syncStripePaymentStatusAdmin(orgSlug: string, token: string): Promise<StripePaymentStatus> {
   const res = await adminMutate(`${stripePath(orgSlug)}/sync`, token, 'POST')
-  if (!res.ok) throw new AdminActionError('Status konnte gerade nicht bei Stripe abgefragt werden.')
+  if (!res.ok) throw await stripeSetupError(res, 'Status konnte gerade nicht bei Stripe abgefragt werden.')
   return res.json() as Promise<StripePaymentStatus>
 }
 
@@ -1327,7 +1336,7 @@ export async function startStripeOnboardingAdmin(
   orgSlug: string, token: string, businessType: 'company' | 'non_profit',
 ): Promise<string> {
   const res = await adminMutate(`${stripePath(orgSlug)}/onboarding`, token, 'POST', { business_type: businessType })
-  if (!res.ok) throw new AdminActionError('Stripe-Einrichtung konnte nicht gestartet werden. Bitte versuch es gleich noch einmal.')
+  if (!res.ok) throw await stripeSetupError(res, 'Stripe-Einrichtung konnte nicht gestartet werden. Bitte versuch es gleich noch einmal.')
   const body = await res.json() as { url?: unknown }
   if (typeof body.url !== 'string' || !body.url.startsWith('https://connect.stripe.com/')) {
     throw new AdminActionError('Stripe hat keinen gültigen Link geliefert.')

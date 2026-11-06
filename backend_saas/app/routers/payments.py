@@ -951,6 +951,23 @@ def _require_express_service():
     return settings
 
 
+def _stripe_setup_error(error: Exception, step: str, organization_slug: str) -> HTTPException:
+    """Map a Stripe error during Express setup. Configuration problems (invalid
+    request, missing permission, wrong key) are shown to the admin with Stripe's
+    own reason so they can be fixed in the dashboard; network trouble stays 503."""
+    code = getattr(error, "code", None)
+    reason = getattr(error, "user_message", None) or getattr(error, "_message", None) or str(error)
+    reason = " ".join(str(reason).split())[:300]
+    logger.warning(
+        "Stripe %s failed (organization_slug=%s, error_type=%s, code=%s, reason=%s)",
+        step, organization_slug, type(error).__name__, code, reason,
+    )
+    if isinstance(error, (stripe.error.InvalidRequestError, stripe.error.PermissionError,
+                          stripe.error.AuthenticationError)):
+        return HTTPException(409, f"Stripe hat die Einrichtung abgelehnt: {reason}")
+    return HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar")
+
+
 @router.post("/admin/organizations/{organization_slug}/payments/stripe/onboarding", response_model=OnboardingLink)
 def start_express_onboarding(
     organization_slug: str,
@@ -970,17 +987,27 @@ def start_express_onboarding(
     if not account_id:
         try:
             account = _stripe_dict(client.Account.create(
-                type="express",
+                # Controller properties instead of the legacy type="express": Stripe
+                # rejects legacy types when the platform is the losses collector
+                # (needed for destination charges). Same behaviour as Express:
+                # Express Dashboard, Stripe collects requirements, platform pays
+                # Stripe fees (variant A) and is liable for losses.
+                controller={
+                    "stripe_dashboard": {"type": "express"},
+                    "requirement_collection": "stripe",
+                    "fees": {"payer": "application"},
+                    "losses": {"payments": "application"},
+                },
                 country="DE",
                 business_type=business_type,
                 capabilities={"card_payments": {"requested": True}, "transfers": {"requested": True}},
                 metadata={**CAMPSPILOT_MARKER, "organization_id": str(organization["id"])},
                 # Two clicks (or a retry after a lost response) get the same account.
-                idempotency_key=f"campspilot-express-{organization['id']}",
+                # v2: earlier keys were used with the rejected legacy type parameter.
+                idempotency_key=f"campspilot-express-v2-{organization['id']}",
             ))
-        except stripe.error.StripeError:
-            logger.warning("Express account creation failed (organization_slug=%s)", organization_slug)
-            raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
+        except stripe.error.StripeError as error:
+            raise _stripe_setup_error(error, "express account creation", organization_slug) from None
         new_id = account.get("id")
         if not isinstance(new_id, str) or not ACCOUNT_ID.fullmatch(new_id):
             raise HTTPException(503, "Zahlungsanbieter hat kein Konto geliefert")
@@ -1007,9 +1034,8 @@ def start_express_onboarding(
             return_url=f"{base}?stripe=return#zahlungen",
             type="account_onboarding",
         ))
-    except stripe.error.StripeError:
-        logger.warning("Account link creation failed (organization_slug=%s)", organization_slug)
-        raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
+    except stripe.error.StripeError as error:
+        raise _stripe_setup_error(error, "account link creation", organization_slug) from None
     url = link.get("url")
     if not isinstance(url, str) or not url.startswith("https://connect.stripe.com/"):
         raise HTTPException(503, "Zahlungsanbieter hat keinen Link geliefert")
@@ -1034,8 +1060,8 @@ def sync_express_status(organization_slug: str, auth: AuthContext = Depends(requ
         client = _stripe_client()
         try:
             account = _stripe_dict(client.Account.retrieve(account_id))
-        except stripe.error.StripeError:
-            raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
+        except stripe.error.StripeError as error:
+            raise _stripe_setup_error(error, "account status sync", organization_slug) from None
         store_express_status(account_id, account)
         org = _payment_org(organization["id"])
     return _express_status(org, settings)

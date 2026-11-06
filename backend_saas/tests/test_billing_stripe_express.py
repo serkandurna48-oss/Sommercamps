@@ -48,12 +48,15 @@ class FakeStripe:
         self.charge = {"amount": 1000, "amount_refunded": 0, "refunded": False, "application_fee_amount": 50,
                        "application_fee": {"amount": 50, "amount_refunded": 0}}
         self.refund_error = None
+        self.account_error = None
         outer = self
 
         class Account:
             @staticmethod
             def create(**kw):
                 outer.calls.append(("Account.create", kw))
+                if outer.account_error is not None:
+                    raise outer.account_error
                 return {"id": outer.express, **outer.account_state}
 
             @staticmethod
@@ -212,10 +215,14 @@ def test_onboarding_creates_express_account_once_and_returns_link(env):
     assert r.status_code == 200, r.text
     assert r.json()["url"].startswith("https://connect.stripe.com/")
     (_, created), = env.fake.named("Account.create")
-    assert created["type"] == "express" and created["country"] == "DE" and created["business_type"] == "non_profit"
+    assert "type" not in created
+    assert created["controller"] == {
+        "stripe_dashboard": {"type": "express"}, "requirement_collection": "stripe",
+        "fees": {"payer": "application"}, "losses": {"payments": "application"}}
+    assert created["country"] == "DE" and created["business_type"] == "non_profit"
     assert created["capabilities"] == {"card_payments": {"requested": True}, "transfers": {"requested": True}}
     assert created["metadata"]["campspilot"] == "1"
-    assert created["idempotency_key"] == f"campspilot-express-{env.org}"
+    assert created["idempotency_key"] == f"campspilot-express-v2-{env.org}"
     (_, link), = env.fake.named("AccountLink.create")
     assert link["account"] == env.express and link["type"] == "account_onboarding"
     assert link["return_url"] == f"https://example.com/pilot/{env.slug}/konfiguration?stripe=return#zahlungen"
@@ -232,6 +239,21 @@ def test_onboarding_creates_express_account_once_and_returns_link(env):
     # Continue onboarding: new link, same account.
     assert env.client.post(f"{path}/onboarding", headers=env.admin()).status_code == 200
     assert len(env.fake.named("Account.create")) == 1 and len(env.fake.named("AccountLink.create")) == 2
+
+
+def test_onboarding_shows_stripe_reason_for_config_errors(env):
+    path = f"/admin/organizations/{env.slug}/payments/stripe/onboarding"
+    env.fake.account_error = stripe.error.InvalidRequestError(
+        "You must complete your platform profile to create connected accounts.", None, code="platform_profile")
+    r = env.client.post(path, headers=env.admin(), json={"business_type": "non_profit"})
+    assert r.status_code == 409
+    assert r.json()["detail"] == (
+        "Stripe hat die Einrichtung abgelehnt: You must complete your platform profile to create connected accounts.")
+    env.fake.account_error = stripe.error.APIConnectionError("down")
+    assert env.client.post(path, headers=env.admin()).status_code == 503
+    with env.cursor() as cur:
+        cur.execute("select stripe_express_account_id from organizations where id=%s", (env.org,))
+        assert cur.fetchone()["stripe_express_account_id"] is None
 
 
 def test_status_check_and_account_updated_webhook(env):

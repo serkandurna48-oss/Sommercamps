@@ -302,7 +302,7 @@ def test_webhook_replay_keeps_paid_at(env):
     with env.cursor() as cur:
         cur.execute("update camp_registrations set paid_at='2026-12-02 10:00:00+00' where registration_token=%s", (token,))
     assert _post_webhook(env, PLATFORM_HOOK, _completed_platform(session_id, env.intent), PLATFORM_SECRET).status_code == 200
-    assert _reg(env, token)["paid_at"].isoformat().startswith("2026-12-02T11:00:00+01:00")
+    assert _reg(env, token)["paid_at"] == datetime(2026, 12, 2, 10, 0, tzinfo=__import__("datetime").timezone.utc)
 
 
 def test_refund_balance_errors_name_the_right_balance(env):

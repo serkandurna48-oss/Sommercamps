@@ -218,3 +218,23 @@ it('getClubAssets returns the same JK gallery for prod and staging demo slug', (
   expect(prod!.galleryImages).not.toContain(prod!.heroImage)
   for (const src of prod!.galleryImages) expect(prod!.galleryAltTexts[src]).toBeTruthy()
 })
+
+it('past camps sit collapsed under "Vergangene Camps", preview camps show "Vorschau" and the start of registration', () => {
+  const base = {
+    registration_end: null, age_min: 6, age_max: 14, capacity: 30, price_cents: 14900, currency: 'EUR',
+    location: null, care_info: null, meals_info: null, includes: null, registered_count: 0, waitlist_count: 0,
+    spots_remaining: 30, is_full: false,
+  }
+  const preview = { ...base, slug: 'ostern', title: 'Ostercamp', start_date: '2099-03-22', end_date: '2099-03-24',
+    registration_start: '2099-01-15T08:00:00Z', registration_open: false } as unknown as CampPublic
+  const past = { ...base, slug: 'sommer-alt', title: 'Sommercamp Alt', start_date: '2020-07-08', end_date: '2020-07-10',
+    registration_start: null, registration_open: false } as unknown as CampPublic
+  const html = renderToStaticMarkup(<ParentFlow org={org} camps={[preview]} pastCamps={[past]} />)
+  expect(html).toContain('Vorschau')
+  expect(html).toContain('Anmeldung ab 15. Jan. 2099')
+  const archive = html.slice(html.indexOf('past-camps'))
+  expect(archive).toContain('Vergangene Camps (1)')
+  expect(archive).toContain('Sommercamp Alt')
+  expect(archive).toContain('Vorbei')
+  expect(html.slice(0, html.indexOf('past-camps'))).not.toContain('Sommercamp Alt')
+})

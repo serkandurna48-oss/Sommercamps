@@ -43,7 +43,7 @@ from . import players
 from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES, validate_transition
 from ..schemas import RegistrationCreate
 from ..tenancy import ACTIVE_PLAN_STATUSES, TenantContext
-from ..utils import age_on_date, is_registration_open
+from ..utils import age_on_date, is_camp_over, is_registration_open
 
 
 logger = logging.getLogger(__name__)
@@ -756,7 +756,7 @@ def update_payment_status(
 
 
 def validate_registration_window(camp: RegistrationTarget) -> None:
-    if not is_registration_open(camp.registration_start, camp.registration_end):
+    if not is_registration_open(camp.registration_start, camp.registration_end) or is_camp_over(camp.end_date):
         raise RegistrationWindowClosedError(f"Registration window closed for camp '{camp.slug}'")
 
 

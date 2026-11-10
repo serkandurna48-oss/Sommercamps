@@ -3938,6 +3938,33 @@
   .cp-public[data-theme='akademie'] .camp .c-go { padding: 9px 18px; font-size: 14px; }
 }
 
+/* Vergangene Camps (Archiv, 10.11.): eingeklappt unter den aktuellen Camps, Karten gedämpft. */
+.cp-public .past-camps { margin-top: 32px; }
+.cp-public .past-camps > summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 9999px;
+  border: 1px solid var(--line-2, var(--line));
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.cp-public .past-camps > summary::-webkit-details-marker { display: none; }
+.cp-public .past-camps > summary::after { content: '▾'; font-size: 12px; transition: transform 0.25s var(--ease); }
+.cp-public .past-camps[open] > summary::after { transform: rotate(180deg); }
+.cp-public .past-camps > .camps { margin-top: 16px; }
+.cp-public .camp.past { opacity: 0.72; }
+.cp-public .camp.past .c-go,
+.cp-public .camp.preview .c-go {
+  color: var(--ink);
+  background: transparent;
+  border-color: var(--line-2, var(--line));
+}
+
 /* KSV Tagesrunde 28.10. (mit Serkan abgestimmt): ein Rotton fuer alle Aktionen, Datum einmal pro Karte,
    "freiwillig" an optionalen Feldern, "So einfach geht's" vor den Camps. Nur KSV. */
 .cp-public[data-org='ksv-baunatal'] .camp:not(.full) .c-go {

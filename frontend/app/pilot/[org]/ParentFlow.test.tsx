@@ -65,7 +65,7 @@ it.each(['tradition', 'akademie', 'kompakt'] as const)('%s does not render img-s
 })
 
 const mockCamp = {
-  slug: 'camp-a', title: 'Sommercamp A', start_date: '2026-07-07', end_date: '2026-07-11',
+  slug: 'camp-a', title: 'Sommercamp A', start_date: '2099-07-07', end_date: '2099-07-11',
   registration_start: null, registration_end: null,
   age_min: 8, age_max: 14, capacity: 30, price_cents: 19900, currency: 'EUR',
   registration_open: true, location: 'Kassel', care_info: null, meals_info: null, includes: null,
@@ -110,7 +110,7 @@ it('akademie h1 trägt data-scale="md" bei JKs Leitsatz', () => {
 // ── M3: CampScreen ──
 it('CampScreen rendert Camp-Titel, Preis und CTA', () => {
   const camp: CampPublic = {
-    slug: 'camp-a', title: 'Sommercamp A', start_date: '2026-07-07', end_date: '2026-07-11',
+    slug: 'camp-a', title: 'Sommercamp A', start_date: '2099-07-07', end_date: '2099-07-11',
     registration_start: null, registration_end: null,
     age_min: 8, age_max: 14, capacity: 30, price_cents: 19900, currency: 'EUR',
     registration_open: true, location: 'Kassel', care_info: null, meals_info: null, includes: null,

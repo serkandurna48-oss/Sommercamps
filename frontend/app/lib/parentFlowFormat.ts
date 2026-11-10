@@ -57,6 +57,28 @@ export function formatPrice(cents: number, currency: string): string {
   return currency === 'EUR' ? `${amount} €` : `${amount} ${currency}`
 }
 
+export type CampPhase = 'open' | 'preview' | 'closed' | 'past'
+
+/**
+ * Phase eines Camps für die Elternseite: vorbei (letzter Tag vorbei, Europe/Berlin),
+ * Vorschau (Anmeldung startet erst), geschlossen (Anmeldefenster zu) oder offen.
+ */
+export function campPhase(
+  camp: { end_date: string; registration_start: string | null; registration_open?: boolean },
+  now: number = Date.now(),
+): CampPhase {
+  const today = new Date(now).toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' })
+  if (camp.end_date < today) return 'past'
+  if (camp.registration_start && Date.parse(camp.registration_start) > now) return 'preview'
+  if (camp.registration_open === false) return 'closed'
+  return 'open'
+}
+
+/** "2027-01-15T09:00:00Z" -> "15. Jan. 2027" (Europe/Berlin). */
+export function formatRegistrationStart(iso: string): string {
+  return new Date(iso).toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Berlin' })
+}
+
 /** Camp mit eigenem, niedrigerem Mitgliederpreis (Mitgliederliste des Vereins). */
 export function campHasMemberPrice(camp: { price_cents: number; price_member_cents?: number | null }): boolean {
   return camp.price_member_cents != null && camp.price_member_cents < camp.price_cents

@@ -23,11 +23,13 @@ const THEME_SURFACE: Record<string, string> = {
  * /pilot/[org] route and the static demo at /demo/verein, so the demo shows the real design.
  * `demo` switches off structured data and analytics, and keeps the registration form local.
  */
-export default function PublicClubView({ org, allCamps, camps, trainings, hadPastCamps, initialCampSlug, demo = false }: {
+export default function PublicClubView({ org, allCamps, camps, pastCamps = [], trainings, hadPastCamps, initialCampSlug, demo = false }: {
   org: OrganizationPublic
   /** Every camp incl. past ones (structured data only). */
   allCamps: CampPublic[]
   camps: CampPublic[]
+  /** Past camps: collapsed archive, clickable, no registration. */
+  pastCamps?: CampPublic[]
   trainings: TrainingOfferListItem[]
   hadPastCamps: boolean
   initialCampSlug?: string
@@ -35,7 +37,7 @@ export default function PublicClubView({ org, allCamps, camps, trainings, hadPas
 }) {
   const ground = THEME_SURFACE[org.theme] ?? THEME_SURFACE.tradition
   const brand = computeBrandSafe(org.primary_color, ground)
-  const flow = <ParentFlow org={org} camps={camps} trainings={trainings} hadPastCamps={hadPastCamps} initialCampSlug={initialCampSlug} demo={demo} />
+  const flow = <ParentFlow org={org} camps={camps} pastCamps={pastCamps} trainings={trainings} hadPastCamps={hadPastCamps} initialCampSlug={initialCampSlug} demo={demo} />
 
   return (
     <div

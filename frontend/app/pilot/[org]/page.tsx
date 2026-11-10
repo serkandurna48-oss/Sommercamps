@@ -68,6 +68,8 @@ export default async function PilotOrgPage({ params, searchParams }: PageProps) 
   if (campsOutcome.status === 'rejected') return <PublicLoadError org={org} />
   const allCamps = campsOutcome.value
   const camps = filterFutureCamps(allCamps)
+  // Past camps stay reachable as an archive (newest first), never bookable.
+  const pastCamps = allCamps.filter(c => !camps.includes(c)).sort((a, b) => b.end_date.localeCompare(a.end_date))
   // Ein Fehler beim Laden der Trainings darf die Camp-Seite nicht beeinträchtigen.
   // Ohne Trainings-Modul gibt es keinen Trainingsbereich (die API antwortet dann ohnehin 404).
   const trainings = hasModule(org, 'trainings') && trainingsOutcome.status === 'fulfilled' && Array.isArray(trainingsOutcome.value) ? trainingsOutcome.value : []
@@ -77,6 +79,7 @@ export default async function PilotOrgPage({ params, searchParams }: PageProps) 
       org={org}
       allCamps={allCamps}
       camps={camps}
+      pastCamps={pastCamps}
       trainings={trainings}
       hadPastCamps={hadPastCamps}
       initialCampSlug={typeof selectedSlug === 'string' ? selectedSlug : undefined}

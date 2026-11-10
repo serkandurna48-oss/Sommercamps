@@ -9,7 +9,8 @@ export default function PricingPackages() {
           <article className="price-card" key={paket.name} aria-label={paket.name}>
             <h3 className="d3">{paket.name}</h3>
             <p className="price-target">{paket.zielgruppe}</p>
-            <p className="price-amount"><strong className="num">{paket.preis} {preise.waehrung}</strong> <span>{preise.zeitraum}</span></p>
+            <p className="price-amount"><strong className="num">{paket.preis}</strong> {paket.zeitraum && <span>{paket.zeitraum}</span>}</p>
+            <p className="price-fee">{paket.buchungsgebuehr}</p>
             <p className="price-scope">{paket.umfang}</p>
             <ul className="price-features">
               {paket.features.map((feature) => <li key={feature}>{feature}</li>)}
@@ -22,7 +23,6 @@ export default function PricingPackages() {
         ))}
       </div>
       <p className="price-tax">{preise.steuerhinweis}</p>
-      {preise.entwurf && <p className="price-note"><small>{preise.saisonhinweis}</small></p>}
     </>
   )
 }

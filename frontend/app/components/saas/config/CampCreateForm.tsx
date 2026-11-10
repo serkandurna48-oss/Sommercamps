@@ -23,12 +23,16 @@ export default function CampCreateForm({
   orgSlug,
   backButton,
   initialValues,
+  blockedMessage = null,
 }: {
   orgSlug: string
   backButton?: ReactNode
   initialValues?: CampDuplicate
+  /** Paketgrenze erreicht: Anlegen gesperrt, Meldung wird angezeigt. */
+  blockedMessage?: string | null
 }) {
   const feedbackId = useId()
+  const blockedId = useId()
   const preview = useAdminPreview()
   const boundAction = preview ? previewNoopAction : createCampAction.bind(null, orgSlug)
   const [title, setTitle] = useState(initialValues?.title ?? '')
@@ -106,6 +110,12 @@ export default function CampCreateForm({
         </Field>)}
       </section>}
 
+      {blockedMessage && (
+        <p id={blockedId} role="note" className="cp-body rounded-[var(--cp-r-chip)] border px-3 py-2" style={{ color: 'var(--cp-ink-2)', borderColor: 'var(--cp-line)' }}>
+          {blockedMessage}
+        </p>
+      )}
+
       {!pending && state.error && (
         <p
           className="cp-body rounded-[var(--cp-r-chip)] border px-3 py-2"
@@ -117,7 +127,7 @@ export default function CampCreateForm({
       )}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="submit" variant="primary" disabled={pending} className="w-full sm:w-auto sm:order-2">
+        <Button type="submit" variant="primary" disabled={pending || Boolean(blockedMessage)} aria-describedby={blockedMessage ? blockedId : undefined} className="w-full sm:w-auto sm:order-2">
           {pending ? 'Wird angelegt …' : 'Camp anlegen'}
         </Button>
         {backButton}

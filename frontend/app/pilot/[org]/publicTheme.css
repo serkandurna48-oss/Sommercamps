@@ -3965,6 +3965,23 @@
   border-color: var(--line-2, var(--line));
 }
 
+/* ── Standarddesign ohne Foto (Serkan 10.11.): keine leere Hero-Flaeche. Niedriger Hero, Verlauf aus der
+   Vereinsfarbe (--brand), Akzentlinie unter dem Text. Verwendet nie Bilder oder Texte eines anderen Vereins. ── */
+.cp-public .hero.h-akad:not(.hero-photo) {
+  min-height: min(100svh, 640px);
+  background:
+    radial-gradient(ellipse 70% 90% at 85% 0%, color-mix(in srgb, var(--brand) 55%, transparent) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 70% at 0% 100%, color-mix(in srgb, var(--brand) 28%, transparent) 0%, transparent 70%),
+    var(--band);
+}
+.cp-public .hero.h-akad:not(.hero-photo) .in { padding-top: 140px; padding-bottom: 56px; }
+.cp-public .hero.h-akad:not(.hero-photo) .hero-label { color: var(--brand-strong); opacity: 1; }
+.cp-public .hero.h-akad:not(.hero-photo) .veil { background: linear-gradient(to top, rgba(0,0,0,.35) 0%, transparent 60%); }
+@media (max-width: 599px) {
+  .cp-public .hero.h-akad:not(.hero-photo) { min-height: 520px; }
+  .cp-public .hero.h-akad:not(.hero-photo) .in { padding-top: 120px; padding-bottom: 40px; }
+}
+
 /* ── Campkarten kompakt und gleich gross (Serkan 10.11.) ─────────────────────────────
    Alle Themes und Vereine: Raster mit gleich hohen Zeilen (auch einspaltig), Karte als Spalte,
    Titel auf 2 Zeilen begrenzt, Leistungen mit fester Hoehe, Preis und Knopf unten angeheftet.

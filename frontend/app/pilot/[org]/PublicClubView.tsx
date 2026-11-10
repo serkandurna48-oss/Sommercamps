@@ -3,6 +3,7 @@ import AnalyticsConsentBanner from '../AnalyticsConsent'
 import { computeBrandSafe } from '../../lib/brandPipeline'
 import { readableTextOn } from '../../lib/readableTextOn'
 import type { CampPublic, OrganizationPublic, TrainingOfferListItem } from '../../lib/saasApi'
+import { withDefaultDesign } from './defaultDesign'
 import CampStructuredData from './CampStructuredData'
 import GrainOverlay from './GrainOverlay'
 import ParentFlow from './ParentFlow'
@@ -23,7 +24,7 @@ const THEME_SURFACE: Record<string, string> = {
  * /pilot/[org] route and the static demo at /demo/verein, so the demo shows the real design.
  * `demo` switches off structured data and analytics, and keeps the registration form local.
  */
-export default function PublicClubView({ org, allCamps, camps, pastCamps = [], trainings, hadPastCamps, initialCampSlug, demo = false }: {
+export default function PublicClubView({ org: storedOrg, allCamps, camps, pastCamps = [], trainings, hadPastCamps, initialCampSlug, demo = false }: {
   org: OrganizationPublic
   /** Every camp incl. past ones (structured data only). */
   allCamps: CampPublic[]
@@ -35,6 +36,7 @@ export default function PublicClubView({ org, allCamps, camps, pastCamps = [], t
   initialCampSlug?: string
   demo?: boolean
 }) {
+  const org = withDefaultDesign(storedOrg)
   const ground = THEME_SURFACE[org.theme] ?? THEME_SURFACE.tradition
   const brand = computeBrandSafe(org.primary_color, ground)
   const flow = <ParentFlow org={org} camps={camps} pastCamps={pastCamps} trainings={trainings} hadPastCamps={hadPastCamps} initialCampSlug={initialCampSlug} demo={demo} />

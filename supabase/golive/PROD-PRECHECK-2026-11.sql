@@ -1,4 +1,4 @@
--- Nur lesen. Vor dem Go-Live auf Prod (Supabase SQL-Editor): zeigt, welche der 15 Go-Live-Migrationen
+-- Nur lesen. Vor dem Go-Live auf Prod (Supabase SQL-Editor): zeigt, welche der 17 Go-Live-Migrationen
 -- schon angewendet sind (erwartet: alle f ausser der ersten Zeile) und Mengen fuer die Backfills.
 -- Gibt nur Zaehlungen und Vereins-Slugs aus, keine Personendaten.
 with c(tab, col) as (select table_name, column_name from information_schema.columns where table_schema = 'public')
@@ -17,10 +17,24 @@ select m, applied from (values
   ('20261107110000 invoice_retry',            exists (select 1 from c where tab = 'camp_registrations' and col = 'invoice_error')),
   ('20261107120000 anonymized_at',            exists (select 1 from c where tab = 'camp_registrations' and col = 'anonymized_at')),
   ('20261107130000 parent_billing_address',   exists (select 1 from c where tab = 'camp_registrations' and col = 'parent_street')),
-  ('20261107140000 stripe_managed_risk',      exists (select 1 from c where tab = 'organizations' and col = 'stripe_express_account_kind'))
+  ('20261107140000 stripe_managed_risk',      exists (select 1 from c where tab = 'organizations' and col = 'stripe_express_account_kind')),
+  ('20261110100000 fee_rule_monthly_fee',     exists (select 1 from c where tab = 'organization_fee_rules' and col = 'monthly_fee_cents')),
+  ('20261110110000 registration_self_service', exists (select 1 from c where tab = 'camp_registrations' and col = 'reminder_sent_at'))
 ) v(m, applied);
 select (select count(*) from public.organizations) as vereine,
        (select string_agg(slug, ', ' order by slug) from public.organizations) as slugs,
        (select count(*) from public.camp_registrations) as anmeldungen,
        (select count(*) from public.camp_registrations where payment_status = 'paid') as bezahlt,
        (select count(*) from public.camp_registrations where child_first_name = 'Gelöscht' and child_last_name = 'Gelöscht') as platzhalter;
+
+-- Nach der Migration (Abschnitt 3.2b): heute gueltiges Paket je Verein. KSV und JK muessen 'individuell'
+-- zeigen, sonst gilt das Camp-Limit des Pakets Starter (1 aktives Camp). Nur Slugs und Zaehlungen.
+-- Vor der Migration schlaegt diese Abfrage fehl (Tabelle fehlt) - dann ignorieren.
+select o.slug,
+       coalesce((select r.plan from public.organization_fee_rules r
+                  where r.organization_id = o.id and r.valid_from <= current_date
+                  order by r.valid_from desc, r.created_at desc, r.id desc limit 1), 'starter (Standard)') as paket_heute,
+       (select count(*) from public.camps c
+         where c.organization_id = o.id and c.offer_id is null and c.status = 'published'
+           and c.end_date >= current_date) as aktive_camps
+from public.organizations o order by o.slug;

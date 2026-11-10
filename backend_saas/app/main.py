@@ -25,8 +25,9 @@ from . import db
 from .admin_resolve import RequestMemoMiddleware
 from .db import DatabaseBusy
 from .config import get_settings
+from .log_redact import install_access_log_filter
 from .routers.training import admin_router as training_admin_router, public_router as training_public_router
-from .routers import admin_router, camps_router, exports_router, memberships_router, organizations_router, players_router, pilot_request_router, registrations_router, signup_router, payments_router, billing_router, invoices_router
+from .routers import admin_router, camps_router, exports_router, memberships_router, organizations_router, players_router, pilot_request_router, registrations_router, signup_router, payments_router, billing_router, invoices_router, internal_router, booking_router
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 logging.basicConfig(level=settings.log_level)
+install_access_log_filter()
 
 
 def _link_unlinked_registrations_best_effort() -> None:
@@ -107,6 +109,8 @@ app.include_router(pilot_request_router)
 app.include_router(payments_router)
 app.include_router(billing_router)
 app.include_router(invoices_router)
+app.include_router(internal_router)
+app.include_router(booking_router)
 
 
 @app.exception_handler(DatabaseBusy)

@@ -3,7 +3,7 @@ import BrandMark from '../../components/marketing/BrandMark'
 import PricingPackages from '../../components/marketing/PricingPackages'
 import StartSteps from '../../components/marketing/StartSteps'
 import { marketingMetadata } from '../campspilot/seoMetadata'
-import { faq, preise, registrierungHref } from './pakete'
+import { faq, preise, rechenbeispiel, registrierungHref } from './pakete'
 
 export async function generateMetadata() {
   return marketingMetadata('/preise', 'Preise – CampsPilot', preise.einleitung)
@@ -40,6 +40,18 @@ export default function PreisePage() {
           <div className="wrap sec">
             <h2 className="d2" id="preis-heading">Die Pakete im Überblick</h2>
             <PricingPackages />
+            <div className="price-example" aria-labelledby="beispiel-heading">
+              <h3 className="d3" id="beispiel-heading">{preise.beispielTitel}</h3>
+              <p>
+                {rechenbeispiel.kinder} Kinder zu je {rechenbeispiel.preisJeKind} ergeben {rechenbeispiel.umsatz} Buchungsumsatz.
+                Im Paket Starter zahlen Sie dafür {rechenbeispiel.starterGebuehr} Gebühr je Buchung.
+                Im Paket Verein sind es {rechenbeispiel.vereinGebuehr} je Buchung, dazu kommen {rechenbeispiel.vereinGrundgebuehrMonat} Grundgebühr pro Monat.
+              </p>
+              <p>
+                Ab etwa {rechenbeispiel.schwelleJahresumsatz} Buchungsumsatz im Jahr ist das Paket Verein günstiger
+                (Grundgebühr {rechenbeispiel.vereinGrundgebuehrJahr} pro Jahr, dafür 2 Prozentpunkte weniger je Buchung).
+              </p>
+            </div>
           </div>
         </section>
         <StartSteps />

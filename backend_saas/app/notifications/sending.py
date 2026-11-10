@@ -31,7 +31,12 @@ from ..config import get_settings
 from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES
 from ..payment_reference import payment_reference as build_payment_reference
 from .mail import get_provider
-from .templates import build_cancellation_mail, build_provider_mail, build_registration_mail
+from .templates import (
+    build_cancellation_mail,
+    build_cancellation_request_mail,
+    build_provider_mail,
+    build_registration_mail,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +44,7 @@ _CAPACITY_COUNTING_STATUSES_LIST = list(CAPACITY_COUNTING_STATUSES)
 
 _FETCH_CONTEXT = """
     SELECT
+        o.slug                            AS org_slug,
         o.name                            AS org_name,
         COALESCE(o.legal_name, o.name)    AS payee_name,
         o.contact_email                   AS org_email,
@@ -148,6 +154,15 @@ def _effective_price(ctx: dict, applied_price_cents: Optional[int]) -> Optional[
     return applied_price_cents if applied_price_cents is not None else ctx.get("price_cents")
 
 
+def _booking_url(ctx: dict, registration_token: UUID) -> Optional[str]:
+    """Link "Meine Buchung" for parent mails; None (mail without link) when the
+    frontend origin is not configured for this environment."""
+    try:
+        return get_settings().booking_url(ctx.get("org_slug") or "", registration_token)
+    except ValueError:
+        return None
+
+
 def _do_send(
     *,
     registration_token: UUID,
@@ -187,6 +202,7 @@ def _do_send(
         currency=ctx.get("currency"),
         starts_at=starts_at,
         payment_method=payment_method,
+        booking_url=_booking_url(ctx, registration_token),
     )
     msg.sender_name = f"{ctx['org_name']} über CampsPilot"
     provider = get_provider()
@@ -547,6 +563,7 @@ def _send_for_status(registration_token: UUID, organization_id: UUID, kind: str)
             promoted=kind == "promoted",
             starts_at=reg.get("starts_at"),
             payment_method=reg.get("payment_method"),
+            booking_url=_booking_url(ctx, registration_token),
         )
     msg.sender_name = f"{ctx['org_name']} über CampsPilot"
     provider = get_provider()
@@ -594,3 +611,51 @@ def resend_registration_mail(registration_token: UUID, organization_id: UUID) ->
         except Exception:
             pass
         raise
+
+
+_CANCELLATION_REQUEST_RECIPIENTS = """
+    SELECT DISTINCT notification_email
+    FROM organization_members
+    WHERE organization_id = %s
+      AND role = 'org_admin'
+      AND notification_channel = 'email'
+      AND notification_email IS NOT NULL
+      AND notification_events && ARRAY['cancellation', 'new_registration']::text[]
+"""
+
+
+def send_cancellation_request_notification(registration_token: UUID, organization_id: UUID) -> None:
+    """Best-effort mail to the club admins that parents asked for a cancellation.
+
+    Recipients: org admins with e-mail notifications on (channel 'email', an address, and the
+    event 'cancellation' or 'new_registration'); without any, the organization's contact
+    address. The mail names the camp and links to the admin list, nothing about the child
+    or the parents. Never raises."""
+    try:
+        reg = _fetch_registration(registration_token, organization_id)
+        if reg is None:
+            return
+        ctx = _fetch_mail_context(organization_id, reg["camp_id"])
+        if ctx is None:
+            return
+        with db.get_cursor() as cur:
+            cur.execute(_CANCELLATION_REQUEST_RECIPIENTS, (organization_id,))
+            recipients = [row["notification_email"] for row in cur.fetchall()]
+        if not recipients and ctx.get("org_email"):
+            recipients = [ctx["org_email"]]
+        try:
+            admin_url: Optional[str] = get_settings().admin_registrations_url(ctx.get("org_slug") or "")
+        except ValueError:
+            admin_url = None
+        provider = get_provider()
+        for address in recipients:
+            msg = build_cancellation_request_mail(
+                org_name=ctx["org_name"], camp_title=ctx["camp_title"], admin_url=admin_url, to_email=address,
+            )
+            msg.sender_name = f"{ctx['org_name']} über CampsPilot"
+            try:
+                provider.send(msg)
+            except Exception as exc:  # noqa: BLE001 - one recipient must not block the others
+                logger.warning("send_cancellation_request_notification failed (error_type=%s)", type(exc).__name__)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("send_cancellation_request_notification failed (error_type=%s)", type(exc).__name__)

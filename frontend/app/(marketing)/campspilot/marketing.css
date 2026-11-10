@@ -563,7 +563,8 @@
 .cp-scope .price-amount { margin-top: var(--price-copy-gap); }
 .cp-scope .price-amount strong { font-size: var(--price-amount-size); line-height: 1.2; white-space: nowrap; }
 .cp-scope .price-amount span { display: block; }
-.cp-scope .price-scope { font-weight: 600; }
+.cp-scope .price-scope, .cp-scope .price-fee { font-weight: 600; }
+.cp-scope .price-example { margin-top: var(--price-grid-gap); display: flex; flex-direction: column; gap: var(--price-copy-gap); max-width: 70ch; }
 .cp-scope .price-features { list-style: disc; padding-left: var(--price-list-indent); padding-block: var(--price-copy-gap) var(--price-gap); color: var(--ink-2); font-size: var(--price-small-size); }
 .cp-scope .price-features li + li { margin-top: var(--price-copy-gap); }
 .cp-scope .price-card .btn { margin-top: auto; padding-inline: var(--price-copy-gap); }

@@ -69,5 +69,11 @@ services:
                                # charge.refund.updated, account.updated. Bestätigt alle Direct Charges (Managed Risk + Altkonten).
       - key: STRIPE_PLATFORM_WEBHOOK_SECRET
         sync: false           # nur für B2-Express-Konten (Destination Charges, Staging); Managed Risk braucht ihn nicht
+      - key: CRON_SECRET
+        sync: false           # Geheimnis für POST /internal/cron/daily (tägliche Jobs, GitHub-Workflow daily-jobs.yml).
+                               # Ohne Wert antwortet der Endpunkt mit 503. Gleicher Wert wie GitHub-Secret CRON_SECRET.
+      - key: RETENTION_APPLY
+        sync: false           # "true" = Allergien/Medizinhinweise 30 Tage nach Campende wirklich auf NULL setzen.
+                               # Standard (leer/false): der Job zählt nur. Erst nach geprüftem Zähllauf einschalten.
       - key: BILLING_ADDRESS_LEGACY_UNTIL
         sync: false           # ISO-Datum, nur im Rollout: Go-Live + 7 Tage (Prod und Staging), danach entfernen

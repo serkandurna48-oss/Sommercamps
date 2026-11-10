@@ -46,7 +46,7 @@ async function renderForm() {
 }
 
 describe('Paketauswahl aus der Preisübersicht', () => {
-  it.each(['Start', 'Verein', 'Fußballschule'])('füllt %s aus der URL vor und lässt die Nachricht bearbeiten', async (name) => {
+  it.each(['Starter', 'Verein', 'Verband/Individuell'])('füllt %s aus der URL vor und lässt die Nachricht bearbeiten', async (name) => {
     window.history.replaceState({}, '', `/campspilot?paket=${encodeURIComponent(name)}#pilot`)
     await renderForm()
     const field = container.querySelector<HTMLTextAreaElement>('#prf-nachricht')!

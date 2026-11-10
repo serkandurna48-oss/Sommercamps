@@ -184,23 +184,32 @@ describe('CX2 – Preis und Fragen', () => {
     expect(price.compareDocumentPosition(pilot) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('enthält drei Pakete mit aufsteigenden Jahrespreisen', () => {
-    expect(pakete.map(({ name, preis }) => [name, preis])).toEqual([
-      ['Start', 199], ['Verein', 490], ['Fußballschule', 990],
+  it('enthält die drei Pakete Starter, Verein und Verband/Individuell', () => {
+    expect(pakete.map(({ name, preis, zeitraum, buchungsgebuehr }) => [name, preis, zeitraum, buchungsgebuehr])).toEqual([
+      ['Starter', '0 €', 'pro Monat', '6,9 % je Buchung, inkl. Zahlungsgebühren'],
+      ['Verein', '24,90 €', 'pro Monat', '4,9 % je Buchung, inkl. Zahlungsgebühren'],
+      ['Verband/Individuell', 'Individuell', '', 'Individuell je Buchung'],
     ])
-    expect(pakete.every((paket, index) => index === 0 || paket.preis > pakete[index - 1].preis)).toBe(true)
     const cards = Array.from(wrapper.querySelectorAll('#preis article'))
     for (const [index, paket] of pakete.entries()) {
       expect(cards[index].querySelector('h3')?.textContent).toBe(paket.name)
-      expect(cards[index].textContent).toContain(`${paket.preis} €`)
-      expect(cards[index].textContent).toContain('pro Jahr')
+      expect(cards[index].textContent).toContain(paket.preis)
+      expect(cards[index].textContent).toContain(paket.buchungsgebuehr)
+      expect(cards[index].textContent).toContain(paket.umfang)
       expect(cards[index].querySelectorAll('li')).toHaveLength(5)
     }
+    expect(cards[0].textContent).toContain('1 aktives Camp')
+    expect(cards[1].textContent).toContain('298,80 € pro Jahr')
+    expect(cards[1].textContent).toContain('Unbegrenzt')
   })
 
-  it('zeigt den vollständigen MwSt-Hinweis und den Saisonhinweis', () => {
-    expect(wrapper.querySelector('#preis')?.textContent).toContain('Alle Preise zzgl. MwSt. Keine Gebühr pro Anmeldung.')
-    expect(wrapper.querySelector('#preis small')?.textContent).toBe('Preise gültig für die Saison 2027')
+  it('zeigt USt-Hinweis und Stripe-Hinweis, ohne Entwurfskennzeichnung', () => {
+    const text = wrapper.querySelector('#preis')?.textContent ?? ''
+    expect(text).toContain('Alle Beträge zzgl. USt.')
+    expect(text).toContain('enthält die Stripe-Gebühr für Kartenzahlungen mit europäischen Karten')
+    expect(text).not.toContain('Keine Gebühr pro Anmeldung')
+    expect(text).not.toContain('Preise gültig für die Saison')
+    expect(wrapper.querySelector('#preis small')).toBeNull()
   })
 
   it('verlinkt jedes Paket mit seinem Namen zum vorhandenen Anfrageformular', () => {
@@ -239,13 +248,12 @@ describe('CX2 – Preis und Fragen', () => {
     }
   })
 
-  it('macht keine Zusage zu Testphase oder jederzeitiger Kündigung', () => {
-    for (const question of ['Gibt es eine Testphase?', 'Können wir jederzeit kündigen?']) {
-      const entry = Array.from(wrapper.querySelectorAll('#fragen details')).find(
-        (item) => item.querySelector('summary')?.textContent === question,
-      )
-      expect(entry?.querySelector('p')?.textContent).toContain('Sprechen Sie uns an.')
-    }
+  it('beantwortet die Testphase mit dem gebührenfreien Starter und macht keine Zusage zur Kündigung', () => {
+    const answerOf = (question: string) => Array.from(wrapper.querySelectorAll('#fragen details')).find(
+      (item) => item.querySelector('summary')?.textContent === question,
+    )?.querySelector('p')?.textContent
+    expect(answerOf('Gibt es eine Testphase?')).toContain('Starter hat keine Grundgebühr, Sie zahlen nur bei Buchungen.')
+    expect(answerOf('Können wir jederzeit kündigen?')).toContain('Sprechen Sie uns an.')
   })
 })
 

@@ -78,7 +78,7 @@ from ..repositories import organizations as organizations_repo
 from ..repositories import platform_roles
 from ..repositories import platform_stats as platform_stats_repo
 from ..repositories import registrations as registrations_repo
-from ..repositories.camps import CampSlugConflictError
+from ..repositories.camps import CampSlugConflictError, PlanCampLimitError
 from ..repositories.organizations import OrganizationSlugConflictError
 from ..repositories.registrations import (
     RegistrationFeeRecordedError,
@@ -374,6 +374,11 @@ def create_camp(
             data.slug,
         )
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Slug already in use") from exc
+    except PlanCampLimitError as exc:
+        logger.info("Camp creation rejected: plan camp limit (organization_slug=%s)", organization_slug)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail={"code": exc.code, "message": exc.message}
+        ) from exc
     except Exception:
         logger.exception(
             "Camp creation failed unexpectedly (organization_slug=%s, camp_slug=%s)",
@@ -399,6 +404,11 @@ def update_camp(
 
     try:
         row = camps_repo.update_camp(organization["id"], camp_slug, data)
+    except PlanCampLimitError as exc:
+        logger.info("Camp update rejected: plan camp limit (organization_slug=%s)", organization_slug)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail={"code": exc.code, "message": exc.message}
+        ) from exc
     except Exception:
         logger.exception(
             "Camp update failed unexpectedly (organization_slug=%s, camp_slug=%s)",

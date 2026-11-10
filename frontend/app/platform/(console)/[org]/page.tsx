@@ -1,16 +1,16 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ButtonLink } from '../../../components/saas/ui/Button'
+import Button, { ButtonLink } from '../../../components/saas/ui/Button'
 import { notFound, redirect } from 'next/navigation'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
-import { fetchCampsAdmin, fetchFeeRulesAdmin, fetchOrganizationAdmin, fetchOrganizationMembersAdmin, fetchStripePaymentStatusAdmin } from '../../../lib/saasAdminApi'
+import { fetchCampsAdmin, fetchFeeMonthAdmin, fetchFeeRulesAdmin, fetchOrganizationAdmin, fetchOrganizationMembersAdmin, fetchStripePaymentStatusAdmin } from '../../../lib/saasAdminApi'
 import PublishToggle from '../../../components/saas/config/PublishToggle'
 import MembersSection from './MembersSection'
 import BillingNotesForm from './BillingNotesForm'
 import StripeConnectForm from './StripeConnectForm'
 import FeeRuleForm from './FeeRuleForm'
 import OnlinePaymentToggle from './OnlinePaymentToggle'
-import { formatFeeRule, formatStripeStatus } from './feeFormat'
+import { feeMonthSummary, formatFeeRule, formatStripeStatus, resolveFeeMonth } from './feeFormat'
 import ModulesForm from './ModulesForm'
 import { orgModules } from '../../../lib/orgModules'
 import ReviewBox from './ReviewBox'
@@ -55,22 +55,28 @@ const CAMP_STATUS_LABEL: Record<string, string> = {
  * diese Seite verlinkt dorthin (siehe root CLAUDE.md-Prinzip "vorhandene
  * Module weiterverwenden").
  */
-export default async function PlatformOrgDetailPage({ params }: { params: Promise<{ org: string }> }) {
+export default async function PlatformOrgDetailPage({ params, searchParams }: {
+  params: Promise<{ org: string }>
+  searchParams: Promise<{ month?: string | string[] }>
+}) {
   const { org: orgSlug } = await params
+  const { month: requestedMonth } = await searchParams
   const token = await getValidAccessToken()
   if (!token) redirect('/platform/login')
 
   const org = await fetchOrganizationAdmin(orgSlug, token)
   if (!org) notFound()
 
-  const [camps, members, feeRules, stripeStatus] = await Promise.all([
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(new Date())
+  const feeMonthKey = resolveFeeMonth(requestedMonth, today.slice(0, 7))
+  const [camps, members, feeRules, stripeStatus, feeMonth] = await Promise.all([
     fetchCampsAdmin(orgSlug, token),
     fetchOrganizationMembersAdmin(orgSlug, token),
     // Billing data must not break the rest of the console page.
     fetchFeeRulesAdmin(orgSlug, token).catch(() => null),
     fetchStripePaymentStatusAdmin(orgSlug, token).catch(() => null),
+    fetchFeeMonthAdmin(orgSlug, token, feeMonthKey).catch(() => null),
   ])
-  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(new Date())
   const steps = computeSetupSteps(org, camps.length)
   const progress = setupProgressCount(steps)
 
@@ -244,6 +250,27 @@ export default async function PlatformOrgDetailPage({ params }: { params: Promis
             </div>
           )}
           <FeeRuleForm orgSlug={org.slug} today={today} />
+          <div className="mt-6" data-testid="fee-month">
+            <h3 className="cp-body font-semibold" style={{ color: 'var(--cp-ink)' }}>Monatsübersicht {feeMonthKey}</h3>
+            <form method="get" className="mt-2 flex flex-wrap items-center gap-2">
+              <label htmlFor="fee_month" className="cp-body">Monat</label>
+              <input id="fee_month" name="month" type="month" defaultValue={feeMonthKey} min="2000-01" required className="cp-body rounded border px-2 py-1" style={{ borderColor: 'var(--cp-line)' }} />
+              <Button type="submit">Anzeigen</Button>
+            </form>
+            {feeMonth ? (
+              <dl className="cp-body mt-3 grid max-w-[480px] grid-cols-[1fr_auto] gap-x-6 gap-y-1">
+                {feeMonthSummary(feeMonth).map(row => (
+                  <div key={row.label} className="contents">
+                    <dt style={{ color: row.label === 'Summe' ? 'var(--cp-ink)' : 'var(--cp-ink-2)' }}>{row.label}</dt>
+                    <dd className={row.label === 'Summe' ? 'text-right font-semibold' : 'text-right'}>{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="cp-body mt-3" style={{ color: 'var(--cp-ink-2)' }}>Monatsübersicht nicht abrufbar.</p>
+            )}
+            <p className="cp-body mt-2" style={{ color: 'var(--cp-ink-2)' }}>Beträge zzgl. USt. Die Grundgebühr gilt nach der Regel vom letzten Tag des Monats (im laufenden Monat: heute).</p>
+          </div>
         </div>
       </section>
 

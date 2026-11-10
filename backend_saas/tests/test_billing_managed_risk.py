@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import time
 from decimal import Decimal
+from types import SimpleNamespace
 from uuid import uuid4
 
 import stripe
@@ -44,7 +45,17 @@ def _completed_dfee(session_id, intent, **extra):
     return event
 
 
+def _no_payment_fee(env):
+    """Webhook tests model a Stripe charge that withheld exactly the quoted 5 %
+    (50 ct): switch the Stripe-fee estimate off so the quote matches the mock.
+    The deduction itself is covered by the checkout tests."""
+    current = env.state["settings"]
+    env.state["settings"] = SimpleNamespace(**{**vars(current), "stripe_fee_percent": Decimal(0),
+                                                "stripe_fee_fixed_cents": 0})
+
+
 def _paid_direct_fee(env):
+    _no_payment_fee(env)
     _activate_direct_fee(env)
     token = _register(env)
     assert _checkout(env, token).status_code == 200
@@ -151,16 +162,20 @@ def test_checkout_is_direct_charge_with_application_fee(env):
     (_, kw), = env.fake.named("Session.create")
     assert kw["stripe_account"] == env.express
     intent = kw["payment_intent_data"]
-    assert intent == {"metadata": {"campspilot": "1", "organization_id": str(env.org)}, "application_fee_amount": 50}
+    # Ahmads Regel: Gebühr inkl. Zahlungsgebühren. 5 % von 10,00 € = 50 ct, abzüglich
+    # geschätzter Stripe-Gebühr (1,5 % + 0,25 € = 40 ct) = 10 ct application fee.
+    assert intent == {"metadata": {"campspilot": "1", "organization_id": str(env.org)}, "application_fee_amount": 10}
     assert "on_behalf_of" not in intent and "transfer_data" not in intent
     assert kw["line_items"][0]["price_data"]["unit_amount"] == 1000
     assert kw["metadata"] == {"campspilot": "1", "organization_id": str(env.org), "camp_slug": "summer-1",
                               "charge_type": "direct_fee"}
-    assert kw["idempotency_key"] == f"campspilot-dfee-{token}-first-1000-50-{env.express}"
+    assert kw["idempotency_key"] == f"campspilot-dfee-{token}-first-1000-10-{env.express}"
     assert "Kind" not in json.dumps(kw) and "max@example.com" not in json.dumps(kw)
     row = _reg(env, token)
     assert (row["stripe_charge_type"], row["stripe_checkout_account_id"]) == ("direct_fee", env.express)
-    assert row["stripe_checkout_fee"]["fee_cents"] == 50 and row["fee_snapshot_at"] is None
+    assert row["stripe_checkout_fee"]["fee_cents"] == 10 and row["fee_snapshot_at"] is None
+    assert row["stripe_checkout_fee"]["gross_fee_cents"] == 50
+    assert row["stripe_checkout_fee"]["payment_fee_cents"] == 40
     # Same booking again: open session on the club's account is reused.
     assert _checkout(env, token).json()["url"] == r.json()["url"]
     assert env.fake.named("Session.retrieve")[0][2] == {"stripe_account": env.express}
@@ -189,7 +204,7 @@ def test_fee_change_replaces_open_direct_fee_session_on_club_account(env):
     assert second.status_code == 200 and second.json()["url"] != first
     expire, = env.fake.named("Session.expire")
     assert expire[2] == {"stripe_account": env.express}
-    assert env.fake.named("Session.create")[1][1]["payment_intent_data"]["application_fee_amount"] == 49
+    assert env.fake.named("Session.create")[1][1]["payment_intent_data"]["application_fee_amount"] == 9
 
 
 def test_training_direct_fee_checkout_uses_applied_price(env, real_db):
@@ -202,7 +217,7 @@ def test_training_direct_fee_checkout_uses_applied_price(env, real_db):
     (_, kw), = env.fake.named("Session.create")
     assert kw["stripe_account"] == env.express
     assert kw["line_items"][0]["price_data"]["unit_amount"] == 4500
-    assert kw["payment_intent_data"]["application_fee_amount"] == 225
+    assert kw["payment_intent_data"]["application_fee_amount"] == 132  # 225 - (68 + 25)
 
 
 # ---------- Connect webhook ----------
@@ -343,6 +358,7 @@ def test_refund_waits_for_unexpanded_fee_object(env):
 def test_fee_lookup_failure_never_blocks_paid(env, monkeypatch):
     """I1: a refund before the completed event, and the ApplicationFee cannot be
     read yet: the payment is still booked, the fee refund comes later."""
+    _no_payment_fee(env)
     _activate_direct_fee(env)
     token = _register(env)
     _checkout(env, token)
@@ -375,6 +391,7 @@ def test_no_fee_lookup_without_refund(env):
 
 def test_fee_is_capped_below_the_charge_amount(env):
     """M2: application_fee_amount must be less than the charge."""
+    _no_payment_fee(env)
     _activate_direct_fee(env)
     with env.cursor() as cur:
         cur.execute("insert into organization_fee_rules (organization_id, plan, percent, min_fee_cents, valid_from, "
@@ -397,4 +414,41 @@ def test_fee_mismatch_is_flagged_but_paid(env, monkeypatch):
     env.intent = f"pi_test{uuid4().hex[:16]}"
     env.fake.charge = {**env.fake.charge, "application_fee_amount": 50}
     _paid_direct_fee(env)
+    assert flagged == []
+
+
+def test_fee_below_payment_fee_omits_application_fee(env):
+    """Gebühr kleiner als die geschätzte Stripe-Gebühr: keine application fee
+    (die Plattform bekommt nichts, Stripe berechnet dem Verein seine Gebühr)."""
+    _activate_direct_fee(env)
+    with env.cursor() as cur:
+        cur.execute("insert into organization_fee_rules (organization_id, plan, percent, valid_from, created_at) "
+                    "values (%s,'individuell',2,'2000-01-01', now() + interval '1 second')", (env.org,))
+    token = _register(env)
+    assert _checkout(env, token).status_code == 200
+    (_, kw), = env.fake.named("Session.create")
+    assert "application_fee_amount" not in kw["payment_intent_data"]
+    assert _reg(env, token)["stripe_checkout_fee"]["fee_cents"] == 0
+
+
+def test_destination_charges_keep_the_full_fee(env):
+    """Bei Destination Charges zahlt die Plattform Stripe selbst: kein Abzug."""
+    from app import fees
+    rule = fees.FeeRule(None, "starter", Decimal("6.90"), None, None, None)
+    assert fees.fee_quote(rule, 15000)["fee_cents"] == 1035
+
+
+def test_net_fee_settles_without_flag_and_snapshot_holds_net_fee(env, monkeypatch):
+    """Stripe behält genau die gekürzte Gebühr (10 ct) ein: bezahlt, keine
+    Prüfmeldung, im Snapshot steht, was die Plattform wirklich bekommt."""
+    flagged = []
+    monkeypatch.setattr(payments, "_flag_for_review", lambda org, reg, reason, *_: flagged.append(reason))
+    env.fake.charge = {**env.fake.charge, "application_fee_amount": 10}
+    _activate_direct_fee(env)
+    token = _register(env)
+    assert _checkout(env, token).status_code == 200
+    event = _completed_dfee(_reg(env, token)["stripe_checkout_session_id"], intent=env.intent, account=env.express)
+    assert _post_webhook(env, CONNECT_HOOK, event, CONNECT_SECRET).json() == {"received": True, "settled": True}
+    row = _reg(env, token)
+    assert (row["payment_status"], row["fee_cents"], row["fee_collection"]) == ("paid", 10, "application_fee")
     assert flagged == []

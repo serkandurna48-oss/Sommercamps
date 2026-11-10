@@ -1,0 +1,44 @@
+# Uptime check for the SaaS API (prod + staging).
+# A failed run makes GitHub mail the repository owner (Settings > Notifications > Actions).
+# Override the URLs with repository variables PROD_API_URL / STAGING_API_URL.
+name: uptime
+
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    name: health ${{ matrix.target }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: prod
+            default_url: https://sommercamps-0aod.onrender.com
+          - target: staging
+            default_url: https://campspilot-staging.onrender.com
+    steps:
+      - name: GET /health
+        env:
+          PROD_URL: ${{ vars.PROD_API_URL }}
+          STAGING_URL: ${{ vars.STAGING_API_URL }}
+          TARGET: ${{ matrix.target }}
+          DEFAULT_URL: ${{ matrix.default_url }}
+        run: |
+          if [ "$TARGET" = prod ]; then url="${PROD_URL:-$DEFAULT_URL}"; else url="${STAGING_URL:-$DEFAULT_URL}"; fi
+          # Render free/starter instances can be slow on first request: 3 tries, 60 s each.
+          for i in 1 2 3; do
+            body="$(curl -sS --max-time 60 "$url/health" || true)"
+            if printf '%s' "$body" | grep -q '"status":"ok"' && printf '%s' "$body" | grep -q '"database":"ok"'; then
+              echo "$TARGET ok"; exit 0
+            fi
+            echo "try $i failed: $body"; sleep 20
+          done
+          echo "::error::$TARGET API unhealthy ($url/health)"; exit 1

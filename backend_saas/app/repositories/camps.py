@@ -22,12 +22,13 @@ tenant").
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
 import psycopg2.errors
 
-from .. import db
+from .. import db, fees
 from ..admin_schemas import CampCreate, CampUpdate
 from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES
 from ..tenancy import TenantContext
@@ -118,6 +119,45 @@ class CampSlugConflictError(Exception):
         super().__init__(f"Camp slug '{slug}' already exists for organization '{organization_id}'")
 
 
+class PlanCampLimitError(Exception):
+    """The organization's plan (starter) allows one active camp and it already
+    has one. Maps to 409 `plan_camp_limit`."""
+
+    code = "plan_camp_limit"
+    message = "Im Paket Starter ist 1 aktives Camp enthalten. Für mehr Camps wechsle ins Paket Verein."
+
+    def __init__(self, organization_id: UUID):
+        self.organization_id = organization_id
+        super().__init__(self.message)
+
+
+STARTER_ACTIVE_CAMP_LIMIT = 1
+
+_COUNT_ACTIVE_CAMPS = """
+    select count(*) as n from camps
+    where organization_id = %s and offer_id is null and status = 'published'
+      and end_date >= %s and id is distinct from %s
+"""
+
+
+def _enforce_plan_camp_limit(cur, organization_id: UUID, exclude_camp_id: Optional[UUID] = None) -> None:
+    """Call before an additional camp becomes active (published and not ended).
+    Only the plan valid today counts; trainings (offer_id set) and other
+    organizations' camps do not. An advisory lock per organization serializes
+    concurrent publishes so two requests cannot both pass the check."""
+    today = fees.booking_date(datetime.now(timezone.utc))
+    cur.execute("select pg_advisory_xact_lock(hashtextextended(%s, 0))", (f"camp-limit:{organization_id}",))
+    if fees.effective_fee(organization_id, today, cur=cur).plan != "starter":
+        return
+    cur.execute(_COUNT_ACTIVE_CAMPS, (organization_id, today, exclude_camp_id))
+    if cur.fetchone()["n"] >= STARTER_ACTIVE_CAMP_LIMIT:
+        raise PlanCampLimitError(organization_id)
+
+
+def _is_active(status: str, end_date, today) -> bool:
+    return status == "published" and end_date >= today
+
+
 _ADMIN_CAMP_FIELDS = """
     id, organization_id, slug, title, start_date, end_date,
     registration_start, registration_end, age_min, age_max, capacity,
@@ -195,6 +235,8 @@ def create_camp(organization_id: UUID, data: CampCreate) -> dict:
     the authoritative check; CampCreate's format validator only catches
     malformed slugs, not duplicates)."""
     with db.get_cursor() as cur:
+        if data.status == "published" and data.end_date >= fees.booking_date(datetime.now(timezone.utc)):
+            _enforce_plan_camp_limit(cur, organization_id)
         try:
             cur.execute(
                 _INSERT_CAMP,
@@ -256,5 +298,22 @@ def update_camp(organization_id: UUID, camp_slug: str, data: CampUpdate) -> Opti
         returning {_ADMIN_CAMP_FIELDS}
     """
     with db.get_cursor() as cur:
+        if "status" in fields or "end_date" in fields:
+            # Only a camp that turns active needs the check: editing a camp that is
+            # already active never fails, even if the plan was downgraded earlier.
+            cur.execute(
+                "select id, status, end_date from camps where organization_id = %s and slug = %s "
+                "and offer_id is null for update",
+                (organization_id, camp_slug),
+            )
+            current = cur.fetchone()
+            if current is not None:
+                today = fees.booking_date(datetime.now(timezone.utc))
+                after_status = fields.get("status", current["status"])
+                after_end = fields.get("end_date", current["end_date"])
+                if _is_active(after_status, after_end, today) and not _is_active(
+                    current["status"], current["end_date"], today
+                ):
+                    _enforce_plan_camp_limit(cur, organization_id, exclude_camp_id=current["id"])
         cur.execute(query, (*fields.values(), organization_id, camp_slug))
         return cur.fetchone()

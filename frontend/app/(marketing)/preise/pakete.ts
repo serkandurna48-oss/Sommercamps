@@ -1,4 +1,4 @@
-// Draft pricing: keep all package copy and amounts here for Serkan's decision.
+// Preismodell (Plan P): alle Paketdaten und Preistexte stehen hier. Beträge zzgl. USt.
 const features = [
   'Anmeldeseite im Vereinsdesign',
   'Bestätigungsmails',
@@ -6,6 +6,14 @@ const features = [
   'Einrichtung in unter 15 Minuten',
   'Persönlicher Support',
 ] as const
+
+/** Cent als deutscher Eurobetrag, z. B. 2490 -> „24,90 €“, 1494000 -> „14.940,00 €“. */
+export function euro(cents: number): string {
+  const sign = cents < 0 ? '-' : ''
+  const abs = Math.abs(Math.round(cents))
+  const whole = String(Math.floor(abs / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${sign}${whole},${String(abs % 100).padStart(2, '0')} €`
+}
 
 export const registrierungHref = '/campspilot/registrieren'
 
@@ -15,21 +23,51 @@ export const startSchritte = [
   { titel: 'Camp anlegen und Anmeldelink teilen', text: 'Legen Sie Ihr Camp an, veröffentlichen Sie es und teilen Sie den Anmeldelink mit den Eltern.' },
 ] as const
 
+const STARTER_BASIS_POINTS = 690
+const VEREIN_BASIS_POINTS = 490
+const VEREIN_MONAT_CENTS = 2490
+const VEREIN_JAHR_CENTS = VEREIN_MONAT_CENTS * 12
+const BEISPIEL_KINDER = 20
+const BEISPIEL_PREIS_CENTS = 15000
+const BEISPIEL_UMSATZ_CENTS = BEISPIEL_KINDER * BEISPIEL_PREIS_CENTS
+const percentOf = (cents: number, basisPoints: number) => Math.round((cents * basisPoints) / 10000)
+
+// Ab diesem Buchungsumsatz im Jahr spart der niedrigere Satz die Grundgebühr wieder ein.
+const SCHWELLE_CENTS = Math.round((VEREIN_JAHR_CENTS * 10000) / (STARTER_BASIS_POINTS - VEREIN_BASIS_POINTS))
+
+export const rechenbeispiel = {
+  kinder: BEISPIEL_KINDER,
+  preisJeKind: euro(BEISPIEL_PREIS_CENTS),
+  umsatz: euro(BEISPIEL_UMSATZ_CENTS),
+  starterGebuehr: euro(percentOf(BEISPIEL_UMSATZ_CENTS, STARTER_BASIS_POINTS)),
+  vereinGebuehr: euro(percentOf(BEISPIEL_UMSATZ_CENTS, VEREIN_BASIS_POINTS)),
+  vereinGrundgebuehrMonat: euro(VEREIN_MONAT_CENTS),
+  vereinGrundgebuehrJahr: euro(VEREIN_JAHR_CENTS),
+  schwelleJahresumsatz: euro(SCHWELLE_CENTS),
+} as const
+
 export const pakete = [
-  { name: 'Start', preis: 199, zielgruppe: 'Für Vereine mit einem Camp in der Saison.', umfang: '1 Camp pro Saison', features },
-  { name: 'Verein', preis: 490, zielgruppe: 'Für Vereine mit mehreren Feriencamps.', umfang: 'Bis 5 Camps', features },
-  { name: 'Fußballschule', preis: 990, zielgruppe: 'Für Fußballschulen an mehreren Standorten.', umfang: 'Unbegrenzte Camps, mehrere Standorte', features },
+  {
+    name: 'Starter', preis: '0 €', zeitraum: 'pro Monat', buchungsgebuehr: '6,9 % je Buchung, inkl. Zahlungsgebühren',
+    zielgruppe: 'Für Vereine, die mit einem Camp starten.', umfang: '1 aktives Camp', features,
+  },
+  {
+    name: 'Verein', preis: '24,90 €', zeitraum: 'pro Monat', buchungsgebuehr: '4,9 % je Buchung, inkl. Zahlungsgebühren',
+    zielgruppe: 'Für Vereine mit mehreren Feriencamps.', umfang: 'Unbegrenzt viele Camps · 298,80 € pro Jahr', features,
+  },
+  {
+    name: 'Verband/Individuell', preis: 'Individuell', zeitraum: '', buchungsgebuehr: 'Individuell je Buchung',
+    zielgruppe: 'Für Verbände und Fußballschulen mit mehreren Standorten.', umfang: 'Unbegrenzt viele Camps', features,
+  },
 ] as const
 
 export const preise = {
-  entwurf: true,
   navigation: 'Preise',
   titel: 'Ihr Camp. Ihr Paket.',
-  einleitung: 'Ein fester Jahrespreis, passend zu Ihrer Campsaison. Alle Pakete enthalten die Funktionen für Anmeldung und Teilnehmerverwaltung.',
-  zeitraum: 'pro Jahr',
+  einleitung: 'Starter hat keine Grundgebühr: Sie zahlen nur, wenn gebucht wird. Wer mehr Camps veranstaltet, wechselt ins Paket Verein.',
   waehrung: '€',
-  steuerhinweis: 'Alle Preise zzgl. MwSt. Keine Gebühr pro Anmeldung.',
-  saisonhinweis: 'Preise gültig für die Saison 2027',
+  steuerhinweis: 'Alle Beträge zzgl. USt. Die Gebühr je Buchung enthält die Stripe-Gebühr für Kartenzahlungen mit europäischen Karten (1,5 % + 0,25 €). Für andere Karten berechnet Stripe teils mehr, bei Erstattungen behält Stripe seine Gebühr. Bei Überweisung fallen keine Zahlungsgebühren an.',
+  beispielTitel: 'Rechenbeispiel',
   anfrage: 'Unverbindlich anfragen',
   formular: '/campspilot',
   formularAnker: 'pilot',
@@ -40,7 +78,7 @@ export const preise = {
 } as const
 
 export const faq = [
-  { frage: 'Gibt es eine Testphase?', antwort: 'Sprechen Sie uns an. Gemeinsam klären wir, wie Sie CampsPilot kennenlernen können.' },
+  { frage: 'Gibt es eine Testphase?', antwort: 'Starter hat keine Grundgebühr, Sie zahlen nur bei Buchungen.' },
   { frage: 'Brauchen Eltern ein Konto?', antwort: 'Nein. Eltern melden ihr Kind direkt über die Anmeldeseite an, ohne ein Konto anzulegen.' },
   { frage: 'Können wir unser Vereinslogo und unsere Farben nutzen?', antwort: 'Ja. Ihre Anmeldeseite nutzt Ihr Vereinslogo und Ihre Vereinsfarbe.' },
   { frage: 'Wo liegen die Daten (Deutschland/EU)?', antwort: 'Die Anmeldedaten speichern wir in einer Datenbank mit EU-Hosting. Details zur Verarbeitung finden Sie in der Datenschutzerklärung der jeweiligen Anmeldeseite.' },

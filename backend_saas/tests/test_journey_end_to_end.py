@@ -241,6 +241,11 @@ def _run_journey(cursor, identities, fake: FakeProvider) -> None:
         assert expected_ref in parent_mails[0].html_content
         assert "Kind1" not in parent_mails[0].html_content
 
+        # A second active camp needs the Verein plan (Starter includes one active camp).
+        with cursor() as cur:
+            cur.execute("INSERT INTO organization_fee_rules (organization_id, plan, percent, valid_from) "
+                        "SELECT id, 'verein', 4.90, date '2026-01-01' FROM organizations WHERE slug = %s", (slug,))
+
         # Same family, different camp: each response, mail and admin row keeps its own title.
         req(
             "POST", f"/admin/organizations/{slug}/camps", 201,

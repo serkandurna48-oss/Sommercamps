@@ -138,7 +138,7 @@ def _settings(**over):
     values = dict(
         stripe_checkout_enabled=True, stripe_secret_key="sk_test_x", stripe_webhook_secret=CONNECT_SECRET,
         stripe_platform_webhook_secret=PLATFORM_SECRET, frontend_base_url="https://example.com",
-        app_env="staging",
+        app_env="staging", stripe_fee_percent=Decimal("1.5"), stripe_fee_fixed_cents=25,
     )
     values.update(over)
     return SimpleNamespace(**values, frontend_base_is_usable=lambda: True)

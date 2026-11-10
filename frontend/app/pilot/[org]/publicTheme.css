@@ -3143,6 +3143,8 @@
   color: var(--ink-2);
   max-width: 65ch;
   margin-top: 16px;
+  /* Absätze aus dem Einführungstext bleiben erhalten (10.11.). */
+  white-space: pre-line;
 }
 
 /* Gallery band: horizontal, mobile scroll-snap, desktop side-by-side */

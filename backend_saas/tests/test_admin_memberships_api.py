@@ -296,3 +296,53 @@ def test_foreign_member_patch_leaves_state_and_audit_untouched(ctx):
     assert c["client"].patch(f"{_base(c)}/{foreign['id']}", headers=c["headers"], json={"active": False}).status_code == 404
     assert memberships.list_members(c["other"])[0]["active"] is True
     assert _audit(c) == []
+
+
+# ---------- detail ----------
+
+def test_get_member_detail_returns_all_fields_and_extra(ctx):
+    c = ctx
+    m = memberships.create_member(c["org"], first_name="Anna", last_name="Muster", birth_date=date(2015, 3, 5), member_number="M-7")
+    memberships.update_member(c["org"], m["id"], extra={"Mannschaft": "U11", "Verein seit": "2019"})
+    r = c["client"].get(f"{_base(c)}/{m['id']}", headers=c["headers"])
+    assert r.status_code == 200
+    body = r.json()
+    assert body["first_name"] == "Anna" and body["member_number"] == "M-7" and body["birth_date"] == "2015-03-05"
+    assert body["extra"] == {"Mannschaft": "U11", "Verein seit": "2019"}
+    assert body["active"] is True and body["source"] == "manual" and body["updated_at"] and body["player"] is None
+
+
+def test_get_member_detail_other_org_is_404_and_unknown_is_404(ctx):
+    c = ctx
+    foreign = memberships.create_member(c["other"], first_name="Bea", last_name="Fremd", birth_date=date(2014, 1, 1))
+    assert c["client"].get(f"{_base(c)}/{foreign['id']}", headers=c["headers"]).status_code == 404
+    assert c["client"].get(f"{_base(c)}/{uuid4()}", headers=c["headers"]).status_code == 404
+    assert c["client"].get(f"{_base(c, c['other_slug'])}/{foreign['id']}", headers=c["headers"]).status_code == 403
+
+
+def test_get_member_detail_requires_auth(ctx):
+    c = ctx
+    m = memberships.create_member(c["org"], first_name="Anna", last_name="Muster", birth_date=date(2015, 3, 5))
+    app.dependency_overrides.clear()
+    assert c["client"].get(f"{_base(c)}/{m['id']}").status_code == 401
+
+
+def test_get_member_detail_links_player_only_with_players_module(ctx):
+    c = ctx
+    m = memberships.create_member(c["org"], first_name="Anna", last_name="Muster", birth_date=date(2015, 3, 5))
+    with c["cursor"]() as cur:
+        cur.execute("insert into players (organization_id, first_name, last_name, birth_date, match_key) values (%s,'Anna','Muster','2015-03-05',%s)",
+                    (c["org"], m["match_key"]))
+        cur.execute("insert into players (organization_id, first_name, last_name, birth_date, match_key) values (%s,'Anna','Muster','2015-03-05',%s)",
+                    (c["other"], m["match_key"]))
+    with c["cursor"]() as cur:
+        cur.execute("update organizations set modules='{camps,members}' where id=%s", (c["org"],))
+    r = c["client"].get(f"{_base(c)}/{m['id']}", headers=c["headers"])
+    assert r.json()["player"] is None  # players module off
+    with c["cursor"]() as cur:
+        cur.execute("update organizations set modules='{camps,members,players}' where id=%s", (c["org"],))
+    p = c["client"].get(f"{_base(c)}/{m['id']}", headers=c["headers"]).json()["player"]
+    assert p["first_name"] == "Anna" and p["last_name"] == "Muster"
+    with c["cursor"]() as cur:
+        cur.execute("select id from players where organization_id=%s", (c["org"],))
+        assert str(cur.fetchone()["id"]) == p["id"]

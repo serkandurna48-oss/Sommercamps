@@ -36,7 +36,7 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
   return (
     <button
       type="button"
-      className={`camp${camp.is_full && phase === 'open' ? ' full' : ''}${phase === 'past' ? ' past' : ''}${phase === 'preview' ? ' preview' : ''}`}
+      className={`camp camp-card${camp.is_full && phase === 'open' ? ' full' : ''}${phase === 'past' ? ' past' : ''}${phase === 'preview' ? ' preview' : ''}`}
       onClick={() => onSelect(camp)}
       data-rise
     >
@@ -47,7 +47,7 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
       </span>
       <span className="c-body">
         <span style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span className="c-name">{camp.title}</span>
+          <span className="c-name" title={camp.title}>{camp.title}</span>
           <span className="c-when">{formatCampDateRange(camp.start_date, camp.end_date)}</span>
         </span>
         <span className="tags">
@@ -63,8 +63,8 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
         </span>
         {camp.includes && camp.includes.length > 0 && (
           <ul className="inc">
-            {camp.includes.slice(0, 3).map((item, i) => <li key={i}>{item}</li>)}
-            {camp.includes.length > 3 && <li className="more">+{camp.includes.length - 3} weitere</li>}
+            {camp.includes.slice(0, 2).map((item, i) => <li key={i}>{item}</li>)}
+            {camp.includes.length > 2 && <li className="more">+{camp.includes.length - 2} weitere</li>}
           </ul>
         )}
         {phase === 'preview' && camp.registration_start ? (

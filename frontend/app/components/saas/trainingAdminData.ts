@@ -2,11 +2,13 @@ import { notFound, redirect } from 'next/navigation'
 import { getValidAccessToken } from '../../lib/supabaseServer'
 import {
   AdminAuthError,
+  fetchClubMemberAdmin,
   fetchClubMembersAdmin,
   fetchTrainingOfferOverviewAdmin,
   fetchTrainingOffersAdmin,
   fetchTrainingSessionsAdmin,
   type ClubMember,
+  type ClubMemberDetail,
   type OrganizationAdmin,
   type RegistrationAdmin,
   type TrainingOffer,
@@ -98,6 +100,13 @@ export async function loadTrainingOffer(orgSlug: string, offerId: string): Promi
 export async function loadClubMembers(orgSlug: string): Promise<{ org: OrganizationAdmin; members: ClubMember[] }> {
   const { org, data: members } = await loadWithBase(orgSlug, token => fetchClubMembersAdmin(orgSlug, token))
   return { org, members }
+}
+
+/** Ein Mitglied (Detailseite); unbekannte oder fremde ID = 404. */
+export async function loadClubMember(orgSlug: string, memberId: string): Promise<{ org: OrganizationAdmin; member: ClubMemberDetail }> {
+  const { org, data: member } = await loadWithBase(orgSlug, token => fetchClubMemberAdmin(orgSlug, memberId, token))
+  if (!member) notFound()
+  return { org, member }
 }
 
 export interface UpcomingSession {

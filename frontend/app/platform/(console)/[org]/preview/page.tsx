@@ -7,6 +7,7 @@ import type { CampPublic, OrganizationPublic } from '../../../../lib/saasApi'
 import { computeCampStats } from '../../../../components/saas/dashboardLogic'
 import GrainOverlay from '../../../../pilot/[org]/GrainOverlay'
 import ParentFlow from '../../../../pilot/[org]/ParentFlow'
+import { effectiveTheme } from '../../../../pilot/[org]/defaultDesign'
 import { publicFontClassName } from '../../../../pilot/[org]/publicFonts'
 import '../../../../pilot/[org]/publicTheme.css'
 
@@ -58,7 +59,7 @@ export default async function PlatformOrgPreviewPage({ params }: { params: Promi
     trainer_image_url: org.trainer_image_url,
     trainer_text: org.trainer_text,
     terms_text: org.terms_text,
-    theme: (org.theme as OrganizationPublic['theme']) ?? 'tradition',
+    theme: effectiveTheme({ slug: org.slug, theme: (org.theme as OrganizationPublic['theme']) ?? 'tradition' }),
     iban: org.iban,
   }
 

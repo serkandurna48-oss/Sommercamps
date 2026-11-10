@@ -1,3 +1,5 @@
+import CampCreateBlocked from '../CampCreateBlocked'
+import { campCreateBlockedMessage } from '../planLimit'
 import Link from '../preview/AdminLink'
 import TodayRegistrations from '../data/TodayRegistrations'
 import { todayRegistrations } from '../registrationDates'
@@ -227,7 +229,9 @@ export default function OrgDashboardScreen({ orgSlug, org, camps, registrationsB
         </div>
 
         <DashboardCampsCard camps={campsWithStats} orgSlug={orgSlug} action={
-          <ButtonLink href={`/pilot/${orgSlug}/camps/new`} variant="secondary">+ Camp anlegen</ButtonLink>
+          campCreateBlockedMessage(org)
+            ? <CampCreateBlocked message={campCreateBlockedMessage(org)!} label="+ Camp anlegen" />
+            : <ButtonLink href={`/pilot/${orgSlug}/camps/new`} variant="secondary">+ Camp anlegen</ButtonLink>
         } />
       </main>
     </>

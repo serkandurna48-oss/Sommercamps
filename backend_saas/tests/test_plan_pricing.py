@@ -20,7 +20,7 @@ from .test_training_booking import _make, fake_provider  # noqa: F401
 MIGRATION = Path(__file__).resolve().parents[2] / "supabase" / "migrations" / "20261110100000_fee_rule_monthly_fee.sql"
 LIMIT_DETAIL = {
     "code": "plan_camp_limit",
-    "message": "Im Paket Starter ist 1 aktives Camp enthalten. Für mehr Camps wechsle ins Paket Verein.",
+    "message": "Im Paket Starter ist 1 aktives Camp enthalten. Für weitere Camps wechsle ins Paket Verein.",
 }
 
 
@@ -223,14 +223,25 @@ def test_starter_limit_applies_to_platform_owner_too(api):
     assert r.status_code == 409 and r.json()["detail"]["code"] == "plan_camp_limit"
 
 
-def test_starter_allows_drafts_but_not_publishing_second_camp(api):
-    assert _post_camp(api, "camp-2", status="draft").status_code == 201
+def test_starter_blocks_creating_a_draft_while_one_camp_is_active(api):
+    r = _post_camp(api, "camp-2", status="draft")
+    assert r.status_code == 409 and r.json()["detail"] == LIMIT_DETAIL
+    assert _count(api, "draft") == 0
+
+
+def test_starter_blocks_even_ended_draft_creation_while_one_camp_is_active(api):
+    r = _post_camp(api, "camp-2", status="draft", start_date="2020-01-01", end_date="2020-01-05")
+    assert r.status_code == 409
+
+
+def test_starter_existing_draft_cannot_be_published_second_camp(api):
+    with api["cursor"]() as cur:
+        cur.execute("insert into camps (organization_id, slug, title, start_date, end_date, age_min, age_max, capacity, "
+                    "price_cents, status) values (%s,'camp-2','D','2027-09-05','2027-09-09',6,12,5,1000,'draft')",
+                    (api["org"],))
     r = api["client"].patch(f"{_camps_path(api)}/camp-2", headers=org_admin_headers(str(api["org"])),
                             json={"status": "published"})
     assert r.status_code == 409 and r.json()["detail"] == LIMIT_DETAIL
-    with api["cursor"]() as cur:
-        cur.execute("select status from camps where organization_id=%s and slug='camp-2'", (api["org"],))
-        assert cur.fetchone()["status"] == "draft"
 
 
 def test_starter_can_swap_active_camp_after_unpublishing(api):

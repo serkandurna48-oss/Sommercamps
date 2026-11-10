@@ -3,6 +3,7 @@ import type { OrganizationPublic } from '../../lib/saasApi'
 import { computeBrandSafe } from '../../lib/brandPipeline'
 import PublicState from './PublicState'
 import RetryButton from './RetryButton'
+import { effectiveTheme } from './defaultDesign'
 import { publicFontClassName } from './publicFonts'
 
 export default function PublicLoadError({ org, title = 'Camps gerade nicht erreichbar', message = 'Die Camp-Informationen konnten nicht geladen werden.' }: {
@@ -10,7 +11,7 @@ export default function PublicLoadError({ org, title = 'Camps gerade nicht errei
   title?: string
   message?: string
 }) {
-  const theme = org?.theme ?? 'kompakt'
+  const theme = org ? effectiveTheme(org) : 'kompakt'
   const brand = computeBrandSafe(org?.primary_color ?? null, theme === 'akademie' ? '#161C1A' : '#FFFFFF')
   return <main className={`cp-public public-state-page ${publicFontClassName(theme)}`} data-theme={theme}
     style={{ '--brand': brand.brand, '--brand-strong': brand.strong, '--brand-on': brand.on } as CSSProperties}>

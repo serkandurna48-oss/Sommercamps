@@ -317,7 +317,7 @@ _GET_TARGET = f"""
       and (c.offer_id is null or o.status = 'published')
 """
 
-_LOCK_CAMP_CAPACITY = "select capacity, status, price_cents from camps where id = %s for update"
+_LOCK_CAMP_CAPACITY = "select capacity, status, price_cents, price_member_cents from camps where id = %s for update"
 
 # SHARE allows registrations in different camps to proceed together, but
 # conflicts with publication/plan UPDATEs. KEY SHARE does not protect these
@@ -355,7 +355,8 @@ _INSERT_REGISTRATION = """
         medical_notes, allergies, health_data_consent, jersey_size, pickup_authorized,
         photo_permission, terms_accepted, privacy_accepted,
         extra_answers, player_id,
-        parent_street, parent_postal_code, parent_city
+        parent_street, parent_postal_code, parent_city,
+        applied_price_cents, member_match
     ) values (
         %s, %s, %s,
         %s, %s, %s, %s,
@@ -364,9 +365,11 @@ _INSERT_REGISTRATION = """
         %s, %s, %s, %s, %s,
         %s, %s, %s,
         %s, %s,
-        %s, %s, %s
+        %s, %s, %s,
+        %s, %s
     )
-    returning registration_token, status, payment_status, child_first_name, child_last_name
+    returning registration_token, status, payment_status, child_first_name, child_last_name,
+        applied_price_cents
 """
 
 # Case-insensitive auf Vor-/Nachname, exaktes Geburtsdatum, gleicher Camp,
@@ -763,6 +766,30 @@ def validate_child_age(camp: RegistrationTarget, child_birth_date: date) -> None
         raise ChildAgeNotEligibleError(age_at_start, camp.age_min, camp.age_max)
 
 
+def _camp_member_price(cur, tenant: TenantContext, organization: dict, locked: dict, data: RegistrationCreate):
+    """Member price for a classic camp, decided server-side like for trainings.
+
+    Only camps with a member price and organizations with the members module do a
+    lookup. Everything else keeps the old behavior: (None, None), so the row has no
+    applied price and the camp price applies (KSV and every one-price camp).
+    """
+    member_price = locked.get("price_member_cents")
+    if member_price is None or "members" not in set(organization.get("modules") or ()):
+        return None, None
+    from .memberships import normalize_match_key
+
+    cur.execute(
+        _FIND_ACTIVE_MEMBER,
+        (
+            tenant.organization_id,
+            normalize_match_key(data.child_first_name, data.child_last_name),
+            data.child_birth_date,
+        ),
+    )
+    member_match = cur.fetchone() is not None
+    return (member_price if member_match else locked["price_cents"]), member_match
+
+
 def create_registration(
     tenant: TenantContext,
     camp: RegistrationTarget,
@@ -846,8 +873,10 @@ def create_registration(
         active_count = cur.fetchone()["active_count"]
 
         new_status = "registered" if active_count < locked["capacity"] else "waitlist"
+        applied_price, member_match = _camp_member_price(cur, tenant, organization, locked, data)
         # Waitlisted bookings too: they become payable once promoted.
-        address = billing_address_for(data, locked.get("price_cents"), tenant.slug, camp.slug)
+        address = billing_address_for(
+            data, applied_price if applied_price is not None else locked.get("price_cents"), tenant.slug, camp.slug)
 
         player_id = players.find_or_create_player(
             cur, tenant.organization_id, data.child_first_name, data.child_last_name, data.child_birth_date)
@@ -877,6 +906,8 @@ def create_registration(
                 psycopg2.extras.Json(dict(data.extra_answers)),
                 player_id,
                 *address,
+                applied_price,
+                member_match,
             ),
         )
         return cur.fetchone()

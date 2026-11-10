@@ -36,6 +36,8 @@ export interface CampAdmin {
   age_max: number
   capacity: number
   price_cents: number
+  /** Mitgliederpreis (Mitgliederliste), null = ein Preis für alle. */
+  price_member_cents?: number | null
   currency: string
   location: string | null
   care_info: string | null
@@ -309,6 +311,7 @@ export interface CampConfigUpdate {
   age_max?: number
   capacity?: number
   price_cents?: number
+  price_member_cents?: number | null
   currency?: string
   location?: string | null
   care_info?: string | null

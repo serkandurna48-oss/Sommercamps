@@ -7,7 +7,7 @@ import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, OrganizationPublic, RegistrationCreated, TrainingOfferListItem } from '../../lib/saasApi'
 import { offerCategoryLabel, offerKindLabel } from '../../components/saas/training/trainingLogic'
 import { fromPriceText } from '../../lib/trainingFormat'
-import { formatCampDateRange, formatPrice, orgShortCode } from '../../lib/parentFlowFormat'
+import { campHasMemberPrice, campPriceLong, formatCampDateRange, formatPrice, orgShortCode } from '../../lib/parentFlowFormat'
 import { truncateIntroForHero } from './campUtils'
 import {
   type FilterState,
@@ -66,8 +66,9 @@ export default function ParentFlow({
   const router = useRouter()
   const isKsv = org.slug === 'ksv-baunatal'
   // KSV-Start zeigt den Preis statt der Platzsumme (Serkan 28.10.).
-  const minPriceCents = camps.length > 0 ? Math.min(...camps.map(c => c.price_cents)) : 0
-  const samePrice = camps.every(c => c.price_cents === minPriceCents)
+  const lowestPrice = (c: CampPublic) => (campHasMemberPrice(c) ? c.price_member_cents as number : c.price_cents)
+  const minPriceCents = camps.length > 0 ? Math.min(...camps.map(lowestPrice)) : 0
+  const samePrice = camps.every(c => c.price_cents === minPriceCents && !campHasMemberPrice(c))
   const priceStat = `${samePrice ? '' : 'ab '}${minPriceCents % 100 === 0
     ? `${minPriceCents / 100} €`
     : formatPrice(minPriceCents, camps[0]?.currency ?? 'EUR')}`
@@ -587,7 +588,7 @@ export default function ParentFlow({
               </button>
             </div>
           ) : (
-            filteredCamps.map((camp) => <CampRow key={camp.slug} camp={camp} onSelect={openCamp} priceFrom={clubAssets?.campPriceFrom} />)
+            filteredCamps.map((camp) => <CampRow key={camp.slug} camp={camp} onSelect={openCamp} />)
           )}
         </div>
       </div>
@@ -894,7 +895,7 @@ export function CampScreen({
       <div className="dock">
         <div className="line">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span className="sum num">{formatPrice(camp.price_cents, camp.currency)}</span>
+            <span className="sum num">{campPriceLong(camp)}</span>
             <span className="muted" style={{ fontSize: 12 }}>pro Kind</span>
           </div>
           <button
@@ -984,7 +985,7 @@ function WaitScreen({
           <h2 className="d3">Termine mit freien Plätzen</h2>
           <div className="camps">
             {alternatives.map((c) => (
-              <CampRow key={c.slug} camp={c} onSelect={onSelectAlternative} priceFrom={getClubAssets(org.slug)?.campPriceFrom} />
+              <CampRow key={c.slug} camp={c} onSelect={onSelectAlternative} />
             ))}
           </div>
         </div>

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, RegistrationCreated, RegistrationQuestion, TrainingPaymentMethod } from '../../lib/saasApi'
 import { submitRegistration } from '../../lib/saasApi'
 import { captureSaasEvent } from '../../lib/saasAnalytics'
-import { formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
+import { campHasMemberPrice, campPriceLong, campPriceShort, formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
 import { trainingSubmitErrorMessage } from '../../lib/trainingFormat'
 import ExtraQuestions from './ExtraQuestions'
 import { getClubAssets } from './clubAssets'
@@ -462,7 +462,7 @@ export default function RegistrationFormScreen({
                   <dd>{camp.location}</dd>
                 </div>
               )}
-              <div className="d3c-aside-price num">{training ? training.priceText : formatPrice(camp.price_cents, camp.currency)}</div>
+              <div className="d3c-aside-price num">{training ? training.priceText : campPriceLong(camp)}</div>
               {!training && camp.spots_remaining != null && !camp.is_full && (
                 <span className={`d3c-aside-spots${camp.spots_remaining <= 10 ? ' accent' : ''}`}>
                   {camp.spots_remaining} Plätze frei
@@ -487,7 +487,7 @@ export default function RegistrationFormScreen({
               <b>{camp.title}</b>
               <span>{training ? training.dateTimeLabel : formatCampDateRange(camp.start_date, camp.end_date)}</span>
             </span>
-            {!training && <span className="d3c-mob-bar-price num">{formatPrice(camp.price_cents, camp.currency)}</span>}
+            {!training && <span className="d3c-mob-bar-price num">{campPriceShort(camp).from ? 'ab ' : ''}{campPriceShort(camp).text}</span>}
           </button>
           {asideOpen && (
             <div className="d3c-mob-bar-body pad">
@@ -504,7 +504,7 @@ export default function RegistrationFormScreen({
                 )}
                 <div className="d3c-aside-row">
                   <dt>Preis</dt>
-                  <dd className="num">{training ? training.priceText : formatPrice(camp.price_cents, camp.currency)}</dd>
+                  <dd className="num">{training ? training.priceText : campPriceLong(camp)}</dd>
                 </div>
                 {!training && camp.spots_remaining != null && !camp.is_full && camp.spots_remaining <= 10 && (
                   <div className="d3c-aside-row">
@@ -987,7 +987,7 @@ export default function RegistrationFormScreen({
               )}
               <div className="line">
                 <span style={{ fontSize: 14, color: 'var(--ink-2)' }}>{camp.title}, 1 Kind</span>
-                <span className="sum num">{training ? training.priceText : formatPrice(camp.price_cents, camp.currency)}</span>
+                <span className="sum num">{training ? training.priceText : campPriceLong(camp)}</span>
               </div>
               {serverError && (errorStatus === 409 || errorStatus === 404) ? (
                 <a className="btn primary btn-pill" href={errorStatus === 409 && contactEmail ? `mailto:${contactEmail}` : training ? `/pilot/${orgSlug}/training` : `/pilot/${orgSlug}`}>
@@ -1004,7 +1004,9 @@ export default function RegistrationFormScreen({
                     ? 'Auf die Warteliste setzen'
                     : training
                       ? 'Verbindlich buchen'
-                      : `Verbindlich anmelden · ${formatPrice(camp.price_cents, camp.currency)}`}
+                      : campHasMemberPrice(camp)
+                        ? 'Verbindlich anmelden'
+                        : `Verbindlich anmelden · ${formatPrice(camp.price_cents, camp.currency)}`}
               </button>}
               <span className="fine">
                 {training

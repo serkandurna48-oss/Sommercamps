@@ -136,17 +136,18 @@ it('without intro text the club images stay a gallery band', () => {
   expect(html).not.toContain('about-media')
 })
 
-it('JK camp cards show "ab" before the price, other clubs do not', () => {
-  const camp = {
+it('camp cards show "ab <member price>" only for camps with a lower member price', () => {
+  const base = {
     slug: 'winter', title: 'Winter Camp', start_date: '2027-01-11', end_date: '2027-01-12',
     registration_start: null, registration_end: null, age_min: 6, age_max: 14, capacity: 30,
-    price_cents: 12900, currency: 'EUR', registration_open: true, location: null, care_info: null,
+    price_cents: 16900, currency: 'EUR', registration_open: true, location: null, care_info: null,
     meals_info: null, includes: null, registered_count: 0, waitlist_count: 0, spots_remaining: 30, is_full: false,
   } as unknown as CampPublic
-  const jk = renderToStaticMarkup(<ParentFlow org={{ ...org, slug: 'jk-performance-academy' }} camps={[camp]} />)
-  expect(jk).toMatch(/c-price-from">ab<\/span>129,00/)
-  const other = renderToStaticMarkup(<ParentFlow org={org} camps={[camp]} />)
-  expect(other).not.toContain('c-price-from')
+  const withMember = renderToStaticMarkup(<ParentFlow org={org} camps={[{ ...base, price_member_cents: 14900 }]} />)
+  expect(withMember).toMatch(/c-price-from">ab<\/span>149,00/)
+  const onePrice = renderToStaticMarkup(<ParentFlow org={org} camps={[base]} />)
+  expect(onePrice).not.toContain('c-price-from')
+  expect(onePrice).toContain('169,00')
 })
 
 // ── Hero objectPosition ──

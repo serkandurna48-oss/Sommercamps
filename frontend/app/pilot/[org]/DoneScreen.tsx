@@ -41,20 +41,22 @@ export default function DoneScreen({
   const bandTextColor = org.theme === 'tradition' ? 'var(--brand-on)' : 'var(--on-band)'
   // Only show transfer instructions when the organization has supplied an IBAN.
   const iban = org.iban
-  const priceText = formatPrice(camp.price_cents, camp.currency)
+  // Camps with a member price: the server decided the price for this child.
+  const priceCents = result.applied_price_cents ?? camp.price_cents
+  const priceText = formatPrice(priceCents, camp.currency)
   const containerRef = useRef<HTMLElement>(null)
   useParentFlowMotion(org.theme, containerRef)
   const headingRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => { headingRef.current?.focus() }, [])
 
   useEffect(() => {
-    if (waitlisted || result.payment_status !== 'open' || camp.price_cents <= 0) return
+    if (waitlisted || result.payment_status !== 'open' || priceCents <= 0) return
     let current = true
     void getStripePaymentAvailability(org.slug, camp.slug).then(available => {
       if (current) setStripeAvailable(available)
     })
     return () => { current = false }
-  }, [org.slug, camp.slug, camp.price_cents, result.payment_status, waitlisted])
+  }, [org.slug, camp.slug, priceCents, result.payment_status, waitlisted])
 
   async function handleStripeCheckout() {
     if (stripeLoading) return
@@ -159,7 +161,7 @@ export default function DoneScreen({
             </div>
             <div className="done-summary-row">
               <dt>Preis</dt>
-              <dd className="num">{formatPrice(camp.price_cents, camp.currency)}</dd>
+              <dd className="num">{priceText}</dd>
             </div>
           </dl>
 

@@ -404,6 +404,10 @@ def update_camp(
 
     try:
         row = camps_repo.update_camp(organization["id"], camp_slug, data)
+    except camps_repo.CampMemberPriceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": exc.code, "message": exc.message}
+        ) from exc
     except PlanCampLimitError as exc:
         logger.info("Camp update rejected: plan camp limit (organization_slug=%s)", organization_slug)
         raise HTTPException(

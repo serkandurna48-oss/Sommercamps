@@ -11,12 +11,6 @@ export interface ClubAssets {
   heroDesktopScale?: number
   /** Show the club's primary registration CTA before the dates CTA. */
   heroCtaEmphasis?: boolean
-  /**
-   * Camp cards show "ab <Preis>": the club has member and non-member camp prices,
-   * but camps store only one price (the member price). Display only — bookings still
-   * use camp.price_cents until camps support member pricing like trainings.
-   */
-  campPriceFrom?: boolean
   sponsor?: {
     heading: string
     intro: string
@@ -49,8 +43,6 @@ const JK_ASSETS: ClubAssets = {
   },
   logoImage: '/jk/logo.jpg',
   heroPosition: 'center 25%',
-  // 149 € Mitglieder/Partnerverein, 169 € extern (Instagram, Anmeldeformular Herbstcamp).
-  campPriceFrom: true,
 }
 
 const ASSETS: Record<string, ClubAssets> = {

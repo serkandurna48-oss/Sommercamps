@@ -87,6 +87,9 @@ checkout_limiter = SlidingWindowLimiter(20, 3600.0)
 
 class PaymentOptions(BaseModel):
     online_payment_available: bool
+    # Who receives the parents' money: shown in the parents' text. "platform":
+    # CampsPilot on behalf of the club; "club": the club's own Stripe account.
+    online_payee: Literal["platform", "club"] = "club"
 
 
 class CheckoutURL(BaseModel):
@@ -171,7 +174,7 @@ def _flag_for_review(organization_id, registration_id, reason: str, checkout_ses
 _ORG_PAYMENT_COLUMNS = """stripe_account_id, stripe_charges_enabled, online_payment_enabled,
     stripe_express_account_id, stripe_express_charges_enabled, stripe_express_payouts_enabled,
     stripe_express_details_submitted, stripe_express_requirements_due, stripe_express_synced_at,
-    stripe_express_account_kind"""
+    stripe_express_account_kind, payment_route"""
 
 
 def _organization_payment_details(org_id):
@@ -205,15 +208,20 @@ def express_kind(org: dict | None) -> Optional[str]:
 
 def payment_mode(org: dict | None, express_ready: bool) -> tuple[Optional[str], Optional[str]]:
     """("direct_fee" | "destination", acct) | ("direct", standard_acct) | ("platform", None) | (None, None).
-    An active club account (stripe_express_account_id) wins; a linked Standard
-    account keeps working until the club has switched; without an active club
-    account the platform collects ("platform"). Every path needs
+    organizations.payment_route decides: "platform" (default) always collects on
+    the platform account; "connect" uses the club account (an active
+    stripe_express_account_id wins, a linked Standard account keeps working until
+    the club has switched) and never falls back to the platform. Every path needs
     online_payment_enabled, the platform owner's per-club switch.
     express_ready (platform webhook secret) gates destination and platform charges.
     Service-level switches are checked by the caller (_stripe_client /
     _service_ready)."""
     if not org or not org.get("online_payment_enabled"):
         return None, None
+    if (org.get("payment_route") or "platform") != "connect":
+        # Platform route (default): CampsPilot collects, even if a club account exists.
+        return (PLATFORM, None) if express_ready else (None, None)
+    # Route "connect": the club's own account; never falls back to the platform.
     express = org.get("stripe_express_account_id")
     if express and ACCOUNT_ID.fullmatch(express) and org.get("stripe_express_charges_enabled"):
         kind = express_kind(org)
@@ -224,9 +232,6 @@ def payment_mode(org: dict | None, express_ready: bool) -> tuple[Optional[str], 
     legacy = org.get("stripe_account_id")
     if legacy and ACCOUNT_ID.fullmatch(legacy) and org.get("stripe_charges_enabled"):
         return "direct", legacy
-    # No active club account: the platform collects (needs the platform webhook).
-    if express_ready:
-        return PLATFORM, None
     return None, None
 
 
@@ -246,7 +251,11 @@ def get_payment_options(
     camp_slug: str,
     tenant: TenantContext = Depends(get_tenant_context),
 ) -> PaymentOptions:
-    return PaymentOptions(online_payment_available=online_payment_available(tenant.organization_id))
+    settings = get_settings()
+    mode = payment_mode(_organization_payment_details(tenant.organization_id), _express_ready(settings))[0] \
+        if _service_ready(settings) else None
+    return PaymentOptions(online_payment_available=mode is not None,
+                          online_payee="platform" if mode == PLATFORM else "club")
 
 
 @router.post(
@@ -1064,6 +1073,7 @@ class ExpressStatus(BaseModel):
     account_kind: Optional[Literal["direct_fee", "destination"]] = None
     # Platform side configured for online payment in this environment.
     service_ready: bool
+    payment_route: Literal["platform", "connect"] = "platform"
 
 
 class OnboardingRequest(BaseModel):
@@ -1130,6 +1140,7 @@ def _express_status(org: dict, settings) -> ExpressStatus:
         account_kind=kind,
         # Destination accounts (B2) additionally need the platform webhook.
         service_ready=_service_ready(settings) and (kind != DESTINATION or _express_ready(settings)),
+        payment_route="connect" if org.get("payment_route") == "connect" else "platform",
     )
 
 
@@ -1380,15 +1391,47 @@ def set_online_payment_enabled(
     return _express_status(_payment_org(organization["id"]), get_settings())
 
 
+class PaymentRouteSwitch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    route: Literal["platform", "connect"]
+
+
+@router.patch("/admin/platform/organizations/{organization_slug}/payment-route", response_model=ExpressStatus)
+def set_payment_route(
+    organization_slug: str,
+    body: PaymentRouteSwitch,
+    auth: AuthContext = Depends(require_platform_owner),
+) -> ExpressStatus:
+    """Owner-only: which way this club's online payments run. platform (default):
+    CampsPilot collects; connect: the club's own Stripe account (no fallback)."""
+    organization = require_organization(organization_slug)
+    with db.get_cursor() as cur:
+        cur.execute("update organizations set payment_route = %s where id = %s", (body.route, organization["id"]))
+    platform_roles.write_audit_log(
+        actor_user_id=auth.user_id, actor_email=auth.email, action="organization.payment_route_switched",
+        organization_id=str(organization["id"]), target_type="organization", target_id=organization_slug,
+        metadata={"route": body.route},
+    )
+    return _express_status(_payment_org(organization["id"]), get_settings())
+
+
 REFUND_FAILED_STATUSES = ("failed", "canceled")
 
 _REFUND_ERRORS = {
     "charge_already_refunded": (409, "Diese Zahlung ist bereits vollständig erstattet."),
-    "insufficient_funds": (409, "Das Stripe-Guthaben des Vereins reicht für die Rückbuchung gerade nicht aus."),
-    "balance_insufficient": (409, "Das Stripe-Guthaben des Vereins reicht für die Rückbuchung gerade nicht aus."),
     "charge_disputed": (409, "Die Zahlung wird gerade angefochten und kann nicht erstattet werden."),
     "amount_too_large": (422, "Betrag höher als der noch erstattbare Rest."),
 }
+_NO_BALANCE = ("insufficient_funds", "balance_insufficient")
+
+
+def _refund_error(code: str, kind: str) -> tuple[int, str]:
+    """Stripe's balance errors name whose balance is short: the platform's (platform
+    charges) or the club's connected account."""
+    if code in _NO_BALANCE:
+        who = "Das Plattformguthaben bei Stripe" if kind in PLATFORM_ACCOUNT_MODES else "Das Stripe-Guthaben des Vereins"
+        return 409, f"{who} reicht für die Rückbuchung gerade nicht aus."
+    return _REFUND_ERRORS.get(code, (502, "Stripe hat die Erstattung abgelehnt. Bitte prüfe sie im Stripe-Dashboard."))
 
 
 def is_fee_mode_payment(row: dict) -> bool:
@@ -1432,8 +1475,7 @@ def create_online_refund(organization_id, organization_slug: str, row: dict, amo
     try:
         refund = _stripe_dict(client.Refund.create(**params))
     except stripe.error.InvalidRequestError as error:
-        status_code, message = _REFUND_ERRORS.get(
-            getattr(error, "code", None) or "", (502, "Stripe hat die Erstattung abgelehnt. Bitte prüfe sie im Stripe-Dashboard."))
+        status_code, message = _refund_error(getattr(error, "code", None) or "", kind)
         logger.warning("Refund rejected by Stripe (organization_slug=%s, code=%s)", organization_slug, getattr(error, "code", None))
         raise HTTPException(status_code, message) from None
     except stripe.error.StripeError:
@@ -1474,7 +1516,7 @@ def refund_destination_payment(
     with db.get_cursor() as cur:
         cur.execute(
             """select id, payment_status, stripe_payment_intent_id, stripe_charge_type,
-                      stripe_checkout_amount_cents, refunded_cents, stripe_checkout_account_id
+                      stripe_checkout_amount_cents, refunded_cents, stripe_checkout_account_id, paid_at
                from camp_registrations
                where organization_id = %s and registration_token = %s""",
             (organization["id"], registration_token),
@@ -1486,6 +1528,14 @@ def refund_destination_payment(
         raise HTTPException(409, "Diese Zahlung lief nicht über CampsPilot. Bitte im eigenen Stripe-Konto erstatten.")
     if row["payment_status"] not in ("paid", "partially_refunded"):
         raise HTTPException(409, "Nur bezahlte Online-Zahlungen können erstattet werden")
+    if row["stripe_charge_type"] == PLATFORM and not auth.is_owner and row["paid_at"] is not None:
+        # The month was already paid out to the club: only the platform owner refunds it.
+        paid_month = row["paid_at"].astimezone(fees.BERLIN).strftime("%Y-%m-01")
+        with db.get_cursor() as cur:
+            cur.execute("select 1 from organization_payouts where organization_id = %s and month = %s",
+                        (organization["id"], paid_month))
+            if cur.fetchone():
+                raise HTTPException(409, "Diese Zahlung gehört zu einem Monat, der schon an deinen Verein überwiesen wurde. Bitte wende dich an CampsPilot.")
     remaining = (row["stripe_checkout_amount_cents"] or 0) - (row["refunded_cents"] or 0)
     amount = body.amount_cents if body.amount_cents is not None else remaining
     if amount <= 0 or amount > remaining:
@@ -1572,16 +1622,34 @@ def close_checkout_before_delete(organization_id, camp_id, registration_token) -
 # ---------------------------------------------------------------------------
 
 MONTH_PATTERN = r"^20[0-9]{2}-(0[1-9]|1[0-2])$"
+REVIEW_REASONS = ("duplicate_payment", "payment_for_closed_registration")
 
 
 class PayoutBooking(BaseModel):
-    """One platform payment. No child or parent data."""
+    """One platform payment of the month. No child or parent data."""
 
     date: _dt.date
     camp_title: str
     amount_cents: int
     fee_cents: int
+
+
+class PayoutRefund(BaseModel):
+    """A refund booked in this month (whatever month the payment was made in)."""
+
+    date: _dt.date
+    camp_title: str
     refund_cents: int
+    fee_returned_cents: int
+
+
+class PayoutReview(BaseModel):
+    """Money that arrived but was not booked as paid: needs a human decision."""
+
+    date: _dt.date
+    camp_title: Optional[str] = None
+    amount_cents: Optional[int] = None
+    reason: str
 
 
 class PayoutRecord(BaseModel):
@@ -1591,9 +1659,9 @@ class PayoutRecord(BaseModel):
 
 
 class PayoutMonth(BaseModel):
-    """Payments that ran over the platform account, by the Berlin month they
-    were paid in. payout = paid - refunded - platform fee (net of its refund).
-    Refunds are counted in full against the booking's payment month."""
+    """Platform payments by the Berlin month they were paid in, minus the
+    platform fee, minus the refunds booked IN this month (by the date of the
+    refund, not of the payment). payout < 0: carried over to the next month."""
 
     month: str
     paid_cents: int
@@ -1602,8 +1670,11 @@ class PayoutMonth(BaseModel):
     payout_cents: int
     iban: Optional[str] = None
     bookings: list[PayoutBooking]
+    refunds: list[PayoutRefund] = []
+    review: list[PayoutReview] = []
+    carry_over: bool = False
     payout: Optional[PayoutRecord] = None
-    # A refund arrived after the payout was marked as transferred.
+    # The computed amount differs from the marked payout.
     changed_since_paid: bool = False
 
 
@@ -1613,40 +1684,72 @@ class PayoutMarkPaid(BaseModel):
     reference: str = Field(min_length=1, max_length=140)
 
 
+def _berlin_month_now() -> str:
+    return datetime.now(fees.BERLIN).strftime("%Y-%m")
+
+
 def _payout_month(organization, month: str) -> PayoutMonth:
+    oid = organization["id"]
     with db.get_cursor() as cur:
         cur.execute(
             """select (r.paid_at at time zone 'Europe/Berlin')::date as day, c.title as camp_title,
-                      r.stripe_checkout_amount_cents as amount_cents,
-                      r.fee_cents - coalesce(r.fee_refunded_cents, 0) as fee_cents,
-                      coalesce(r.refunded_cents, 0) as refund_cents
+                      r.stripe_checkout_amount_cents as amount_cents, r.fee_cents
                from camp_registrations r
                join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
-               where r.organization_id = %s and r.stripe_charge_type = 'platform'
-                 and r.payment_status in ('paid', 'partially_refunded', 'refunded')
-                 and r.fee_snapshot_at is not null
+               where r.organization_id = %s and r.fee_collection = 'platform_collected'
+                 and r.paid_at is not null
                  and to_char(r.paid_at at time zone 'Europe/Berlin', 'YYYY-MM') = %s
                order by r.paid_at, r.id""",
-            (organization["id"], month),
+            (oid, month),
         )
         rows = cur.fetchall()
-        cur.execute("select iban from organizations where id = %s", (organization["id"],))
+        cur.execute(
+            """select (e.created_at at time zone 'Europe/Berlin')::date as day, c.title as camp_title,
+                      e.refunded_delta_cents, e.fee_delta_cents
+               from registration_refund_events e
+               join camp_registrations r on r.id = e.registration_id and r.organization_id = e.organization_id
+               join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
+               where e.organization_id = %s and r.fee_collection = 'platform_collected'
+                 and to_char(e.created_at at time zone 'Europe/Berlin', 'YYYY-MM') = %s
+               order by e.created_at, e.id""",
+            (oid, month),
+        )
+        refund_rows = cur.fetchall()
+        cur.execute(
+            """select (a.created_at at time zone 'Europe/Berlin')::date as day, a.metadata->>'reason' as reason,
+                      c.title as camp_title, r.stripe_checkout_amount_cents as amount_cents
+               from audit_log a
+               join camp_registrations r on r.id::text = a.target_id and r.organization_id = a.organization_id
+               join camps c on c.id = r.camp_id and c.organization_id = r.organization_id
+               where a.organization_id = %s and a.action = 'stripe.payment_needs_review'
+                 and a.metadata->>'reason' = any(%s) and r.stripe_charge_type = 'platform'
+                 and to_char(a.created_at at time zone 'Europe/Berlin', 'YYYY-MM') = %s
+               order by a.created_at, a.id""",
+            (oid, list(REVIEW_REASONS), month),
+        )
+        review_rows = cur.fetchall()
+        cur.execute("select iban from organizations where id = %s", (oid,))
         org = cur.fetchone() or {}
         cur.execute(
             "select payout_cents, paid_at, reference from organization_payouts "
             "where organization_id = %s and month = %s",
-            (organization["id"], f"{month}-01"),
+            (oid, f"{month}-01"),
         )
         record = cur.fetchone()
     bookings = [PayoutBooking(date=r["day"], camp_title=r["camp_title"], amount_cents=int(r["amount_cents"] or 0),
-                              fee_cents=int(r["fee_cents"] or 0), refund_cents=int(r["refund_cents"])) for r in rows]
+                              fee_cents=int(r["fee_cents"] or 0)) for r in rows]
+    refunds = [PayoutRefund(date=r["day"], camp_title=r["camp_title"], refund_cents=int(r["refunded_delta_cents"]),
+                            fee_returned_cents=int(r["fee_delta_cents"])) for r in refund_rows]
     paid = sum(b.amount_cents for b in bookings)
-    refunded = sum(b.refund_cents for b in bookings)
-    fee = sum(b.fee_cents for b in bookings)
+    refunded = sum(r.refund_cents for r in refunds)
+    fee = sum(b.fee_cents for b in bookings) - sum(r.fee_returned_cents for r in refunds)
     payout = paid - refunded - fee
     return PayoutMonth(
         month=month, paid_cents=paid, refunded_cents=refunded, fee_cents=fee, payout_cents=payout,
-        iban=org.get("iban"), bookings=bookings,
+        iban=org.get("iban"), bookings=bookings, refunds=refunds,
+        review=[PayoutReview(date=r["day"], camp_title=r["camp_title"], amount_cents=r["amount_cents"], reason=r["reason"])
+                for r in review_rows],
+        carry_over=payout < 0,
         payout=PayoutRecord(**record) if record else None,
         changed_since_paid=bool(record and record["payout_cents"] != payout),
     )
@@ -1670,15 +1773,18 @@ def mark_payout_paid(
     month: str = Path(pattern=MONTH_PATTERN),
     auth: AuthContext = Depends(require_platform_owner),
 ) -> PayoutMonth:
-    """Record that the month's payout was transferred to the club. Repeating
-    the same call is harmless; a different date or reference for an already
-    marked month is refused (one payout per club and month)."""
+    """Record that a finished month's payout was transferred to the club.
+    Repeating the same call is harmless; a different date or reference for an
+    already marked month is refused (one payout per club and month)."""
     organization = require_organization(organization_slug)
     current = _payout_month(organization, month)
     if current.payout is not None:
         if current.payout.paid_at == body.paid_at and current.payout.reference == body.reference:
             return current
         raise HTTPException(409, "Dieser Monat ist bereits als überwiesen markiert")
+    if month >= _berlin_month_now():
+        # Payments and refunds can still arrive: the amount is not final yet.
+        raise HTTPException(409, "Dieser Monat ist noch nicht abgeschlossen")
     if current.payout_cents <= 0:
         raise HTTPException(409, "Für diesen Monat gibt es nichts zu überweisen")
     with db.get_cursor() as cur:

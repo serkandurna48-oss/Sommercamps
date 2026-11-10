@@ -11,6 +11,8 @@
 --
 -- Rein additiv (erweiterte CHECKs, neue Tabelle), keine Datenaenderung. Idempotent.
 -- Rollback (erst, wenn keine Buchung platform/platform_collected hat):
+--   alter table public.organizations drop constraint if exists chk_organizations_payment_route,
+--     drop column if exists payment_route;
 --   alter table public.camp_registrations drop constraint if exists chk_camp_registrations_stripe_charge_type;
 --   alter table public.camp_registrations add constraint chk_camp_registrations_stripe_charge_type
 --     check (stripe_charge_type is null or stripe_charge_type in ('direct', 'destination', 'direct_fee'));
@@ -49,6 +51,19 @@ alter table public.camp_registrations
 
 comment on column public.camp_registrations.fee_collection is
     'application_fee = per Stripe Application Fee einbehalten; platform_collected = Zahlung lief ueber das Plattformkonto, Gebuehr bleibt bei der Plattform; not_collected = berechnet, aber nicht einbehalten (Ueberweisung/bar oder Altkonto mit Direct Charges).';
+
+-- 4. organizations.payment_route: Zahlungsweg je Verein, vom Plattform-Owner gewaehlt.
+--    platform = CampsPilot zieht auf dem Plattformkonto ein (auch wenn ein Connect-Konto existiert),
+--    connect  = bisheriger Weg ueber das Vereinskonto (kein Fallback auf die Plattform).
+--    Bestehende Vereine bekommen 'platform' (Entscheidung Serkan 10.11.: alles ueber uns).
+alter table public.organizations add column if not exists payment_route text not null default 'platform';
+alter table public.organizations drop constraint if exists chk_organizations_payment_route;
+alter table public.organizations
+    add constraint chk_organizations_payment_route check (payment_route in ('platform', 'connect'));
+comment on column public.organizations.payment_route is
+    'Zahlungsweg der Online-Zahlung: platform (Plattformkonto, Standard) oder connect (Vereinskonto, Altbestand).';
+-- Backend-only column, even if column grants were handed out again. No-op when absent.
+revoke select (payment_route) on public.organizations from anon, authenticated;
 
 create table if not exists public.organization_payouts (
     id uuid primary key default gen_random_uuid(),

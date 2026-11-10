@@ -182,11 +182,12 @@ def _org(env, **values):
 def _activate_express(env, enabled=True):
     _org(env, stripe_express_account_id=env.express, stripe_express_charges_enabled=True,
          stripe_express_payouts_enabled=True, stripe_express_details_submitted=True,
-         online_payment_enabled=enabled)
+         online_payment_enabled=enabled, payment_route="connect")
 
 
 def _activate_legacy(env):
-    _org(env, stripe_account_id=LEGACY, stripe_charges_enabled=True, online_payment_enabled=True)
+    _org(env, stripe_account_id=LEGACY, stripe_charges_enabled=True, online_payment_enabled=True,
+         payment_route="connect")
 
 
 def _register(env):
@@ -325,7 +326,7 @@ def test_onboarding_shows_stripe_reason_for_config_errors(env):
 
 
 def test_status_check_and_account_updated_webhook(env):
-    _org(env, stripe_express_account_id=env.express, online_payment_enabled=True)
+    _org(env, stripe_express_account_id=env.express, online_payment_enabled=True, payment_route="connect")
     path = f"/admin/organizations/{env.slug}/payments/stripe"
     env.fake.account_state = {"charges_enabled": True, "payouts_enabled": True, "details_submitted": True,
                               "requirements": {"currently_due": [], "past_due": []}}
@@ -433,17 +434,17 @@ def test_express_needs_platform_webhook_secret(env):
     assert _checkout(env, token).status_code == 503
     assert env.fake.named("Session.create") == []
     options = env.client.get(f"/api/v1/organizations/{env.slug}/camps/summer-1/payment-options").json()
-    assert options == {"online_payment_available": False}
+    assert options == {"online_payment_available": False, "online_payee": "club"}
 
 
 def test_no_account_no_online_payment(env):
     token = _register(env)
     assert _checkout(env, token).status_code == 503
     assert env.client.get(f"/api/v1/organizations/{env.slug}/camps/summer-1/payment-options").json() == {
-        "online_payment_available": False}
+        "online_payment_available": False, "online_payee": "club"}
     _activate_express(env)
     assert env.client.get(f"/api/v1/organizations/{env.slug}/camps/summer-1/payment-options").json() == {
-        "online_payment_available": True}
+        "online_payment_available": True, "online_payee": "club"}
 
 
 def test_camp_member_price_is_charged_in_checkout(env):
@@ -631,7 +632,7 @@ def test_refund_error_mapping(env):
     _post_webhook(env, PLATFORM_HOOK, _completed(session_id, intent=env.intent), PLATFORM_SECRET)
     env.fake.refund_error = stripe.error.InvalidRequestError("no funds", "amount", code="insufficient_funds")
     r = _refund(env, token)
-    assert r.status_code == 409 and "Guthaben" in r.json()["detail"]
+    assert r.status_code == 409 and "Plattformguthaben" in r.json()["detail"]
     env.fake.refund_error = stripe.error.InvalidRequestError("x", "x", code="charge_already_refunded")
     assert "bereits vollständig" in _refund(env, token).json()["detail"]
     env.fake.refund_error = stripe.error.InvalidRequestError("x", "x", code="something_new")
@@ -709,7 +710,7 @@ def test_express_needs_platform_owner_switch(env):
     assert status["state"] == "awaiting_approval" and status["platform_enabled"] is False
     assert status["online_payment_mode"] is None
     options = f"/api/v1/organizations/{env.slug}/camps/summer-1/payment-options"
-    assert env.client.get(options).json() == {"online_payment_available": False}
+    assert env.client.get(options).json() == {"online_payment_available": False, "online_payee": "club"}
     token = _register(env)
     assert _checkout(env, token).status_code == 503
     assert env.fake.named("Session.create") == []
@@ -718,7 +719,7 @@ def test_express_needs_platform_owner_switch(env):
     assert env.client.patch(switch, headers=env.admin(), json={"enabled": True}).status_code == 403
     r = env.client.patch(switch, headers=owner_headers(), json={"enabled": True})
     assert r.status_code == 200 and r.json()["state"] == "active"
-    assert env.client.get(options).json() == {"online_payment_available": True}
+    assert env.client.get(options).json() == {"online_payment_available": True, "online_payee": "club"}
     assert _checkout(env, token).status_code == 200
     # Switching off again stops new checkouts at once.
     env.client.patch(switch, headers=owner_headers(), json={"enabled": False})

@@ -12,6 +12,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
+import stripe
 
 from app.routers import payments
 from .auth_helpers import org_admin_headers, owner_headers
@@ -84,12 +85,58 @@ def test_platform_mode_needs_the_platform_webhook_secret(env):
     assert _checkout(env, _register(env)).status_code == 503
 
 
-def test_active_club_account_still_wins_over_platform(env):
+def test_platform_route_wins_even_with_a_club_account(env):
     _activate_direct_fee(env)
+    _org(env, payment_route="platform")
+    token = _register(env)
+    assert _checkout(env, token).status_code == 200
+    (_, kw), = env.fake.named("Session.create")
+    assert "stripe_account" not in kw and _reg(env, token)["stripe_charge_type"] == "platform"
+
+
+def test_connect_route_uses_the_club_account_and_never_falls_back(env):
+    _activate_direct_fee(env)  # sets route connect
     token = _register(env)
     assert _checkout(env, token).status_code == 200
     (_, kw), = env.fake.named("Session.create")
     assert kw["stripe_account"] == env.express and _reg(env, token)["stripe_charge_type"] == "direct_fee"
+    # Connect route without an active account: no online payment, no platform fallback.
+    _activate_direct_fee(env, charges=False)
+    assert _options(env) is False
+    assert _checkout(env, _register(env)).status_code == 503
+    _org(env, payment_route="connect", stripe_express_account_id=None, stripe_express_account_kind=None)
+    assert _options(env) is False
+
+
+def test_existing_clubs_default_to_platform_route(env):
+    with env.cursor() as cur:
+        cur.execute("select payment_route from organizations where id=%s", (env.org,))
+        assert cur.fetchone()["payment_route"] == "platform"
+        import psycopg2
+        with pytest.raises(psycopg2.errors.CheckViolation):
+            cur.execute("update organizations set payment_route='x' where id=%s", (env.org,))
+
+
+def test_owner_chooses_the_payment_route(env):
+    path = f"/admin/platform/organizations/{env.slug}/payment-route"
+    assert env.client.patch(path, headers=env.admin(), json={"route": "connect"}).status_code == 403
+    r = env.client.patch(path, headers=owner_headers(), json={"route": "connect"})
+    assert r.status_code == 200 and r.json()["payment_route"] == "connect"
+    assert env.client.get(f"/admin/organizations/{env.slug}/payments/stripe", headers=env.admin()).json()["payment_route"] == "connect"
+    assert env.client.patch(path, headers=owner_headers(), json={"route": "bogus"}).status_code == 422
+    r = env.client.patch(path, headers=owner_headers(), json={"route": "platform"})
+    assert r.json()["payment_route"] == "platform"
+
+
+def test_payment_options_name_the_payee(env):
+    assert env.client.get(f"/api/v1/organizations/{env.slug}/camps/summer-1/payment-options").json() == {
+        "online_payment_available": False, "online_payee": "club"}
+    _enable(env)
+    assert env.client.get(f"/api/v1/organizations/{env.slug}/camps/summer-1/payment-options").json() == {
+        "online_payment_available": True, "online_payee": "platform"}
+    _activate_direct_fee(env)
+    assert env.client.get(f"/api/v1/organizations/{env.slug}/camps/summer-1/payment-options").json() == {
+        "online_payment_available": True, "online_payee": "club"}
 
 
 # ---------- checkout ----------
@@ -240,20 +287,51 @@ def test_open_platform_checkout_is_closed_on_the_platform_account(env):
     assert env.fake.named("Session.expire")[0][2] == {}
 
 
+# ---------- manual status, webhook replay, refund guards ----------
+
+def test_manual_status_change_is_refused_for_online_paid_bookings(env):
+    token, _ = _paid_platform(env)
+    r = env.client.patch(f"/admin/organizations/{env.slug}/camps/summer-1/registrations/{token}/payment-status",
+                         headers=env.admin(), json={"payment_status": "open"})
+    assert r.status_code == 409 and "online bezahlt" in r.json()["detail"] and "du" not in r.json()["detail"].split()[:0]
+    assert _reg(env, token)["payment_status"] == "paid" and _reg(env, token)["fee_collection"] == "platform_collected"
+
+
+def test_webhook_replay_keeps_paid_at(env):
+    token, session_id = _paid_platform(env)
+    with env.cursor() as cur:
+        cur.execute("update camp_registrations set paid_at='2026-12-02 10:00:00+00' where registration_token=%s", (token,))
+    assert _post_webhook(env, PLATFORM_HOOK, _completed_platform(session_id, env.intent), PLATFORM_SECRET).status_code == 200
+    assert _reg(env, token)["paid_at"].isoformat().startswith("2026-12-02T11:00:00+01:00")
+
+
+def test_refund_balance_errors_name_the_right_balance(env):
+    token, _ = _paid_platform(env)
+    env.fake.refund_error = stripe.error.InvalidRequestError("no funds", "amount", code="insufficient_funds")
+    r = _refund(env, token)
+    assert r.status_code == 409 and "Plattformguthaben" in r.json()["detail"] and "des Vereins" not in r.json()["detail"]
+    assert payments._refund_error("balance_insufficient", "direct_fee")[1].startswith("Das Stripe-Guthaben des Vereins")
+    assert payments._refund_error("balance_insufficient", "platform")[1].startswith("Das Plattformguthaben")
+
+
 # ---------- payout ledger ----------
 
-def _paid_row(env, org, camp, paid_at, amount=1000, fee=50, refunded=0, fee_refunded=0, platform=True):
+def _paid_row(env, org, camp, paid_at, amount=1000, fee=50, refunds=(), collection="platform_collected", charge="platform"):
+    """refunds: (created_at, refunded_delta_cents, fee_delta_cents) events."""
     child = f"K{uuid4().hex[:6]}"
     with env.cursor() as cur:
-        token = make_reg(cur, org, camp, child=child, payment_status="paid" if not refunded else "partially_refunded")
+        token = make_reg(cur, org, camp, child=child, payment_status="paid")
         cur.execute(
             """update camp_registrations set stripe_charge_type=%s, stripe_payment_intent_id=%s,
                    stripe_checkout_amount_cents=%s, paid_at=%s, fee_plan='individuell', fee_percent=5,
-                   fee_base_cents=%s, fee_cents=%s, fee_collection='platform_collected', fee_snapshot_at=%s,
-                   refunded_cents=%s, fee_refunded_cents=%s
-               where registration_token=%s""",
-            ("platform" if platform else "direct_fee", f"pi_{uuid4().hex[:16]}", amount, paid_at, amount, fee,
-             paid_at, refunded or None, fee_refunded or None, token))
+                   fee_base_cents=%s, fee_cents=%s, fee_collection=%s, fee_snapshot_at=%s
+               where registration_token=%s returning id""",
+            (charge, f"pi_{uuid4().hex[:16]}", amount, paid_at, amount, fee, collection, paid_at, token))
+        reg_id = cur.fetchone()["id"]
+        for created, refunded, fee_back in refunds:
+            cur.execute("insert into registration_refund_events (organization_id, registration_id, refunded_delta_cents, "
+                        "fee_delta_cents, source, created_at) values (%s,%s,%s,%s,'stripe',%s)",
+                        (org, reg_id, refunded, fee_back, created))
     return token
 
 
@@ -272,44 +350,79 @@ def ledger(env):
 
 
 def test_payout_math_with_refunds_isolation_and_berlin_month_boundary(env, ledger):
-    # December 2026 (Berlin): 2 normal payments, 1 partly refunded.
+    # December 2026 (Berlin): two payments; one refunded in January (not December).
     _paid_row(env, env.org, ledger.camp, "2026-12-01 10:00:00+00", 10000, 490)
-    _paid_row(env, env.org, ledger.camp, "2026-12-15 10:00:00+00", 5000, 245, refunded=2000, fee_refunded=98)
+    _paid_row(env, env.org, ledger.camp, "2026-12-15 10:00:00+00", 5000, 245,
+              refunds=[("2027-01-10 10:00:00+00", 2000, 98)])
     # Boundary: 22:59 UTC on 31.12. is 23:59 Berlin (December); 23:00 UTC is 00:00 Berlin (January);
     # 23:30 UTC on 30.11. is 00:30 Berlin on 1.12. (December).
     _paid_row(env, env.org, ledger.camp, "2026-12-31 22:59:00+00", 1000, 50)
     _paid_row(env, env.org, ledger.camp, "2026-12-31 23:00:00+00", 3000, 150)
     _paid_row(env, env.org, ledger.camp, "2026-11-30 23:30:00+00", 2000, 100)
-    # Not ours: other club, other payment path, unpaid.
+    # Not ours: other club, other payment path (fee not collected by the platform).
     _paid_row(env, env.other, ledger.other_camp, "2026-12-10 10:00:00+00", 7777, 388)
-    _paid_row(env, env.org, ledger.camp, "2026-12-10 10:00:00+00", 4444, 0, platform=False)
+    _paid_row(env, env.org, ledger.camp, "2026-12-10 10:00:00+00", 4444, 0, collection="application_fee", charge="direct_fee")
     with env.cursor() as cur:
         make_reg(cur, env.org, ledger.camp, child="Open")
-    r = _payouts(env, "2026-12")
-    assert r.status_code == 200, r.text
-    body = r.json()
+    body = _payouts(env, "2026-12").json()
     assert body["paid_cents"] == 10000 + 5000 + 1000 + 2000
-    assert body["refunded_cents"] == 2000
-    assert body["fee_cents"] == 490 + (245 - 98) + 50 + 100
-    assert body["payout_cents"] == body["paid_cents"] - body["refunded_cents"] - body["fee_cents"]
-    assert body["payout_cents"] == 18000 - 2000 - 787 == 15213
-    assert body["iban"] == "DE89370400440532013000" and body["payout"] is None
-    dates = [b["date"] for b in body["bookings"]]
-    assert dates == ["2026-12-01", "2026-12-01", "2026-12-15", "2026-12-31"]
+    assert (body["refunded_cents"], body["refunds"]) == (0, [])
+    assert body["fee_cents"] == 490 + 245 + 50 + 100
+    assert body["payout_cents"] == 18000 - 885 == 17115
+    assert body["iban"] == "DE89370400440532013000" and body["payout"] is None and body["carry_over"] is False
+    assert [b["date"] for b in body["bookings"]] == ["2026-12-01", "2026-12-01", "2026-12-15", "2026-12-31"]
+    assert set(body["bookings"][0]) == {"date", "camp_title", "amount_cents", "fee_cents"}
     assert {b["camp_title"] for b in body["bookings"]} == {"Sommercamp"}
-    refunded = [b for b in body["bookings"] if b["refund_cents"]]
-    assert refunded == [{"date": "2026-12-15", "camp_title": "Sommercamp", "amount_cents": 5000,
-                         "fee_cents": 147, "refund_cents": 2000}]
-    assert set(body["bookings"][0]) == {"date", "camp_title", "amount_cents", "fee_cents", "refund_cents"}
     dumped = json.dumps(body)
     assert "Pia" not in dumped and "Geheimweg" not in dumped and "p@example.com" not in dumped
-    # January only has the 00:00 Berlin booking; other months are empty.
+    # January: the 00:00-Berlin payment, minus the refund booked in January.
     jan = _payouts(env, "2027-01").json()
-    assert (jan["paid_cents"], jan["fee_cents"], jan["payout_cents"], len(jan["bookings"])) == (3000, 150, 2850, 1)
-    empty = _payouts(env, "2026-10").json()
-    assert (empty["paid_cents"], empty["payout_cents"], empty["bookings"]) == (0, 0, [])
-    # The other club has its own ledger.
+    assert (jan["paid_cents"], jan["refunded_cents"], jan["fee_cents"]) == (3000, 2000, 150 - 98)
+    assert jan["payout_cents"] == 3000 - 2000 - 52 == 948
+    assert jan["refunds"] == [{"date": "2027-01-10", "camp_title": "Sommercamp", "refund_cents": 2000,
+                               "fee_returned_cents": 98}]
+    assert _payouts(env, "2026-10").json()["payout_cents"] == 0
     assert _payouts(env, "2026-12", slug=env.other_slug).json()["paid_cents"] == 7777
+
+
+def test_refund_in_a_month_without_payments_is_a_carry_over(env, ledger):
+    _paid_row(env, env.org, ledger.camp, "2026-12-15 10:00:00+00", 5000, 245,
+              refunds=[("2027-02-10 10:00:00+00", 5000, 245)])
+    feb = _payouts(env, "2027-02").json()
+    assert (feb["paid_cents"], feb["refunded_cents"], feb["fee_cents"]) == (0, 5000, -245)
+    assert feb["payout_cents"] == -4755 and feb["carry_over"] is True and feb["bookings"] == []
+    # Berlin boundary for refunds: 23:30 UTC on 31.01. is 00:30 on 1.02.
+    _paid_row(env, env.org, ledger.camp, "2026-12-16 10:00:00+00", 1000, 50,
+              refunds=[("2027-01-31 23:30:00+00", 1000, 50)])
+    assert _payouts(env, "2027-02").json()["refunded_cents"] == 6000
+    assert _payouts(env, "2027-01").json()["refunded_cents"] == 0
+
+
+def test_ledger_filters_by_fee_collection_not_payment_status(env, ledger):
+    token = _paid_row(env, env.org, ledger.camp, "2026-12-03 10:00:00+00", 1000, 50)
+    with env.cursor() as cur:  # a status edited afterwards does not remove the payment from the ledger
+        cur.execute("update camp_registrations set payment_status='cancelled' where registration_token=%s", (token,))
+        make_reg(cur, env.org, ledger.camp, child="Unpaid")
+    assert _payouts(env, "2026-12").json()["paid_cents"] == 1000
+
+
+def test_review_flagged_payments_are_listed_separately(env, ledger):
+    token = _paid_row(env, env.org, ledger.camp, "2026-12-03 10:00:00+00", 1000, 50)
+    with env.cursor() as cur:
+        cur.execute("select id from camp_registrations where registration_token=%s", (token,))
+        rid = cur.fetchone()["id"]
+        for reason, when in (("duplicate_payment", "2026-12-04 10:00:00+00"),
+                             ("payment_for_closed_registration", "2026-12-05 10:00:00+00"),
+                             ("amount_mismatch", "2026-12-06 10:00:00+00"),
+                             ("duplicate_payment", "2027-01-04 10:00:00+00")):
+            cur.execute("insert into audit_log (action, organization_id, target_type, target_id, metadata, created_at) "
+                        "values ('stripe.payment_needs_review', %s, 'registration', %s, %s::jsonb, %s)",
+                        (env.org, str(rid), json.dumps({"reason": reason}), when))
+    review = _payouts(env, "2026-12").json()["review"]
+    assert review == [
+        {"date": "2026-12-04", "camp_title": "Sommercamp", "amount_cents": 1000, "reason": "duplicate_payment"},
+        {"date": "2026-12-05", "camp_title": "Sommercamp", "amount_cents": 1000, "reason": "payment_for_closed_registration"}]
+    assert len(_payouts(env, "2027-01").json()["review"]) == 1
 
 
 def test_payouts_are_owner_only_and_validate_the_month(env, ledger):
@@ -319,6 +432,11 @@ def test_payouts_are_owner_only_and_validate_the_month(env, ledger):
     assert post.status_code == 403
     assert _payouts(env, "2026-13").status_code == 422 and _payouts(env, "12-2026").status_code == 422
     assert _payouts(env, "2026-12", slug="nope-nope").status_code == 404
+
+
+@pytest.fixture(autouse=True)
+def _berlin_february(monkeypatch):
+    monkeypatch.setattr(payments, "_berlin_month_now", lambda: "2027-02")
 
 
 def _mark(env, month, paid_at="2027-01-05", reference="Auszahlung 12/2026", slug=None):
@@ -335,9 +453,7 @@ def test_mark_paid_is_idempotent_unique_and_audited(env, ledger):
     assert r.status_code == 200, r.text
     assert r.json()["payout"] == {"payout_cents": 9510, "paid_at": "2027-01-05", "reference": "Auszahlung 12/2026"}
     assert r.json()["changed_since_paid"] is False
-    # Same call again: same answer, still one record and one audit entry.
     assert _mark(env, "2026-12").status_code == 200
-    # Another date or reference for the same month: refused.
     assert _mark(env, "2026-12", reference="anderer Text").status_code == 409
     assert _mark(env, "2026-12", paid_at="2027-01-06").status_code == 409
     with env.cursor() as cur:
@@ -348,26 +464,59 @@ def test_mark_paid_is_idempotent_unique_and_audited(env, ledger):
         audit = cur.fetchall()
     assert len(rows) == 1 and str(rows[0]["month"]) == "2026-12-01" and rows[0]["payout_cents"] == 9510
     assert len(audit) == 1 and audit[0]["metadata"] == {"month": "2026-12", "payout_cents": 9510}
-    # GET shows the record; a refund after the transfer is flagged.
     assert _payouts(env, "2026-12").json()["payout"]["reference"] == "Auszahlung 12/2026"
-    with env.cursor() as cur:
-        cur.execute("update camp_registrations set refunded_cents=1000, fee_refunded_cents=49, "
-                    "payment_status='partially_refunded' where organization_id=%s", (env.org,))
-    assert _payouts(env, "2026-12").json()["changed_since_paid"] is True
-    # Unique per club and month in the database.
+    # A refund booked in a LATER month does not touch the paid month.
+    _paid_row(env, env.other, ledger.other_camp, "2026-12-03 10:00:00+00", 2000, 100,
+              refunds=[("2027-01-20 10:00:00+00", 2000, 100)])
+    assert _payouts(env, "2026-12").json()["changed_since_paid"] is False
     import psycopg2
     with pytest.raises(psycopg2.errors.UniqueViolation):
         with env.cursor() as cur:
             cur.execute("insert into organization_payouts (organization_id, month, payout_cents, paid_at, reference) "
                         "values (%s,'2026-12-01',1,'2027-01-05','dup')", (env.org,))
-    # Other club, same month: its own record.
-    _paid_row(env, env.other, ledger.other_camp, "2026-12-03 10:00:00+00", 2000, 100)
     assert _mark(env, "2026-12", slug=env.other_slug).status_code == 200
+
+
+def test_changed_since_paid_when_a_refund_lands_in_the_marked_month(env, ledger):
+    _paid_row(env, env.org, ledger.camp, "2026-12-03 10:00:00+00", 10000, 490)
+    assert _mark(env, "2026-12").status_code == 200
+    with env.cursor() as cur:
+        cur.execute("select id from camp_registrations where organization_id=%s", (env.org,))
+        cur.execute("insert into registration_refund_events (organization_id, registration_id, refunded_delta_cents, "
+                    "fee_delta_cents, source, created_at) select %s, id, 100, 5, 'stripe', '2026-12-20 10:00:00+00' "
+                    "from camp_registrations where organization_id=%s and fee_collection='platform_collected'",
+                    (env.org, env.org))
+    assert _payouts(env, "2026-12").json()["changed_since_paid"] is True
+
+
+def test_mark_paid_only_for_finished_months(env, ledger, monkeypatch):
+    _paid_row(env, env.org, ledger.camp, "2027-02-03 10:00:00+00", 10000, 490)
+    r = _mark(env, "2027-02")
+    assert r.status_code == 409 and "noch nicht abgeschlossen" in r.json()["detail"]
+    monkeypatch.setattr(payments, "_berlin_month_now", lambda: "2027-03")
+    assert _mark(env, "2027-02").status_code == 200
 
 
 def test_mark_paid_refuses_months_with_nothing_to_transfer(env, ledger):
     assert _mark(env, "2026-12").status_code == 409
+    _paid_row(env, env.org, ledger.camp, "2026-12-15 10:00:00+00", 5000, 245,
+              refunds=[("2027-01-10 10:00:00+00", 5000, 245)])
+    assert _mark(env, "2027-01").status_code == 409  # negative: carried over
     assert _mark(env, "2026-12", reference="").status_code == 422
+
+
+def test_club_admin_cannot_refund_a_payment_of_a_paid_out_month_owner_can(env, ledger):
+    token, _ = _paid_platform(env)
+    month = datetime.now(__import__("zoneinfo").ZoneInfo("Europe/Berlin")).strftime("%Y-%m")
+    monkey_open = _refund(env, token)  # month not paid out yet: club admin may refund
+    assert monkey_open.status_code == 200, monkey_open.text
+    with env.cursor() as cur:
+        cur.execute("insert into organization_payouts (organization_id, month, payout_cents, paid_at, reference) "
+                    "values (%s, %s, 1, '2027-02-01', 'x')", (env.org, f"{month}-01"))
+    r = _refund(env, token)
+    assert r.status_code == 409 and "Bitte wende dich an CampsPilot" in r.json()["detail"]
+    assert len(env.fake.named("Refund.create")) == 1
+    assert _refund(env, token, headers=owner_headers()).status_code == 200
 
 
 def test_payouts_table_is_backend_only(env):

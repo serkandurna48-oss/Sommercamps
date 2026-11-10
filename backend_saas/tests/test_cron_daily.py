@@ -37,6 +37,10 @@ def jobs(monkeypatch):
         lambda apply, today, organization_id=None: calls.append(("health", apply)) or {"rows": 4, "applied": apply},
     )
     monkeypatch.setattr(internal.retention, "general_review_rows", lambda today, organization_id=None: 7)
+    monkeypatch.setattr(
+        internal.reminders, "send_due_reminders",
+        lambda today: calls.append(("reminders", None)) or {"due": 2, "sent": 2, "failed": 0},
+    )
     return calls
 
 
@@ -73,6 +77,7 @@ def test_cron_correct_secret_returns_counts_only(jobs):
     body = r.json()
     assert body == {
         "health_data_rows": 4, "health_data_applied": False, "general_review_rows": 7,
+        "reminders_due": 2, "reminders_sent": 2, "reminders_failed": 0,
     }
     assert all(isinstance(v, (int, bool)) for v in body.values())
 
@@ -100,7 +105,7 @@ def test_cron_failing_job_does_not_stop_the_others_and_returns_500(monkeypatch, 
     assert r.status_code == 500
     body = r.json()
     assert body["failed_jobs"] == ["health_data"]
-    assert body["general_review_rows"] == 7  # the other jobs still ran
+    assert body["general_review_rows"] == 7 and body["reminders_sent"] == 2  # the other jobs still ran
     assert "secret" not in r.text
 
 
@@ -238,6 +243,7 @@ def test_daily_endpoint_end_to_end_apply_flag_off_changes_nothing(fresh, monkeyp
     with cursor() as cur:
         old = _reg(cur, org, _camp(cur, org, date.today() - timedelta(days=90)))
     monkeypatch.setattr(internal, "get_settings", lambda: _settings(apply=False))
+    monkeypatch.setattr(internal.reminders, "send_due_reminders", lambda today: {"due": 0, "sent": 0, "failed": 0})
     r = _post({"Authorization": f"Bearer {SECRET}"})
     assert r.status_code == 200 and r.json()["health_data_rows"] == 1 and r.json()["health_data_applied"] is False
     with cursor() as cur:

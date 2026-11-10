@@ -1,7 +1,7 @@
 """Internal endpoints for scheduled jobs (not part of the public API).
 
 POST /internal/cron/daily runs the daily jobs once: health-data retention, the
-12-month review count (more jobs are added here).
+12-month review count and the reminder mails three days before camp start.
 Called by .github/workflows/daily-jobs.yml with `Authorization: Bearer <CRON_SECRET>`.
 
 The response contains counts only: no IDs, names, addresses or error texts.
@@ -15,7 +15,7 @@ import logging
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse
 
-from .. import retention
+from .. import reminders, retention
 from ..config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,14 @@ def run_daily(authorization: str | None = Header(default=None)) -> JSONResponse:
         logger.error("Daily job general_review failed (error_type=%s)", type(exc).__name__)
         failed.append("general_review")
         result["general_review_rows"] = 0
+
+    try:
+        sent = reminders.send_due_reminders(today)
+        result.update(reminders_due=sent["due"], reminders_sent=sent["sent"], reminders_failed=sent["failed"])
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Daily job reminders failed (error_type=%s)", type(exc).__name__)
+        failed.append("reminders")
+        result.update(reminders_due=0, reminders_sent=0, reminders_failed=0)
 
     if failed:
         return JSONResponse(status_code=500, content={**result, "failed_jobs": failed})

@@ -275,7 +275,7 @@ def test_nonexistent_or_ambiguous_local_time_rejected(ctx, date, time):
 
 @pytest.mark.parametrize("bad", [
     {"date": "2030-13-01"}, {"date": "06.05.2030"}, {"start_time": "25:00"}, {"start_time": "18:00:30"},
-    {"start_time": "6pm"}, {"capacity": 0}, {"capacity": 9}, {"capacity": -1}, {"status": "archived"},
+    {"start_time": "6pm"}, {"capacity": 0}, {"capacity": 13}, {"capacity": -1}, {"status": "archived"},
     {"offer_id": str(uuid4())}, {"age_min": -1}, {"age_min": 10, "age_max": 5},
 ])
 def test_create_session_validation(ctx, bad):

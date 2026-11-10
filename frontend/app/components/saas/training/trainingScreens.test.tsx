@@ -143,12 +143,12 @@ describe('Angebot mit Terminen und Buchungen', () => {
     }
   })
 
-  it('Einzel-Termin hat kein Kapazitätsfeld, Gruppentermin schon (1 bis 8)', () => {
+  it('Einzel-Termin hat kein Kapazitätsfeld, Gruppentermin schon (1 bis 12)', () => {
     expect(render([]).querySelector('input[name="capacity"]')).toBeNull()
     const group = html(<TrainingOfferScreen orgSlug="demo" org={org} offer={{ ...offer, kind: 'gruppe' }} sessions={[]} registrationsBySession={{}} />)
     const capacity = group.querySelector<HTMLInputElement>('input[name="capacity"]')!
     expect(capacity.min).toBe('1')
-    expect(capacity.max).toBe('8')
+    expect(capacity.max).toBe('12')
   })
 
   it('Terminformular bietet Wiederholung in Wochen (Standard 1, 1 bis 12)', () => {

@@ -474,6 +474,67 @@ export async function addOrganizationMemberAdmin(orgSlug: string, token: string,
   return res.json() as Promise<OrganizationMember>
 }
 
+export interface Invoice {
+  id: string
+  number: string
+  kind: 'invoice' | 'storno'
+  issue_date: string
+  gross_cents: number
+  net_cents: number
+  vat_cents: number
+  recipient_name: string
+  description: string
+  cancels_number: string | null
+  registration_token: string | null
+  sent_at: string | null
+  send_error: string | null
+}
+
+export interface RegistrationInvoices {
+  invoices: Invoice[]
+  pending_reason: string | null
+  can_create: boolean
+}
+
+const INVOICE_BLOCKED: Record<string, string> = {
+  missing_billing_profile: 'Es fehlen noch Rechnungsdaten des Vereins.',
+  not_paid: 'Die Buchung ist noch nicht als bezahlt markiert.',
+  free: 'Für einen Betrag von 0 € wird keine Rechnung erstellt.',
+}
+
+export async function fetchRegistrationInvoicesAdmin(
+  orgSlug: string,
+  registrationToken: string,
+  token: string,
+): Promise<RegistrationInvoices> {
+  const res = await adminFetch(
+    `/admin/organizations/${orgSlug}/registrations/${registrationToken}/invoices`,
+    token,
+  )
+  if (res.status === 404) throw new AdminActionError('Anmeldung nicht gefunden')
+  if (!res.ok) throw new AdminActionError('Rechnungen konnten nicht geladen werden')
+  return res.json() as Promise<RegistrationInvoices>
+}
+
+export async function createRegistrationInvoiceAdmin(
+  orgSlug: string,
+  registrationToken: string,
+  token: string,
+): Promise<Invoice> {
+  const res = await adminMutate(
+    `/admin/organizations/${orgSlug}/registrations/${registrationToken}/invoice`,
+    token,
+    'POST',
+  )
+  if (res.status === 409) {
+    const body = (await res.json().catch(() => null)) as { detail?: { code?: string } } | null
+    const code = body?.detail?.code
+    throw new AdminActionError(code && INVOICE_BLOCKED[code] ? INVOICE_BLOCKED[code] : 'Rechnung konnte nicht erstellt werden.')
+  }
+  if (!res.ok) throw new AdminActionError('Rechnung konnte nicht erstellt werden.')
+  return res.json() as Promise<Invoice>
+}
+
 export async function removeOrganizationMemberAdmin(orgSlug: string, memberId: string, token: string): Promise<void> {
   const res = await fetch(`${baseUrl()}/admin/organizations/${orgSlug}/members/${memberId}`, {
     method: 'DELETE',

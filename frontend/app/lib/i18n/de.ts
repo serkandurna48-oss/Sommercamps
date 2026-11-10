@@ -204,6 +204,19 @@ export const de = {
     saved: 'Gespeichert.',
     saveError: 'Konnte nicht gespeichert werden — Angaben prüfen und erneut versuchen.',
   },
+  invoices: {
+    heading: 'Rechnung',
+    loading: 'Rechnungen werden geladen …',
+    loadError: 'Rechnungen konnten nicht geladen werden.',
+    empty: 'Noch keine Rechnung.',
+    storno: 'Storno',
+    download: 'PDF herunterladen',
+    create: 'Rechnung erstellen',
+    creating: 'Wird erstellt …',
+    missingProfile: 'Rechnung ausstehend. Die Rechnungsdaten des Vereins fehlen noch.',
+    failed: 'Die Rechnung konnte nicht erzeugt werden. Versuch es mit „Rechnung erstellen“ noch einmal.',
+    createError: 'Rechnung konnte nicht erstellt werden.',
+  },
 } as const
 
 export function formatEuro(cents: number, currency = 'EUR'): string {

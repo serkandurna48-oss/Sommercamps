@@ -171,7 +171,23 @@ it('Redirect bei "/" mit Marketing-Modus', async () => {
   )
 })
 
-it('kein Redirect bei "/" ohne Marketing-Modus', async () => {
+it('Redirect bei "/" im SaaS-Build (NEXT_PUBLIC_ACTIVE_CLUB nicht gesetzt)', async () => {
+  vi.stubEnv('NEXT_PUBLIC_ACTIVE_CLUB', '')
+  await proxy(makeRequest({ url: 'http://localhost/' }))
+  expect(NextResponse.redirect).toHaveBeenCalledWith(
+    expect.objectContaining({ href: 'http://localhost/campspilot' }),
+  )
+})
+
+it.each(['ksv', 'jk'])('kein Redirect bei "/" im Legacy-Build ACTIVE_CLUB=%s', async (club) => {
+  vi.stubEnv('NEXT_PUBLIC_ACTIVE_CLUB', club)
+  await proxy(makeRequest({ url: 'http://localhost/' }))
+  expect(NextResponse.redirect).not.toHaveBeenCalled()
+  expect(NextResponse.next).toHaveBeenCalled()
+})
+
+it('kein Redirect bei "/" ohne Marketing-Modus (Legacy-Build)', async () => {
+  vi.stubEnv('NEXT_PUBLIC_ACTIVE_CLUB', 'ksv')
   const request = makeRequest({ url: 'http://localhost/' })
   await proxy(request)
   expect(NextResponse.redirect).not.toHaveBeenCalled()

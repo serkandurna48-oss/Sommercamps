@@ -6,7 +6,7 @@ import type { CampAdmin, OrganizationAdmin } from '../../../lib/saasAdminApi'
 import { formatDateTime } from '../../../lib/i18n/de'
 import Button from '../ui/Button'
 import SuccessNote from '../state/SuccessNote'
-import { useAdminPreview } from '../preview/AdminPreviewContext'
+import { DEV_PREVIEW_BASE, previewParentHref, useAdminPreview } from '../preview/AdminPreviewContext'
 
 export type PublicationOrganization = Pick<OrganizationAdmin, 'site_published' | 'contact_email' | 'iban' | 'terms_text'>
 
@@ -29,8 +29,8 @@ export default function CampPublicationCard({ orgSlug, org, camp, pending, empha
 }) {
   const [copyResult, setCopyResult] = useState<'copied' | 'error' | null>(null)
   const preview = useAdminPreview()
-  const orgSettings = preview ? '/dev/admin-vorschau/konfiguration' : `/pilot/${orgSlug}/konfiguration`
-  const registrationLink = preview ? '/dev/admin-vorschau' : `/pilot/${encodeURIComponent(orgSlug)}?camp=${encodeURIComponent(camp.slug)}`
+  const orgSettings = preview ? `${preview.basePath ?? DEV_PREVIEW_BASE}/konfiguration` : `/pilot/${orgSlug}/konfiguration`
+  const registrationLink = preview ? previewParentHref(preview) : `/pilot/${encodeURIComponent(orgSlug)}?camp=${encodeURIComponent(camp.slug)}`
   const reachable = org.site_published && camp.status === 'published'
   const checks = [
     { label: 'Kontakt-E-Mail', ready: !!org.contact_email?.trim(), href: `${orgSettings}#contact_email` },

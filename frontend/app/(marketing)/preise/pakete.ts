@@ -30,6 +30,12 @@ const VEREIN_JAHR_CENTS = VEREIN_MONAT_CENTS * 12
 const BEISPIEL_KINDER = 20
 const BEISPIEL_PREIS_CENTS = 15000
 const BEISPIEL_UMSATZ_CENTS = BEISPIEL_KINDER * BEISPIEL_PREIS_CENTS
+/** Zahlen für Rechner und Schaubilder (z. B. ROI-Rechner der Startseite). Einzige Quelle; die Anzeigetexte unten müssen dazu passen (siehe pakete.test.ts). */
+export const tarife = {
+  starter: { name: 'Starter', basisPoints: STARTER_BASIS_POINTS, monatCents: 0 },
+  verein: { name: 'Verein', basisPoints: VEREIN_BASIS_POINTS, monatCents: VEREIN_MONAT_CENTS },
+} as const
+
 const percentOf = (cents: number, basisPoints: number) => Math.round((cents * basisPoints) / 10000)
 
 // Ab diesem Buchungsumsatz im Jahr spart der niedrigere Satz die Grundgebühr wieder ein.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { euro, rechenbeispiel, pakete, preise } from './pakete'
+import { euro, rechenbeispiel, pakete, preise, tarife } from './pakete'
 
 describe('euro', () => {
   it.each([[0, '0,00 €'], [2490, '24,90 €'], [20700, '207,00 €'], [1494000, '14.940,00 €'], [5, '0,05 €']])(
@@ -38,5 +38,15 @@ describe('Preisseite-Texte', () => {
 
   it('hat genau drei Pakete', () => {
     expect(pakete.map((paket) => paket.name)).toEqual(['Starter', 'Verein', 'Verband/Individuell'])
+  })
+})
+
+describe('tarife (Zahlen für den ROI-Rechner)', () => {
+  it('stimmen mit den Anzeigetexten der Pakete überein', () => {
+    const prozent = (bp: number) => `${(bp / 100).toFixed(1).replace('.', ',')} %`
+    expect(pakete[0].buchungsgebuehr).toContain(prozent(tarife.starter.basisPoints))
+    expect(pakete[1].buchungsgebuehr).toContain(prozent(tarife.verein.basisPoints))
+    expect(pakete[0].preis).toBe(tarife.starter.monatCents === 0 ? '0 €' : euro(tarife.starter.monatCents))
+    expect(pakete[1].preis).toBe(euro(tarife.verein.monatCents))
   })
 })

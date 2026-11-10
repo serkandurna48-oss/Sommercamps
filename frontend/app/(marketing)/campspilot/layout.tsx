@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Archivo } from 'next/font/google'
 import './marketing.css'
+import './landing.css'
 
 // Scoped to /campspilot only — the KSV/JK site keeps its Geist fonts and
 // Tailwind utilities (app/layout.tsx). This nested layout adds Archivo and

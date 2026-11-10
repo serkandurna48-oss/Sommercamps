@@ -2,7 +2,15 @@
 
 import { createContext, useContext } from 'react'
 
-export const AdminPreviewContext = createContext<{ empty: boolean } | null>(null)
+export const DEV_PREVIEW_BASE = '/dev/admin-vorschau'
+
+/**
+ * `basePath`: where preview screens live (dev preview or the public demo at /demo/dashboard).
+ * `parentHref`: target of the "parent link" actions inside the preview.
+ */
+export type AdminPreview = { empty: boolean; basePath?: string; parentHref?: string }
+
+export const AdminPreviewContext = createContext<AdminPreview | null>(null)
 
 export function useAdminPreview() {
   return useContext(AdminPreviewContext)
@@ -16,7 +24,11 @@ export async function previewNoopAction<S extends { error: string | null }>(stat
 
 export async function previewLogoutAction() {}
 
-export function previewHref(href: string, empty: boolean): string {
+export function previewParentHref(preview: AdminPreview): string {
+  return preview.parentHref ?? DEV_PREVIEW_BASE
+}
+
+export function previewHref(href: string, empty: boolean, basePath: string = DEV_PREVIEW_BASE): string {
   if (!href.startsWith('/pilot/')) return href
   const [pathname, query] = href.split('?')
   const path = pathname.split('/').slice(3)
@@ -39,5 +51,5 @@ export function previewHref(href: string, empty: boolean): string {
   }
   if (empty) params.set('leer', '1')
   const search = params.toString()
-  return `/dev/admin-vorschau/${screen}${search ? `?${search}` : ''}`
+  return `${basePath}/${screen}${search ? `?${search}` : ''}`
 }

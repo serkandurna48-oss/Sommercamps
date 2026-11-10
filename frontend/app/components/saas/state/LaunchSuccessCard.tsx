@@ -4,14 +4,14 @@ import { useState } from 'react'
 import { de } from '../../../lib/i18n/de'
 import Button, { ButtonLink } from '../ui/Button'
 import SuccessNote from './SuccessNote'
-import { useAdminPreview } from '../preview/AdminPreviewContext'
+import { previewParentHref, useAdminPreview } from '../preview/AdminPreviewContext'
 
 export default function LaunchSuccessCard({ orgSlug }: {
   orgSlug: string
 }) {
   const [copyResult, setCopyResult] = useState<'idle' | 'copied' | 'error'>('idle')
   const preview = useAdminPreview()
-  const registrationLink = preview ? '/dev/admin-vorschau' : `/pilot/${orgSlug}`
+  const registrationLink = preview ? previewParentHref(preview) : `/pilot/${orgSlug}`
 
   async function copyLink() {
     try {

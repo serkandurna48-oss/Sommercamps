@@ -3,12 +3,12 @@
 import { useState } from 'react'
 import { de } from '../../../lib/i18n/de'
 import Button, { ButtonLink } from '../ui/Button'
-import { useAdminPreview } from '../preview/AdminPreviewContext'
+import { previewParentHref, useAdminPreview } from '../preview/AdminPreviewContext'
 
 export default function ParentLinkActions({ orgSlug }: { orgSlug: string }) {
   const [result, setResult] = useState<'copied' | 'error' | null>(null)
   const preview = useAdminPreview()
-  const href = preview ? '/dev/admin-vorschau' : `/pilot/${orgSlug}`
+  const href = preview ? previewParentHref(preview) : `/pilot/${orgSlug}`
 
   async function copy() {
     try {

@@ -181,7 +181,7 @@ export default function DoneScreen({
             <div className="done-transfer" style={{ marginBottom: 18 }}>
               <span className="done-transfer-label">Online bezahlen</span>
               <p style={{ marginTop: 6, marginBottom: 12 }}>
-                Sicher per Karte über Stripe. Der Betrag geht direkt an {payTo}.
+                Sicher per Karte über Stripe. Zahlungsempfänger ist CampsPilot im Auftrag von {payTo}.
               </p>
               <button className="btn primary btn-pill" type="button" disabled={stripeLoading}
                 aria-busy={stripeLoading} onClick={handleStripeCheckout}>

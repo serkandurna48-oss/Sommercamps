@@ -886,6 +886,9 @@ export default function RegistrationFormScreen({
                         <span className="err"><span id="err-payment-method" role="alert">Bitte wählen Sie eine Zahlart.</span></span>
                       )}
                     </fieldset>
+                    {paymentMethod === 'online' && (
+                      <p className="note quiet" data-testid="online-payee">Sicher per Karte über Stripe. Zahlungsempfänger ist CampsPilot im Auftrag von {orgName}.</p>
+                    )}
                     <p className="note quiet">Kostenlose Absage bis 24 h vorher – bitte direkt beim Verein melden.</p>
                   </div>
                 </section>

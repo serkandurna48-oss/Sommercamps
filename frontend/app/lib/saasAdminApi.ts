@@ -1342,8 +1342,8 @@ export interface StripePaymentStatus {
   synced_at: string | null
   legacy_account_linked: boolean
   legacy_active: boolean
-  /** direct_fee: Managed Risk direct charge with platform fee; destination: B2 Express (staging); direct: legacy Standard account. */
-  online_payment_mode: 'direct_fee' | 'destination' | 'direct' | null
+  /** platform: CampsPilot collects on its own Stripe account (no club account). direct_fee: Managed Risk direct charge with platform fee; destination: B2 Express (staging); direct: legacy Standard account. */
+  online_payment_mode: 'direct_fee' | 'destination' | 'direct' | 'platform' | null
   account_kind?: 'direct_fee' | 'destination' | null
   service_ready: boolean
 }
@@ -1447,6 +1447,45 @@ export async function fetchFeeMonthAdmin(orgSlug: string, token: string, month: 
   const res = await adminFetch(`/admin/platform/organizations/${encodeURIComponent(orgSlug)}/fees?month=${encodeURIComponent(month)}`, token)
   if (!res.ok) throw new AdminActionError('Monatsübersicht konnte nicht geladen werden.')
   return res.json() as Promise<FeeMonth>
+}
+
+export interface PayoutBooking {
+  date: string
+  camp_title: string
+  amount_cents: number
+  fee_cents: number
+  refund_cents: number
+}
+
+export interface PayoutMonth {
+  month: string
+  paid_cents: number
+  refunded_cents: number
+  fee_cents: number
+  payout_cents: number
+  iban: string | null
+  bookings: PayoutBooking[]
+  payout: { payout_cents: number; paid_at: string; reference: string } | null
+  changed_since_paid: boolean
+}
+
+/** Owner only: platform payments of one club and month (what the platform owes the club). */
+export async function fetchPayoutsAdmin(orgSlug: string, token: string, month: string): Promise<PayoutMonth> {
+  const res = await adminFetch(`/admin/platform/organizations/${encodeURIComponent(orgSlug)}/payouts?month=${encodeURIComponent(month)}`, token)
+  if (!res.ok) throw new AdminActionError('Auszahlungen konnten nicht geladen werden.')
+  return res.json() as Promise<PayoutMonth>
+}
+
+export async function markPayoutPaidAdmin(
+  orgSlug: string, token: string, month: string, data: { paid_at: string; reference: string },
+): Promise<PayoutMonth> {
+  const res = await adminMutate(`/admin/platform/organizations/${encodeURIComponent(orgSlug)}/payouts/${encodeURIComponent(month)}/mark-paid`, token, 'POST', data)
+  if (res.status === 409) {
+    const body = await res.json().catch(() => null) as { detail?: unknown } | null
+    throw new AdminActionError(typeof body?.detail === 'string' ? body.detail : 'Auszahlung kann nicht markiert werden.')
+  }
+  if (!res.ok) throw new AdminActionError('Auszahlung konnte nicht gespeichert werden.')
+  return res.json() as Promise<PayoutMonth>
 }
 
 export async function fetchFeeRulesAdmin(orgSlug: string, token: string): Promise<FeeRules> {

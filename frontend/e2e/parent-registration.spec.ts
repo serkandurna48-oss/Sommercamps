@@ -20,6 +20,10 @@ async function register(page: Page, child: { first: string; birth: string }, par
   await page.locator('[name="parent_email"]').fill(parentEmail)
   await page.locator('[name="parent_phone"]').fill('0561 000000')
   await page.locator('[name="emergency_phone"]').fill('0561 111111')
+  // Rechnungsanschrift ist seit PR #83 Pflicht bei kostenpflichtigen Buchungen.
+  await page.locator('[name="parent_street"]').fill('Musterweg 1')
+  await page.locator('#parent_postal_code').fill('34225')
+  await page.locator('#parent_city').fill('Baunatal')
   await page.locator('#terms_accepted').check()
   await page.locator('#privacy_accepted').check()
   await page.locator('form button[type="submit"]').click()

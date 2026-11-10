@@ -34,6 +34,10 @@ async function parentRegisters(browser: Browser, first: string, cta: string) {
   await page.locator('[name="parent_email"]').fill(`${first.toLowerCase()}@eltern.e2e.example`)
   await page.locator('[name="parent_phone"]').fill('0561 000000')
   await page.locator('[name="emergency_phone"]').fill('0561 111111')
+  // Rechnungsanschrift ist seit PR #83 Pflicht bei kostenpflichtigen Buchungen.
+  await page.locator('[name="parent_street"]').fill('Musterweg 1')
+  await page.locator('#parent_postal_code').fill('34225')
+  await page.locator('#parent_city').fill('Baunatal')
   await page.locator('#terms_accepted').check()
   await page.locator('#privacy_accepted').check()
   await page.locator('form button[type="submit"]').click()
@@ -95,7 +99,7 @@ test('Fremder Verein startet ohne Hilfe bis zur verwalteten Anmeldung', async ({
   await page.getByRole('button', { name: 'Zur Freigabe einreichen' }).click()
   await page.getByLabel(/Auftragsverarbeitungsvertrag/).check()
   await page.getByRole('button', { name: 'Jetzt einreichen' }).click()
-  await expect(page.getByText('Wir prüfen Ihren Verein, meist innerhalb eines Werktags.')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('Wir prüfen deinen Verein, meist innerhalb eines Werktags.')).toBeVisible({ timeout: 15_000 })
 
   // Not public before approval
   const anon = await (await browser.newContext()).newPage()
@@ -130,7 +134,7 @@ test('Fremder Verein startet ohne Hilfe bis zur verwalteten Anmeldung', async ({
   await admin2.locator('#new-password').fill('kollegin-passwort-123')
   await admin2.locator('#confirm-password').fill('kollegin-passwort-123')
   await admin2.locator('form button[type="submit"]').click()
-  await expect(admin2.getByText('Ihr Passwort wurde geändert.', { exact: false })).toBeVisible()
+  await expect(admin2.getByText('Dein Passwort wurde geändert.', { exact: false })).toBeVisible()
   await login(admin2, `/pilot/${CLUB.slug}/login`, colleague, 'kollegin-passwort-123')
   await expect(admin2).toHaveURL(/\/pilot\/sv-probelauf\/dashboard/)
 

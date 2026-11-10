@@ -152,6 +152,14 @@ class Settings(BaseSettings):
     # power, unlike supabase_anon_key.
     supabase_service_role_key: Optional[str] = Field(default=None, alias="SUPABASE_SERVICE_ROLE_KEY")
 
+    # Daily jobs (POST /internal/cron/daily, called by .github/workflows/daily-jobs.yml).
+    # Unset or blank = the endpoint answers 503 and does nothing. Compared in
+    # constant time; never logged.
+    cron_secret: Optional[str] = Field(default=None, alias="CRON_SECRET")
+    # Health-data retention (allergies/medical_notes 30 days after camp end).
+    # False (default) = the job only counts affected rows; true = it clears them.
+    retention_apply: bool = Field(default=False, alias="RETENTION_APPLY")
+
     # Number of trusted reverse-proxy hops in front of this service.
     # 0 (default, Render direct): use request.client.host; never trust
     # X-Forwarded-For — a client could forge it and bypass IP rate limits.

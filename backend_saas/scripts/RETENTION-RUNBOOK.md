@@ -37,6 +37,22 @@ Beispiel ausschließlich mit einer lokal erzeugten Testdatenbank:
 5. Für Backups wird erst nach belegter Providerrotation eine Aussage zur
    Löschdauer getroffen. Eine feste Backupfrist ist hier nicht bekannt.
 
-Es gibt noch keinen Scheduler, keinen Apply-Modus und keinen produktiven
-Löschlauf. Vor Release sind lokaler Schema-Test der Migration, dokumentierte
-Finanzdatentrennung und ein freigegebener operativer Löschprozess erforderlich.
+## Automatischer Lauf (Gesundheitsdaten)
+
+Seit 10.11.2026 ruft der Workflow `.github/workflows/daily-jobs.yml` täglich um 04:17 UTC
+`POST /internal/cron/daily` auf (Header `Authorization: Bearer <CRON_SECRET>`). Der Job
+„Gesundheitsdaten“ setzt `allergies` und `medical_notes` von Anmeldungen, deren Camp mindestens
+30 Tage zurückliegt, auf NULL; `health_data_consent` bleibt als Nachweis.
+
+- Nur mit `RETENTION_APPLY=true`. Standard ist `false`: dann zählt der Job nur
+  (`health_data_rows` in der Antwort) und schreibt einen Audit-Eintrag `retention.health_data`
+  mit `{"rows": n, "mode": "dry_run"}`. Im Apply-Modus steht `mode: "apply"` darin.
+- Der Audit-Eintrag enthält keine IDs, Namen oder Gesundheitswerte.
+- Empfohlene Reihenfolge je Umgebung: Secret setzen, einige Tage im Zählmodus laufen lassen,
+  Zahl mit `retention_dry_run.py` gegenprüfen, dann `RETENTION_APPLY=true` setzen.
+- Die allgemeine 12-Monats-Löschung (Punkte 2 bis 5 oben) bleibt manuell. Der Job meldet nur die
+  Zahl als `general_review_rows` und löscht oder anonymisiert nichts.
+
+Es gibt weiterhin keinen automatischen Löschlauf für allgemeine Daten. Vor Release sind lokaler
+Schema-Test der Migration, dokumentierte Finanzdatentrennung und ein freigegebener operativer
+Löschprozess für die 12-Monats-Löschung erforderlich.

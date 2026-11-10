@@ -128,7 +128,7 @@ export default function ParentFlow({ org, camps }: { org: OrganizationPublic; ca
 
       {org.theme === 'akademie' && (
         <header className="hero h-akad">
-          <div className="bg">{hero && <Image id="shotB" src={hero.src} alt={hero.alt} fill priority style={{ objectFit: 'cover', opacity: 0.46 }} />}</div>
+          <div className="bg">{hero && <Image id="shotB" src={hero.src} alt={hero.alt} fill priority style={{ objectFit: 'cover' }} />}</div>
           <div className="veil" />
           <div className="in">
             <span className="mark">

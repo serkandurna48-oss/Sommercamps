@@ -172,6 +172,14 @@ class Settings(BaseSettings):
     # False (default) = the job only counts affected rows; true = it clears them.
     retention_apply: bool = Field(default=False, alias="RETENTION_APPLY")
 
+    @field_validator("retention_apply", mode="before")
+    @classmethod
+    def _retention_apply_blank_is_false(cls, value):
+        # A variable created empty in the Render dashboard must not stop the app.
+        if isinstance(value, str) and not value.strip():
+            return False
+        return value
+
     # Number of trusted reverse-proxy hops in front of this service.
     # 0 (default, Render direct): use request.client.host; never trust
     # X-Forwarded-For — a client could forge it and bypass IP rate limits.

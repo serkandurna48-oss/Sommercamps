@@ -186,3 +186,11 @@ def test_claim_is_atomic_second_claim_sends_nothing(env):
             "org_slug": env.slug, "org_name": "O", "org_email": "o@example.com", "org_phone": None}
     assert reminders._send_one(full) is False
     assert env.mail.sent == []
+
+
+def test_no_reminder_after_cancellation_request(env):
+    token = _reg(env, _camp(env))
+    with env.cursor() as cur:
+        cur.execute("update camp_registrations set cancellation_requested_at = now() where registration_token = %s", (token,))
+    assert reminders.send_due_reminders(TODAY) == {"due": 0, "sent": 0, "failed": 0}
+    assert env.mail.sent == [] and _sent_at(env, token) is None

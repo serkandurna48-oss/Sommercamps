@@ -41,12 +41,14 @@ _DUE = """
       and r.status in ('registered', 'confirmed')
       and r.anonymized_at is null
       and r.reminder_sent_at is null
+      and r.cancellation_requested_at is null
     order by r.created_at, r.id
 """
 _CLAIM = """
     update camp_registrations set reminder_sent_at = now()
     where registration_token = %s and organization_id = %s
-      and reminder_sent_at is null and anonymized_at is null and status in ('registered', 'confirmed')
+      and reminder_sent_at is null and anonymized_at is null and cancellation_requested_at is null
+      and status in ('registered', 'confirmed')
 """
 _RELEASE = "update camp_registrations set reminder_sent_at = null where registration_token = %s and organization_id = %s"
 

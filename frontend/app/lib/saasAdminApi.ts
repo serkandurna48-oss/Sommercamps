@@ -161,7 +161,7 @@ export class SlugConflictError extends Error {
 
 /** 409 `plan_camp_limit`: the plan (Starter) allows one active camp. The message
  * comes from the backend (Du-Form for admins) and is safe to show as is. */
-export const PLAN_CAMP_LIMIT_MESSAGE = 'Im Paket Starter ist 1 aktives Camp enthalten. Für mehr Camps wechsle ins Paket Verein.'
+export const PLAN_CAMP_LIMIT_MESSAGE = 'Im Paket Starter ist 1 aktives Camp enthalten. Für weitere Camps wechsle ins Paket Verein.'
 export class PlanCampLimitError extends AdminActionError {
   constructor(message: string = PLAN_CAMP_LIMIT_MESSAGE) {
     super(message)

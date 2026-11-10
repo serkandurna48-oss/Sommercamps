@@ -134,7 +134,7 @@ class PlanCampLimitError(Exception):
     has one. Maps to 409 `plan_camp_limit`."""
 
     code = "plan_camp_limit"
-    message = "Im Paket Starter ist 1 aktives Camp enthalten. Für mehr Camps wechsle ins Paket Verein."
+    message = "Im Paket Starter ist 1 aktives Camp enthalten. Für weitere Camps wechsle ins Paket Verein."
 
     def __init__(self, organization_id: UUID):
         self.organization_id = organization_id
@@ -255,8 +255,8 @@ def create_camp(organization_id: UUID, data: CampCreate) -> dict:
     the authoritative check; CampCreate's format validator only catches
     malformed slugs, not duplicates)."""
     with db.get_cursor() as cur:
-        if data.status == "published" and data.end_date >= fees.booking_date(datetime.now(timezone.utc)):
-            _enforce_plan_camp_limit(cur, organization_id)
+        # Starter: no further camp at all (draft included) while one is active.
+        _enforce_plan_camp_limit(cur, organization_id)
         try:
             cur.execute(
                 _INSERT_CAMP,

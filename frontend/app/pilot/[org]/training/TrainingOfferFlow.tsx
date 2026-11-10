@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { OrganizationPublic, RegistrationCreated, TrainingOfferDetail, TrainingPaymentMethod, TrainingSessionPublic } from '../../../lib/saasApi'
-import { fetchTrainingOffer, getStripePaymentAvailability } from '../../../lib/saasApi'
+import { fetchTrainingOffer, getStripePaymentOptions } from '../../../lib/saasApi'
 import {
   findBookableSession, formatSessionDateTime, memberPriceText, sessionAsCamp, sessionAvailability, uniformSessionPriceText,
 } from '../../../lib/trainingFormat'
@@ -34,6 +34,7 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
   const [done, setDone] = useState<DoneState | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [onlineAvailable, setOnlineAvailable] = useState(false)
+  const [payeeIsPlatform, setPayeeIsPlatform] = useState(false)
 
   useEffect(() => { window.scrollTo?.(0, 0) }, [screen])
 
@@ -41,8 +42,10 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
   useEffect(() => {
     if (screen !== 'form' || !selectedSlug) return
     let current = true
-    void getStripePaymentAvailability(org.slug, selectedSlug).then(available => {
-      if (current) setOnlineAvailable(available)
+    void getStripePaymentOptions(org.slug, selectedSlug).then(options => {
+      if (!current) return
+      setOnlineAvailable(options.available)
+      setPayeeIsPlatform(options.payee === 'platform')
     })
     return () => { current = false }
   }, [screen, selectedSlug, org.slug])
@@ -79,6 +82,7 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
           dateTimeLabel: formatSessionDateTime(selected.local_date, selected.local_time),
           priceText: memberPriceText(selected.price_member_cents, selected.price_nonmember_cents),
           onlinePaymentAvailable: onlineAvailable,
+          onlinePayeeIsPlatform: payeeIsPlatform,
           billingAddressRequired: Math.max(selected.price_member_cents, selected.price_nonmember_cents) > 0,
           onSlotTaken: (conflict) => {
             setNotice(SLOT_TAKEN_NOTICE[conflict])
@@ -100,7 +104,7 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
     return (
       <TrainingDoneScreen
         org={org} offer={offer} session={done.session} result={done.result}
-        sessionSlug={done.session.slug} childName={done.childName} parentEmail={done.parentEmail} paymentMethod={done.paymentMethod}
+        sessionSlug={done.session.slug} childName={done.childName} parentEmail={done.parentEmail} paymentMethod={done.paymentMethod} payeeIsPlatform={payeeIsPlatform}
         onBookAnother={() => {
           setDone(null)
           setSelectedSlug(null)

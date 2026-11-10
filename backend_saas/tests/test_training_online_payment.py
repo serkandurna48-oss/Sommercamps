@@ -50,7 +50,7 @@ def stripe_env(real_db, monkeypatch):
     with cursor() as cur:
         cur.execute(
             """update organizations set stripe_account_id=%s, stripe_charges_enabled=true,
-                      online_payment_enabled=true where id=%s""", (ACCOUNT, tenant.organization_id))
+                      online_payment_enabled=true, payment_route='connect' where id=%s""", (ACCOUNT, tenant.organization_id))
     sessions = _Sessions()
     client = MagicMock()
     client.checkout.Session = sessions
@@ -87,7 +87,7 @@ def _book_online(real_db, session, **overrides):
 
 def test_payment_options_true_for_training_when_stripe_active(real_db, stripe_env):
     _, session = _make(real_db)
-    assert _options(real_db, session["slug"]) == {"online_payment_available": True}
+    assert _options(real_db, session["slug"]) == {"online_payment_available": True, "online_payee": "club"}
 
 
 def test_payment_options_false_for_training_when_org_not_enabled(real_db, stripe_env):
@@ -95,7 +95,7 @@ def test_payment_options_false_for_training_when_org_not_enabled(real_db, stripe
     _, session = _make(real_db)
     with cursor() as cur:
         cur.execute("update organizations set online_payment_enabled=false where id=%s", (tenant.organization_id,))
-    assert _options(real_db, session["slug"]) == {"online_payment_available": False}
+    assert _options(real_db, session["slug"]) == {"online_payment_available": False, "online_payee": "club"}
 
 
 def test_online_rejected_with_422_when_stripe_inactive(real_db, stripe_env):
@@ -246,7 +246,7 @@ def test_camp_checkout_still_uses_camp_price(real_db, stripe_env):
 
 
 def test_camp_payment_options_unchanged(real_db, stripe_env):
-    assert _options(real_db, "summer-1") == {"online_payment_available": True}
+    assert _options(real_db, "summer-1") == {"online_payment_available": True, "online_payee": "club"}
 
 
 def test_online_confirmation_mail_has_transfer_fallback(real_db, stripe_env, fake_provider):

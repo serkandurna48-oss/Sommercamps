@@ -256,19 +256,29 @@ export async function submitRegistration(
   return { ok: true, data: body as RegistrationCreated }
 }
 
-/** Stripe availability is separate from registration and defaults to false. */
-export async function getStripePaymentAvailability(orgSlug: string, campSlug: string): Promise<boolean> {
+export interface StripePaymentOptions {
+  available: boolean
+  /** Who receives the money: "platform" = CampsPilot on behalf of the club, "club" = the club's own account. */
+  payee: 'platform' | 'club'
+}
+
+/** Stripe availability is separate from registration and defaults to unavailable. */
+export async function getStripePaymentOptions(orgSlug: string, campSlug: string): Promise<StripePaymentOptions> {
   try {
     const res = await fetch(
       `${baseUrl()}/api/v1/organizations/${encodeURIComponent(orgSlug)}/camps/${encodeURIComponent(campSlug)}/payment-options`,
       { cache: 'no-store' },
     )
-    if (!res.ok) return false
+    if (!res.ok) return { available: false, payee: 'club' }
     const data = await res.json()
-    return data?.online_payment_available === true
+    return { available: data?.online_payment_available === true, payee: data?.online_payee === 'platform' ? 'platform' : 'club' }
   } catch {
-    return false
+    return { available: false, payee: 'club' }
   }
+}
+
+export async function getStripePaymentAvailability(orgSlug: string, campSlug: string): Promise<boolean> {
+  return (await getStripePaymentOptions(orgSlug, campSlug)).available
 }
 
 /** Registration token is a bearer capability; never send child data to Stripe. */

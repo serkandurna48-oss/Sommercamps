@@ -590,6 +590,10 @@ def list_registrations_global(
         return cur.fetchall()
 
 
+class PaidOnlineError(Exception):
+    """The booking was paid through Stripe; its payment status is not edited by hand."""
+
+
 _UPDATE_PAYMENT_STATUS = f"""
     update camp_registrations
     set payment_status = %s
@@ -701,6 +705,15 @@ def update_payment_status(
     never a manual bookkeeping action.
     """
     with db.get_cursor() as cur:
+        cur.execute(
+            "select stripe_payment_intent_id from camp_registrations "
+            "where registration_token = %s and organization_id = %s and camp_id = %s",
+            (registration_token, organization_id, camp_id),
+        )
+        current = cur.fetchone()
+        if current is not None and current["stripe_payment_intent_id"]:
+            # Paid through Stripe: webhook and refund own the state (fee snapshot, payout).
+            raise PaidOnlineError()
         cur.execute(_UPDATE_PAYMENT_STATUS, (payment_status, registration_token, organization_id, camp_id))
         row = cur.fetchone()
         if row is not None and payment_status == "paid":

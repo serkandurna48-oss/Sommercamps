@@ -3,13 +3,15 @@ import Link from 'next/link'
 import Button, { ButtonLink } from '../../../components/saas/ui/Button'
 import { notFound, redirect } from 'next/navigation'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
-import { fetchCampsAdmin, fetchFeeMonthAdmin, fetchFeeRulesAdmin, fetchOrganizationAdmin, fetchOrganizationMembersAdmin, fetchStripePaymentStatusAdmin } from '../../../lib/saasAdminApi'
+import { fetchCampsAdmin, fetchFeeMonthAdmin, fetchFeeRulesAdmin, fetchOrganizationAdmin, fetchOrganizationMembersAdmin, fetchPayoutsAdmin, fetchStripePaymentStatusAdmin } from '../../../lib/saasAdminApi'
 import PublishToggle from '../../../components/saas/config/PublishToggle'
 import MembersSection from './MembersSection'
 import BillingNotesForm from './BillingNotesForm'
 import StripeConnectForm from './StripeConnectForm'
 import FeeRuleForm from './FeeRuleForm'
 import OnlinePaymentToggle from './OnlinePaymentToggle'
+import PaymentRouteSelect from './PaymentRouteSelect'
+import PayoutSection from './PayoutSection'
 import { feeMonthSummary, formatFeeRule, formatStripeStatus, resolveFeeMonth } from './feeFormat'
 import ModulesForm from './ModulesForm'
 import { orgModules } from '../../../lib/orgModules'
@@ -57,10 +59,10 @@ const CAMP_STATUS_LABEL: Record<string, string> = {
  */
 export default async function PlatformOrgDetailPage({ params, searchParams }: {
   params: Promise<{ org: string }>
-  searchParams: Promise<{ month?: string | string[] }>
+  searchParams: Promise<{ month?: string | string[]; payout_month?: string | string[] }>
 }) {
   const { org: orgSlug } = await params
-  const { month: requestedMonth } = await searchParams
+  const { month: requestedMonth, payout_month: requestedPayoutMonth } = await searchParams
   const token = await getValidAccessToken()
   if (!token) redirect('/platform/login')
 
@@ -69,13 +71,15 @@ export default async function PlatformOrgDetailPage({ params, searchParams }: {
 
   const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(new Date())
   const feeMonthKey = resolveFeeMonth(requestedMonth, today.slice(0, 7))
-  const [camps, members, feeRules, stripeStatus, feeMonth] = await Promise.all([
+  const payoutMonthKey = resolveFeeMonth(requestedPayoutMonth, today.slice(0, 7))
+  const [camps, members, feeRules, stripeStatus, feeMonth, payouts] = await Promise.all([
     fetchCampsAdmin(orgSlug, token),
     fetchOrganizationMembersAdmin(orgSlug, token),
     // Billing data must not break the rest of the console page.
     fetchFeeRulesAdmin(orgSlug, token).catch(() => null),
     fetchStripePaymentStatusAdmin(orgSlug, token).catch(() => null),
     fetchFeeMonthAdmin(orgSlug, token, feeMonthKey).catch(() => null),
+    fetchPayoutsAdmin(orgSlug, token, payoutMonthKey).catch(() => null),
   ])
   const steps = computeSetupSteps(org, camps.length)
   const progress = setupProgressCount(steps)
@@ -224,6 +228,7 @@ export default async function PlatformOrgDetailPage({ params, searchParams }: {
             Stripe: {formatStripeStatus(stripeStatus)}
           </p>
           {stripeStatus && <OnlinePaymentToggle orgSlug={org.slug} enabled={stripeStatus.platform_enabled} />}
+          {stripeStatus && <PaymentRouteSelect orgSlug={org.slug} route={stripeStatus.payment_route ?? 'platform'} />}
           {feeRules && feeRules.history.length > 0 && (
             <div className="mt-4 overflow-x-auto">
               <table className="cp-body w-full text-left">
@@ -274,13 +279,15 @@ export default async function PlatformOrgDetailPage({ params, searchParams }: {
         </div>
       </section>
 
+      <PayoutSection orgSlug={org.slug} monthKey={payoutMonthKey} payouts={payouts} today={today} />
+
       <section className="mt-8">
         <h2 className="cp-heading mb-3" style={{ color: 'var(--cp-ink)' }}>
           Online-Zahlung (Stripe)
         </h2>
         <div className="rounded-[var(--cp-r-card)] border p-4" style={{ borderColor: 'var(--cp-line)', background: 'var(--cp-surface)' }}>
           <p className="cp-body" style={{ color: 'var(--cp-ink)' }}>
-            Neue Vereine richten die Online-Zahlung selbst ein (Einstellungen → Zahlungen, Stripe Express). Hier nur für Altkonten: ein bestehendes Standard-Konto verbinden (Direct Charges, ohne Plattformgebühr).
+            Kein Verein richtet Online-Zahlung selbst ein: Mit „Freigeben“ oben zieht CampsPilot die Zahlungen auf dem Plattformkonto ein, ein Stripe-Konto des Vereins ist nicht nötig. Hier nur für Altkonten: ein bestehendes Standard-Konto verbinden (Direct Charges, ohne Plattformgebühr).
           </p>
           <StripeConnectForm orgSlug={org.slug} />
         </div>

@@ -195,7 +195,7 @@ def fee_month(
         )
         refunds = RefundTotals()
         for event in cur.fetchall():
-            if event["fee_collection"] == "application_fee":
+            if event["fee_collection"] in ("application_fee", "platform_collected"):
                 refunds.collected_fee_refunded_cents += int(event["fee"] or 0)
             else:
                 refunds.not_collected_fee_refunded_cents += int(event["fee"] or 0)
@@ -203,7 +203,8 @@ def fee_month(
             refunds.events += int(event["events"])
     totals = {"application_fee": FeeTotals(), "not_collected": FeeTotals()}
     for row in rows:
-        t = totals[row.fee_collection]
+        # platform_collected: the platform keeps the fee itself, like a withheld application fee.
+        t = totals["not_collected" if row.fee_collection == "not_collected" else "application_fee"]
         t.bookings += 1
         t.fee_cents += row.fee_cents
         t.fee_refunded_cents += row.fee_refunded_cents

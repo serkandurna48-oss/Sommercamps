@@ -33,7 +33,9 @@ export function formatStripeStatus(status: StripePaymentStatus | null): string {
     awaiting_approval: 'Stripe-Konto bereit, wartet auf Freigabe', active: 'Stripe-Konto aktiv',
   }[status.state]
   const legacy = status.legacy_account_linked ? (status.legacy_active ? ' · Altkonto (Direct Charges) aktiv' : ' · Altkonto verbunden, inaktiv') : ''
-  const mode = status.online_payment_mode === 'direct_fee'
+  const mode = status.online_payment_mode === 'platform'
+    ? ' · Zahlung über das Plattformkonto (CampsPilot zieht ein)'
+    : status.online_payment_mode === 'direct_fee'
     ? ' · Direct Charge mit Plattformgebühr (Managed Risk)'
     : status.online_payment_mode === 'destination'
       ? ' · Zahlungen über die Plattform (Express)'

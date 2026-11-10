@@ -41,6 +41,18 @@ export default function PaymentSetupCard({ orgSlug, status }: { orgSlug: string;
   if (!status) {
     return <p role="alert" className="cp-body">Der Zahlungsstatus konnte gerade nicht geladen werden. Bitte lade die Seite neu.</p>
   }
+  // CampsPilot collects the payments itself (decision 10.11.2026): no club
+  // onboarding. Clubs with an existing Stripe account keep the old card below.
+  if (status.online_payment_mode === 'platform' || (status.state === 'not_set_up' && !status.legacy_account_linked)) {
+    const active = status.online_payment_mode === 'platform'
+    return (
+      <p className="cp-body" data-testid="payment-state" style={{ color: 'var(--cp-ink-2)' }}>
+        {active
+          ? 'Online-Zahlung: aktiv – CampsPilot zieht die Zahlungen ein und überweist dir den Betrag abzüglich Gebühr monatlich.'
+          : 'Online-Zahlung: nicht aktiv – sprich uns an.'}
+      </p>
+    )
+  }
   const state = status.state
   const busy = starting || checking || Boolean(onboarding.url)
 

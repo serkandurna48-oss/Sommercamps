@@ -33,13 +33,19 @@ afterEach(async () => {
 
 const buttons = () => [...container.querySelectorAll('button')].map(b => b.textContent)
 
-it('nicht eingerichtet: Einrichten-Button mit Rechtsform, kein Status-Prüfen', async () => {
-  await act(() => root.render(<PaymentSetupCard orgSlug="demo" status={status()} />))
-  expect(container.querySelector('[data-testid="payment-state"]')!.textContent).toBe('Nicht eingerichtet')
-  expect(buttons()).toEqual(['Online-Zahlung einrichten'])
-  expect(container.querySelector('select[name="business_type"]')).not.toBeNull()
-  expect(container.textContent).toContain('richtest du einmalig')
-  expect(container.textContent).not.toMatch(/\bSie\b/)
+it('Plattform-Zahlung aktiv: Hinweistext in Du-Form, keine Einrichtung, keine Buttons', async () => {
+  await act(() => root.render(<PaymentSetupCard orgSlug="demo" status={status({ online_payment_mode: 'platform' })} />))
+  expect(container.querySelector('[data-testid="payment-state"]')!.textContent).toBe(
+    'Online-Zahlung: aktiv – CampsPilot zieht die Zahlungen ein und überweist dir den Betrag abzüglich Gebühr monatlich.')
+  expect(buttons()).toEqual([])
+  expect(container.querySelector('select[name="business_type"]')).toBeNull()
+  expect(container.textContent).not.toMatch(/\bSie\b|einrichten/)
+})
+
+it('ohne Konto und ohne Freigabe: nicht aktiv – sprich uns an, kein Stripe-Onboarding', async () => {
+  await act(() => root.render(<PaymentSetupCard orgSlug="demo" status={status({ platform_enabled: false })} />))
+  expect(container.querySelector('[data-testid="payment-state"]')!.textContent).toBe('Online-Zahlung: nicht aktiv – sprich uns an.')
+  expect(buttons()).toEqual([])
 })
 
 it('Angaben fehlen: fortsetzen und Status prüfen', async () => {
@@ -63,14 +69,14 @@ it('Altkonto aktiv, Express noch nicht: Zahlungen laufen weiter über das alte K
 })
 
 it('Umgebung nicht freigeschaltet: keine Buttons', async () => {
-  await act(() => root.render(<PaymentSetupCard orgSlug="demo" status={status({ service_ready: false })} />))
+  await act(() => root.render(<PaymentSetupCard orgSlug="demo" status={status({ state: 'incomplete', service_ready: false })} />))
   expect(buttons()).toEqual([])
   expect(container.textContent).toContain('noch nicht freigeschaltet')
 })
 
 it('leitet nach dem Start zu Stripe weiter, Fehler wird angezeigt', async () => {
   vi.mocked(startStripeOnboardingAction).mockResolvedValueOnce({ error: null, url: 'https://connect.stripe.com/setup/e/x' })
-  await act(() => root.render(<PaymentSetupCard orgSlug="demo" status={status()} />))
+  await act(() => root.render(<PaymentSetupCard orgSlug="demo" status={status({ state: 'incomplete' })} />))
   await act(async () => container.querySelector('button')!.click())
   expect(startStripeOnboardingAction).toHaveBeenCalledWith('demo', { error: null }, expect.any(FormData))
   expect(assign).toHaveBeenCalledWith('https://connect.stripe.com/setup/e/x')
@@ -100,7 +106,7 @@ it('wartet auf Freigabe: keine Einrichten-Buttons, Hinweis auf CampsPilot', asyn
   expect(container.textContent).toContain('schaltet die Online-Zahlung für deinen Verein jetzt noch frei')
 })
 
-it('nennt Stripe-Gebühren und Plattformgebühr im Einrichtungstext', async () => {
-  await act(() => root.render(<PaymentSetupCard orgSlug="demo" status={status()} />))
+it('Altkonto ohne Express-Konto: alter Einrichtungstext mit Stripe-Gebühren und Plattformgebühr', async () => {
+  await act(() => root.render(<PaymentSetupCard orgSlug="demo" status={status({ legacy_account_linked: true })} />))
   expect(container.textContent).toContain('abzüglich der Stripe-Gebühren und der vereinbarten Plattformgebühr')
 })

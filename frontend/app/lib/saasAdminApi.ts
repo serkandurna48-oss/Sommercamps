@@ -876,6 +876,12 @@ export interface ClubMember {
   created_at: string
 }
 
+/** Detailansicht eines Mitglieds: alle Daten, jedes Zusatzfeld und die verknüpfte Spielerakte (falls vorhanden). */
+export interface ClubMemberDetail extends ClubMember {
+  updated_at: string
+  player: { id: string; first_name: string; last_name: string; birth_date: string } | null
+}
+
 /** Ziel einer CSV-Spalte im Import; null = nicht importieren. */
 export type MemberMappingTarget = 'first_name' | 'last_name' | 'birth_date' | 'member_number' | { extra: string } | null
 
@@ -1028,6 +1034,13 @@ export async function fetchClubMembersAdmin(orgSlug: string, token: string, filt
   const res = await adminFetch(`${MEMBERS_BASE(orgSlug)}${query ? `?${query}` : ''}`, token)
   if (!res.ok) throw new TrainingAdminError('Mitglieder konnten nicht geladen werden.')
   return res.json() as Promise<ClubMember[]>
+}
+
+export async function fetchClubMemberAdmin(orgSlug: string, memberId: string, token: string): Promise<ClubMemberDetail | null> {
+  const res = await adminFetch(`${MEMBERS_BASE(orgSlug)}/${encodeURIComponent(memberId)}`, token)
+  if (res.status === 404 || res.status === 422) return null
+  if (!res.ok) throw new TrainingAdminError('Mitglied konnte nicht geladen werden.')
+  return res.json() as Promise<ClubMemberDetail>
 }
 
 export async function createClubMemberAdmin(orgSlug: string, token: string, data: ClubMemberCreateInput): Promise<ClubMember> {

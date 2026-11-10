@@ -74,7 +74,7 @@ export default function ParentFlow({
   const priceStat = `${samePrice ? '' : 'ab '}${minPriceCents % 100 === 0
     ? `${minPriceCents / 100} €`
     : formatPrice(minPriceCents, camps[0]?.currency ?? 'EUR')}`
-  // "So einfach geht's": bei KSV vor den Camps, sonst wie bisher unten (Serkan 28.10.).
+  // "So einfach geht's" steht bei allen Vereinen vor der Camp-Liste (vorher nur bei KSV, Serkan 28.10.).
   const howSection = (
     <div className={`pad how-sec${isKsv ? ' how-sec-top' : ''}`}>
       <div>
@@ -562,7 +562,7 @@ export default function ParentFlow({
         <span>Die Anmeldung dauert etwa vier Minuten. Sie brauchen kein Benutzerkonto.</span>
       </div>
 
-      {isKsv && howSection}
+      {howSection}
 
       {/* ── Camps ── */}
       <div className="pad sec" id="s-camps" tabIndex={-1}>
@@ -725,8 +725,6 @@ export default function ParentFlow({
           </div>
         </div>
       )}
-
-      {!isKsv && howSection}
 
       <div className="pad faq-sec">
         <div>

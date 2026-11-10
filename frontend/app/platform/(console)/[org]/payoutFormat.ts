@@ -14,6 +14,7 @@ export function payoutSummary(p: Pick<PayoutMonth, 'paid_cents' | 'refunded_cent
     { label: 'Eingezogen', value: euro(p.paid_cents) },
     { label: 'Erstattet', value: `− ${euro(p.refunded_cents)}` },
     { label: 'Plattformgebühr (nach Erstattungen)', value: `− ${euro(p.fee_cents)}` },
-    { label: 'An den Verein zu überweisen', value: euro(p.payout_cents) },
+    // Refunds can exceed the month's payments: the rest is settled with the next month.
+    { label: p.payout_cents < 0 ? 'Verrechnung mit Folgemonat' : 'An den Verein zu überweisen', value: euro(p.payout_cents) },
   ]
 }

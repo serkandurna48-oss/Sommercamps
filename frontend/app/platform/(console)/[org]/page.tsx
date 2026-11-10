@@ -10,6 +10,7 @@ import BillingNotesForm from './BillingNotesForm'
 import StripeConnectForm from './StripeConnectForm'
 import FeeRuleForm from './FeeRuleForm'
 import OnlinePaymentToggle from './OnlinePaymentToggle'
+import PaymentRouteSelect from './PaymentRouteSelect'
 import PayoutSection from './PayoutSection'
 import { feeMonthSummary, formatFeeRule, formatStripeStatus, resolveFeeMonth } from './feeFormat'
 import ModulesForm from './ModulesForm'
@@ -227,6 +228,7 @@ export default async function PlatformOrgDetailPage({ params, searchParams }: {
             Stripe: {formatStripeStatus(stripeStatus)}
           </p>
           {stripeStatus && <OnlinePaymentToggle orgSlug={org.slug} enabled={stripeStatus.platform_enabled} />}
+          {stripeStatus && <PaymentRouteSelect orgSlug={org.slug} route={stripeStatus.payment_route ?? 'platform'} />}
           {feeRules && feeRules.history.length > 0 && (
             <div className="mt-4 overflow-x-auto">
               <table className="cp-body w-full text-left">

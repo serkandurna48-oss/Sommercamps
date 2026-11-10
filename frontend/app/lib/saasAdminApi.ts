@@ -1346,6 +1346,8 @@ export interface StripePaymentStatus {
   online_payment_mode: 'direct_fee' | 'destination' | 'direct' | 'platform' | null
   account_kind?: 'direct_fee' | 'destination' | null
   service_ready: boolean
+  /** platform (default): CampsPilot collects; connect: the club's own Stripe account. */
+  payment_route?: 'platform' | 'connect'
 }
 
 export async function fetchStripePaymentStatusAdmin(orgSlug: string, token: string): Promise<StripePaymentStatus> {
@@ -1376,6 +1378,13 @@ const STRIPE_ONBOARDING_PREFIXES = ['https://connect.stripe.com/', 'https://acco
 export async function setOnlinePaymentEnabledAdmin(orgSlug: string, token: string, enabled: boolean): Promise<StripePaymentStatus> {
   const res = await adminMutate(`/admin/platform/organizations/${encodeURIComponent(orgSlug)}/online-payment`, token, 'PATCH', { enabled })
   if (!res.ok) throw new AdminActionError('Online-Zahlung konnte nicht umgeschaltet werden.')
+  return res.json() as Promise<StripePaymentStatus>
+}
+
+/** Platform owner: choose how this club's online payments run. */
+export async function setPaymentRouteAdmin(orgSlug: string, token: string, route: 'platform' | 'connect'): Promise<StripePaymentStatus> {
+  const res = await adminMutate(`/admin/platform/organizations/${encodeURIComponent(orgSlug)}/payment-route`, token, 'PATCH', { route })
+  if (!res.ok) throw new AdminActionError('Zahlungsweg konnte nicht geändert werden.')
   return res.json() as Promise<StripePaymentStatus>
 }
 
@@ -1454,7 +1463,22 @@ export interface PayoutBooking {
   camp_title: string
   amount_cents: number
   fee_cents: number
+}
+
+/** A refund booked in this month, whatever month the payment was made in. */
+export interface PayoutRefund {
+  date: string
+  camp_title: string
   refund_cents: number
+  fee_returned_cents: number
+}
+
+/** Money that arrived but was not booked as paid: needs a human decision. */
+export interface PayoutReview {
+  date: string
+  camp_title: string | null
+  amount_cents: number | null
+  reason: string
 }
 
 export interface PayoutMonth {
@@ -1465,6 +1489,10 @@ export interface PayoutMonth {
   payout_cents: number
   iban: string | null
   bookings: PayoutBooking[]
+  refunds: PayoutRefund[]
+  review: PayoutReview[]
+  /** payout_cents < 0: settled with the next month. */
+  carry_over: boolean
   payout: { payout_cents: number; paid_at: string; reference: string } | null
   changed_since_paid: boolean
 }

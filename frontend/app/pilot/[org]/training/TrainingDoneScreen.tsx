@@ -12,7 +12,7 @@ import TransferDetails from '../TransferDetails'
  * erscheint kein Hinweis auf eine Mitgliedschaft.
  */
 export default function TrainingDoneScreen({
-  org, offer, session, sessionSlug, result, childName, parentEmail, paymentMethod, onBookAnother,
+  org, offer, session, sessionSlug, result, childName, parentEmail, paymentMethod, payeeIsPlatform = false, onBookAnother,
 }: {
   org: OrganizationPublic
   offer: Pick<TrainingOfferPublic, 'title' | 'location'>
@@ -23,6 +23,8 @@ export default function TrainingDoneScreen({
   childName: string
   parentEmail: string
   paymentMethod: TrainingPaymentMethod
+  /** payment-options online_payee = platform */
+  payeeIsPlatform?: boolean
   onBookAnother: () => void
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -99,7 +101,9 @@ export default function TrainingDoneScreen({
             <div className="done-transfer" style={{ marginBottom: 18 }}>
               <span className="done-transfer-label">Online bezahlen</span>
               <p style={{ marginTop: 6, marginBottom: 12 }}>
-                Sicher per Karte über Stripe{price ? ` (${price})` : ''}. Zahlungsempfänger ist CampsPilot im Auftrag von {payTo}.
+                {payeeIsPlatform
+                  ? `Sicher per Karte über Stripe${price ? ` (${price})` : ''}. Zahlungsempfänger ist CampsPilot im Auftrag von ${payTo}.`
+                  : `Sicher per Karte über Stripe. Der Betrag${price ? ` (${price})` : ''} geht direkt an ${payTo}.`}
               </p>
               {canPayOnline && (
                 <button className="btn primary btn-pill" type="button" disabled={paying}

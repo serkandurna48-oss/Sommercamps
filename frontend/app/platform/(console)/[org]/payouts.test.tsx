@@ -17,11 +17,12 @@ import { fetchMe, markPayoutPaidAdmin } from '../../../lib/saasAdminApi'
 
 const payouts = (over: Partial<PayoutMonth> = {}): PayoutMonth => ({
   month: '2026-12', paid_cents: 15000, refunded_cents: 2000, fee_cents: 787, payout_cents: 12213,
-  iban: 'DE89370400440532013000', changed_since_paid: false, payout: null,
+  iban: 'DE89370400440532013000', changed_since_paid: false, payout: null, carry_over: false, review: [],
   bookings: [
-    { date: '2026-12-01', camp_title: 'Sommercamp', amount_cents: 10000, fee_cents: 490, refund_cents: 0 },
-    { date: '2026-12-15', camp_title: 'Sommercamp', amount_cents: 5000, fee_cents: 147, refund_cents: 2000 },
+    { date: '2026-12-01', camp_title: 'Sommercamp', amount_cents: 10000, fee_cents: 490 },
+    { date: '2026-12-15', camp_title: 'Sommercamp', amount_cents: 5000, fee_cents: 147 },
   ],
+  refunds: [{ date: '2026-12-20', camp_title: 'Sommercamp', refund_cents: 2000, fee_returned_cents: 98 }],
   ...over,
 })
 
@@ -51,7 +52,7 @@ it('formatiert Beträge, Daten und den Standard-Verwendungszweck', () => {
 
 it('zeigt Tabelle, Summe, IBAN und den Button „Als überwiesen markieren“', async () => {
   await render(payouts())
-  expect(container.querySelectorAll('tbody tr')).toHaveLength(2)
+  expect(container.querySelector('table')!.querySelectorAll('tbody tr')).toHaveLength(2)
   expect(container.querySelector('[data-testid="payout-total"]')!.textContent).toBe('122,13 €')
   expect(container.textContent).toContain('An den Verein zu überweisen')
   expect(container.querySelector('[data-testid="payout-iban"]')!.textContent).toContain('DE89370400440532013000')
@@ -59,11 +60,28 @@ it('zeigt Tabelle, Summe, IBAN und den Button „Als überwiesen markieren“', 
   expect(container.textContent).not.toMatch(/\bSie\b/)
 })
 
-it('bereits markiert: Status statt Button; leerer Monat; Ladefehler', async () => {
-  await render(payouts({ payout: { payout_cents: 12213, paid_at: '2027-01-05', reference: 'CampsPilot Auszahlung 12/2026' } }))
-  expect(container.querySelector('[data-testid="payout-done"]')!.textContent).toContain('05.01.2027')
+it('Erstattungen, Zur Prüfung und Verrechnung mit Folgemonat', async () => {
+  await render(payouts({ review: [{ date: '2026-12-04', camp_title: 'Sommercamp', amount_cents: 1000, reason: 'duplicate_payment' }] }))
+  expect(container.querySelector('[data-testid="payout-refunds"]')!.textContent).toContain('20.12.2026')
+  expect(container.querySelector('[data-testid="payout-review"]')!.textContent).toContain('Doppelzahlung')
+  await render(payouts({ bookings: [], paid_cents: 0, fee_cents: -98, payout_cents: -1902, carry_over: true }))
+  expect(container.querySelector('[data-testid="payout-carry-over"]')!.textContent).toContain('Verrechnung mit Folgemonat')
+  expect(container.textContent).toContain('Verrechnung mit Folgemonat')
   expect([...container.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Anzeigen'])
-  await render(payouts({ bookings: [], paid_cents: 0, refunded_cents: 0, fee_cents: 0, payout_cents: 0 }))
+})
+
+it('laufender Monat: kein Markieren-Button', async () => {
+  await act(() => root.render(<PayoutSection orgSlug="demo" monthKey="2027-01" payouts={payouts({ month: '2027-01' })} today="2027-01-05" />))
+  expect(container.textContent).toContain('noch nicht abgeschlossen')
+  expect([...container.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Anzeigen'])
+})
+
+it('bereits markiert: Status statt Button; leerer Monat; Ladefehler', async () => {
+  await render(payouts({ payout: { payout_cents: 12213, paid_at: '2027-01-05', reference: 'CampsPilot Auszahlung 12/2026' }, changed_since_paid: true }))
+  expect(container.querySelector('[data-testid="payout-done"]')!.textContent).toContain('05.01.2027')
+  expect(container.querySelector('[data-testid="payout-done"]')!.textContent).toContain('Betrag hat sich seit der Markierung geändert')
+  expect([...container.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Anzeigen'])
+  await render(payouts({ bookings: [], refunds: [], paid_cents: 0, refunded_cents: 0, fee_cents: 0, payout_cents: 0 }))
   expect(container.querySelector('[data-testid="payout-empty"]')).not.toBeNull()
   await render(null)
   expect(container.textContent).toContain('nicht abrufbar')

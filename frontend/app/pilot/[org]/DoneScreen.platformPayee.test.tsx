@@ -4,11 +4,12 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { CampPublic, OrganizationPublic, RegistrationCreated } from '../../lib/saasApi'
 import DoneScreen from './DoneScreen'
+import { getStripePaymentOptions } from '../../lib/saasApi'
 
 vi.mock('./motion', () => ({ useParentFlowMotion: () => {} }))
 vi.mock('../../lib/saasApi', async importOriginal => ({
   ...await importOriginal<typeof import('../../lib/saasApi')>(),
-  getStripePaymentAvailability: vi.fn(async () => true),
+  getStripePaymentOptions: vi.fn(async () => ({ available: true, payee: 'platform' })),
   createStripeCheckout: vi.fn(),
 }))
 
@@ -44,4 +45,11 @@ it('nennt CampsPilot als Zahlungsempfänger im Auftrag des Vereins (Sie-Form)', 
   await act(async () => root.render(<DoneScreen org={org} camp={camp} result={result} childName="Mia" parentEmail="eva@example.de" onBackToOrg={() => {}} />))
   expect(host.textContent).toContain('Sicher per Karte über Stripe. Zahlungsempfänger ist CampsPilot im Auftrag von Testverein e. V.')
   expect(host.textContent).not.toContain('geht direkt an')
+})
+
+it('Vereinskonto (online_payee club): alter Text, CampsPilot wird nicht als Empfänger genannt', async () => {
+  vi.mocked(getStripePaymentOptions).mockResolvedValueOnce({ available: true, payee: 'club' })
+  await act(async () => root.render(<DoneScreen org={org} camp={camp} result={result} childName="Mia" parentEmail="eva@example.de" onBackToOrg={() => {}} />))
+  expect(host.textContent).toContain('Der Betrag geht direkt an Testverein e. V.')
+  expect(host.textContent).not.toContain('Zahlungsempfänger ist CampsPilot')
 })

@@ -21,7 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from ..admin_resolve import require_organization
 from ..db import DatabaseBusy
 from ..auth_deps import AuthContext, require_org_access
-from ..modules import require_module
+from ..modules import has_module, require_module
 from ..membership_csv import (
     MAX_EXTRA_VALUE_LEN, MAX_ORG_EXTRA_FIELDS, MembershipCsvError, clean_extra_label, parse_membership_csv,
 )
@@ -48,6 +48,20 @@ class MemberOut(BaseModel):
     source: str
     extra: dict[str, str] = Field(default_factory=dict)
     created_at: datetime
+
+
+class LinkedPlayerOut(BaseModel):
+    id: UUID
+    first_name: str
+    last_name: str
+    birth_date: date
+
+
+class MemberDetailOut(MemberOut):
+    """Detail view: all member data incl. every extra field, plus the linked player record
+    (same name and birth date) when the players module is on."""
+    updated_at: datetime
+    player: Optional[LinkedPlayerOut] = None
 
 
 class MemberCreate(BaseModel):
@@ -109,6 +123,18 @@ def list_members(
 ) -> list[dict]:
     organization = require_organization(organization_slug)
     return memberships_repo.list_members(organization["id"], active=active, search=q)
+
+
+@router.get("/organizations/{organization_slug}/club-members/{member_id}", response_model=MemberDetailOut)
+def get_member(
+    organization_slug: str, member_id: UUID, auth: AuthContext = Depends(require_org_access)
+) -> dict:
+    organization = require_organization(organization_slug)
+    row = memberships_repo.get_member(organization["id"], member_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Member not found")
+    player = memberships_repo.find_linked_player(organization["id"], row) if has_module(organization, "players") else None
+    return {**row, "player": player}
 
 
 @router.post(

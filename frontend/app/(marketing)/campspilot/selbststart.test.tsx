@@ -21,6 +21,11 @@ describe.each([
   })
 
   it('verlinkt den primären Hero-Button zur bestehenden Vereinsregistrierung', () => {
+    if (_route === '/campspilot') {
+      // Startseite: Hero führt zu Demos; Registrierung über Kopfzeile, Pakete und Abschluss.
+      expect(page.querySelector('#pilot a.btn.fill')?.getAttribute('href')).toBe('/campspilot/registrieren')
+      return
+    }
     const primary = page.querySelector('header .hero-cta a:first-child')!
     expect(primary.textContent).toBe('Verein registrieren')
     expect(primary.classList.contains('fill')).toBe(true)
@@ -43,7 +48,7 @@ describe.each([
       expect(primary.textContent).toBe('Verein registrieren')
       expect(primary.classList.contains('price-cta')).toBe(true)
       expect(primary.getAttribute('href')).toBe('/campspilot/registrieren')
-      const secondary = card.querySelector('.price-inquiry')!
+      const secondary = card.querySelector('.price-inquiry, .lp-inquiry')!
       expect(secondary.textContent).toContain('Unverbindlich anfragen')
       const target = new URL(secondary.getAttribute('href')!, 'https://verein.example.test')
       expect(target.pathname).toBe('/campspilot')
@@ -53,6 +58,11 @@ describe.each([
   })
 
   it('rendert genau drei Startschritte in Produktreihenfolge', () => {
+    if (_route === '/campspilot') {
+      const items = Array.from(page.querySelectorAll('#pilot .lp-steps li')).map(li => li.textContent!.replace(/^\d/, ''))
+      expect(items).toEqual(['Verein registrieren', 'Wir prüfen und schalten frei', 'Camp anlegen und Anmeldelink teilen'])
+      return
+    }
     const section = page.querySelector('section#start')!
     expect(section.querySelector('h2')!.textContent).toBe('So starten Sie')
     const steps = Array.from(section.querySelectorAll('ol > li'))

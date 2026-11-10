@@ -9,6 +9,7 @@ import { formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/par
 import { trainingSubmitErrorMessage } from '../../lib/trainingFormat'
 import ExtraQuestions from './ExtraQuestions'
 import { getClubAssets } from './clubAssets'
+import { demoLegalHref } from './demoMode'
 import { submitErrorMessage } from './submitError'
 import { parentDetailsOnly, type ParentDetails } from './siblingRegistration'
 
@@ -167,6 +168,7 @@ export default function RegistrationFormScreen({
   siblingCamps = [],
   onCampChange,
   training,
+  demo = false,
 }: {
   orgSlug: string
   orgName: string
@@ -183,6 +185,8 @@ export default function RegistrationFormScreen({
   siblingCamps?: CampPublic[]
   onCampChange?: (slug: string) => void
   training?: TrainingFormConfig
+  /** Public demo: the form answers locally and never calls the API. */
+  demo?: boolean
 }) {
   // Hook order (slots 0–8): do not reorder — RegistrationFormScreen.test.tsx
   // mocks React hooks by a shared counter. New hooks go to the end only.
@@ -337,7 +341,10 @@ export default function RegistrationFormScreen({
     inFlight.current = true
     setSubmitting(true)
     try {
-      const outcome = await submitRegistration(orgSlug, camp.slug, {
+      const outcome = demo
+        // Demo: answer locally, never call the API.
+        ? { ok: true as const, data: { registration_token: 'demo-token', status: camp.is_full ? 'waitlist' : 'registered', payment_status: camp.is_full ? 'none' : 'open', payment_reference: 'CP-DEMO0001' } satisfies RegistrationCreated }
+        : await submitRegistration(orgSlug, camp.slug, {
         parent_first_name: parentFirstName,
         parent_last_name: parentLastName,
         parent_email: form.parentEmail.trim(),
@@ -387,7 +394,7 @@ export default function RegistrationFormScreen({
         }
         return
       }
-      captureSaasEvent('camp_registration_succeeded', orgSlug, camp.slug, {
+      if (!demo) captureSaasEvent('camp_registration_succeeded', orgSlug, camp.slug, {
         result: outcome.data.status === 'registered' || outcome.data.status === 'waitlist' ? outcome.data.status : 'other',
       })
       setSubmitted(true)
@@ -906,7 +913,7 @@ export default function RegistrationFormScreen({
                     />
                     <span className="txt">
                       <b>Teilnahmebedingungen<span className="consent-req"> Pflichtfeld *</span></b>
-                      <span>Ich habe die <a href={`/pilot/${orgSlug}/teilnahmebedingungen`} target="_blank" rel="noopener noreferrer">Teilnahmebedingungen</a> gelesen und melde mein Kind verbindlich an.</span>
+                      <span>Ich habe die <a href={demoLegalHref(demo, `/pilot/${orgSlug}/teilnahmebedingungen`)} target="_blank" rel="noopener noreferrer">Teilnahmebedingungen</a> gelesen und melde mein Kind verbindlich an.</span>
                       {badFields.agb && <span id="err-agb" role="alert" style={{ color: 'var(--error)' }}>{badFields.agb}</span>}
                     </span>
                   </label>
@@ -925,7 +932,7 @@ export default function RegistrationFormScreen({
                     <span className="txt">
                       <b>Datenschutz<span className="consent-req"> Pflichtfeld *</span></b>
                       <span>
-                        Ich habe die <a href={`/pilot/${orgSlug}/datenschutz`} target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a> gelesen und stimme der Verarbeitung der Daten für {training ? 'die Buchung' : 'die Camp-Anmeldung'} zu.
+                        Ich habe die <a href={demoLegalHref(demo, `/pilot/${orgSlug}/datenschutz`)} target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a> gelesen und stimme der Verarbeitung der Daten für {training ? 'die Buchung' : 'die Camp-Anmeldung'} zu.
                       </span>
                       {badFields.privacy && <span id="err-privacy" role="alert" style={{ color: 'var(--error)' }}>{badFields.privacy}</span>}
                     </span>
@@ -957,7 +964,7 @@ export default function RegistrationFormScreen({
                     </svg>
                     <span>
                       Informationen zur Verarbeitung und Speicherung der Daten Ihres Kindes finden Sie in der{' '}
-                      <a href={`/pilot/${orgSlug}/datenschutz`} target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>.
+                      <a href={demoLegalHref(demo, `/pilot/${orgSlug}/datenschutz`)} target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>.
                     </span>
                   </div>
                 </div>

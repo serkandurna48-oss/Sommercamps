@@ -49,13 +49,28 @@ it('KSV: bei unterschiedlichen Preisen steht "ab" vor dem kleinsten Preis', () =
   expect(html).toContain('ab 149 €')
 })
 
-it('KSV: "So einfach geht\'s" steht vor den Camps, bei anderen Vereinen danach', () => {
+it('"So einfach geht\'s" steht bei KSV und bei allen anderen Vereinen vor der Camp-Liste', () => {
   const k = renderToStaticMarkup(<ParentFlow org={ksv} camps={[camp]} />)
   expect(k.indexOf('how-sec')).toBeGreaterThan(-1)
   expect(k.indexOf('how-sec')).toBeLessThan(k.indexOf('id="s-camps"'))
   expect(k.match(/class="pad how-sec/g)).toHaveLength(1)
+  for (const theme of ['tradition', 'akademie', 'kompakt'] as const) {
+    const o = renderToStaticMarkup(<ParentFlow org={{ ...org, theme }} camps={[camp]} />)
+    expect(o.match(/class="pad how-sec/g), theme).toHaveLength(1)
+    expect(o.indexOf('how-sec'), theme).toBeGreaterThan(-1)
+    expect(o.indexOf('how-sec'), theme).toBeLessThan(o.indexOf('id="s-camps"'))
+    expect(o).toContain('In 3 Schritten')
+    // Die Reihenfolge der Schritte bleibt: Platz wählen, Anmelden, Bestätigung.
+    expect(o.indexOf('Platz wählen')).toBeLessThan(o.indexOf('Anmelden</h3>'))
+    expect(o.indexOf('Anmelden</h3>')).toBeLessThan(o.indexOf('Bestätigung</h3>'))
+  }
+})
+
+it('Nur bei KSV bleibt die kompakte Variante (how-sec-top)', () => {
+  const k = renderToStaticMarkup(<ParentFlow org={ksv} camps={[camp]} />)
   const o = renderToStaticMarkup(<ParentFlow org={org} camps={[camp]} />)
-  expect(o.indexOf('how-sec')).toBeGreaterThan(o.indexOf('id="s-camps"'))
+  expect(k).toContain('how-sec how-sec-top')
+  expect(o).not.toContain('how-sec-top')
 })
 
 it('KSV-Campdetail: Kopf ohne Großbuchstaben-Zeile und ohne einzelne Tageszahl, Termin unter dem Titel', () => {

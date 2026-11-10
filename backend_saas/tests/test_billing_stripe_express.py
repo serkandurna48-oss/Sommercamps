@@ -769,3 +769,13 @@ def test_fee_and_stripe_columns_not_readable_by_authenticated(env):
     finally:
         with env.cursor() as cur:
             cur.execute("grant select on public.camp_registrations to authenticated")
+
+
+@pytest.mark.parametrize("status", ["failed", "canceled"])
+def test_admin_refund_with_failed_status_is_502(env, status):
+    token, session_id = _paid_destination(env)
+    _post_webhook(env, PLATFORM_HOOK, _completed(session_id, intent=env.intent), PLATFORM_SECRET)
+    orig = env.fake.Refund.create
+    env.fake.Refund.create = staticmethod(lambda **kw: {**orig(**kw), "status": status})
+    r = _refund(env, token, 400)
+    assert r.status_code == 502, r.text

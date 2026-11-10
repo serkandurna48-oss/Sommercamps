@@ -6,10 +6,17 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.repositories import camps as camps_repo
 from app.repositories import organizations
 from app.repositories.organizations import OrganizationSlugConflictError
 
 from .auth_helpers import org_admin_headers, owner_headers as _auth_headers
+
+@pytest.fixture(autouse=True)
+def _no_db_plan_usage(monkeypatch):
+    """These tests run without a database; plan/active camps are covered in test_plan_pricing.py."""
+    monkeypatch.setattr(camps_repo, "plan_usage", lambda organization_id: {"plan": "starter", "active_camps": 0})
+
 
 VALID_PAYLOAD = {
     "slug": "demo-fc",

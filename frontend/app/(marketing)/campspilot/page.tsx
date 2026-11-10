@@ -1,15 +1,15 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import BrandMark from '../../components/marketing/BrandMark'
-import BootCurtain from '../../components/marketing/BootCurtain'
-import Grain from '../../components/marketing/Grain'
-import SiteMotion from '../../components/marketing/SiteMotion'
-import { CP_IMAGES } from './images'
-import PilotRequestForm from './PilotRequestForm'
 import { marketingMetadata } from './seoMetadata'
-import { faq, preise, registrierungHref } from '../preise/pakete'
-import PricingPackages from '../../components/marketing/PricingPackages'
-import StartSteps from '../../components/marketing/StartSteps'
+import PilotRequestForm from './PilotRequestForm'
+import RoiCalculator from './landing/RoiCalculator'
+import { NightHero, NightPitch } from './landing/NightScene'
+import {
+  IconCalendar, IconCard, IconCheck, IconClipboard, IconEye, IconLock, IconPalette, IconPeople,
+  IconPhone, IconPin, IconSheet, IconShield, IconSliders,
+} from './landing/icons'
+import { dashboardDemoHref, demoHref, features, heroFacts, loginHref, trust } from './landingContent'
+import { faq, pakete, paketAnfrageHref, preise, registrierungHref, startSchritte, tarife } from '../preise/pakete'
 
 export async function generateMetadata() {
   return marketingMetadata(
@@ -20,253 +20,192 @@ export async function generateMetadata() {
   )
 }
 
+const ICONS = {
+  calendar: IconCalendar, card: IconCard, palette: IconPalette, sheet: IconSheet, people: IconPeople, shield: IconShield,
+  pin: IconPin, lock: IconLock, clipboard: IconClipboard, phone: IconPhone,
+} as const
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'CampsPilot',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  description: 'Plattform für Sportvereine: Feriencamps erstellen, Anmeldungen und Zahlungen automatisch verwalten.',
+  offers: { '@type': 'Offer', price: String(tarife.starter.monatCents / 100), priceCurrency: 'EUR' },
+}
+
+/** Dekorative Beispielkarte: zeigt, was Eltern sehen. Beispielwerte, keine Preise von CampsPilot. */
+function HeroPreview() {
+  return (
+    <Link href={demoHref} className="lp-preview-link">
+      <div className="lp-card lp-preview">
+        <div className="lp-preview-top">
+          <div>
+            <span className="lp-pill">Fußball</span>
+            <p className="lp-preview-title">Sommer-Fußballcamp</p>
+          </div>
+          <div className="lp-preview-price">
+            <s>150 €</s>
+            <strong>135 €</strong>
+          </div>
+        </div>
+        <div className="lp-pill-row">
+          <span className="lp-pill accent">Frühbucherpreis</span>
+          <span className="lp-pill">10 % Geschwisterrabatt</span>
+        </div>
+        <div className="lp-bar"><i style={{ width: '75%' }} /></div>
+        <div className="lp-preview-meta">
+          <span>9 von 12 Plätzen belegt</span>
+          <span className="lp-pill warn">Nur noch 3 Plätze frei</span>
+        </div>
+        <div className="lp-preview-cta">Jetzt anmelden</div>
+        <p className="lp-fine">Beispiel: in der Live-Demo ausprobieren</p>
+      </div>
+    </Link>
+  )
+}
+
 export default function CampsPilotPage() {
   return (
-    <div className="cp-scope">
+    <div className="lp-root">
       <a className="skip-link" href="#inhalt">Zum Inhalt springen</a>
-      <SiteMotion />
-      <BootCurtain />
-      <Grain />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
 
-      <nav className="nav" id="nav" aria-label="Hauptnavigation">
+      <nav className="nav solid" id="nav" aria-label="Hauptnavigation">
         <div className="wrap nav-in">
           <a className="brand" href="#top">
             <BrandMark className="mark-svg" width={35} height={24} />
             CampsPilot<span className="sr"> — Startseite</span>
           </a>
-          <div className="nav-links">
-            <a href="#ordnung">Wie es funktioniert</a>
-            <a href="#vertrauen">Vertrauen</a>
-            <a href="#fussballschulen">Fußballschulen</a>
-            <a href="#preis">{preise.navigation}</a>
-            <a href="#pilot">Pilot</a>
+          <div className="lp-nav-links">
+            <a href="#roi" className="lp-hide-sm">ROI-Rechner</a>
+            <Link href="/preise">{preise.navigation}</Link>
+            <Link href={loginHref}>Login</Link>
+            <a href="#demo" className="lp-hide-sm">Demo ansehen</a>
           </div>
           <Link href={registrierungHref} className="btn sm fill"><span className="nav-long">Verein registrieren</span><span className="nav-short">Registrieren</span></Link>
         </div>
       </nav>
 
       <main id="inhalt" tabIndex={-1}>
-      <header className="hero" id="top">
-        <div className="hero-media">
-          <div id="heroImg" className="cp-fill">
-            <Image
-              src={CP_IMAGES.hero.src}
-              alt="Leerer, vom Flutlicht beschienener Fußballplatz bei Nacht; das nasse Grün spiegelt die Lampen."
-              fill
-              sizes="100vw"
-              priority
-              fetchPriority="high"
-              placeholder="blur"
-              blurDataURL={CP_IMAGES.hero.blurDataURL}
-            />
-          </div>
-        </div>
-        <div className="hero-veil" />
-        <div className="wrap hero-in">
-          <div className="hero-grid">
-            <p className="label" data-rise="">Für Vereine und Fußballschulen, die Feriencamps veranstalten</p>
-            <h1 className="d1" id="heroTitle">Jedes Camp beginnt mit einem Zettel.</h1>
-            <p className="lead" data-rise="">Und endet in fünf Systemen, die nicht miteinander reden. CampsPilot ist das eine, das übrig bleibt.</p>
-            <div className="hero-cta" data-rise="">
-              <Link className="btn fill" href={registrierungHref}>Verein registrieren</Link>
-              <a className="btn ghost" href="#pilot">Unverbindlich anfragen</a>
-            </div>
-            <div className="scroll-hint" data-rise=""><i />Weiterscrollen</div>
-          </div>
-        </div>
-      </header>
-
-      <section className="chapter-zettel" id="zettel">
-        <div className="z-stage" id="zStage">
-          <div className="z-bg">
-            <div id="zImg" className="cp-fill">
-              <Image
-                src={CP_IMAGES.zettel.src}
-                alt="Ein regennasses Klemmbrett mit handschriftlicher Liste und Kugelschreiber auf einer Holzbank am Spielfeldrand."
-                fill
-                sizes="100vw"
-                loading="lazy"
-                placeholder="blur"
-                blurDataURL={CP_IMAGES.zettel.blurDataURL}
-              />
-            </div>
-          </div>
-          <div className="z-veil" />
-          <div className="z-dim" id="zDim" />
-          <div className="wrap z-in">
-            <div className="z-head">
-              <p className="label">Der Zettel</p>
-              <h2 className="d2">Fünf Systeme für ein Camp.</h2>
-            </div>
-            <ul className="z-list" id="zList">
-              <li className="z-item"><span className="t">Die Ausschreibung als PDF auf der Vereinswebsite</span><i className="strike" /></li>
-              <li className="z-item"><span className="t">Das Anmeldeformular bei irgendeinem Anbieter</span><i className="strike" /></li>
-              <li className="z-item"><span className="t">Rückfragen der Eltern per E-Mail</span><i className="strike" /></li>
-              <li className="z-item"><span className="t">Teilnehmer und Zahlungen in Excel</span><i className="strike" /></li>
-              <li className="z-item"><span className="t">Überweisungen von Hand abgleichen</span><i className="strike" /></li>
-            </ul>
-            <div className="z-resolve" id="zResolve">
-              <p className="d1" id="zCampsPilot">CampsPilot</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="light" id="ordnung">
-        <div className="wrap sec">
-          <div className="ordnung-top">
-            <div className="sec-head">
-              <p className="label on-light" data-rise="">Die Ordnung</p>
-              <h2 className="d2" data-split="">Alles, was ein Camp braucht. An einer Stelle.</h2>
-              <p className="lead" data-rise="">Keine Plattform für alles. Eine Software für genau diesen einen Ablauf: ausschreiben, anmelden, bezahlen, durchführen.</p>
-            </div>
-            <figure className="ordnung-right" data-rise="">
-              <div id="ordnungImg" className="cp-fill">
-                <Image
-                  src={CP_IMAGES.leibchen.src}
-                  alt="Ein sauber gefalteter Stapel oranger und dunkelblauer Trainingsleibchen auf einer Holzbank am Platzrand."
-                  fill
-                  sizes="(min-width: 860px) 42vw, 100vw"
-                  loading="lazy"
-                  placeholder="blur"
-                  blurDataURL={CP_IMAGES.leibchen.blurDataURL}
-                />
-              </div>
-            </figure>
-          </div>
-          <div className="feat" data-group="feat">
-            <article className="feat-i" data-rise="">
-              <span className="k">Für Eltern</span>
-              <h3>Eine Anmeldung, die in vier Minuten erledigt ist</h3>
-              <p>Auf dem Handy, ohne Benutzerkonto, mit sofortiger Bestätigung und einem Zahlungsweg, den man versteht. Sie sehen jede Anmeldung in dem Moment, in dem sie eingeht.</p>
-            </article>
-            <article className="feat-i" data-rise="">
-              <span className="k">Für den Organisator</span>
-              <h3>Ein Vormittag, an dem klar ist, was zu tun ist</h3>
-              <p>Offene Zahlungen, fehlende Notfallnummern, volle Camps, Warteliste. Nicht als Diagramm, sondern als Liste in ganzen Sätzen, mit einem Knopf pro Zeile.</p>
-            </article>
-            <article className="feat-i" data-rise="">
-              <span className="k">Für den Verein</span>
-              <h3>Ein zweiter Verein, der keine Zeile Code kostet</h3>
-              <p>Eigenes Wappen, eigene Vereinsfarbe, eigene Camps und Preise. Dieselbe Plattform, ohne Sonderlocke und ohne eigenes Deployment.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section id="vertrauen">
-        <div className="wrap sec">
-          <div className="trust">
+        <header className="lp-hero" id="top">
+          <div className="lp-hero-bg" aria-hidden><div className="lp-zoom"><NightHero className="lp-fill" /></div></div>
+          <div className="lp-hero-veil" aria-hidden />
+          <div className="wrap lp-hero-grid">
             <div>
-              <div className="sec-head wide">
-                <p className="label" data-rise="">Die Linie</p>
-                <h2 className="d2" data-split="">Auf dieser Seite sehen Sie kein einziges Kind.</h2>
-                <p className="lead" style={{ color: 'var(--fog-2)' }} data-rise="">Das ist kein Zufall und kein Mangel an Fotos. Wer die Daten von Minderjährigen verwaltet, sollte sie nicht zur Werbung machen.</p>
+              <p className="lp-label lp-rise">Für Vereine, die Feriencamps veranstalten</p>
+              <h1 className="lp-display lp-rise" style={{ ['--i' as string]: 1 }}>Digitalisieren Sie Ihre Vereins-Feriencamps in 5 Minuten</h1>
+              <p className="lp-lead lp-rise" style={{ ['--i' as string]: 2 }}>Anmeldung, Bezahlung und Teilnehmerlisten in einer Plattform – mit Ihrem Logo, Ihren Farben und Ihren Fragen.</p>
+              <div className="hero-cta lp-rise" style={{ ['--i' as string]: 3 }}>
+                <Link className="btn fill" href={demoHref}>Live-Demo ansehen</Link>
+                <Link className="btn ghost" href={dashboardDemoHref}>Dashboard ausprobieren</Link>
+                <a className="btn quiet" href="#roi">Ersparnis berechnen</a>
               </div>
-              <ul className="trust-list">
-                <li data-rise=""><span className="n">01</span><p>Angaben zum Kind werden nur für das gebuchte Camp verwendet und sechs Monate nach Camp-Ende gelöscht.</p></li>
-                <li data-rise=""><span className="n">02</span><p>Die Foto-Einwilligung wird getrennt abgefragt, ist nie vorausgewählt und jederzeit widerrufbar. Ohne sie nimmt das Kind ganz normal teil.</p></li>
-                <li data-rise=""><span className="n">03</span><p>Jeder Verein sieht ausschließlich seine eigenen Teilnehmer. Getrennt auf Datenebene, nicht per Filter in der Oberfläche.</p></li>
-                <li data-rise=""><span className="n">04</span><p>Tägliche Sicherung, dokumentierte Migrationen, nachvollziehbare Änderungen an jedem Teilnehmerdatensatz.</p></li>
+              <ul className="lp-facts lp-rise" style={{ ['--i' as string]: 4 }}>
+                {heroFacts.map((t) => <li key={t}><IconCheck />{t}</li>)}
               </ul>
             </div>
-            <figure className="trust-fig" data-rise="">
-              <Image
-                id="netzImg"
-                src={CP_IMAGES.netz.src}
-                alt="Nahaufnahme eines Tornetzes von hinten, gegen das Flutlicht; an jeder Masche hängen Wassertropfen."
-                width={CP_IMAGES.netz.width}
-                height={CP_IMAGES.netz.height}
-                sizes="(min-width: 900px) 38vw, 100vw"
-                loading="lazy"
-                placeholder="blur"
-                blurDataURL={CP_IMAGES.netz.blurDataURL}
-                style={{ width: '100%', height: 'auto' }}
-              />
-              <figcaption>Das Netz hält, weil jede Masche hält. Software für Vereinsdaten funktioniert genauso.</figcaption>
-            </figure>
+            <div className="lp-rise lp-hero-card" style={{ ['--i' as string]: 5 }}><HeroPreview /></div>
           </div>
-        </div>
-      </section>
+        </header>
 
-      <div className="band">
-        <div id="linieImg" className="cp-fill-tall">
-          <Image
-            src={CP_IMAGES.linie.src}
-            alt="Nahaufnahme einer frisch gezogenen weißen Kalklinie im taunassen, dunkelgrünen Rasen."
-            fill
-            sizes="100vw"
-            loading="lazy"
-            placeholder="blur"
-            blurDataURL={CP_IMAGES.linie.blurDataURL}
-          />
-        </div>
-      </div>
+        <section className="wrap lp-sec" id="funktionen" aria-labelledby="funktionen-heading">
+          <h2 className="lp-h2 lp-fade" id="funktionen-heading">Alles, was ein Camp braucht</h2>
+          <div className="lp-grid lp-grid-3">
+            {features.map((f) => {
+              const Icon = ICONS[f.icon]
+              return (
+                <div className="lp-card lp-feature lp-fade lp-lift" key={f.title}>
+                  <span className="lp-icon"><Icon /></span>
+                  <div><h3>{f.title}</h3><p>{f.text}</p></div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
 
-      <section style={{ position: 'relative', overflow: 'hidden' }}>
-        <BrandMark className="watermark mark-svg" />
-        <div className="wrap sec" style={{ position: 'relative', zIndex: 1 }}>
-          <div className="sec-head wide">
-            <p className="label" data-rise="">Die Messlatte</p>
-            <h2 className="d2" data-split="">Woran wir uns messen lassen.</h2>
-            <p className="lead" style={{ color: 'var(--fog-2)' }} data-rise="">Keine Erfolgsmeldungen. Das sind die Zielwerte, an denen der Pilot besteht oder scheitert — nachgehalten und offengelegt.</p>
+        <section className="wrap lp-sec narrow" id="demo" aria-labelledby="demo-heading">
+          <div className="lp-center lp-fade">
+            <h2 className="lp-h2" id="demo-heading">Erleben Sie CampsPilot, bevor Sie sich entscheiden</h2>
+            <p className="lp-muted">Zwei Demos ohne Anmeldung: so sehen Eltern Ihre Seite, und so verwalten Sie Ihre Camps.</p>
           </div>
-          <div className="metrics" id="metrics">
-            <div className="metric"><span className="v num" data-count="5" data-pre="unter " data-post=" Min.">unter 5 Min.</span><span className="c">bis eine Anmeldung abgeschickt ist</span></div>
-            <div className="metric"><span className="v num" data-count="95" data-pre="über " data-post=" %">über 95 %</span><span className="c">Anmeldungen ohne manuelle Korrektur</span></div>
-            <div className="metric"><span className="v num" data-count="2" data-pre="unter " data-post=" Std.">unter 2 Std.</span><span className="c">bis ein neuer Verein eingerichtet ist</span></div>
-            <div className="metric"><span className="v num" data-count="0" data-pre="" data-post="">0</span><span className="c">Anmeldungen, die im falschen Verein landen</span></div>
+          <div className="lp-grid lp-grid-2">
+            <div className="lp-card lp-demo lp-fade lp-lift">
+              <NightPitch className="lp-demo-art" id="npa" />
+              <span className="lp-icon"><IconEye /></span>
+              <h3>Die Seite für Ihre Eltern</h3>
+              <p>Camp-Karten, Anmeldung in drei Schritten und Bestätigung, genau wie bei einem echten Verein. Nichts wird gespeichert oder bezahlt.</p>
+              <Link className="btn ghost lp-block" href={demoHref}>Live-Demo öffnen</Link>
+            </div>
+            <div className="lp-card lp-demo glow lp-fade lp-lift">
+              <NightPitch className="lp-demo-art" id="npb" />
+              <span className="lp-icon"><IconSliders /></span>
+              <h3>Ihr Vereins-Dashboard</h3>
+              <p>So sieht der Alltag im Verwaltungsbereich aus: Aufgaben, Auslastung, Zahlungen und Teilnehmerlisten. Mit Beispieldaten, ohne Anmeldung.</p>
+              <Link className="btn fill lp-block" href={dashboardDemoHref}>Dashboard ausprobieren</Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section id="fussballschulen">
-        <div className="wrap sec">
-          <div className="sec-head wide">
-            <p className="label" data-rise="">Fußballschulen</p>
-            <h2 className="d2" data-split="">Für Fußballschulen mit vielen Standorten.</h2>
+        <section className="wrap lp-sec narrow" id="roi" aria-labelledby="roi-heading">
+          <div className="lp-center lp-fade">
+            <h2 className="lp-h2" id="roi-heading">Was bringt das Ihrem Verein?</h2>
+            <p className="lp-muted">Stellen Sie Ihre Zahlen ein – der Rechner reagiert sofort.</p>
           </div>
-          <ul className="fs-list">
-            <li data-rise="">
-              <span className="n">01</span>
-              <p>Alle Camps an allen Gastvereinen auf einer Seite; jedes Camp mit eigenem Ort, Termin, Preis und Plätzen.</p>
-            </li>
-            <li data-rise="">
-              <span className="n">02</span>
-              <p>Eltern bekommen sofort eine Bestätigung mit Überweisungsdaten und eigenem Verwendungszweck; Zahlungseingänge haken Sie in einer Liste ab, statt Bargeld an jedem Standort einzusammeln.</p>
-            </li>
-            <li data-rise="">
-              <span className="n">03</span>
-              <p>Tagesliste je Camp zum Drucken und Excel-Export für die Trainer vor Ort.</p>
-            </li>
-          </ul>
-          <p className="lead fs-brand" data-rise="" style={{ color: 'var(--fog-2)' }}>Ihr Logo, Ihre Farben – die Gastvereine sehen Ihre Marke.</p>
-          <div className="start-actions" data-rise="">
-            <Link className="btn fill" href={registrierungHref}>Verein registrieren</Link>
-            <a className="btn ghost" href="#pilot">Unverbindlich anfragen</a>
-          </div>
-        </div>
-      </section>
+          <div className="lp-fade"><RoiCalculator /></div>
+        </section>
 
-      <section className="light" id="preis" aria-labelledby="preis-heading">
-        <div className="wrap sec">
-          <div className="sec-head wide">
-            <p className="label on-light">{preise.navigation}</p>
-            <h2 className="d2" id="preis-heading">{preise.titel}</h2>
-            <p className="lead">{preise.einleitung}</p>
+        <section className="wrap lp-sec" id="vertrauen" aria-labelledby="vertrauen-heading">
+          <div className="lp-center lp-fade">
+            <h2 className="lp-h2" id="vertrauen-heading">Vertrauen von Anfang an</h2>
+            <p className="lp-muted">Sorgfalt bei Daten und Zahlungen ist bei Kinder-Anmeldungen keine Nebensache.</p>
           </div>
-          <PricingPackages />
-          <p className="price-note"><Link href="/preise">Zur Preisübersicht</Link></p>
-        </div>
-      </section>
-
-      <StartSteps />
-
-      <section id="fragen" aria-labelledby="fragen-heading">
-        <div className="wrap sec">
-          <div className="sec-head wide">
-            <h2 className="d2" id="fragen-heading" data-split="">{preise.faqTitel}</h2>
+          <div className="lp-grid lp-grid-4">
+            {trust.map((t) => {
+              const Icon = ICONS[t.icon]
+              return (
+                <div className="lp-card lp-fade" key={t.title}>
+                  <span className="lp-icon"><Icon /></span>
+                  <h3>{t.title}</h3>
+                  <p>{t.text}</p>
+                </div>
+              )
+            })}
           </div>
+          <div className="lp-card lp-pilotcard lp-fade">
+            <div>
+              <h3>Pilotvereine gesucht</h3>
+              <p>Wir suchen Vereine, die CampsPilot als Erste einsetzen und gemeinsam mit uns weiterentwickeln. Sprechen Sie uns an.</p>
+            </div>
+            <Link className="btn ghost" href={paketAnfrageHref('Verein')}>Pilotverein werden</Link>
+          </div>
+        </section>
+
+        <section className="wrap lp-sec" id="preis" aria-labelledby="preis-heading">
+          <div className="lp-center lp-fade">
+            <h2 className="lp-h2" id="preis-heading">{preise.titel}</h2>
+            <p className="lp-muted">{preise.einleitung}</p>
+          </div>
+          <div className="lp-grid lp-grid-3">
+            {pakete.map((p) => (
+              <article className={`lp-card lp-plan lp-lift${p.name === 'Verein' ? ' glow' : ''}`} key={p.name} aria-label={p.name}>
+                <h3>{p.name}</h3>
+                <p className="lp-muted">{p.zielgruppe}</p>
+                <p className="lp-price"><strong className="num">{p.preis}</strong>{p.zeitraum && <span> {p.zeitraum}</span>}</p>
+                <p className="lp-fee">{p.buchungsgebuehr}</p>
+                <p className="lp-muted">{p.umfang}</p>
+                <Link className={`btn ${p.name === 'Verein' ? 'fill' : 'ghost'} price-cta`} href={registrierungHref}>Verein registrieren</Link>
+                <a className="lp-inquiry" href={paketAnfrageHref(p.name)}>{preise.anfrage}<span className="sr"> – {p.name}</span></a>
+              </article>
+            ))}
+          </div>
+          <p className="lp-fine lp-center">{preise.steuerhinweis}</p>
+          <p className="lp-center lp-more"><Link href="/preise">Rechenbeispiel und häufige Fragen</Link></p>
+        </section>
+
+        <section className="wrap lp-sec narrow" id="fragen" aria-labelledby="fragen-heading">
+          <h2 className="lp-h2 lp-fade" id="fragen-heading">{preise.faqTitel}</h2>
           <div className="faq-list">
             {faq.map((eintrag) => (
               <details className="faq-item" key={eintrag.frage}>
@@ -275,42 +214,30 @@ export default function CampsPilotPage() {
               </details>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="close" id="pilot">
-        <div className="close-media">
-          <div id="closeImg" className="cp-fill">
-            <Image
-              src={CP_IMAGES.flutlicht.src}
-              alt="Ein Flutlichtmast und das flache Dach eines Vereinsheims vor tiefblauem Abendhimmel, die Lampen gerade eingeschaltet."
-              fill
-              sizes="100vw"
-              loading="lazy"
-              placeholder="blur"
-              blurDataURL={CP_IMAGES.flutlicht.blurDataURL}
-            />
+        <section className="wrap lp-sec lp-closing" id="pilot" aria-labelledby="pilot-heading">
+          <div className="lp-closing-art lp-fade"><NightPitch className="lp-fill-w" id="npc" /></div>
+          <div className="lp-center lp-fade">
+            <h2 className="lp-h2" id="pilot-heading">Bereit für Ihr erstes Online-Camp?</h2>
+            <p className="lp-muted">{preise.pilotEinleitung}</p>
           </div>
-        </div>
-        <div className="close-veil" />
-        <div className="wrap close-in">
-          <div className="sec-head wide">
-            <p className="label" data-rise="">Ihr Start</p>
-            <h2 className="d2" data-split="">Bereit für Ihr nächstes Camp?</h2>
-            <p className="lead" style={{ color: 'var(--fog-2)' }} data-rise="">{preise.pilotEinleitung}</p>
-          </div>
-          <div className="start-actions">
+          <ol className="lp-steps">
+            {startSchritte.map((s, i) => (
+              <li key={s.titel}><span className="lp-step-n" aria-hidden>{i + 1}</span>{s.titel}</li>
+            ))}
+          </ol>
+          <div className="start-actions lp-center-actions">
             <Link href={registrierungHref} className="btn fill">Verein registrieren</Link>
             <a href="#anfrage" className="btn ghost">Unverbindlich anfragen</a>
+            <Link href={dashboardDemoHref} className="btn quiet">Dashboard ausprobieren</Link>
           </div>
-          <div id="anfrage"><PilotRequestForm /></div>
+          <div id="anfrage" className="lp-form"><PilotRequestForm /></div>
           <p className="form-note" id="formNote">
             Aktuelle Pilotvereine: <strong>KSV Baunatal</strong> und <strong>JK Performance Academy</strong>.
           </p>
-          <p className="form-note">Bereits registriert? <Link href="/campspilot/anmelden" className="underline">Anmelden</Link></p>
-        </div>
-      </section>
-
+          <p className="form-note">Bereits registriert? <Link href={loginHref} className="underline">Anmelden</Link></p>
+        </section>
       </main>
 
       <footer className="foot">
@@ -321,7 +248,7 @@ export default function CampsPilotPage() {
           </a>
           <span className="cl">Anmeldung und Verwaltung für Fußballcamps</span>
           <nav className="foot-links" aria-label="Preise und Rechtliches">
-            <a href="#preis">{preise.navigation}</a>
+            <Link href="/preise">{preise.navigation}</Link>
             <Link href="/campspilot/impressum">Impressum</Link>
             <Link href="/campspilot/datenschutz">Datenschutz</Link>
             <Link href="/campspilot/teilnahmebedingungen">Teilnahmebedingungen</Link>

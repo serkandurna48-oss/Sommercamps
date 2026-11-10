@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 import time
+
+import pytest
 from decimal import Decimal
 from types import SimpleNamespace
 from uuid import uuid4
@@ -452,3 +454,17 @@ def test_net_fee_settles_without_flag_and_snapshot_holds_net_fee(env, monkeypatc
     row = _reg(env, token)
     assert (row["payment_status"], row["fee_cents"], row["fee_collection"]) == ("paid", 10, "application_fee")
     assert flagged == []
+
+
+@pytest.mark.parametrize("status,flagged", [("failed", True), ("canceled", True), ("succeeded", False)])
+def test_failed_refund_update_is_flagged_for_review(env, status, flagged):
+    with env.cursor() as cur:
+        cur.execute("delete from audit_log where action='stripe.payment_needs_review'")
+    token, _ = _paid_direct_fee(env)
+    event = _connect_refund_event(env, 400, "charge.refund.updated")
+    event["data"]["object"]["status"] = status
+    assert _post_webhook(env, CONNECT_HOOK, event, CONNECT_SECRET).status_code == 200
+    with env.cursor() as cur:
+        cur.execute("select metadata from audit_log where action='stripe.payment_needs_review' "
+                    "and metadata->>'reason'='refund_failed'")
+        assert len(cur.fetchall()) == (1 if flagged else 0)

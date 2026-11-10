@@ -55,6 +55,7 @@ export default function ParentFlow({
   hadPastCamps = false,
   testFilter,
   initialCampSlug,
+  demo = false,
 }: {
   org: OrganizationPublic
   camps: CampPublic[]
@@ -62,6 +63,8 @@ export default function ParentFlow({
   hadPastCamps?: boolean
   testFilter?: FilterState
   initialCampSlug?: string
+  /** Public demo (/demo/verein): registration stays local, legal links stay inside the demo. */
+  demo?: boolean
 }) {
   const router = useRouter()
   const isKsv = org.slug === 'ksv-baunatal'
@@ -71,7 +74,7 @@ export default function ParentFlow({
   const priceStat = `${samePrice ? '' : 'ab '}${minPriceCents % 100 === 0
     ? `${minPriceCents / 100} €`
     : formatPrice(minPriceCents, camps[0]?.currency ?? 'EUR')}`
-  // "So einfach geht's": bei KSV vor den Camps, sonst wie bisher unten (Serkan 28.10.).
+  // "So einfach geht's" steht bei allen Vereinen vor der Camp-Liste (vorher nur bei KSV, Serkan 28.10.).
   const howSection = (
     <div className={`pad how-sec${isKsv ? ' how-sec-top' : ''}`}>
       <div>
@@ -221,6 +224,7 @@ export default function ParentFlow({
         questions={org.registration_questions ?? []}
         parentPrefill={parentPrefill}
         onPrefillConsumed={() => setParentPrefill(null)}
+        demo={demo}
         siblingCamps={siblingMode ? camps : []}
         onCampChange={selectCamp}
         onBack={() => {
@@ -244,6 +248,7 @@ export default function ParentFlow({
         org={org}
         camp={selectedCamp}
         result={done.result}
+        demo={demo}
         childName={done.childName}
         parentEmail={done.parentEmail}
         onBackToOrg={backToOrg}
@@ -265,6 +270,7 @@ export default function ParentFlow({
     return (
       <WaitScreen
         org={org}
+        demo={demo}
         camp={selectedCamp}
         alternatives={camps.filter((c) => c.slug !== selectedCamp.slug && !c.is_full).slice(0, 2)}
         onBack={backToOrg}
@@ -556,7 +562,7 @@ export default function ParentFlow({
         <span>Die Anmeldung dauert etwa vier Minuten. Sie brauchen kein Benutzerkonto.</span>
       </div>
 
-      {isKsv && howSection}
+      {howSection}
 
       {/* ── Camps ── */}
       <div className="pad sec" id="s-camps" tabIndex={-1}>
@@ -720,8 +726,6 @@ export default function ParentFlow({
         </div>
       )}
 
-      {!isKsv && howSection}
-
       <div className="pad faq-sec">
         <div>
           <span className="sec-label">FAQ</span>
@@ -753,7 +757,7 @@ export default function ParentFlow({
         </div>
       </div>
 
-      <PublicFooter org={org} />
+      <PublicFooter org={org} demo={demo} />
 
       {/* ── Mobile Sticky CTA ── */}
       {!isKsv && <div className={`sticky-cta${showStickyCta ? ' sticky-cta-on' : ''}`} aria-hidden={!showStickyCta} inert={!showStickyCta}>
@@ -915,9 +919,11 @@ function WaitScreen({
   onBack,
   onJoinWaitlist,
   onSelectAlternative,
+  demo = false,
 }: {
   org: OrganizationPublic
   camp: CampPublic
+  demo?: boolean
   alternatives: CampPublic[]
   onBack: () => void
   onJoinWaitlist: () => void
@@ -985,7 +991,7 @@ function WaitScreen({
           </div>
         </div>
       )}
-      <PublicFooter org={org} />
+      <PublicFooter org={org} demo={demo} />
     </section>
   )
 }

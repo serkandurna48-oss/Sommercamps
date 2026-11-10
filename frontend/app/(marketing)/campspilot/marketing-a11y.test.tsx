@@ -69,31 +69,20 @@ describe('CX17 – Struktur und Ladeverhalten im echten SSR-Markup', () => {
     }
   })
 
-  it('gibt jedem Bild ein alt-Attribut und lädt alle Bilder unter dem Hero lazy', () => {
-    const images = [...page.querySelectorAll('img')]
-    expect(images.length).toBeGreaterThan(1)
-    for (const image of images) expect(image.hasAttribute('alt')).toBe(true)
-    const belowFold = images.filter(image => !image.closest('.hero'))
-    expect(belowFold.length).toBeGreaterThan(0)
-    for (const image of belowFold) expect(image.getAttribute('loading')).toBe('lazy')
+  it('nutzt für Illustrationen nur dekorative, ausgeblendete SVGs und hat keine Bilder ohne alt-Text', () => {
+    for (const image of page.querySelectorAll('img')) expect(image.hasAttribute('alt')).toBe(true)
+    const art = [...page.querySelectorAll('.lp-hero svg.lp-fill, .lp-demo-art, .lp-closing-art svg')]
+    expect(art.length).toBeGreaterThanOrEqual(4)
+    for (const svg of art) expect(svg.getAttribute('aria-hidden')).toBe('true')
   })
 
-  it('priorisiert das vollbreite Hero und reserviert Bildflächen', () => {
-    const hero = page.querySelector('.hero img')!
-    expect(hero.getAttribute('sizes')).toBe('100vw')
-    expect(hero.getAttribute('fetchPriority')).toBe('high')
-    expect(hero.getAttribute('loading')).not.toBe('lazy')
-    const source = readFileSync(resolve(__dirname, 'page.tsx'), 'utf8')
-    expect(source.slice(source.indexOf('src={CP_IMAGES.hero.src}'), source.indexOf('blurDataURL={CP_IMAGES.hero'))).toMatch(/\bpriority\b/)
-    const css = readFileSync(resolve(__dirname, 'marketing.css'), 'utf8')
-    for (const image of page.querySelectorAll('img')) {
-      if (image.hasAttribute('width') && image.hasAttribute('height')) continue
-      const area = image.closest('.hero,.z-stage,.ordnung-right,.band,.close')
-      expect(area, image.getAttribute('src')!).not.toBeNull()
-      const name = area!.classList[0]
-      const rule = [...css.matchAll(new RegExp(`\\.cp-scope \\.${name} \\{([^}]+)\\}`, 'g'))].map(match => match[1]).join('\n')
-      expect(rule).toMatch(/(?:min-height|height|aspect-ratio):/)
-    }
+  it('verlinkt die Kopfzeile ohne Zeilenumbruch-Falle: Preise und Login bleiben auf kleinen Bildschirmen sichtbar', () => {
+    const css = readFileSync(resolve(__dirname, 'landing.css'), 'utf8')
+    const hidden = css.match(/\.lp-hide-sm \{[^}]*\}/)?.[0] ?? ''
+    expect(hidden).toContain('display: none')
+    const nav = page.querySelector('.lp-nav-links')!
+    const hiddenLinks = [...nav.querySelectorAll('.lp-hide-sm')].map(a => a.textContent)
+    expect(hiddenLinks).toEqual(['ROI-Rechner', 'Demo ansehen'])
   })
 
   it('rendert Text ohne versteckende Inline-Stile und nutzt swap mit angepasstem Font-Fallback', () => {

@@ -390,6 +390,10 @@ class OrganizationOrgAdminOut(BaseModel):
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
     plan_status: str
+    # Read-only, only filled by GET /admin/organizations/{slug}: the plan valid today
+    # (starter | verein | individuell) and the camps counting against the Starter limit.
+    plan: Optional[str] = None
+    active_camps: Optional[int] = None
     # Nur lesend — "Kein Theme-Editor im Admin" (Eltern-Flow-Auftrag
     # Abschnitt 1). Wird bewusst NICHT auf OrganizationCreate/Update
     # geführt, damit es über diese API nicht setzbar ist. Default spiegelt
@@ -515,8 +519,10 @@ class RegistrationAdminOut(RegistrationCreated):
     documentation_consent: Optional[bool] = None
     # Player record deleted: child data removed ("Gelöscht"), no age to show.
     anonymized_at: Optional[datetime] = None
-    # Parents asked for a cancellation via "Meine Buchung"; the club still has to cancel.
+    # Legacy: parents asked for a cancellation (old request flow). Not set any more.
     cancellation_requested_at: Optional[datetime] = None
+    # Set when the parents cancelled themselves (refund and cancel in one step).
+    parent_cancelled_at: Optional[datetime] = None
     # Delete guard (GoBD): an invoice/storno exists, or the platform fee is recorded.
     has_invoice: bool = False
     fee_recorded: bool = False

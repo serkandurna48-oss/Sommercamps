@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { fetchBookingStatus, requestBookingCancellation } from './saasApi'
+import { fetchBookingStatus, cancelBookingAsParent } from './saasApi'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -8,6 +8,7 @@ const status = {
   camp_title: 'Sommercamp', start_date: '2027-07-05', end_date: '2027-07-09', starts_at: null,
   child_first_name: 'Kim', status: 'registered', payment_status: 'open', amount_cents: 14900, currency: 'EUR',
   cancellation_requested_at: null, invoice_available: false,
+  self_cancel: { possible: true, reason: 'ok', deadline: '2027-06-21', refund_cents: 14900, days: 14 },
 }
 
 it('loads the booking status without caching and escapes path parts', async () => {
@@ -29,16 +30,24 @@ it('maps a network failure to error', async () => {
   expect(await fetchBookingStatus('club', token)).toEqual({ kind: 'error' })
 })
 
-it('posts the cancellation request and returns the timestamp', async () => {
-  const fetchMock = vi.fn(async () => new Response(JSON.stringify({ cancellation_requested_at: '2027-06-01T10:00:00Z' }), { status: 200 }))
+it('posts to /cancel and returns the booking', async () => {
+  const cancelled = { ...status, status: 'cancelled' }
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify(cancelled), { status: 200 }))
   vi.stubGlobal('fetch', fetchMock)
-  expect(await requestBookingCancellation('club', token)).toEqual({ kind: 'ok', cancellationRequestedAt: '2027-06-01T10:00:00Z' })
+  expect(await cancelBookingAsParent('club', token)).toEqual({ kind: 'ok', data: cancelled })
   const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
-  expect(url).toMatch(/\/registrations\/.+\/cancellation-request$/)
+  expect(url).toMatch(new RegExp(`/registrations/${token}/cancel$`))
   expect(init.method).toBe('POST')
 })
 
-it.each([[409, 'already_cancelled'], [404, 'not_found'], [429, 'rate_limited'], [500, 'error']])('maps cancellation HTTP %s to %s', async (code, kind) => {
+it('passes the server message on 409 and 502', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ detail: 'Bitte wenden Sie sich an den Verein.' }), { status: 409 })))
+  expect(await cancelBookingAsParent('club', token)).toEqual({ kind: 'not_allowed', message: 'Bitte wenden Sie sich an den Verein.' })
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ detail: 'Nicht storniert.' }), { status: 502 })))
+  expect(await cancelBookingAsParent('club', token)).toEqual({ kind: 'refund_failed', message: 'Nicht storniert.' })
+})
+
+it.each([[404, 'not_found'], [429, 'rate_limited'], [500, 'error']])('maps cancel HTTP %s to %s', async (code, kind) => {
   vi.stubGlobal('fetch', vi.fn(async () => new Response('x', { status: code })))
-  expect(await requestBookingCancellation('club', token)).toEqual({ kind })
+  expect(await cancelBookingAsParent('club', token)).toEqual({ kind })
 })

@@ -305,7 +305,7 @@ export interface BookingStatus {
 
 export interface SelfCancel {
   possible: boolean
-  reason: 'ok' | 'not_paid_online' | 'deadline_passed' | 'already_cancelled' | 'waitlist'
+  reason: 'ok' | 'not_paid_online' | 'payment_pending' | 'deadline_passed' | 'already_cancelled' | 'waitlist'
   /** Last day for a cancellation (start minus `days`); null when no online payment is involved. */
   deadline: string | null
   /** Amount refunded to the payment method; null without an online payment. */

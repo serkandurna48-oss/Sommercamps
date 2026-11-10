@@ -91,8 +91,12 @@ export default function ParticipantRow({
                 tone={PAYMENT_STATUS_TONE[effective.payment_status] ?? 'neutral'}
                 label={paymentStatusLabel[effective.payment_status] ?? effective.payment_status}
               />
-              {effective.cancellation_requested_at && effective.status === 'cancelled' && (
+              {effective.parent_cancelled_at && effective.status === 'cancelled' && (
                 <StatusChip tone="neutral" label="Von Eltern storniert" />
+              )}
+              {/* Altbestand aus dem früheren Anfrage-Ablauf */}
+              {effective.cancellation_requested_at && effective.status !== 'cancelled' && (
+                <StatusChip tone="error" label="Storno angefragt" />
               )}
             </div>} action={<IconChevronDown
               className={`shrink-0 transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}

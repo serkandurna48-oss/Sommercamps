@@ -127,6 +127,29 @@ describe('BookingView', () => {
     expect(text()).toContain('Sie stehen nicht mehr auf der Warteliste')
   })
 
+  it('explains an unfinished online payment instead of the transfer text', async () => {
+    await show({ self_cancel: { possible: false, reason: 'payment_pending', deadline: null, refund_cents: null, days: 14 } })
+    expect(text()).toContain('Die Zahlung ist noch nicht abgeschlossen. Zum Stornieren wenden Sie sich bitte an KSV Test')
+    expect(text()).not.toContain('Überweisung')
+  })
+
+  it('names the club contact only once when cancelling is not possible', async () => {
+    await show({ payment_status: 'paid' })
+    expect(text().match(/verein@example\.com/g)).toHaveLength(1)
+    expect(text()).not.toContain('Bei Fragen erreichen Sie')
+  })
+
+  it('sends only one request on a double click', async () => {
+    let resolve!: (value: api.ParentCancelResult) => void
+    vi.mocked(api.cancelBookingAsParent).mockReturnValue(new Promise(r => { resolve = r }))
+    await show(paidOnline)
+    await act(() => button('Anmeldung stornieren')!.click())
+    const yes = button('Ja, Anmeldung stornieren')!
+    await act(async () => { yes.click(); yes.click() })
+    expect(api.cancelBookingAsParent).toHaveBeenCalledTimes(1)
+    await act(async () => { resolve({ kind: 'error' }) })
+  })
+
   it('offers no cancellation for cancelled bookings', async () => {
     await show({ status: 'cancelled', self_cancel: { possible: false, reason: 'already_cancelled', deadline: null, refund_cents: null, days: 14 } })
     expect(button('Anmeldung stornieren')).toBeUndefined()

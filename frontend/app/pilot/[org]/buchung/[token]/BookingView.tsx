@@ -47,10 +47,10 @@ function formatDay(iso: string): string {
   return `${day}.${month}.${year}`
 }
 
-function ContactInline({ org }: { org: Contact }) {
+function ContactInline({ org, lead = 'Bitte wenden Sie sich an' }: { org: Contact; lead?: string }) {
   return (
     <>
-      Bitte wenden Sie sich an {org.name}: <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>
+      {lead} {org.name}: <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>
       {org.contact_phone ? <> oder <a href={`tel:${org.contact_phone.replace(/[^+\d]/g, '')}`}>{org.contact_phone}</a></> : null}.
     </>
   )
@@ -61,14 +61,18 @@ function NoSelfCancel({ data, org }: { data: BookingStatus; org: Contact }) {
   const { self_cancel: sc } = data
   const start = data.starts_at ? 'Trainingsbeginn' : 'Campbeginn'
   let reason: string
+  let lead: string | undefined
   if (sc.reason === 'deadline_passed' && sc.deadline) {
     reason = `Eine Stornierung ist bis ${sc.days} Tage vor ${start} (bis zum ${formatDay(sc.deadline)}) möglich.`
+  } else if (sc.reason === 'payment_pending') {
+    reason = 'Die Zahlung ist noch nicht abgeschlossen.'
+    lead = 'Zum Stornieren wenden Sie sich bitte an'
   } else if (data.payment_status === 'partially_refunded' || data.payment_status === 'refunded') {
     reason = 'Diese Anmeldung kann nur der Verein stornieren.'
   } else {
     reason = 'Bei Überweisung oder Barzahlung storniert der Verein Ihre Anmeldung.'
   }
-  return <p>{reason} <ContactInline org={org} /></p>
+  return <p>{reason} <ContactInline org={org} lead={lead} /></p>
 }
 
 /** "Meine Buchung": status of one booking; parents cancel themselves when they paid online in time. */
@@ -79,6 +83,7 @@ export default function BookingView({ orgSlug, token, org }: { orgSlug: string; 
   const [done, setDone] = useState<{ refundCents: number | null } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const confirmRef = useRef<HTMLDivElement>(null)
+  const inFlight = useRef(false)
 
   useEffect(() => {
     let current = true
@@ -89,10 +94,12 @@ export default function BookingView({ orgSlug, token, org }: { orgSlug: string; 
   useEffect(() => { if (confirming) confirmRef.current?.focus() }, [confirming])
 
   async function cancelNow(refundCents: number | null) {
-    if (sending) return
+    if (inFlight.current) return // the state below is too slow for a double click
+    inFlight.current = true
     setSending(true)
     setError(null)
     const result = await cancelBookingAsParent(orgSlug, token)
+    inFlight.current = false
     setSending(false)
     if (result.kind === 'ok') {
       setLoad({ kind: 'ok', data: result.data })
@@ -140,6 +147,8 @@ export default function BookingView({ orgSlug, token, org }: { orgSlug: string; 
   const sc = data.self_cancel
   const onWaitlist = sc.reason === 'waitlist'
   const refundCents = sc.refund_cents
+  // The cancel section already names the club when it explains why parents cannot cancel or an error occurred.
+  const contactShown = (!isCancelled && !sc.possible) || error !== null
   const showPayment = !isCancelled && data.status !== 'waitlist'
   return (
     <div className="legal-body">
@@ -230,7 +239,7 @@ export default function BookingView({ orgSlug, token, org }: { orgSlug: string; 
         </p>
       )}
       {isCancelled && !done && <p>Diese Anmeldung ist storniert.</p>}
-      <ContactLine org={org} />
+      {!contactShown && <ContactLine org={org} />}
     </div>
   )
 }

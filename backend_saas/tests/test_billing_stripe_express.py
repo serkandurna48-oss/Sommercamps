@@ -422,7 +422,7 @@ def test_legacy_checkout_unchanged_without_express(env):
     assert kw["stripe_account"] == LEGACY
     assert "application_fee_amount" not in kw["payment_intent_data"]
     assert "transfer_data" not in kw["payment_intent_data"]
-    assert kw["idempotency_key"] == f"campspilot-{token}-first-1000"
+    assert kw["idempotency_key"] == f"campspilot-v2-{token}-first-1000"
     assert _reg(env, token)["stripe_charge_type"] == "direct"
 
 
@@ -785,3 +785,13 @@ def test_fee_and_stripe_columns_not_readable_by_authenticated(env):
     finally:
         with env.cursor() as cur:
             cur.execute("grant select on public.camp_registrations to authenticated")
+
+
+@pytest.mark.parametrize("status", ["failed", "canceled"])
+def test_admin_refund_with_failed_status_is_502(env, status):
+    token, session_id = _paid_destination(env)
+    _post_webhook(env, PLATFORM_HOOK, _completed(session_id, intent=env.intent), PLATFORM_SECRET)
+    orig = env.fake.Refund.create
+    env.fake.Refund.create = staticmethod(lambda **kw: {**orig(**kw), "status": status})
+    r = _refund(env, token, 400)
+    assert r.status_code == 502, r.text

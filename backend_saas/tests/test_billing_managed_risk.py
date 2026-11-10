@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 import time
+
+import pytest
 from decimal import Decimal
 from types import SimpleNamespace
 from uuid import uuid4
@@ -169,7 +171,7 @@ def test_checkout_is_direct_charge_with_application_fee(env):
     assert kw["line_items"][0]["price_data"]["unit_amount"] == 1000
     assert kw["metadata"] == {"campspilot": "1", "organization_id": str(env.org), "camp_slug": "summer-1",
                               "charge_type": "direct_fee"}
-    assert kw["idempotency_key"] == f"campspilot-dfee-{token}-first-1000-10-{env.express}"
+    assert kw["idempotency_key"] == f"campspilot-dfee-v2-{token}-first-1000-10-{env.express}"
     assert "Kind" not in json.dumps(kw) and "max@example.com" not in json.dumps(kw)
     row = _reg(env, token)
     assert (row["stripe_charge_type"], row["stripe_checkout_account_id"]) == ("direct_fee", env.express)
@@ -452,3 +454,25 @@ def test_net_fee_settles_without_flag_and_snapshot_holds_net_fee(env, monkeypatc
     row = _reg(env, token)
     assert (row["payment_status"], row["fee_cents"], row["fee_collection"]) == ("paid", 10, "application_fee")
     assert flagged == []
+
+
+@pytest.mark.parametrize("status,flagged", [("failed", True), ("canceled", True), ("succeeded", False)])
+def test_failed_refund_update_is_flagged_for_review(env, status, flagged):
+    with env.cursor() as cur:
+        cur.execute("delete from audit_log where action='stripe.payment_needs_review'")
+    token, _ = _paid_direct_fee(env)
+    event = _connect_refund_event(env, 400, "charge.refund.updated")
+    event["data"]["object"]["status"] = status
+    assert _post_webhook(env, CONNECT_HOOK, event, CONNECT_SECRET).status_code == 200
+    with env.cursor() as cur:
+        cur.execute("select metadata from audit_log where action='stripe.payment_needs_review' "
+                    "and metadata->>'reason'='refund_failed'")
+        assert len(cur.fetchall()) == (1 if flagged else 0)
+def test_checkout_sends_no_payment_method_types(env):
+    """Stripe API 2026-10-28: payment_method_types is rejected (400) when creating a
+    Checkout Session; payment methods are managed in the Stripe Dashboard."""
+    _activate_direct_fee(env)
+    token = _register(env)
+    assert _checkout(env, token).status_code == 200
+    (_, kw), = env.fake.named("Session.create")
+    assert "payment_method_types" not in kw

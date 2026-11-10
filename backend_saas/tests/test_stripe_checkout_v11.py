@@ -509,4 +509,4 @@ def test_checkout_never_holds_a_lock_and_refuses_a_concurrent_change(monkeypatch
     assert error.value.status_code == 409
     assert all("for update" not in query for query, _ in cursor.executed)
     # Deterministic key: a double click reaches the same Stripe session.
-    assert _CheckoutSession.args["idempotency_key"] == f"campspilot-{token}-first-14900"
+    assert _CheckoutSession.args["idempotency_key"] == f"campspilot-v2-{token}-first-14900"

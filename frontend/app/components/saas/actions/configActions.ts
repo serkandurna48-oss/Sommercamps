@@ -241,8 +241,14 @@ export async function createCampAction(
       const currency = str(formData, 'currency')
       if (!currency || !/^[A-Z]{3}$/.test(currency)) return { error: 'Bitte eine gültige Währung eingeben.' }
       const includes = (str(formData, 'includes') ?? '').split('\n').map(line => line.trim()).filter(Boolean)
+      const memberRaw = str(formData, 'price_member_euros')
+      const memberEuros = memberRaw ? Number(memberRaw.replace(',', '.')) : null
+      if (memberEuros !== null && (!Number.isFinite(memberEuros) || memberEuros > priceEuros)) {
+        return { error: 'Der Mitgliederpreis darf nicht höher sein als der normale Preis.' }
+      }
       details = {
         currency,
+        price_member_cents: memberEuros === null ? null : Math.round(memberEuros * 100),
         registration_start: parseZonedDateTime(formData.get('registration_start')),
         registration_end: parseZonedDateTime(formData.get('registration_end')),
         location: optionalStr(formData, 'location'),

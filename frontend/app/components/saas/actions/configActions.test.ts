@@ -70,7 +70,7 @@ it('legt die Kopie als Entwurf an, ergänzt die weiteren Felder und öffnet die 
     age_min: 6, age_max: 12, capacity: 20, price_cents: 14950, status: 'draft',
   })
   expect(updateCampAdmin).toHaveBeenCalledExactlyOnceWith('demo', 'neue-kopie', 'tok-123', {
-    currency: 'CHF', registration_start: '2027-01-01T08:00:00.000Z', registration_end: null,
+    currency: 'CHF', price_member_cents: null, registration_start: '2027-01-01T08:00:00.000Z', registration_end: null,
     location: 'Sportplatz', care_info: 'Ab 8 Uhr', meals_info: 'Mittagessen', includes: ['Ball', 'Trikot'], status: 'draft',
   })
   expect(vi.mocked(createCampAdmin).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(updateCampAdmin).mock.invocationCallOrder[0])

@@ -72,7 +72,7 @@ export default function WaitlistCard({
             variant={showCampTitle ? 'secondary' : 'primary'}
             requireConfirm={<>
               <p className="cp-subheading">Platz an {childName} für {campTitle} vergeben?</p>
-              <p>Preis: {formatEuro(priceCents, currency)}</p>
+              <p>Preis: {formatEuro(next.applied_price_cents ?? priceCents, currency)}</p>
               <p>Die Familie bekommt nach der Platzvergabe automatisch eine E-Mail.</p>
             </>}
           />)}

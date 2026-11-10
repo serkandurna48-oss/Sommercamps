@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { de } from '../../../lib/i18n/de'
 import { IconLink } from '../icons'
-import { useAdminPreview } from '../preview/AdminPreviewContext'
+import { previewParentHref, useAdminPreview } from '../preview/AdminPreviewContext'
 import Button, { type ButtonVariant } from '../ui/Button'
 
 /** Quick action "Link teilen": copies the parent registration page URL. */
@@ -14,7 +14,7 @@ export default function CopyParentLinkButton({ orgSlug, variant = 'secondary', l
 }) {
   const [result, setResult] = useState<'copied' | 'error' | null>(null)
   const preview = useAdminPreview()
-  const href = preview ? '/dev/admin-vorschau' : `/pilot/${orgSlug}`
+  const href = preview ? previewParentHref(preview) : `/pilot/${orgSlug}`
 
   async function copy() {
     try {

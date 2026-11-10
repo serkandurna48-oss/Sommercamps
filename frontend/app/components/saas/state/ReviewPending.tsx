@@ -12,7 +12,7 @@ export default function ReviewPending({ orgSlug }: { orgSlug: string }) {
       <p role="status">{de.onboarding.reviewPendingBanner}</p>
       <p>{de.onboarding.reviewPendingHint}</p>
       {/* A full navigation also reloads the status when this is the current route. */}
-      <a href={preview ? previewHref(statusHref, preview.empty) : statusHref} className="cp-focus inline-flex min-h-[44px] items-center underline">
+      <a href={preview ? previewHref(statusHref, preview.empty, preview.basePath) : statusHref} className="cp-focus inline-flex min-h-[44px] items-center underline">
         {de.onboarding.reviewRefresh}
       </a>
       <ButtonLink href={`/pilot/${orgSlug}/hilfe`} variant="secondary">{de.onboarding.reviewHelp}</ButtonLink>

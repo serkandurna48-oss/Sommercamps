@@ -15,7 +15,7 @@ function TabHint() {
 export default function PageTabs({ tabs, label }: { tabs: TabItem[]; label: string }) {
   const pathname = usePathname() ?? ''
   const preview = useAdminPreview()
-  const tabPath = (href: string) => (preview ? previewHref(href, preview.empty).split('?')[0] : href)
+  const tabPath = (href: string) => (preview ? previewHref(href, preview.empty, preview.basePath).split('?')[0] : href)
   const activeHref = activeTabHref(pathname, tabs.map(tab => tabPath(tab.href)))
   return (
     <nav aria-label={label} className="cp-page-tabs">

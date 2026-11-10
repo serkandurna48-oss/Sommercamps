@@ -4015,3 +4015,9 @@
   .cp-public[data-org='ksv-baunatal'] .h-akad .hero-scrim::before { display: none; }
   .cp-public[data-org='ksv-baunatal'] .h-akad :is(h1, .intro, .hero-label) { text-shadow: none; }
 }
+
+/* Meine Buchung: Bezeichnung klein und gedämpft, Wert darunter, Zeilen getrennt */
+.cp-public .booking-facts { margin: 0; }
+.cp-public .booking-facts > div { padding: 10px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+.cp-public .booking-facts dt { font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.6; }
+.cp-public .booking-facts dd { margin: 2px 0 0; font-weight: 600; }

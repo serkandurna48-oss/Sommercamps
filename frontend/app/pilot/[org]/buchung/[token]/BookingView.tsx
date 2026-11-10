@@ -119,7 +119,7 @@ export default function BookingView({ orgSlug, token, org }: { orgSlug: string; 
 
       <section aria-labelledby="booking-details">
         <h2 id="booking-details">Angaben zur Buchung</h2>
-        <dl>
+        <dl className="booking-facts">
           <div><dt>{data.starts_at ? 'Training' : 'Camp'}</dt><dd>{data.camp_title}</dd></div>
           <div><dt>Zeitraum</dt><dd>{whenText(data)}</dd></div>
           <div><dt>Kind</dt><dd>{data.child_first_name}</dd></div>

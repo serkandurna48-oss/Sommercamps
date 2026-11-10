@@ -1297,6 +1297,50 @@ _REFUND_ERRORS = {
 }
 
 
+def is_fee_mode_payment(row: dict) -> bool:
+    """True when the booking was paid through CampsPilot's Stripe checkout with
+    platform fee (direct_fee or destination), so CampsPilot can refund it."""
+    kind = row.get("stripe_charge_type")
+    account = row.get("stripe_checkout_account_id")
+    if kind not in FEE_MODES or not row.get("stripe_payment_intent_id"):
+        return False
+    return not (kind == DIRECT_FEE and not (isinstance(account, str) and ACCOUNT_ID.fullmatch(account)))
+
+
+def create_online_refund(organization_id, organization_slug: str, row: dict, amount: int, key_suffix: str) -> dict:
+    """Creates the Stripe refund (platform fee refunded too). Shared by the
+    admin refund and the parent's self-cancel. The idempotency key makes a
+    repeated call with the same suffix one refund. Raises HTTPException (the
+    admin endpoint passes it on; the parent flow maps every failure to 502).
+    Status and amounts are booked by the webhook."""
+    kind = row["stripe_charge_type"]
+    settings = get_settings()
+    if not (_express_ready(settings) if kind == DESTINATION else _service_ready(settings)):
+        raise HTTPException(503, "Online-Zahlung ist in dieser Umgebung noch nicht eingerichtet")
+    client = _stripe_client()
+    params = dict(
+        payment_intent=row["stripe_payment_intent_id"],
+        amount=amount,
+        refund_application_fee=True,
+        metadata={**CAMPSPILOT_MARKER, "organization_id": str(organization_id)},
+        idempotency_key=f"campspilot-refund-{row['id']}-{amount}-{key_suffix}",
+    )
+    if kind == DESTINATION:
+        params["reverse_transfer"] = True
+    else:
+        # Direct charge: the PaymentIntent lives on the club's account.
+        params["stripe_account"] = row["stripe_checkout_account_id"]
+    try:
+        return _stripe_dict(client.Refund.create(**params))
+    except stripe.error.InvalidRequestError as error:
+        status_code, message = _REFUND_ERRORS.get(
+            getattr(error, "code", None) or "", (502, "Stripe hat die Erstattung abgelehnt. Bitte prüfe sie im Stripe-Dashboard."))
+        logger.warning("Refund rejected by Stripe (organization_slug=%s, code=%s)", organization_slug, getattr(error, "code", None))
+        raise HTTPException(status_code, message) from None
+    except stripe.error.StripeError:
+        raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
+
+
 @router.post("/admin/organizations/{organization_slug}/registrations/{registration_token}/refund", response_model=RefundResult)
 def refund_destination_payment(
     organization_slug: str,
@@ -1321,11 +1365,7 @@ def refund_destination_payment(
         row = cur.fetchone()
     if row is None:
         raise HTTPException(404, "Registration not found")
-    kind = row["stripe_charge_type"]
-    account = row.get("stripe_checkout_account_id")
-    if kind not in FEE_MODES or not row["stripe_payment_intent_id"] or (
-        kind == DIRECT_FEE and not (isinstance(account, str) and ACCOUNT_ID.fullmatch(account))
-    ):
+    if not is_fee_mode_payment(row):
         raise HTTPException(409, "Diese Zahlung lief nicht über CampsPilot. Bitte im eigenen Stripe-Konto erstatten.")
     if row["payment_status"] not in ("paid", "partially_refunded"):
         raise HTTPException(409, "Nur bezahlte Online-Zahlungen können erstattet werden")
@@ -1333,31 +1373,7 @@ def refund_destination_payment(
     amount = body.amount_cents if body.amount_cents is not None else remaining
     if amount <= 0 or amount > remaining:
         raise HTTPException(422, "Betrag höher als der noch erstattbare Rest")
-    settings = get_settings()
-    if not (_express_ready(settings) if kind == DESTINATION else _service_ready(settings)):
-        raise HTTPException(503, "Online-Zahlung ist in dieser Umgebung noch nicht eingerichtet")
-    client = _stripe_client()
-    params = dict(
-        payment_intent=row["stripe_payment_intent_id"],
-        amount=amount,
-        refund_application_fee=True,
-        metadata={**CAMPSPILOT_MARKER, "organization_id": str(organization["id"])},
-        idempotency_key=f"campspilot-refund-{row['id']}-{amount}-{body.request_id}",
-    )
-    if kind == DESTINATION:
-        params["reverse_transfer"] = True
-    else:
-        # Direct charge: the PaymentIntent lives on the club's account.
-        params["stripe_account"] = account
-    try:
-        refund = _stripe_dict(client.Refund.create(**params))
-    except stripe.error.InvalidRequestError as error:
-        status_code, message = _REFUND_ERRORS.get(
-            getattr(error, "code", None) or "", (502, "Stripe hat die Erstattung abgelehnt. Bitte prüfe sie im Stripe-Dashboard."))
-        logger.warning("Refund rejected by Stripe (organization_slug=%s, code=%s)", organization_slug, getattr(error, "code", None))
-        raise HTTPException(status_code, message) from None
-    except stripe.error.StripeError:
-        raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
+    refund = create_online_refund(organization["id"], organization_slug, row, amount, str(body.request_id))
     refunded = refund.get("amount") if isinstance(refund.get("amount"), int) else amount
     platform_roles.write_audit_log(
         actor_user_id=auth.user_id, actor_email=auth.email, action="stripe.refund_requested",

@@ -79,3 +79,20 @@ it.each(['1', 'incomplete'])('zeigt auf der Konfigurationsseite den passenden Ko
     expect(html).toContain('die weiteren Angaben konnten nicht übernommen werden')
   }
 })
+
+const STARTER_HINT = 'Im Paket Starter ist 1 aktives Camp enthalten. Du kannst das Camp als Entwurf anlegen; veröffentlichen geht nach dem Wechsel ins Paket Verein.'
+
+it.each([
+  ['starter mit einem aktiven Camp', { plan: 'starter', active_camps: 1 }, true],
+  ['starter mit mehreren aktiven Camps (Altbestand)', { plan: 'starter', active_camps: 2 }, true],
+  ['starter ohne aktives Camp', { plan: 'starter', active_camps: 0 }, false],
+  ['verein', { plan: 'verein', active_camps: 3 }, false],
+  ['unbekannter Stand', {}, false],
+])('Starter-Hinweis beim Anlegen: %s', async (_name, usage, shown) => {
+  vi.mocked(getOrganizationAdmin).mockResolvedValue({ ...fixtures.org, ...usage })
+  const html = renderToStaticMarkup(await NewCampPage({ params, searchParams: Promise.resolve({}) }))
+  if (shown) expect(html).toContain(STARTER_HINT)
+  else expect(html).not.toContain('Im Paket Starter')
+  // Das Formular bleibt in jedem Fall bedienbar (Anlegen als Entwurf).
+  expect(html).toContain('name="title"')
+})

@@ -33,7 +33,7 @@ describe('Preisseite-Texte', () => {
 
   it('nennt die Zahlungsgebühren als enthalten (Ahmads Preismodell)', () => {
     expect(preise.steuerhinweis).toContain('Alle Beträge zzgl. USt.')
-    expect(preise.steuerhinweis).toContain('enthält die Zahlungsgebühren bei Online-Zahlung (Stripe), es kommt nichts hinzu')
+    expect(preise.steuerhinweis).toContain('enthält die Stripe-Gebühr für Kartenzahlungen mit europäischen Karten')
   })
 
   it('hat genau drei Pakete', () => {

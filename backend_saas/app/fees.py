@@ -172,9 +172,10 @@ def net_of_payment_fee(quote: dict[str, Any], amount_cents: int, percent: Decima
     """Ahmad's pricing: the plan percent INCLUDES the payment fees. With direct
     charges (Managed Risk) Stripe takes its fee from the club's account, so the
     platform withholds only plan fee minus the estimated Stripe fee (never < 0).
-    The club then pays about the plan percent in total. The estimate can differ
-    from Stripe's real fee (non-EEA cards, other methods); the platform carries
-    that difference by design."""
+    For standard EEA cards the club then pays the plan percent in total. Stripe's
+    real fee can be higher (premium/non-EEA cards) and is kept by Stripe on
+    refunds; that difference is borne by the club (the application fee is fixed
+    at checkout). A minimum fee (min_fee_cents) is reduced as well."""
     gross = int(quote["fee_cents"])
     payment = payment_fee_estimate_cents(amount_cents, percent, fixed_cents)
     return {**quote, "gross_fee_cents": gross, "payment_fee_cents": payment, "fee_cents": max(0, gross - payment)}

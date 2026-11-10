@@ -66,7 +66,7 @@ export const preise = {
   titel: 'Ihr Camp. Ihr Paket.',
   einleitung: 'Starter hat keine Grundgebühr: Sie zahlen nur, wenn gebucht wird. Wer mehr Camps veranstaltet, wechselt ins Paket Verein.',
   waehrung: '€',
-  steuerhinweis: 'Alle Beträge zzgl. USt. Die Gebühr je Buchung enthält die Zahlungsgebühren bei Online-Zahlung (Stripe), es kommt nichts hinzu. Bei Überweisung fallen keine Zahlungsgebühren an.',
+  steuerhinweis: 'Alle Beträge zzgl. USt. Die Gebühr je Buchung enthält die Stripe-Gebühr für Kartenzahlungen mit europäischen Karten (1,5 % + 0,25 €). Für andere Karten berechnet Stripe teils mehr, bei Erstattungen behält Stripe seine Gebühr. Bei Überweisung fallen keine Zahlungsgebühren an.',
   beispielTitel: 'Rechenbeispiel',
   anfrage: 'Unverbindlich anfragen',
   formular: '/campspilot',

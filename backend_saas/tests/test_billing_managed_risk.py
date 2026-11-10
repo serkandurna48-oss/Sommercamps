@@ -418,8 +418,8 @@ def test_fee_mismatch_is_flagged_but_paid(env, monkeypatch):
 
 
 def test_fee_below_payment_fee_omits_application_fee(env):
-    """Gebühr kleiner als die geschätzte Stripe-Gebühr: keine application fee,
-    der Verein zahlt nie mehr als den Prozentsatz seines Pakets."""
+    """Gebühr kleiner als die geschätzte Stripe-Gebühr: keine application fee
+    (die Plattform bekommt nichts, Stripe berechnet dem Verein seine Gebühr)."""
     _activate_direct_fee(env)
     with env.cursor() as cur:
         cur.execute("insert into organization_fee_rules (organization_id, plan, percent, valid_from, created_at) "

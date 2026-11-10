@@ -206,7 +206,7 @@ describe('CX2 – Preis und Fragen', () => {
   it('zeigt USt-Hinweis und Stripe-Hinweis, ohne Entwurfskennzeichnung', () => {
     const text = wrapper.querySelector('#preis')?.textContent ?? ''
     expect(text).toContain('Alle Beträge zzgl. USt.')
-    expect(text).toContain('enthält die Zahlungsgebühren bei Online-Zahlung (Stripe), es kommt nichts hinzu')
+    expect(text).toContain('enthält die Stripe-Gebühr für Kartenzahlungen mit europäischen Karten')
     expect(text).not.toContain('Keine Gebühr pro Anmeldung')
     expect(text).not.toContain('Preise gültig für die Saison')
     expect(wrapper.querySelector('#preis small')).toBeNull()

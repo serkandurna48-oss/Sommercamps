@@ -28,8 +28,9 @@ def test_net_quote_keeps_club_total_at_plan_percent(rule, amount, platform, paym
     assert quote["fee_cents"] == platform
     assert quote["payment_fee_cents"] == payment
     assert quote["gross_fee_cents"] == fees.compute_fee_cents(rule, amount)
-    # Was der Verein insgesamt zahlt, übersteigt nie den Paketprozentsatz.
-    assert quote["fee_cents"] + quote["payment_fee_cents"] >= quote["gross_fee_cents"] or quote["fee_cents"] == 0
+    # EWR-Standardkarte: Plattformgebühr + Stripe-Gebühr = Paketgebühr, solange sie die Stripe-Gebühr deckt.
+    if quote["gross_fee_cents"] >= payment:
+        assert quote["fee_cents"] + quote["payment_fee_cents"] == quote["gross_fee_cents"]
 
 
 def test_zero_quote_stays_zero():

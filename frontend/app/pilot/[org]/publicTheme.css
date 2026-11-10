@@ -3965,6 +3965,112 @@
   border-color: var(--line-2, var(--line));
 }
 
+/* ── Campkarten kompakt und gleich gross (Serkan 10.11.) ─────────────────────────────
+   Alle Themes und Vereine: Raster mit gleich hohen Zeilen (auch einspaltig), Karte als Spalte,
+   Titel auf 2 Zeilen begrenzt, Leistungen mit fester Hoehe, Preis und Knopf unten angeheftet.
+   Das grosse Datum entfaellt: der Zeitraum steht schon unter dem Titel. */
+.cp-public[data-theme] .camps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: 1fr;
+  align-items: stretch;
+  gap: 12px;
+}
+@media (min-width: 700px) {
+  .cp-public[data-theme] .camps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1100px) {
+  .cp-public[data-theme] .camps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.cp-public[data-theme] .camps .camp {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  height: 100%;
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line-2);
+}
+.cp-public[data-theme='tradition'] .camps .camp,
+.cp-public[data-theme='kompakt'] .camps .camp,
+.cp-public[data-org='ksv-baunatal'] .camps .camp {
+  background: var(--surface);
+}
+.cp-public[data-theme='akademie'] .camps .camp {
+  border-color: rgba(255,255,255,.1);
+}
+.cp-public[data-theme] .camps .camp .c-date { display: none; }
+.cp-public[data-theme] .camps .camp .c-body {
+  flex: 1 1 auto;
+  height: auto;
+  gap: 8px;
+}
+.cp-public[data-theme] .camps .camp .c-body > span:first-child { gap: 2px !important; }
+.cp-public[data-theme] .camps .camp .c-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-size: 17px;
+  line-height: 1.3;
+  min-height: 2.6em;
+  overflow-wrap: anywhere;
+}
+.cp-public[data-theme] .camps .camp .c-when,
+.cp-public[data-org='ksv-baunatal'] .camps .camp .c-body > span:first-child > span:last-child {
+  font-size: 14px;
+  font-weight: 500;
+}
+.cp-public[data-theme] .camps .camp .tags {
+  flex-wrap: nowrap;
+  overflow: hidden;
+  gap: 6px;
+}
+.cp-public[data-theme] .camps .camp .tags > * { white-space: nowrap; flex: 0 0 auto; }
+.cp-public[data-theme] .camps .camp .tag,
+.cp-public[data-theme] .camps .camp .chip { font-size: 12px; padding: 3px 8px; }
+.cp-public[data-theme] .camps .camp .inc {
+  gap: 2px;
+  min-height: calc(3 * 1.4em);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: hidden;
+}
+.cp-public[data-theme] .camps .camp .inc li {
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+.cp-public[data-theme] .camps .camp .inc li::before { margin-right: 5px; }
+.cp-public[data-theme] .camps .camp .cap { gap: 4px; }
+.cp-public[data-theme] .camps .camp .cap .t {
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cp-public[data-theme] .camps .camp .c-foot {
+  margin-top: auto;
+  padding-top: 4px;
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+.cp-public[data-theme] .camps .camp .c-price { font-size: 16px; }
+.cp-public[data-theme] .camps .camp .c-go { padding: 7px 14px; font-size: 13px; min-height: 36px; }
+@media (max-width: 599px) {
+  .cp-public[data-theme] .camps .camp { padding: 14px 16px; border-radius: 16px; }
+  .cp-public[data-theme] .camps .camp .c-body { gap: 6px; }
+  .cp-public[data-theme] .camps .camp .cap { flex-direction: column; align-items: stretch; }
+  .cp-public[data-theme] .camps .camp .cap .bar { flex: 0 0 auto; }
+}
+
 /* KSV Tagesrunde 28.10. (mit Serkan abgestimmt): ein Rotton fuer alle Aktionen, Datum einmal pro Karte,
    "freiwillig" an optionalen Feldern, "So einfach geht's" vor den Camps. Nur KSV. */
 .cp-public[data-org='ksv-baunatal'] .camp:not(.full) .c-go {

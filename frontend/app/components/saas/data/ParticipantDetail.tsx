@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from 'react'
 import { de } from '../../../lib/i18n/de'
 import type { RegistrationAdmin } from '../../../lib/saasAdminApi'
 import { cancelRegistrationAction, updateRegistrationDetailsAction } from '../actions/waitlistActions'
+import InvoiceSection from '../billing/InvoiceSection'
 import { hasMissingEmergencyContact, hasNotes } from '../commandCenterLogic'
 import ActionForm from '../ui/ActionForm'
 import Button from '../ui/Button'
@@ -212,6 +213,12 @@ export default function ParticipantDetail({
           </div>
         )}
       </div>
+
+      {(registration.payment_status === 'paid' || registration.payment_status === 'refunded') && (
+        <div className="md:col-span-2">
+          <InvoiceSection orgSlug={orgSlug} registrationToken={registration.registration_token} />
+        </div>
+      )}
     </div>
   )
 }

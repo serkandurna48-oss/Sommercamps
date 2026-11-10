@@ -23,7 +23,14 @@ from fastapi.responses import JSONResponse
 
 from . import db
 from .config import get_settings
-from .routers import admin_router, camps_router, exports_router, organizations_router, registrations_router
+from .routers import (
+    admin_router,
+    camps_router,
+    exports_router,
+    invoices_router,
+    organizations_router,
+    registrations_router,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +76,7 @@ app.include_router(camps_router)
 app.include_router(registrations_router)
 app.include_router(admin_router)
 app.include_router(exports_router)
+app.include_router(invoices_router)
 
 
 @app.get("/health", tags=["System"])

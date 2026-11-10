@@ -61,6 +61,7 @@ from ..admin_schemas import (
     RegistrationDetailsUpdate,
     WaitlistPromoteResponse,
 )
+from .. import invoices
 from ..registration_lifecycle import InvalidStatusTransitionError
 from ..repositories import camps as camps_repo
 from ..repositories import organizations as organizations_repo
@@ -396,6 +397,9 @@ def cancel_registration(
         target_id=str(registration_token),
         metadata={"promoted": result["promoted"] is not None},
     )
+    # Best effort: a paid booking that is cancelled needs a storno. A failure
+    # here must not undo the cancellation.
+    invoices.sync_by_token(registration_token, organization["id"], created_by=auth.user_id)
     return CancelRegistrationResponse(**result)
 
 
@@ -437,6 +441,10 @@ def update_registration_payment_status(
         target_id=str(registration_token),
         metadata={"payment_status": data.payment_status},
     )
+    # Best effort. paid creates the invoice; refunded creates the storno
+    # when an invoice already exists. open/waived do not.
+    if data.payment_status in ("paid", "refunded"):
+        invoices.sync_by_token(registration_token, organization["id"], created_by=auth.user_id)
     return RegistrationAdminOut.model_validate(row)
 
 

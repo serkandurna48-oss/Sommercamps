@@ -34,7 +34,7 @@ OPTIONS = "/api/v1/organizations/{slug}/camps/summer-1/payment-options"
 def _activate_direct_fee(env, enabled=True, charges=True):
     _org(env, stripe_express_account_id=env.express, stripe_express_account_kind="direct_fee",
          stripe_express_charges_enabled=charges, stripe_express_payouts_enabled=charges,
-         stripe_express_details_submitted=charges, online_payment_enabled=enabled)
+         stripe_express_details_submitted=charges, online_payment_enabled=enabled, payment_route="connect")
 
 
 def _options(env):
@@ -80,11 +80,12 @@ def _connect_refund_event(env, refunded, event_type="charge.refunded", account=N
 
 def test_status_mapping_from_v1_retrieve(env):
     _org(env, stripe_express_account_id=env.express, stripe_express_account_kind="direct_fee",
-         online_payment_enabled=True)
+         online_payment_enabled=True, payment_route="connect")
     path = f"/admin/organizations/{env.slug}/payments/stripe"
     env.fake.account_state = {"charges_enabled": False, "payouts_enabled": False, "details_submitted": True,
                               "requirements": {"currently_due": ["a", "b"], "past_due": ["b", "c"]}}
     status = env.client.post(f"{path}/sync", headers=env.admin()).json()
+    # Route "connect": no active club account means no online payment, never a platform fallback.
     assert (status["state"], status["requirements_due"], status["online_payment_mode"]) == ("incomplete", 3, None)
     assert env.fake.named("Account.retrieve") == [("Account.retrieve", env.express)]
     env.fake.account_state = {"charges_enabled": True, "payouts_enabled": True, "details_submitted": True,

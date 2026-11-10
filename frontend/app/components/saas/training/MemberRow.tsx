@@ -1,4 +1,5 @@
 import type { ClubMember } from '../../../lib/saasAdminApi'
+import Link from '../preview/AdminLink'
 import { formatDateDE } from '../../../lib/formatDate'
 import { setMemberActiveAction } from '../actions/trainingActions'
 import StatusChip from '../data/StatusChip'
@@ -14,8 +15,13 @@ export default function MemberRow({ orgSlug, member, extraLabels = [], gridStyle
 }) {
   const toggle = setMemberActiveAction.bind(null, orgSlug, member.id, !member.active)
   return (
-    <li className="cp-table-row cp-member-cols" data-active={member.active} style={gridStyle}>
-      <p className="cp-subheading min-w-0 break-words" style={{ color: 'var(--cp-ink)' }}>{member.first_name} {member.last_name}</p>
+    <li className="cp-table-row cp-member-cols relative cursor-pointer hover:bg-[var(--cp-surface-2,transparent)]" data-active={member.active} style={gridStyle}>
+      <p className="cp-subheading min-w-0 break-words" style={{ color: 'var(--cp-ink)' }}>
+        {/* Ganze Zeile klickbar: der Link spannt sich per ::after über die Zeile, der Status-Knopf liegt darüber. */}
+        <Link href={`/pilot/${orgSlug}/mitglieder/${member.id}`} className="cp-focus after:absolute after:inset-0 after:content-['']" aria-label={`Details zu ${member.first_name} ${member.last_name} öffnen`}>
+          {member.first_name} {member.last_name}
+        </Link>
+      </p>
       <p className="cp-chip cp-num" style={{ color: 'var(--cp-muted)' }}>geboren {formatDateDE(member.birth_date)}</p>
       <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
         {member.member_number ? `Nr. ${member.member_number} · ` : ''}{member.source === 'csv' ? 'per CSV' : 'manuell'}
@@ -33,8 +39,8 @@ export default function MemberRow({ orgSlug, member, extraLabels = [], gridStyle
           </p>
         )
       })}
-      <ActionForm action={toggle} label={member.active ? 'Auf inaktiv setzen' : 'Auf aktiv setzen'} pendingLabel="Wird gespeichert …"
-        requireConfirm={member.active ? 'Mitglied auf inaktiv setzen? Es bekommt dann nicht mehr den Mitgliederpreis.' : undefined} />
+      <div className="relative z-10"><ActionForm action={toggle} label={member.active ? 'Auf inaktiv setzen' : 'Auf aktiv setzen'} pendingLabel="Wird gespeichert …"
+        requireConfirm={member.active ? 'Mitglied auf inaktiv setzen? Es bekommt dann nicht mehr den Mitgliederpreis.' : undefined} /></div>
     </li>
   )
 }

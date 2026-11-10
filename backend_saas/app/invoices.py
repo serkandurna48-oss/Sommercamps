@@ -20,6 +20,7 @@ Parent invoices in the club's name (billing B3, migration 20261107100000).
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 from datetime import date, datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
@@ -108,101 +109,309 @@ def allocate_number(cur, organization_id, year: int) -> int:
 # ---------------------------------------------------------------------------
 # Data snapshot and PDF
 # ---------------------------------------------------------------------------
+# The snapshot (invoices.data) is the immutable record; the PDF is only a
+# rendering of it. Snapshots written before the DIN 5008 layout lack the
+# optional keys (item.title / participant_first, booking_ref, payment,
+# branding, issuer.iban); every renderer path falls back to the older fields.
 
 _TAX_NOTE = {
     "kleinunternehmer": "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet (Kleinunternehmerregelung).",
 }
+FONT_DIR = Path(__file__).resolve().parent / "fonts"  # DejaVu Sans, see fonts/LICENSE-DejaVu.txt
+
+LOGO_TIMEOUT_SECONDS = 3.0
+LOGO_MAX_BYTES = 1_000_000
+_HEX_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
-def invoice_lines(data: dict) -> list[tuple[str, str]]:
-    """Text content of the PDF as (style, text) lines. Single source for the
-    renderer and for tests (fpdf compresses page streams)."""
-    issuer, recipient, item = data["issuer"], data["recipient"], data["item"]
-    storno = data["kind"] == "storno"
-    lines: list[tuple[str, str]] = [
-        ("issuer_name", issuer["legal_name"]),
-        ("small", f"{issuer['street']}, {issuer['postal_code']} {issuer['city']}"),
-    ]
-    if issuer.get("tax_number"):
-        lines.append(("small", f"Steuernummer: {issuer['tax_number']}"))
-    if issuer.get("vat_id"):
-        lines.append(("small", f"USt-IdNr.: {issuer['vat_id']}"))
-    lines.append(("small", f"E-Mail: {issuer['invoice_email']}"))
-    lines += [
-        ("gap", ""),
-        ("label", "Rechnungsempfänger"),
-        ("text", recipient["name"]),
-    ]
-    if recipient.get("address"):
-        # One line per address line ("street\npostal_code city" since 20261107130000).
-        lines += [("text", part) for part in str(recipient["address"]).split("\n") if part.strip()]
-    lines.append(("text", recipient["email"]))
-    lines += [
-        ("gap", ""),
-        ("title", "Stornorechnung" if storno else "Rechnung"),
-        ("text", f"Rechnungsnummer: {data['number']}"),
-        ("text", f"Rechnungsdatum: {_de_date(date.fromisoformat(data['issue_date']))}"),
-        ("text", f"Leistungszeitraum: {data['service_period']}"),
-    ]
-    if storno:
-        lines.append(("text", f"Storno zu Rechnung {data['cancels']['number']} vom "
-                              f"{_de_date(date.fromisoformat(data['cancels']['issue_date']))}"))
-    lines += [
-        ("gap", ""),
-        ("label", "Leistung"),
-        ("text", item["description"]),
-        ("text", f"Teilnehmer/in: {item['participant']}"),
-        ("text", f"Betrag: {euro(data['gross_cents'])}"),
-        ("gap", ""),
-    ]
+def _strip_period(description: str, period: str) -> str:
+    suffix = f" ({period})"
+    return description[: -len(suffix)] if period and description.endswith(suffix) else description
+
+
+def _position(data: dict) -> tuple[str, str, str]:
+    """(title line, participant line, period line) of the single invoice position."""
+    item, period = data["item"], data["service_period"]
+    title = item.get("title") or _strip_period(item["description"], period)
+    first = item.get("participant_first") or str(item["participant"]).split()[0]
+    return title, f"Teilnehmer/in: {first}", f"Zeitraum: {period}"
+
+
+def _payment_line(data: dict) -> str:
+    pay, issuer = data.get("payment") or {}, data["issuer"]
+    if data["kind"] != "storno" and pay.get("status") == "open":
+        iban = issuer.get("iban") or ""
+        return (f"Bitte überweisen Sie {euro(data['gross_cents'])} auf IBAN {iban} mit dem Verwendungszweck "
+                f"{data['number']}." if iban else
+                f"Bitte überweisen Sie {euro(data['gross_cents'])} mit dem Verwendungszweck {data['number']}.")
+    if data["kind"] != "storno" and pay.get("status") == "paid" and pay.get("paid_at"):
+        paid = _de_date(date.fromisoformat(pay["paid_at"]))
+        return f"Bezahlt am {paid} per Online-Zahlung." if pay.get("method") == "online" else f"Bezahlt am {paid}."
+    return data["payment_note"]
+
+
+def _tax_note(data: dict) -> str:
     tax = data["tax"]
     if tax["status"] == "ust_pflichtig":
-        lines += [
-            ("text", f"Nettobetrag: {euro(data['net_cents'])}"),
-            ("text", f"Umsatzsteuer {tax['vat_rate']} %: {euro(data['vat_cents'])}"),
-            ("total", f"Gesamtbetrag: {euro(data['gross_cents'])}"),
-        ]
-    else:
-        lines.append(("total", f"Gesamtbetrag: {euro(data['gross_cents'])}"))
-        note = _TAX_NOTE.get(tax["status"]) or tax.get("exemption_text") or ""
-        if note:
-            lines.append(("small", note))
-    lines += [
-        ("gap", ""),
-        ("small", data["payment_note"]),
-        ("small", f"Rechnung im Namen und für Rechnung von {issuer['legal_name']}, erstellt mit CampsPilot."),
-    ]
+        return ""
+    return _TAX_NOTE.get(tax["status"]) or tax.get("exemption_text") or ""
+
+
+def _title(data: dict) -> str:
+    if data["kind"] != "storno":
+        return "Rechnung"
+    c = data["cancels"]
+    return f"Stornorechnung zu Rechnung {c['number']} vom {_de_date(date.fromisoformat(c['issue_date']))}"
+
+
+def _info_rows(data: dict) -> list[tuple[str, str]]:
+    rows = [("Rechnungsnummer", data["number"]),
+            ("Rechnungsdatum", _de_date(date.fromisoformat(data["issue_date"]))),
+            ("Leistungszeitraum", data["service_period"])]
+    if data.get("booking_ref"):
+        rows.append(("Buchungsreferenz", data["booking_ref"]))
+    return rows
+
+
+def _address_lines(data: dict) -> list[str]:
+    r = data["recipient"]
+    lines = [r["name"]]
+    if r.get("address"):
+        # One line per address line ("street\npostal_code city" since 20261107130000).
+        lines += [p for p in str(r["address"]).split("\n") if p.strip()]
+    lines.append(r["email"])
     return lines
 
 
-FONT_DIR = Path(__file__).resolve().parent / "fonts"  # DejaVu Sans, see fonts/LICENSE-DejaVu.txt
+def _footer_columns(data: dict) -> list[list[str]]:
+    i = data["issuer"]
+    ids = [f"Steuernummer: {i['tax_number']}"] if i.get("tax_number") else []
+    ids += [f"USt-IdNr.: {i['vat_id']}"] if i.get("vat_id") else []
+    contact = [f"E-Mail: {i['invoice_email']}"] + ([f"IBAN: {i['iban']}"] if i.get("iban") else [])
+    return [[i["legal_name"], i["street"], f"{i['postal_code']} {i['city']}"], ids, contact]
+
+
+def invoice_lines(data: dict) -> list[tuple[str, str]]:
+    """All text of the PDF as (style, text) lines, in reading order. Used by
+    tests to check content without PDF text extraction (e.g. that no fee or
+    health data appears)."""
+    issuer = data["issuer"]
+    lines: list[tuple[str, str]] = [("issuer_name", issuer["legal_name"])]
+    lines += [("text", t) for t in _address_lines(data)]
+    lines += [("text", f"{k}: {v}") for k, v in _info_rows(data)]
+    lines.append(("title", _title(data)))
+    lines += [("text", t) for t in _position(data)]
+    lines.append(("text", f"Betrag: {euro(data['gross_cents'])}"))
+    if data["tax"]["status"] == "ust_pflichtig":
+        lines += [("text", f"Nettobetrag: {euro(data['net_cents'])}"),
+                  ("text", f"Umsatzsteuer {data['tax']['vat_rate']} %: {euro(data['vat_cents'])}")]
+    lines.append(("total", f"Gesamtbetrag: {euro(data['gross_cents'])}"))
+    if _tax_note(data):
+        lines.append(("small", _tax_note(data)))
+    lines.append(("small", _payment_line(data)))
+    lines += [("small", t) for col in _footer_columns(data) for t in col]
+    lines.append(("small", "Erstellt mit CampsPilot"))
+    return lines
+
+
+def _fetch_logo(url: Optional[str]) -> Optional[bytes]:
+    """PNG/JPEG bytes of the club logo, or None. Never raises and never
+    blocks for long: https only, no private/loopback targets, no redirects,
+    short timeout, size limit, content sniffed (not the Content-Type)."""
+    if not url:
+        return None
+    try:
+        import ipaddress
+        import socket
+        from urllib.parse import urlparse
+
+        import httpx
+
+        parts = urlparse(url)
+        if parts.scheme != "https" or not parts.hostname:
+            return None
+        for info in socket.getaddrinfo(parts.hostname, parts.port or 443, proto=socket.IPPROTO_TCP):
+            ip = ipaddress.ip_address(info[4][0])
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+                return None
+        body = bytearray()
+        with httpx.stream("GET", url, timeout=LOGO_TIMEOUT_SECONDS, follow_redirects=False) as resp:
+            if resp.status_code != 200:
+                return None
+            for chunk in resp.iter_bytes():
+                body += chunk
+                if len(body) > LOGO_MAX_BYTES:
+                    return None
+        raw = bytes(body)
+        return raw if raw.startswith((b"\x89PNG\r\n\x1a\n", b"\xff\xd8\xff")) else None
+    except Exception:  # noqa: BLE001 - the logo is decoration; the invoice must still render
+        logger.info("Invoice logo skipped")
+        return None
+
+
+def _accent(data: dict) -> tuple[int, int, int]:
+    color = (data.get("branding") or {}).get("color")
+    if isinstance(color, str) and _HEX_COLOR.match(color):
+        return int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+    return 90, 98, 110
 
 
 def render_pdf(data: dict, compress: bool = True) -> bytes:
-    from fpdf import FPDF
+    """A4 business letter in DIN 5008 (form B) style: logo top right, sender
+    line above the address window, info block right, position table, totals,
+    payment line, footer with issuer details on every page."""
+    from fpdf import FPDF, FontFace
 
-    pdf = FPDF(format="A4")
+    issuer = data["issuer"]
+    accent = _accent(data)
+    grey = (95, 99, 104)
+
+    class InvoicePDF(FPDF):
+        def header(self):
+            if self.page_no() > 1:
+                self.set_font("DejaVu", "", 8)
+                self.set_text_color(*grey)
+                self.set_xy(25, 12)
+                self.cell(0, 4, f"{'Stornorechnung' if data['kind'] == 'storno' else 'Rechnung'} {data['number']}",
+                          new_x="LMARGIN", new_y="NEXT")
+                self.set_draw_color(*accent)
+                self.set_line_width(0.3)
+                self.line(25, 18, 190, 18)
+                self.set_text_color(0, 0, 0)
+                self.set_y(24)
+
+        def footer(self):
+            self.set_draw_color(200, 200, 200)
+            self.set_line_width(0.2)
+            self.line(25, 267, 190, 267)
+            self.set_text_color(*grey)
+            self.set_font("DejaVu", "", 7)
+            for index, col in enumerate(_footer_columns(data)):
+                self.set_xy(25 + index * 55, 269)
+                self.multi_cell(53, 3.4, "\n".join(col), new_x="LEFT", new_y="NEXT")
+            self.set_xy(25, 283)
+            self.cell(125, 3.4, "Erstellt mit CampsPilot")
+            self.cell(40, 3.4, f"Seite {self.page_no()}/{{nb}}", align="R")
+            self.set_text_color(0, 0, 0)
+
+    pdf = InvoicePDF(format="A4")
     pdf.set_compression(compress)
     # Unicode TTF (embedded subset): names like Ayşe, Łukasz, Çelik render correctly.
     pdf.add_font("DejaVu", "", str(FONT_DIR / "DejaVuSans.ttf"))
     pdf.add_font("DejaVu", "B", str(FONT_DIR / "DejaVuSans-Bold.ttf"))
+    pdf.alias_nb_pages()
     pdf.set_title(f"{'Stornorechnung' if data['kind'] == 'storno' else 'Rechnung'} {data['number']}")
-    pdf.set_author(data["issuer"]["legal_name"])
-    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.set_author(issuer["legal_name"])
+    pdf.set_margins(25, 20, 20)
+    pdf.set_auto_page_break(auto=True, margin=36)
     pdf.add_page()
-    pdf.set_margins(20, 20, 20)
-    styles = {
-        "issuer_name": ("B", 13, 7), "small": ("", 9, 5), "label": ("B", 10, 6), "text": ("", 11, 6),
-        "title": ("B", 16, 10), "total": ("B", 12, 8),
-    }
-    for style, text in invoice_lines(data):
-        if style == "gap":
-            pdf.ln(5)
-            continue
-        weight, size, height = styles[style]
-        pdf.set_font("DejaVu", weight, size)
-        pdf.multi_cell(0, height, text, new_x="LMARGIN", new_y="NEXT")
+
+    # Letterhead: issuer top left, logo (if any) top right, thin accent line.
+    pdf.set_xy(25, 14)
+    pdf.set_font("DejaVu", "B", 12)
+    pdf.cell(100, 6, issuer["legal_name"], new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("DejaVu", "", 8.5)
+    pdf.set_text_color(*grey)
+    pdf.cell(100, 4.5, f"{issuer['street']}, {issuer['postal_code']} {issuer['city']}")
+    pdf.set_text_color(0, 0, 0)
+    logo = _fetch_logo((data.get("branding") or {}).get("logo_url"))
+    if logo:
+        try:
+            pdf.image(logo, x=140, y=10, w=50, h=20, keep_aspect_ratio=True)  # fits the box, aligned left
+        except Exception:  # noqa: BLE001 - corrupt image: skip
+            logger.info("Invoice logo skipped")
+    pdf.set_draw_color(*accent)
+    pdf.set_line_width(0.5)
+    pdf.line(25, 34, 190, 34)
+
+    # Address window (DIN 5008 B: 45 mm from top): sender line, then recipient.
+    pdf.set_xy(25, 45)
+    pdf.set_font("DejaVu", "", 6.5)
+    pdf.set_text_color(*grey)
+    pdf.set_draw_color(190, 190, 190)
+    pdf.set_line_width(0.2)
+    pdf.cell(85, 3.5, f"{issuer['legal_name']} · {issuer['street']} · {issuer['postal_code']} {issuer['city']}",
+             border="B", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_xy(25, 51)
+    pdf.set_font("DejaVu", "", 10)
+    for text in _address_lines(data):
+        pdf.cell(85, 5, text, new_x="LMARGIN", new_y="NEXT")
+
+    # Info block right.
+    pdf.set_xy(125, 47)
+    for label, value in _info_rows(data):
+        pdf.set_x(125)
+        pdf.set_font("DejaVu", "", 8)
+        pdf.set_text_color(*grey)
+        pdf.cell(30, 5, label)
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("DejaVu", "B" if label == "Rechnungsnummer" else "", 8.5)
+        pdf.cell(35, 5, value, new_x="LMARGIN", new_y="NEXT")
+
+    # Title and position table.
+    pdf.set_xy(25, 98)
+    pdf.set_font("DejaVu", "B", 12.5)
+    pdf.multi_cell(165, 7, _title(data), align="L", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(1)
+    pdf.set_font("DejaVu", "", 9)
+    intro = ("Hiermit stornieren wir die folgende Leistung:" if data["kind"] == "storno"
+             else "Wir stellen Ihnen folgende Leistung in Rechnung:")
+    pdf.cell(0, 5, intro, new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(3)
+
+    ust = data["tax"]["status"] == "ust_pflichtig"
+    unit = data["net_cents"] if ust else data["gross_cents"]
+    title, participant, period = _position(data)
+    pdf.set_font("DejaVu", "", 9)
+    pdf.set_draw_color(190, 190, 190)
+    pdf.set_line_width(0.2)
+    with pdf.table(col_widths=(11, 64, 16, 37, 37), text_align=("CENTER", "LEFT", "CENTER", "RIGHT", "RIGHT"),
+                   borders_layout="HORIZONTAL_LINES", line_height=5, padding=(1.5, 1.5),
+                   headings_style=FontFace(emphasis="BOLD", fill_color=(242, 243, 245))) as table:
+        head = table.row()
+        for text in ("Pos.", "Beschreibung", "Menge", "Einzelpreis" + (" netto" if ust else ""),
+                     "Betrag" + (" netto" if ust else "")):
+            head.cell(text)
+        row = table.row()
+        row.cell("1")
+        row.cell(f"{title}\n{participant}\n{period}")
+        row.cell("1")
+        row.cell(euro(unit))
+        row.cell(euro(unit))
+    pdf.ln(4)
+
+    # Totals block (kept together with the payment line on one page).
+    totals = ([("Nettobetrag", euro(data["net_cents"])),
+               (f"Umsatzsteuer {data['tax']['vat_rate']} %", euro(data["vat_cents"]))] if ust else [])
+    needed = 8 * (len(totals) + 1) + 40
+    if pdf.will_page_break(needed):
+        pdf.add_page()
+    for label, value in totals:
+        pdf.set_x(115)
+        pdf.set_font("DejaVu", "", 9)
+        pdf.cell(40, 5.5, label)
+        pdf.cell(35, 5.5, value, align="R", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_x(115)
+    pdf.set_draw_color(*accent)
+    pdf.set_line_width(0.3)
+    pdf.line(115, pdf.get_y() + 0.5, 190, pdf.get_y() + 0.5)
+    pdf.ln(1.5)
+    pdf.set_x(115)
+    pdf.set_font("DejaVu", "B", 10.5)
+    pdf.cell(40, 7, "Gesamtbetrag")
+    pdf.cell(35, 7, euro(data["gross_cents"]), align="R", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(6)
+
+    pdf.set_font("DejaVu", "", 9)
+    note = _tax_note(data)
+    if note:
+        pdf.multi_cell(165, 4.8, note, align="L", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(2)
+    pdf.multi_cell(165, 4.8, _payment_line(data), align="L", new_x="LMARGIN", new_y="NEXT")
     return bytes(pdf.output())
+
+
 
 
 def recipient_address(booking: dict) -> Optional[str]:
@@ -292,6 +501,9 @@ def create_invoice(registration_id, organization_id, created_by: Optional[str] =
             (organization_id,),
         )
         profile = cur.fetchone()
+        if profile is not None:
+            cur.execute("select logo_url, primary_color, iban from organizations where id = %s", (organization_id,))
+            profile = {**profile, **(cur.fetchone() or {})}
         if profile is None:
             # Commit the pending mark (raising inside this block would roll it back).
             cur.execute("update camp_registrations set invoice_pending_reason = %s where id = %s",
@@ -315,8 +527,15 @@ def _issue(cur, booking: dict, profile: dict, amount: int, organization_id, regi
         "year": issue.year, "sequence": sequence,
         "issue_date": issue.isoformat(),
         "service_period": _service_period(booking["start_date"], booking["end_date"]),
-        "issuer": {k: profile[k] for k in ("legal_name", "street", "postal_code", "city", "tax_number",
-                                           "vat_id", "invoice_email")},
+        "issuer": {**{k: profile[k] for k in ("legal_name", "street", "postal_code", "city", "tax_number",
+                                              "vat_id", "invoice_email")},
+                   "iban": profile.get("iban")},
+        # Rendering only (logo/accent line); the PDF never depends on live club data.
+        "branding": {"logo_url": profile.get("logo_url"), "color": profile.get("primary_color")},
+        "booking_ref": str(registration_id).split("-")[0].upper(),
+        "payment": {"status": "paid", "method": "online" if online else "manual",
+                    "paid_at": (booking["paid_at"].astimezone(BERLIN).date().isoformat()
+                                if booking.get("paid_at") else None)},
         # Billing address collected for paid bookings since 20261107130000; older
         # bookings have none (name + email only, as before).
         "recipient": {"name": f"{booking['parent_first_name']} {booking['parent_last_name']}",
@@ -325,6 +544,8 @@ def _issue(cur, booking: dict, profile: dict, amount: int, organization_id, regi
             "description": f"{'Training' if booking['offer_id'] else 'Camp'}: {booking['camp_title']} "
                            f"({_service_period(booking['start_date'], booking['end_date'])})",
             "participant": f"{booking['child_first_name']} {booking['child_last_name']}",
+            "title": f"{'Training' if booking['offer_id'] else 'Camp'}: {booking['camp_title']}",
+            "participant_first": booking["child_first_name"],
         },
         "tax": {"status": profile["tax_status"], "vat_rate": rate,
                 "exemption_text": profile["tax_exemption_text"]},
@@ -373,7 +594,8 @@ def create_stornos(registration_id, organization_id, created_by: Optional[str] =
         prefix = source["number"].rsplit("-", 2)[0]
         net, vat = storno_split(original, target, int(done["net"]), int(done["vat"]))
         data = {
-            **{k: source[k] for k in ("service_period", "issuer", "recipient", "item", "tax")},
+            **{k: source[k] for k in ("service_period", "issuer", "recipient", "item", "tax", "branding", "booking_ref")
+               if k in source},
             "kind": "storno",
             "number": format_number(prefix, issue.year, sequence),
             "year": issue.year, "sequence": sequence,

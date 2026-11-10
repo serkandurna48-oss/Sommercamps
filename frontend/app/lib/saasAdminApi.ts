@@ -161,7 +161,7 @@ export class SlugConflictError extends Error {
 
 /** 409 `plan_camp_limit`: the plan (Starter) allows one active camp. The message
  * comes from the backend (Du-Form for admins) and is safe to show as is. */
-export const PLAN_CAMP_LIMIT_MESSAGE = 'Im Paket Starter ist 1 aktives Camp enthalten. Für mehr Camps wechsle ins Paket Verein.'
+export const PLAN_CAMP_LIMIT_MESSAGE = 'Im Paket Starter ist 1 aktives Camp enthalten. Für weitere Camps wechsle ins Paket Verein.'
 export class PlanCampLimitError extends AdminActionError {
   constructor(message: string = PLAN_CAMP_LIMIT_MESSAGE) {
     super(message)
@@ -876,6 +876,12 @@ export interface ClubMember {
   created_at: string
 }
 
+/** Detailansicht eines Mitglieds: alle Daten, jedes Zusatzfeld und die verknüpfte Spielerakte (falls vorhanden). */
+export interface ClubMemberDetail extends ClubMember {
+  updated_at: string
+  player: { id: string; first_name: string; last_name: string; birth_date: string } | null
+}
+
 /** Ziel einer CSV-Spalte im Import; null = nicht importieren. */
 export type MemberMappingTarget = 'first_name' | 'last_name' | 'birth_date' | 'member_number' | { extra: string } | null
 
@@ -1028,6 +1034,13 @@ export async function fetchClubMembersAdmin(orgSlug: string, token: string, filt
   const res = await adminFetch(`${MEMBERS_BASE(orgSlug)}${query ? `?${query}` : ''}`, token)
   if (!res.ok) throw new TrainingAdminError('Mitglieder konnten nicht geladen werden.')
   return res.json() as Promise<ClubMember[]>
+}
+
+export async function fetchClubMemberAdmin(orgSlug: string, memberId: string, token: string): Promise<ClubMemberDetail | null> {
+  const res = await adminFetch(`${MEMBERS_BASE(orgSlug)}/${encodeURIComponent(memberId)}`, token)
+  if (res.status === 404 || res.status === 422) return null
+  if (!res.ok) throw new TrainingAdminError('Mitglied konnte nicht geladen werden.')
+  return res.json() as Promise<ClubMemberDetail>
 }
 
 export async function createClubMemberAdmin(orgSlug: string, token: string, data: ClubMemberCreateInput): Promise<ClubMember> {
@@ -1342,10 +1355,12 @@ export interface StripePaymentStatus {
   synced_at: string | null
   legacy_account_linked: boolean
   legacy_active: boolean
-  /** direct_fee: Managed Risk direct charge with platform fee; destination: B2 Express (staging); direct: legacy Standard account. */
-  online_payment_mode: 'direct_fee' | 'destination' | 'direct' | null
+  /** platform: CampsPilot collects on its own Stripe account (no club account). direct_fee: Managed Risk direct charge with platform fee; destination: B2 Express (staging); direct: legacy Standard account. */
+  online_payment_mode: 'direct_fee' | 'destination' | 'direct' | 'platform' | null
   account_kind?: 'direct_fee' | 'destination' | null
   service_ready: boolean
+  /** platform (default): CampsPilot collects; connect: the club's own Stripe account. */
+  payment_route?: 'platform' | 'connect'
 }
 
 export async function fetchStripePaymentStatusAdmin(orgSlug: string, token: string): Promise<StripePaymentStatus> {
@@ -1376,6 +1391,13 @@ const STRIPE_ONBOARDING_PREFIXES = ['https://connect.stripe.com/', 'https://acco
 export async function setOnlinePaymentEnabledAdmin(orgSlug: string, token: string, enabled: boolean): Promise<StripePaymentStatus> {
   const res = await adminMutate(`/admin/platform/organizations/${encodeURIComponent(orgSlug)}/online-payment`, token, 'PATCH', { enabled })
   if (!res.ok) throw new AdminActionError('Online-Zahlung konnte nicht umgeschaltet werden.')
+  return res.json() as Promise<StripePaymentStatus>
+}
+
+/** Platform owner: choose how this club's online payments run. */
+export async function setPaymentRouteAdmin(orgSlug: string, token: string, route: 'platform' | 'connect'): Promise<StripePaymentStatus> {
+  const res = await adminMutate(`/admin/platform/organizations/${encodeURIComponent(orgSlug)}/payment-route`, token, 'PATCH', { route })
+  if (!res.ok) throw new AdminActionError('Zahlungsweg konnte nicht geändert werden.')
   return res.json() as Promise<StripePaymentStatus>
 }
 
@@ -1447,6 +1469,64 @@ export async function fetchFeeMonthAdmin(orgSlug: string, token: string, month: 
   const res = await adminFetch(`/admin/platform/organizations/${encodeURIComponent(orgSlug)}/fees?month=${encodeURIComponent(month)}`, token)
   if (!res.ok) throw new AdminActionError('Monatsübersicht konnte nicht geladen werden.')
   return res.json() as Promise<FeeMonth>
+}
+
+export interface PayoutBooking {
+  date: string
+  camp_title: string
+  amount_cents: number
+  fee_cents: number
+}
+
+/** A refund booked in this month, whatever month the payment was made in. */
+export interface PayoutRefund {
+  date: string
+  camp_title: string
+  refund_cents: number
+  fee_returned_cents: number
+}
+
+/** Money that arrived but was not booked as paid: needs a human decision. */
+export interface PayoutReview {
+  date: string
+  camp_title: string | null
+  amount_cents: number | null
+  reason: string
+}
+
+export interface PayoutMonth {
+  month: string
+  paid_cents: number
+  refunded_cents: number
+  fee_cents: number
+  payout_cents: number
+  iban: string | null
+  bookings: PayoutBooking[]
+  refunds: PayoutRefund[]
+  review: PayoutReview[]
+  /** payout_cents < 0: settled with the next month. */
+  carry_over: boolean
+  payout: { payout_cents: number; paid_at: string; reference: string } | null
+  changed_since_paid: boolean
+}
+
+/** Owner only: platform payments of one club and month (what the platform owes the club). */
+export async function fetchPayoutsAdmin(orgSlug: string, token: string, month: string): Promise<PayoutMonth> {
+  const res = await adminFetch(`/admin/platform/organizations/${encodeURIComponent(orgSlug)}/payouts?month=${encodeURIComponent(month)}`, token)
+  if (!res.ok) throw new AdminActionError('Auszahlungen konnten nicht geladen werden.')
+  return res.json() as Promise<PayoutMonth>
+}
+
+export async function markPayoutPaidAdmin(
+  orgSlug: string, token: string, month: string, data: { paid_at: string; reference: string },
+): Promise<PayoutMonth> {
+  const res = await adminMutate(`/admin/platform/organizations/${encodeURIComponent(orgSlug)}/payouts/${encodeURIComponent(month)}/mark-paid`, token, 'POST', data)
+  if (res.status === 409) {
+    const body = await res.json().catch(() => null) as { detail?: unknown } | null
+    throw new AdminActionError(typeof body?.detail === 'string' ? body.detail : 'Auszahlung kann nicht markiert werden.')
+  }
+  if (!res.ok) throw new AdminActionError('Auszahlung konnte nicht gespeichert werden.')
+  return res.json() as Promise<PayoutMonth>
 }
 
 export async function fetchFeeRulesAdmin(orgSlug: string, token: string): Promise<FeeRules> {

@@ -15,6 +15,7 @@ from app.admin_schemas import CampCreate, CampUpdate
 from app.main import app
 from app.notifications.mail import FakeProvider, reset_provider_for_testing
 from app.repositories import camps, memberships
+from .test_billing_fees import _add_rule
 from .test_registrations_api import _valid_payload
 from .test_review_postgres import local_database, real_db  # noqa: F401
 
@@ -31,12 +32,14 @@ def fake_provider():
 
 def _camp(real_db, *, price=16900, member=14900, capacity=5):
     cursor, tenant, _ = real_db
+    # The fixture org already holds a published camp; a second one needs the Verein plan.
+    _add_rule(cursor, tenant.organization_id, "verein", "4.90", date(2026, 1, 1))
     camp = camps.create_camp(tenant.organization_id, CampCreate(
         slug=f"camp-{uuid4().hex[:6]}", title="Herbstcamp", start_date=date(2027, 10, 13),
         end_date=date(2027, 10, 15), age_min=6, age_max=14, capacity=capacity,
         price_cents=price, price_member_cents=member, status="draft",
     ))
-    with cursor() as cur:  # publish directly: the fixture org is on the starter plan (camp limit)
+    with cursor() as cur:  # publish directly
         cur.execute("update camps set status='published' where id=%s", (camp["id"],))
     return camp
 

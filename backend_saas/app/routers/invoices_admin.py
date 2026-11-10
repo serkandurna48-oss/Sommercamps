@@ -203,7 +203,7 @@ def registration_invoices(
                             and reg["payment_status"] in invoices.PAID_STATES)
     remaining = (reg["stripe_checkout_amount_cents"] or 0) - (reg["refunded_cents"] or 0)
     refundable = (
-        reg["stripe_charge_type"] in ("destination", "direct_fee") and reg["stripe_payment_intent_id"] is not None
+        reg["stripe_charge_type"] in ("destination", "direct_fee", "platform") and reg["stripe_payment_intent_id"] is not None
         and reg["payment_status"] in ("paid", "partially_refunded") and remaining > 0
     )
     return RegistrationInvoicesOut(

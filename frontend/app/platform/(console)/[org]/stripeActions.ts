@@ -2,7 +2,7 @@
 
 import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { revalidatePath } from 'next/cache'
-import { AdminActionError, connectStripeAccount, fetchMe, setOnlinePaymentEnabledAdmin } from '../../../lib/saasAdminApi'
+import { AdminActionError, connectStripeAccount, fetchMe, setOnlinePaymentEnabledAdmin, setPaymentRouteAdmin } from '../../../lib/saasAdminApi'
 
 export interface StripeConnectState {
   error: string | null
@@ -54,6 +54,27 @@ export async function setOnlinePaymentEnabledAction(
     await setOnlinePaymentEnabledAdmin(orgSlug, token, enabled)
   } catch (error) {
     return { error: error instanceof AdminActionError ? error.message : 'Online-Zahlung konnte nicht umgeschaltet werden.', saved: false }
+  }
+  revalidatePath(`/platform/${orgSlug}`)
+  return { error: null, saved: true }
+}
+
+/** Owner only: payment route per club (platform = CampsPilot collects; connect = the club's own account). */
+export async function setPaymentRouteAction(
+  orgSlug: string,
+  _previous: OnlinePaymentSwitchState,
+  formData: FormData,
+): Promise<OnlinePaymentSwitchState> {
+  const token = await getValidAccessToken()
+  if (!token) return { error: 'Sitzung abgelaufen – bitte neu anmelden.', saved: false }
+  const route = String(formData.get('route') ?? '')
+  if (route !== 'platform' && route !== 'connect') return { error: 'Bitte einen Zahlungsweg wählen.', saved: false }
+  try {
+    const me = await fetchMe(token)
+    if (!me.is_platform_owner) return { error: 'Nur Plattform-Betreiber dürfen den Zahlungsweg ändern.', saved: false }
+    await setPaymentRouteAdmin(orgSlug, token, route)
+  } catch (error) {
+    return { error: error instanceof AdminActionError ? error.message : 'Zahlungsweg konnte nicht geändert werden.', saved: false }
   }
   revalidatePath(`/platform/${orgSlug}`)
   return { error: null, saved: true }

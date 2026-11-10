@@ -3,7 +3,7 @@ import { AdminActionError, createCampAdmin, fetchFeeMonthAdmin, PlanCampLimitErr
 
 afterEach(() => vi.unstubAllGlobals())
 
-const MESSAGE = 'Im Paket Starter ist 1 aktives Camp enthalten. Für mehr Camps wechsle ins Paket Verein.'
+const MESSAGE = 'Im Paket Starter ist 1 aktives Camp enthalten. Für weitere Camps wechsle ins Paket Verein.'
 
 function stubFetch(status: number, body: unknown) {
   const fetchMock = vi.fn(async () => new Response(JSON.stringify(body), { status }))

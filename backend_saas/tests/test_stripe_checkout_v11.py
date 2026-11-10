@@ -76,7 +76,7 @@ def test_direct_charge_checkout_uses_club_account_and_database_amount(monkeypatc
         "id": uuid4(), "status": "registered", "payment_status": "open",
         "stripe_checkout_session_id": None,
         "stripe_account_id": "acct_1234567890123456",
-        "stripe_charges_enabled": True, "online_payment_enabled": True,
+        "stripe_charges_enabled": True, "online_payment_enabled": True, "payment_route": "connect",
         "title": "Feriencamp", "price_cents": 14900, "currency": "EUR",
         "camp_status": "published",
     }
@@ -112,7 +112,7 @@ def test_waitlisted_registration_cannot_checkout(monkeypatch):
         "id": uuid4(), "status": "waitlist", "payment_status": "open",
         "stripe_checkout_session_id": None,
         "stripe_account_id": "acct_1234567890123456",
-        "stripe_charges_enabled": True, "online_payment_enabled": True,
+        "stripe_charges_enabled": True, "online_payment_enabled": True, "payment_route": "connect",
         "title": "Feriencamp", "price_cents": 14900, "currency": "EUR",
         "camp_status": "published",
     }
@@ -248,7 +248,7 @@ def test_completed_session_without_confirmed_payment_cannot_be_replaced(monkeypa
         "id": uuid4(), "status": "registered", "payment_status": "open",
         "stripe_checkout_session_id": "cs_test_1234567890",
         "stripe_account_id": "acct_1234567890123456",
-        "stripe_charges_enabled": True, "online_payment_enabled": True,
+        "stripe_charges_enabled": True, "online_payment_enabled": True, "payment_route": "connect",
         "title": "Feriencamp", "price_cents": 14900, "currency": "EUR",
         "camp_status": "published",
     }
@@ -445,7 +445,7 @@ def test_checkout_marks_session_and_payment_intent_as_campspilot(monkeypatch):
     booking = {
         "id": uuid4(), "status": "registered", "payment_status": "open",
         "stripe_checkout_session_id": None, "stripe_account_id": ACCOUNT,
-        "stripe_charges_enabled": True, "online_payment_enabled": True,
+        "stripe_charges_enabled": True, "online_payment_enabled": True, "payment_route": "connect",
         "title": "Feriencamp", "price_cents": 14900, "currency": "EUR", "camp_status": "published",
     }
     cursor = _Cursor(booking)
@@ -486,7 +486,7 @@ def test_checkout_never_holds_a_lock_and_refuses_a_concurrent_change(monkeypatch
     booking = {
         "id": uuid4(), "status": "registered", "payment_status": "open",
         "stripe_checkout_session_id": None, "stripe_account_id": ACCOUNT,
-        "stripe_charges_enabled": True, "online_payment_enabled": True,
+        "stripe_charges_enabled": True, "online_payment_enabled": True, "payment_route": "connect",
         "title": "Feriencamp", "price_cents": 14900, "currency": "EUR", "camp_status": "published",
     }
 

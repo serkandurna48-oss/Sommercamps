@@ -6,6 +6,7 @@ import { computeBrandSafe } from '../../lib/brandPipeline'
 import { readableTextOn } from '../../lib/readableTextOn'
 import type { OrganizationPublic } from '../../lib/saasApi'
 import { orgShortCode } from '../../lib/parentFlowFormat'
+import { withDefaultDesign } from './defaultDesign'
 import GrainOverlay from './GrainOverlay'
 import { publicFontClassName } from './publicFonts'
 import PublicFooter from './PublicFooter'
@@ -17,7 +18,8 @@ const THEME_SURFACE: Record<string, string> = {
   kompakt: '#FFFFFF',
 }
 
-export default function LegalShell({ org, children }: { org: OrganizationPublic; children: ReactNode }) {
+export default function LegalShell({ org: storedOrg, children }: { org: OrganizationPublic; children: ReactNode }) {
+  const org = withDefaultDesign(storedOrg)
   const ground = THEME_SURFACE[org.theme] ?? THEME_SURFACE.tradition
   const brand = computeBrandSafe(org.primary_color, ground)
   const short = orgShortCode(org.name)

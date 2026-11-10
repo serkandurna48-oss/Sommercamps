@@ -424,11 +424,11 @@ def test_payment_options_same_rule_for_training_and_camp(real_db, monkeypatch):
     monkeypatch.setattr(payments, "get_settings", lambda: SimpleNamespace(
         stripe_checkout_enabled=True, stripe_secret_key="sk_test_x", stripe_webhook_secret="whsec_x"))
     monkeypatch.setattr(payments, "_organization_payment_details", lambda _org: {
-        "online_payment_enabled": True, "stripe_charges_enabled": True, "stripe_account_id": "acct_1234567890abcdef"})
+        "online_payment_enabled": True, "payment_route": "connect", "stripe_charges_enabled": True, "stripe_account_id": "acct_1234567890abcdef"})
     base = f"/api/v1/organizations/{tenant.slug}/camps"
     with TestClient(app) as client:
-        assert client.get(f"{base}/{session['slug']}/payment-options").json() == {"online_payment_available": True}
-        assert client.get(f"{base}/summer-1/payment-options").json() == {"online_payment_available": True}
+        assert client.get(f"{base}/{session['slug']}/payment-options").json() == {"online_payment_available": True, "online_payee": "club"}
+        assert client.get(f"{base}/summer-1/payment-options").json() == {"online_payment_available": True, "online_payee": "club"}
 
 
 def test_platform_stats_use_applied_price(real_db):

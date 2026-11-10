@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { CampPublic, OrganizationPublic, RegistrationCreated } from '../../lib/saasApi'
-import { createStripeCheckout, getStripePaymentAvailability } from '../../lib/saasApi'
+import { createStripeCheckout, getStripePaymentOptions } from '../../lib/saasApi'
 import { formatCampDateRange, formatPrice } from '../../lib/parentFlowFormat'
 import { buildCampIcs } from '../../lib/ics'
 import { useParentFlowMotion } from './motion'
@@ -38,6 +38,7 @@ export default function DoneScreen({
 }) {
   const [copiedField, setCopiedField] = useState<'ref' | 'iban' | 'betrag' | null>(null)
   const [stripeAvailable, setStripeAvailable] = useState(false)
+  const [payeeIsPlatform, setPayeeIsPlatform] = useState(false)
   const [stripeLoading, setStripeLoading] = useState(false)
   const [stripeError, setStripeError] = useState<string | null>(null)
   const waitlisted = result.status === 'waitlist'
@@ -56,8 +57,10 @@ export default function DoneScreen({
   useEffect(() => {
     if (demo || waitlisted || result.payment_status !== 'open' || priceCents <= 0) return
     let current = true
-    void getStripePaymentAvailability(org.slug, camp.slug).then(available => {
-      if (current) setStripeAvailable(available)
+    void getStripePaymentOptions(org.slug, camp.slug).then(options => {
+      if (!current) return
+      setStripeAvailable(options.available)
+      setPayeeIsPlatform(options.payee === 'platform')
     })
     return () => { current = false }
   }, [demo, org.slug, camp.slug, priceCents, result.payment_status, waitlisted])
@@ -181,7 +184,9 @@ export default function DoneScreen({
             <div className="done-transfer" style={{ marginBottom: 18 }}>
               <span className="done-transfer-label">Online bezahlen</span>
               <p style={{ marginTop: 6, marginBottom: 12 }}>
-                Sicher per Karte über Stripe. Der Betrag geht direkt an {payTo}.
+                {payeeIsPlatform
+                  ? `Sicher per Karte über Stripe. Zahlungsempfänger ist CampsPilot im Auftrag von ${payTo}.`
+                  : `Sicher per Karte über Stripe. Der Betrag geht direkt an ${payTo}.`}
               </p>
               <button className="btn primary btn-pill" type="button" disabled={stripeLoading}
                 aria-busy={stripeLoading} onClick={handleStripeCheckout}>

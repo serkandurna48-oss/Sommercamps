@@ -172,10 +172,12 @@ def test_pdf_contains_the_required_fields_only():
     assert pdf.startswith(b"%PDF")
     content = extract_text(pdf)
     for needle in ("Rechnung", "TV-2026-0001", "Testverein e.V.", "Am Sportplatz 3", "34117 Kassel",
-                   "Steuernummer: 026 123 45678", "Max Mustermann", "max@example.com", "Lena Mustermann",
-                   "Rechnungsdatum: 07.11.2026", "Leistungszeitraum: 05.07.2027 - 09.07.2027",
-                   "Nettobetrag: 125,21 EUR", "Umsatzsteuer 19 %: 23,79 EUR", "Gesamtbetrag: 149,00 EUR"):
+                   "Steuernummer: 026 123 45678", "Max Mustermann", "max@example.com",
+                   "Teilnehmer/in: Lena", "Rechnungsnummer", "Rechnungsdatum", "07.11.2026",
+                   "Leistungszeitraum", "05.07.2027 - 09.07.2027", "Camp: Sommercamp", "Erstellt mit CampsPilot",
+                   "Nettobetrag", "125,21 EUR", "Umsatzsteuer 19 %", "23,79 EUR", "Gesamtbetrag", "149,00 EUR"):
         assert needle in content, needle
+    assert "Mustermann" not in content.split("Teilnehmer/in:")[1].split("\n")[0]  # child: first name only
     text = " ".join(t for _, t in invoices.invoice_lines(_data()))
     for forbidden in ("Gebühr", "Plattformgebühr", "2017", "Allerg", "Geburt"):
         assert forbidden not in text
@@ -183,19 +185,95 @@ def test_pdf_contains_the_required_fields_only():
 
 
 def test_pdf_tax_variants():
-    klein = " ".join(t for _, t in invoices.invoice_lines(_data(
+    klein = extract_text(_pdf_text(_data(
         tax={"status": "kleinunternehmer", "vat_rate": None, "exemption_text": None}, net_cents=14900, vat_cents=0)))
-    assert "§ 19 UStG" in klein and "Umsatzsteuer" not in klein.replace("keine Umsatzsteuer", "")
-    frei = " ".join(t for _, t in invoices.invoice_lines(_data(
+    assert "§ 19 UStG" in klein and "Nettobetrag" not in klein and "Umsatzsteuer 19" not in klein
+    assert "Gesamtbetrag" in klein and "149,00 EUR" in klein
+    frei = extract_text(_pdf_text(_data(
         tax={"status": "steuerbefreit", "vat_rate": None, "exemption_text": "Steuerfrei nach § 4 Nr. 22 b UStG"},
         net_cents=14900, vat_cents=0)))
     assert "Steuerfrei nach § 4 Nr. 22 b UStG" in frei and "Nettobetrag" not in frei
+    ust = extract_text(_pdf_text(_data()))
+    assert "§ 19" not in ust and "Steuerfrei" not in ust
     storno = _pdf_text(_data(kind="storno", number="TV-2026-0002", gross_cents=-14900, net_cents=-12521,
                              vat_cents=-2379, cancels={"id": "x", "number": "TV-2026-0001", "issue_date": "2026-11-07"}))
     storno = extract_text(storno)
-    assert "Stornorechnung" in storno and "Storno zu Rechnung TV-2026-0001 vom 07.11.2026" in storno
-    assert "-149,00 EUR" in storno
+    assert "Stornorechnung zu Rechnung TV-2026-0001 vom 07.11.2026" in storno
+    assert "-149,00 EUR" in storno and "-125,21 EUR" in storno
 
+
+def test_pdf_new_snapshot_fields_payment_footer_and_old_snapshot_fallback():
+    issuer = {**_data()["issuer"], "iban": "DE89370400440532013000", "vat_id": "DE123456789"}
+    new = extract_text(_pdf_text(_data(
+        issuer=issuer, booking_ref="A1B2C3D4", branding={"logo_url": None, "color": "#1E6E3C"},
+        item={"description": "x", "participant": "Lena Mustermann", "title": "Camp: Sommercamp",
+              "participant_first": "Lena"},
+        payment={"status": "paid", "method": "online", "paid_at": "2026-11-07"})))
+    for needle in ("Buchungsreferenz", "A1B2C3D4", "Bezahlt am 07.11.2026 per Online-Zahlung.",
+                   "IBAN: DE89370400440532013000", "USt-IdNr.: DE123456789", "E-Mail: rechnung@example.com"):
+        assert needle in new, needle
+    open_ = extract_text(_pdf_text(_data(issuer=issuer, payment={"status": "open"})))
+    assert "Bitte überweisen Sie 149,00 EUR auf IBAN DE89370400440532013000" in open_
+    assert "TV-2026-0001" in open_.split("Verwendungszweck")[1]
+    old = extract_text(_pdf_text(_data()))  # snapshot without the new keys
+    assert "Betrag erhalten. Vielen Dank!" in old and "Buchungsreferenz" not in old and "IBAN" not in old
+
+
+def test_pdf_long_position_and_page_break_stay_valid():
+    data = _data(item={"description": "Camp: " + "Sehr langer Campname " * 12, "participant": "Lena Mustermann"})
+    pdf = invoices.render_pdf(data, compress=False)
+    assert pdf.count(b"/Type /Page\n") >= 1 and pdf.startswith(b"%PDF")
+    assert "Gesamtbetrag" in extract_text(pdf)
+
+
+def _png() -> bytes:
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (200, 80), (30, 110, 60)).save(buf, "PNG")
+    return buf.getvalue()
+
+
+def test_logo_is_embedded_and_failures_never_break_rendering(monkeypatch):
+    data = _data(branding={"logo_url": "https://cdn.example.com/logo.png", "color": "#1E6E3C"})
+    monkeypatch.setattr(invoices, "_fetch_logo", lambda url: _png())
+    with_logo = invoices.render_pdf(data, compress=False)
+    assert b"/Subtype /Image" in with_logo
+    for broken in (lambda url: None, lambda url: b"not an image"):
+        monkeypatch.setattr(invoices, "_fetch_logo", broken)
+        pdf = invoices.render_pdf(data, compress=False)
+        assert b"/Subtype /Image" not in pdf and "Gesamtbetrag" in extract_text(pdf)
+
+
+def test_fetch_logo_rules(monkeypatch):
+    import httpx
+
+    monkeypatch.setattr("socket.getaddrinfo", lambda *a, **k: [(2, 1, 6, "", ("93.184.216.34", 443))])
+
+    def serve(handler):
+        transport = httpx.MockTransport(handler)
+        monkeypatch.setattr(httpx, "stream", lambda m, u, **kw: httpx.Client(transport=transport).stream(m, u, **kw))
+
+    serve(lambda request: httpx.Response(200, content=_png(), headers={"content-type": "text/plain"}))
+    assert invoices._fetch_logo("https://cdn.example.com/l.png") == _png()  # sniffed, not Content-Type
+    assert invoices._fetch_logo("http://cdn.example.com/l.png") is None  # https only
+    assert invoices._fetch_logo(None) is None and invoices._fetch_logo("") is None
+    serve(lambda request: httpx.Response(200, content=b"<svg/>"))
+    assert invoices._fetch_logo("https://cdn.example.com/l.svg") is None  # png/jpg only
+    serve(lambda request: httpx.Response(200, content=b"\x89PNG\r\n\x1a\n" + b"0" * (invoices.LOGO_MAX_BYTES + 1)))
+    assert invoices._fetch_logo("https://cdn.example.com/big.png") is None  # size limit
+    serve(lambda request: httpx.Response(404))
+    assert invoices._fetch_logo("https://cdn.example.com/x.png") is None
+
+    def boom(request):
+        raise httpx.ConnectTimeout("slow")
+
+    serve(boom)
+    assert invoices._fetch_logo("https://cdn.example.com/x.png") is None  # timeout: skipped silently
+    monkeypatch.setattr("socket.getaddrinfo", lambda *a, **k: [(2, 1, 6, "", ("127.0.0.1", 443))])
+    assert invoices._fetch_logo("https://localhost/x.png") is None  # no internal targets
 
 
 def test_pdf_renders_names_outside_latin1():
@@ -206,7 +284,7 @@ def test_pdf_renders_names_outside_latin1():
         issuer={**_data()["issuer"], "legal_name": "SV Gänseblümchen e.V."},
     )
     content = extract_text(_pdf_text(data))
-    for needle in ("Ayşe Yılmaz-Doğan", "Łukasz Çelik Weiß", "„Spezial“ für Groß", "SV Gänseblümchen e.V."):
+    for needle in ("Ayşe Yılmaz-Doğan", "Teilnehmer/in: Łukasz", "„Spezial“ für Groß", "SV Gänseblümchen e.V."):
         assert needle in content, needle
     assert "Ay?e" not in content and "?ukasz" not in content
 
@@ -301,6 +379,9 @@ def test_manual_payment_creates_invoice_and_mails_pdf(env, mail):
     (attachment,) = message.attachments
     assert attachment.filename == f"{invoice['number']}.pdf" and attachment.content.startswith(b"%PDF")
     assert attachment.content == bytes(invoice["pdf"])
+    snap = invoice["data"]  # new snapshot keys for the layout (rendering only)
+    assert snap["booking_ref"] and snap["item"]["participant_first"] and snap["payment"]["status"] == "paid"
+    assert set(snap["branding"]) == {"logo_url", "color"} and "iban" in snap["issuer"]
     assert "Sie" in message.html_content and "Gebühr" not in message.html_content
     assert message.reply_to == "rechnung@example.com"
     # Paid again (undo + redo): no second invoice, no second mail.

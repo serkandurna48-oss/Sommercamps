@@ -777,7 +777,13 @@ def update_registration_payment_status(
     organization = require_organization(organization_slug)
     camp = require_camp(organization, camp_slug)
 
-    row = registrations_repo.update_payment_status(organization["id"], camp["id"], registration_token, data.payment_status)
+    try:
+        row = registrations_repo.update_payment_status(organization["id"], camp["id"], registration_token, data.payment_status)
+    except registrations_repo.PaidOnlineError:
+        raise HTTPException(
+            status_code=409,
+            detail="Diese Buchung wurde online bezahlt. Den Status kannst du nicht von Hand ändern – nutze bei Bedarf „Erstatten“.",
+        ) from None
     if row is None:
         raise HTTPException(status_code=404, detail="Registration not found")
 

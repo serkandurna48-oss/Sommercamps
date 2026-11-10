@@ -1,4 +1,4 @@
--- Nur lesen. Vor dem Go-Live auf Prod (Supabase SQL-Editor): zeigt, welche der 18 Go-Live-Migrationen
+-- Nur lesen. Vor dem Go-Live auf Prod (Supabase SQL-Editor): zeigt, welche der 19 Go-Live-Migrationen
 -- schon angewendet sind (erwartet: alle f ausser der ersten Zeile) und Mengen fuer die Backfills.
 -- Gibt nur Zaehlungen und Vereins-Slugs aus, keine Personendaten.
 with c(tab, col) as (select table_name, column_name from information_schema.columns where table_schema = 'public')
@@ -20,7 +20,8 @@ select m, applied from (values
   ('20261107140000 stripe_managed_risk',      exists (select 1 from c where tab = 'organizations' and col = 'stripe_express_account_kind')),
   ('20261110100000 fee_rule_monthly_fee',     exists (select 1 from c where tab = 'organization_fee_rules' and col = 'monthly_fee_cents')),
   ('20261110110000 registration_self_service', exists (select 1 from c where tab = 'camp_registrations' and col = 'reminder_sent_at')),
-  ('20261110120000 parent_self_cancel',       exists (select 1 from c where tab = 'camp_registrations' and col = 'parent_cancelled_at'))
+  ('20261110120000 parent_self_cancel',       exists (select 1 from c where tab = 'camp_registrations' and col = 'parent_cancelled_at')),
+  ('20261110130000 platform_payments',        to_regclass('public.organization_payouts') is not null)
 ) v(m, applied);
 select (select count(*) from public.organizations) as vereine,
        (select string_agg(slug, ', ' order by slug) from public.organizations) as slugs,

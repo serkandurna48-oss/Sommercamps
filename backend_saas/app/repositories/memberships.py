@@ -125,6 +125,28 @@ def list_members(
         return cur.fetchall()
 
 
+def get_member(organization_id: UUID, member_id: UUID) -> Optional[dict]:
+    """One member of this organization (None for unknown ids and for other tenants)."""
+    with db.get_cursor() as cur:
+        cur.execute(
+            f"select {_FIELDS} from organization_memberships where organization_id = %s and id = %s",
+            (organization_id, member_id),
+        )
+        return cur.fetchone()
+
+
+def find_linked_player(organization_id: UUID, member: dict) -> Optional[dict]:
+    """The player record with the same normalised name and birth date (same rule as the
+    member price at booking). Org-filtered."""
+    with db.get_cursor() as cur:
+        cur.execute(
+            """select id, first_name, last_name, birth_date from players
+               where organization_id = %s and match_key = %s and birth_date = %s""",
+            (organization_id, member["match_key"], member["birth_date"]),
+        )
+        return cur.fetchone()
+
+
 def set_member_active(organization_id: UUID, member_id: UUID, active: bool) -> Optional[dict]:
     with db.get_cursor() as cur:
         cur.execute(

@@ -460,7 +460,7 @@ _ADMIN_REGISTRATION_FIELDS = """
     photo_permission, created_at, extra_answers,
     email_sent_at, email_error,
     applied_price_cents, member_match, payment_method,
-    player_id, documentation_consent, anonymized_at, cancellation_requested_at
+    player_id, documentation_consent, anonymized_at, cancellation_requested_at, parent_cancelled_at
 """
 
 _LIST_REGISTRATIONS_FOR_CAMP = f"""
@@ -1083,7 +1083,9 @@ def promote_next_waitlisted_registration(tenant: TenantContext, camp_id: UUID) -
         return _lock_and_promote_next_waitlisted(cur, tenant, camp_id)
 
 
-def cancel_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, registration_token: UUID) -> dict:
+def cancel_registration_and_promote_next(
+    tenant: TenantContext, camp_id: UUID, registration_token: UUID, *, mark_parent_cancelled: bool = False
+) -> dict:
     """
     Cancels one registration — strictly scoped by `WHERE registration_token
     = %s AND organization_id = %s AND camp_id = %s`, looked up by the
@@ -1134,6 +1136,9 @@ def cancel_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, r
     doesn't allow a transition to 'cancelled' — this includes an
     already-cancelled registration, which is rejected rather than treated
     as a harmless no-op (see registration_lifecycle.validate_transition).
+
+    mark_parent_cancelled=True (parents' self-cancel) stamps parent_cancelled_at in the
+    same transaction as the status change, so the marker can never exist without the cancel.
     """
     with db.get_cursor() as cur:
         cur.execute(_LOAD_AND_LOCK_REGISTRATION, (registration_token, tenant.organization_id, camp_id))
@@ -1148,6 +1153,11 @@ def cancel_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, r
         # this function/module, only used for the same-transaction UPDATE.
         cur.execute(_UPDATE_STATUS, ("cancelled", registration["id"], tenant.organization_id))
         cancelled = cur.fetchone()
+        if mark_parent_cancelled:
+            cur.execute(
+                "update camp_registrations set parent_cancelled_at = now() where id = %s and organization_id = %s",
+                (registration["id"], tenant.organization_id),
+            )
 
         promoted = None
         if current_status in CAPACITY_COUNTING_STATUSES:

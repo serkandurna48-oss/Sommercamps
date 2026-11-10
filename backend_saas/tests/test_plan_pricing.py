@@ -350,3 +350,15 @@ def test_org_detail_active_camps_ignores_drafts_ended_and_trainings(api, real_db
 def test_org_detail_plan_follows_fee_rule(api):
     _add_rule(api["cursor"], api["org"], "verein", "4.90", date(2026, 1, 1))
     assert _org_get(api, org_admin_headers(str(api["org"]))).json()["plan"] == "verein"
+
+
+def test_org_detail_survives_plan_usage_failure(api, monkeypatch):
+    from app.repositories import camps as camps_repo
+
+    def boom(organization_id):
+        raise RuntimeError("fee lookup down")
+
+    monkeypatch.setattr(camps_repo, "plan_usage", boom)
+    r = _org_get(api, org_admin_headers(str(api["org"])))
+    assert r.status_code == 200
+    assert r.json()["plan"] is None and r.json()["active_camps"] is None

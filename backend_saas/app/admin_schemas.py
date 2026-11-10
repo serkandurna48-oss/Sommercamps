@@ -519,8 +519,10 @@ class RegistrationAdminOut(RegistrationCreated):
     documentation_consent: Optional[bool] = None
     # Player record deleted: child data removed ("Gelöscht"), no age to show.
     anonymized_at: Optional[datetime] = None
-    # Set when parents cancelled themselves via "Meine Buchung" (refund and cancel in one step).
+    # Legacy: parents asked for a cancellation (old request flow). Not set any more.
     cancellation_requested_at: Optional[datetime] = None
+    # Set when the parents cancelled themselves (refund and cancel in one step).
+    parent_cancelled_at: Optional[datetime] = None
     # Delete guard (GoBD): an invoice/storno exists, or the platform fee is recorded.
     has_invoice: bool = False
     fee_recorded: bool = False

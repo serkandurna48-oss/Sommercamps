@@ -147,7 +147,8 @@ def get_organization(
     organization's own org_admin."""
     organization = require_organization(organization_slug)
     schema = OrganizationAdminOut if auth.is_owner else OrganizationOrgAdminOut
-    return schema.model_validate(organization)
+    usage = camps_repo.plan_usage(organization["id"])
+    return schema.model_validate({**organization, **usage})
 
 
 @router.post(

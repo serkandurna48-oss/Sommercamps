@@ -290,23 +290,31 @@ E-Mail: {e_org_email}{phone_line}</p>
     )
 
 
-def build_cancellation_request_mail(
+def build_parent_cancelled_mail(
     *,
     org_name: str,
     camp_title: str,
+    refund_text: Optional[str],
     admin_url: Optional[str],
     to_email: str,
 ) -> MailMessage:
-    """To club admins (du-Form) when parents ask for a cancellation. No names, no health data."""
+    """To club admins (du-Form) when parents cancelled themselves. refund_text is the
+    formatted refunded amount, None for a waitlist removal. No names, no health data."""
     e_org_name = escape(org_name)
+    e_camp = escape(camp_title)
     link = f'<p><a href="{escape(admin_url)}">Anmeldungen im Adminbereich öffnen</a></p>\n' if admin_url else ""
+    if refund_text:
+        body = (f"<p>Eltern haben die Anmeldung für <strong>{e_camp}</strong> storniert. "
+                f"Die Zahlung von {escape(refund_text)} wurde über Stripe erstattet.</p>\n"
+                "<p>Die Anmeldung ist storniert, ein Platz auf der Warteliste rückt automatisch nach. "
+                "Du musst nichts weiter tun.</p>")
+        subject = f"Von Eltern storniert – {camp_title}"
+    else:
+        body = (f"<p>Eltern haben ihr Kind für <strong>{e_camp}</strong> von der Warteliste abgemeldet. "
+                "Es war nichts bezahlt, daher gibt es keine Erstattung.</p>")
+        subject = f"Von der Warteliste abgemeldet – {camp_title}"
     html = f"""\
 <p>Hallo,</p>
-<p>für <strong>{escape(camp_title)}</strong> wurde eine Stornierung angefragt. Die Anmeldung ist noch nicht storniert.</p>
-{link}<p>In der Anmeldungsliste ist sie mit „Storno angefragt“ markiert. Bitte melde dich bei den Eltern und storniere die Anmeldung, wenn es passt.</p>
-<p>Viele Grüße<br>{e_org_name} über CampsPilot</p>"""
-    return MailMessage(
-        to_email=to_email,
-        subject=f"Stornierung angefragt – {camp_title}",
-        html_content=html,
-    )
+{body}
+{link}<p>Viele Grüße<br>{e_org_name} über CampsPilot</p>"""
+    return MailMessage(to_email=to_email, subject=subject, html_content=html)

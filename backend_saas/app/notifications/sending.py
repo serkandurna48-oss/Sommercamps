@@ -33,7 +33,7 @@ from ..payment_reference import payment_reference as build_payment_reference
 from .mail import get_provider
 from .templates import (
     build_cancellation_mail,
-    build_cancellation_request_mail,
+    build_parent_cancelled_mail,
     build_provider_mail,
     build_registration_mail,
 )
@@ -613,7 +613,7 @@ def resend_registration_mail(registration_token: UUID, organization_id: UUID) ->
         raise
 
 
-_CANCELLATION_REQUEST_RECIPIENTS = """
+_PARENT_CANCELLED_RECIPIENTS = """
     SELECT DISTINCT notification_email
     FROM organization_members
     WHERE organization_id = %s
@@ -624,8 +624,16 @@ _CANCELLATION_REQUEST_RECIPIENTS = """
 """
 
 
-def send_cancellation_request_notification(registration_token: UUID, organization_id: UUID) -> None:
-    """Best-effort mail to the club admins that parents asked for a cancellation.
+def _money(cents: int, currency: Optional[str]) -> str:
+    value = f"{cents / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"{value} €" if (currency or "EUR") == "EUR" else f"{value} {currency}"
+
+
+def send_parent_cancelled_notification(
+    registration_token: UUID, organization_id: UUID, refund_cents: int = 0
+) -> None:
+    """Best-effort mail to the club admins that parents cancelled themselves (with the
+    refunded amount, or a waitlist removal when refund_cents is 0).
 
     Recipients: org admins with e-mail notifications on (channel 'email', an address, and the
     event 'cancellation' or 'new_registration'); without any, the organization's contact
@@ -639,7 +647,7 @@ def send_cancellation_request_notification(registration_token: UUID, organizatio
         if ctx is None:
             return
         with db.get_cursor() as cur:
-            cur.execute(_CANCELLATION_REQUEST_RECIPIENTS, (organization_id,))
+            cur.execute(_PARENT_CANCELLED_RECIPIENTS, (organization_id,))
             recipients = [row["notification_email"] for row in cur.fetchall()]
         if not recipients and ctx.get("org_email"):
             recipients = [ctx["org_email"]]
@@ -647,15 +655,17 @@ def send_cancellation_request_notification(registration_token: UUID, organizatio
             admin_url: Optional[str] = get_settings().admin_registrations_url(ctx.get("org_slug") or "")
         except ValueError:
             admin_url = None
+        refund_text = _money(refund_cents, ctx.get("currency")) if refund_cents > 0 else None
         provider = get_provider()
         for address in recipients:
-            msg = build_cancellation_request_mail(
-                org_name=ctx["org_name"], camp_title=ctx["camp_title"], admin_url=admin_url, to_email=address,
+            msg = build_parent_cancelled_mail(
+                org_name=ctx["org_name"], camp_title=ctx["camp_title"], refund_text=refund_text,
+                admin_url=admin_url, to_email=address,
             )
             msg.sender_name = f"{ctx['org_name']} über CampsPilot"
             try:
                 provider.send(msg)
             except Exception as exc:  # noqa: BLE001 - one recipient must not block the others
-                logger.warning("send_cancellation_request_notification failed (error_type=%s)", type(exc).__name__)
+                logger.warning("send_parent_cancelled_notification failed (error_type=%s)", type(exc).__name__)
     except Exception as exc:  # noqa: BLE001
-        logger.warning("send_cancellation_request_notification failed (error_type=%s)", type(exc).__name__)
+        logger.warning("send_parent_cancelled_notification failed (error_type=%s)", type(exc).__name__)

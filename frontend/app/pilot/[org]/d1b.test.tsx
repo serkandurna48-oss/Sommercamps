@@ -213,7 +213,7 @@ it('getClubAssets returns the same JK gallery for prod and staging demo slug', (
   const demo = getClubAssets('jk-academy-demo')
   expect(prod).not.toBeNull()
   expect(demo).toEqual(prod)
-  expect(prod!.galleryImages).toHaveLength(3)
+  expect(prod!.galleryImages).toEqual(['/jk/slideshow/01.jpg'])
   expect(prod!.galleryImages).not.toContain(prod!.heroImage)
   for (const src of prod!.galleryImages) expect(prod!.galleryAltTexts[src]).toBeTruthy()
 })

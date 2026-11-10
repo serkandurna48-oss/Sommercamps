@@ -15,7 +15,7 @@ it('kopiert alle Camp-Felder außer Identität, Termin, Titel, Slug und Status',
   expect(copy).toEqual({
     title: 'Fußballcamp (Kopie)', slug: 'fussballcamp-kopie', start_date: '', end_date: '', status: 'draft',
     registration_start: source.registration_start, registration_end: source.registration_end,
-    age_min: 0, age_max: 13, capacity: 50, price_cents: 19995, currency: 'EUR',
+    age_min: 0, age_max: 13, capacity: 50, price_cents: 19995, price_member_cents: null, currency: 'EUR',
     location: 'Sportplatz', care_info: 'Ab 8 Uhr', meals_info: 'Mittagessen', includes: ['Trikot', 'Ball'],
   })
   copy.includes!.push('Flasche')

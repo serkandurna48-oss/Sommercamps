@@ -61,6 +61,9 @@ export interface OrganizationAdmin {
   logo_url: string | null
   primary_color: string | null
   plan_status: string
+  /** Nur in der Einzelabfrage: gültiges Paket (starter | verein | individuell) und aktive Camps (Starter-Grenze). */
+  plan?: string | null
+  active_camps?: number | null
   theme: string
   iban: string | null
   intro_heading: string | null

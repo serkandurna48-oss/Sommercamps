@@ -1,7 +1,8 @@
 """
 Platform fee model (migration 20261106140000_billing_profile_fee_rules.sql).
 
-Plans: starter 6.9 %, verein 4.9 %, individuell (percent set per club). Every
+Plans: starter 6.9 % (0 EUR/month, 1 active camp), verein 4.9 % (24.90 EUR/month),
+individuell (percent and base fee set per club). Every
 rule may add a fixed amount per booking and a minimum fee per booking. Rules
 are append-only rows with `valid_from`; the active rule for a booking is the
 one with the latest `valid_from` on or before the booking date (Europe/Berlin),
@@ -24,6 +25,8 @@ from . import db
 
 Plan = Literal["starter", "verein", "individuell"]
 PLAN_PERCENT: dict[str, Decimal] = {"starter": Decimal("6.90"), "verein": Decimal("4.90")}
+# Monthly base fee in cents (excl. VAT); a rule's NULL monthly_fee_cents means this default.
+PLAN_MONTHLY_CENTS: dict[str, int] = {"starter": 0, "verein": 2490, "individuell": 0}
 DEFAULT_PLAN: Plan = "starter"
 BERLIN = ZoneInfo("Europe/Berlin")
 
@@ -36,6 +39,14 @@ class FeeRule:
     fixed_cents: Optional[int]
     min_fee_cents: Optional[int]
     valid_from: Optional[date]
+    monthly_fee_cents: Optional[int] = None  # None = plan default
+
+
+def monthly_fee_for(rule: FeeRule) -> int:
+    """Monthly base fee in cents: the rule's own value, else the plan default."""
+    if rule.monthly_fee_cents is not None:
+        return rule.monthly_fee_cents
+    return PLAN_MONTHLY_CENTS.get(rule.plan, 0)
 
 
 DEFAULT_RULE = FeeRule(None, DEFAULT_PLAN, PLAN_PERCENT[DEFAULT_PLAN], None, None, None)
@@ -55,12 +66,12 @@ def _rule_from_row(row: dict) -> FeeRule:
     return FeeRule(
         id=row["id"], plan=row["plan"], percent=Decimal(row["percent"]),
         fixed_cents=row.get("fixed_cents"), min_fee_cents=row.get("min_fee_cents"),
-        valid_from=row.get("valid_from"),
+        valid_from=row.get("valid_from"), monthly_fee_cents=row.get("monthly_fee_cents"),
     )
 
 
 _EFFECTIVE_RULE = """
-    select id, plan, percent, fixed_cents, min_fee_cents, valid_from
+    select id, plan, percent, fixed_cents, min_fee_cents, valid_from, monthly_fee_cents
     from organization_fee_rules
     where organization_id = %s and valid_from <= %s
     order by valid_from desc, created_at desc, id desc

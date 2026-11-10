@@ -65,6 +65,10 @@ def test_owner_configures_a_club_without_membership(identities):
 
         camp = {"slug": "herbst", "title": "Herbst", "start_date": "2027-10-05", "end_date": "2027-10-09", "age_min": 6, "age_max": 12, "capacity": 10, "price_cents": 5000}
         assert _call(client, "owner", "POST", f"{admin}/camps", json=camp).status_code == 201
+        # Starter includes one active camp (the fixture already has one); Verein lifts the limit.
+        with cursor() as cur:
+            cur.execute("INSERT INTO organization_fee_rules (organization_id, plan, percent, valid_from) "
+                        "VALUES (%s, 'verein', 4.90, date '2026-01-01')", (tenant.organization_id,))
         assert _call(client, "owner", "PATCH", f"{admin}/camps/herbst", json={"status": "published", "capacity": 12}).json()["capacity"] == 12
 
         # The club's own admin may not touch the owner-only switch.

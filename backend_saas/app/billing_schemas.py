@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import Literal, Optional
 from uuid import UUID
 
+from .fees import PLAN_MONTHLY_CENTS
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 TaxStatus = Literal["ust_pflichtig", "kleinunternehmer", "steuerbefreit"]
@@ -108,6 +109,8 @@ class FeeRuleIn(BaseModel):
     percent: Optional[Decimal] = Field(default=None, ge=0, le=30, max_digits=4, decimal_places=2)
     fixed_cents: Optional[int] = Field(default=None, ge=0, le=100000)
     min_fee_cents: Optional[int] = Field(default=None, ge=0, le=100000)
+    # Monthly base fee in cents excl. VAT; omitted = plan default (starter 0, verein 2490).
+    monthly_fee_cents: Optional[int] = Field(default=None, ge=0, le=1000000, strict=True)
     valid_from: date
     note: Optional[str] = Field(default=None, max_length=500)
 
@@ -124,10 +127,20 @@ class FeeRuleOut(BaseModel):
     percent: Decimal
     fixed_cents: Optional[int] = None
     min_fee_cents: Optional[int] = None
+    # Resolved: the rule's own value or the plan default.
+    monthly_fee_cents: int = 0
     valid_from: Optional[date] = None
     note: Optional[str] = None
     created_at: Optional[datetime] = None
     created_by_email: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _resolve_monthly_fee(cls, data):
+        """Rows store NULL for "plan default"; the API always shows the amount."""
+        if isinstance(data, dict) and data.get("monthly_fee_cents") is None:
+            return {**data, "monthly_fee_cents": PLAN_MONTHLY_CENTS.get(data.get("plan"), 0)}
+        return data
 
 
 class FeeRulesOut(BaseModel):
@@ -165,6 +178,10 @@ class FeeMonthOut(BaseModel):
     legacy direct charges). Month = paid date in Europe/Berlin."""
 
     month: str
+    # Base fee of the rule valid on the last day of the month (today in the current
+    # month); total = booking fees net of refunds (both kinds) + base fee.
+    monthly_fee_cents: int = 0
+    total_cents: int = 0
     collected: FeeTotals
     not_collected: FeeTotals
     bookings: list[FeeBookingOut]

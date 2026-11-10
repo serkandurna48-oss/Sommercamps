@@ -157,14 +157,25 @@ describe('A2: Mailstatus im Teilnehmerdetail', () => {
   })
 })
 
-it('kennzeichnet eine angefragte Stornierung', async () => {
-  await render({ ...registration, cancellation_requested_at: '2027-02-01T09:00:00Z' })
-  expect(container.textContent).toContain('Storno angefragt')
+it('kennzeichnet eine von den Eltern stornierte Anmeldung (parent_cancelled_at)', async () => {
+  await render({ ...registration, status: 'cancelled', parent_cancelled_at: '2027-02-01T09:00:00Z' })
+  expect(container.textContent).toContain('Von Eltern storniert')
 })
 
-it('zeigt kein Kennzeichen ohne Stornoanfrage und nicht bei stornierter Anmeldung', async () => {
-  await render()
-  expect(container.textContent).not.toContain('Storno angefragt')
+it('zeigt "Von Eltern storniert" nicht allein wegen cancellation_requested_at', async () => {
   await render({ ...registration, status: 'cancelled', cancellation_requested_at: '2027-02-01T09:00:00Z' })
+  expect(container.textContent).not.toContain('Von Eltern storniert')
+})
+
+it('zeigt für Altbestand weiter "Storno angefragt", solange nicht storniert', async () => {
+  await render({ ...registration, cancellation_requested_at: '2027-02-01T09:00:00Z' })
+  expect(container.textContent).toContain('Storno angefragt')
+  await render({ ...registration, status: 'cancelled', cancellation_requested_at: '2027-02-01T09:00:00Z' })
+  expect(container.textContent).not.toContain('Storno angefragt')
+})
+
+it('zeigt ohne Eltern-Storno und ohne Anfrage kein Kennzeichen', async () => {
+  await render()
+  expect(container.textContent).not.toContain('Von Eltern storniert')
   expect(container.textContent).not.toContain('Storno angefragt')
 })

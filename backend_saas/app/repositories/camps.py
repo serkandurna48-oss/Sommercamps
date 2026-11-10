@@ -164,6 +164,16 @@ def _enforce_plan_camp_limit(cur, organization_id: UUID, exclude_camp_id: Option
         raise PlanCampLimitError(organization_id)
 
 
+def plan_usage(organization_id: UUID) -> dict:
+    """Read-only: the plan valid today and how many camps count against the
+    Starter limit. Powers the hint in the admin "new camp" flow."""
+    today = fees.booking_date(datetime.now(timezone.utc))
+    with db.get_read_cursor() as cur:
+        plan = fees.effective_fee(organization_id, today, cur=cur).plan
+        cur.execute(_COUNT_ACTIVE_CAMPS, (organization_id, today, None))
+        return {"plan": plan, "active_camps": cur.fetchone()["n"]}
+
+
 def _is_active(status: str, end_date, today) -> bool:
     return status == "published" and end_date >= today
 

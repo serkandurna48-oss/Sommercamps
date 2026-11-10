@@ -6,6 +6,7 @@ import { createStripeCheckout, getStripePaymentAvailability } from '../../lib/sa
 import { formatCampDateRange, formatPrice } from '../../lib/parentFlowFormat'
 import { buildCampIcs } from '../../lib/ics'
 import { useParentFlowMotion } from './motion'
+import { DEMO_NOT_SAVED_NOTE, DEMO_PARENT_PATH } from './demoMode'
 
 /**
  * Bestätigungsscreen — Ticket §6.4. Zeigt zwei Zustände, je nach
@@ -23,6 +24,7 @@ export default function DoneScreen({
   parentEmail,
   onBackToOrg,
   onRegisterSibling,
+  demo = false,
 }: {
   org: OrganizationPublic
   camp: CampPublic
@@ -31,6 +33,8 @@ export default function DoneScreen({
   parentEmail: string
   onBackToOrg: () => void
   onRegisterSibling?: () => void
+  /** Public demo: shows the not-saved note and skips the payment provider. */
+  demo?: boolean
 }) {
   const [copiedField, setCopiedField] = useState<'ref' | 'iban' | 'betrag' | null>(null)
   const [stripeAvailable, setStripeAvailable] = useState(false)
@@ -50,13 +54,13 @@ export default function DoneScreen({
   useEffect(() => { headingRef.current?.focus() }, [])
 
   useEffect(() => {
-    if (waitlisted || result.payment_status !== 'open' || priceCents <= 0) return
+    if (demo || waitlisted || result.payment_status !== 'open' || priceCents <= 0) return
     let current = true
     void getStripePaymentAvailability(org.slug, camp.slug).then(available => {
       if (current) setStripeAvailable(available)
     })
     return () => { current = false }
-  }, [org.slug, camp.slug, priceCents, result.payment_status, waitlisted])
+  }, [demo, org.slug, camp.slug, priceCents, result.payment_status, waitlisted])
 
   async function handleStripeCheckout() {
     if (stripeLoading) return
@@ -72,7 +76,9 @@ export default function DoneScreen({
   }
 
   // This screen mounts only after a registration in the browser. Exclude filters and tokens.
-  const publicPath = `/pilot/${encodeURIComponent(org.slug)}?camp=${encodeURIComponent(camp.slug)}`
+  const publicPath = demo
+    ? `${DEMO_PARENT_PATH}?camp=${encodeURIComponent(camp.slug)}`
+    : `/pilot/${encodeURIComponent(org.slug)}?camp=${encodeURIComponent(camp.slug)}`
   const publicPageUrl = typeof window === 'undefined'
     ? publicPath
     : new URL(publicPath, window.location.origin).href
@@ -137,6 +143,12 @@ export default function DoneScreen({
           Wir haben eine Bestätigung an {parentEmail} geschickt.
         </p>
       </header>
+
+      {demo && (
+        <p className="pad" role="note" data-testid="demo-not-saved" style={{ paddingTop: 16, paddingBottom: 0, fontWeight: 600 }}>
+          {DEMO_NOT_SAVED_NOTE}
+        </p>
+      )}
 
       <div className="assure" style={{ gap: 8 }}>
         <span className="chip ok">{waitlisted ? 'Auf der Warteliste' : 'Platz reserviert'}</span>

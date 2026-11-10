@@ -26,9 +26,8 @@ it('führt neue Vereine zur Registrierung und bestehende Vereine direkt zur Anme
   const dom = document.createElement('div')
   dom.innerHTML = renderToStaticMarkup(createElement(CampsPilotPage))
   expect(dom.querySelector('a[href="/campspilot/registrieren"]')?.textContent).toContain('Verein registrieren')
-  expect(dom.querySelector('a[href="/campspilot/anmelden"]')?.textContent).toBe('Anmelden')
-  expect(dom.querySelector('.close-in a[href="/campspilot/anmelden"]')?.textContent).toBe('Anmelden')
-  expect(dom.querySelector('.nav-in a[href="/campspilot/anmelden"]')).toBeNull()
+  expect(dom.querySelector('#pilot a[href="/campspilot/anmelden"]')?.textContent).toBe('Anmelden')
+  expect(dom.querySelector('.nav-in a[href="/campspilot/anmelden"]')?.textContent).toBe('Login')
 })
 
 // ── Tracking-Variable für m2pin ───────────────────────────────────────────────
@@ -140,19 +139,11 @@ describe('m1motion – SSR-Markup ohne opacity:0', () => {
     expect(html).not.toMatch(/style='[^']*opacity\s*:\s*0/)
 
     // Wichtige Abschnittstexte müssen im Markup stehen
-    expect(html).toContain('Fünf Systeme für ein Camp.')
-    expect(html).toContain('Alles, was ein Camp braucht.')
-    expect(html).toContain('Für Eltern')
-    expect(html).toContain('Für den Organisator')
-    expect(html).toContain('Für den Verein')
+    expect(html).toContain('Digitalisieren Sie Ihre Vereins-Feriencamps in 5 Minuten')
+    expect(html).toContain('Alles, was ein Camp braucht')
+    expect(html).toContain('Was bringt das Ihrem Verein?')
+    expect(html).toContain('Vertrauen von Anfang an')
     expect(html).toContain('CampsPilot')
-  })
-
-  it('z-list hat KEIN z-list--animated im SSR-Markup', async () => {
-    const { default: CampsPilotPage } = await import('./page')
-    const html = renderToStaticMarkup(createElement(CampsPilotPage))
-    // Die Klasse wird nur per JS gesetzt, nie im JSX — Punkte starten sichtbar
-    expect(html).not.toContain('z-list--animated')
   })
 })
 
@@ -196,7 +187,6 @@ describe('CX2 – Preis und Fragen', () => {
       expect(cards[index].textContent).toContain(paket.preis)
       expect(cards[index].textContent).toContain(paket.buchungsgebuehr)
       expect(cards[index].textContent).toContain(paket.umfang)
-      expect(cards[index].querySelectorAll('li')).toHaveLength(5)
     }
     expect(cards[0].textContent).toContain('1 aktives Camp')
     expect(cards[1].textContent).toContain('298,80 € pro Jahr')
@@ -213,7 +203,7 @@ describe('CX2 – Preis und Fragen', () => {
   })
 
   it('verlinkt jedes Paket mit seinem Namen zum vorhandenen Anfrageformular', () => {
-    const buttons = Array.from(wrapper.querySelectorAll<HTMLAnchorElement>('#preis a.price-inquiry'))
+    const buttons = Array.from(wrapper.querySelectorAll<HTMLAnchorElement>('#preis a.lp-inquiry'))
     expect(buttons).toHaveLength(3)
     for (const [index, button] of buttons.entries()) {
       const url = new URL(button.getAttribute('href')!, 'https://campspilot.example')
@@ -223,8 +213,8 @@ describe('CX2 – Preis und Fragen', () => {
       expect(button.textContent).toContain('Unverbindlich anfragen')
       expect(wrapper.querySelector(url.hash + ' form')).not.toBeNull()
     }
-    expect(wrapper.querySelector('.nav a[href="#preis"]')?.textContent).toBe('Preise')
-    expect(wrapper.querySelector('footer a[href="#preis"]')?.textContent).toBe('Preise')
+    expect(wrapper.querySelector('.nav a[href="/preise"]')?.textContent).toBe('Preise')
+    expect(wrapper.querySelector('footer a[href="/preise"]')?.textContent).toBe('Preise')
   })
 
   it('enthält sechs native Aufklappelemente mit den vorgegebenen Fragen', () => {
@@ -320,37 +310,54 @@ describe('m4pill – Hero-Buttons sind Pills', () => {
   })
 })
 
-// ── fs: Fußballschulen-Abschnitt ──────────────────────────────────────────────
-// Mutationsprobe: id="fussballschulen" umbenennen → sectionEl ist null → alle Tests rot.
-describe('fs – Fußballschulen-Abschnitt', () => {
-  let sectionEl: Element | null = null
-
+// ── Landing: Navigation, Demos, Rechner, Preise (Ahmads Startseite in unserer Route) ───
+describe('Startseite – Navigation und Ziele', () => {
+  let page: HTMLDivElement
   beforeEach(async () => {
     const { default: CampsPilotPage } = await import('./page')
-    const html = renderToStaticMarkup(createElement(CampsPilotPage))
-    const wrapper = document.createElement('div')
-    wrapper.innerHTML = html
-    sectionEl = wrapper.querySelector('#fussballschulen')
+    page = document.createElement('div')
+    page.innerHTML = renderToStaticMarkup(createElement(CampsPilotPage))
   })
 
-  it('Anker #fussballschulen existiert im Markup', () => {
-    expect(sectionEl).not.toBeNull()
+  it('Kopfzeile enthält ROI-Rechner, Preise (sichtbarer Link), Login, Demo ansehen und Verein registrieren', () => {
+    const nav = page.querySelector('nav')!
+    const link = (text: string) => Array.from(nav.querySelectorAll('a')).find(a => a.textContent?.trim() === text)
+    expect(link('ROI-Rechner')?.getAttribute('href')).toBe('#roi')
+    expect(link('Preise')?.getAttribute('href')).toBe('/preise')
+    expect(link('Preise')?.className ?? '').not.toContain('lp-hide-sm')
+    expect(link('Login')?.getAttribute('href')).toBe('/campspilot/anmelden')
+    expect(link('Demo ansehen')?.getAttribute('href')).toBe('#demo')
+    expect(nav.querySelector('a.btn.fill')?.getAttribute('href')).toBe('/campspilot/registrieren')
   })
 
-  it('enthält alle drei Punkte', () => {
-    const text = sectionEl?.textContent ?? ''
-    expect(text).toContain('Alle Camps an allen Gastvereinen auf einer Seite')
-    expect(text).toContain('Eltern bekommen sofort eine Bestätigung mit Überweisungsdaten')
-    expect(text).toContain('Tagesliste je Camp zum Drucken')
+  it('Hero hat drei Knöpfe: Live-Demo, Dashboard, Ersparnis berechnen', () => {
+    const buttons = Array.from(page.querySelectorAll('header .hero-cta a'))
+    expect(buttons.map(a => [a.textContent, a.getAttribute('href')])).toEqual([
+      ['Live-Demo ansehen', '/demo/verein'],
+      ['Dashboard ausprobieren', '/demo/dashboard'],
+      ['Ersparnis berechnen', '#roi'],
+    ])
   })
 
-  it('Knopf verweist auf #pilot', () => {
-    const btn = sectionEl?.querySelector('a[href="#pilot"]')
-    expect(btn).not.toBeNull()
-    expect(btn?.textContent?.trim()).toBe('Unverbindlich anfragen')
+  it('Anker #demo, #roi, #vertrauen, #preis und #pilot existieren genau einmal', () => {
+    for (const id of ['demo', 'roi', 'vertrauen', 'preis', 'pilot']) expect(page.querySelectorAll(`section#${id}`)).toHaveLength(1)
+    expect(page.querySelector('#demo a[href="/demo/verein"]')).not.toBeNull()
+    expect(page.querySelector('#demo a[href="/demo/dashboard"]')).not.toBeNull()
   })
 
-  it('enthält kein „Online-Zahlung"', () => {
-    expect(sectionEl?.textContent ?? '').not.toContain('Online-Zahlung')
+  it('Fußzeile verlinkt Preise und die vorhandenen Rechtstexte', () => {
+    const hrefs = Array.from(page.querySelectorAll('footer a')).map(a => a.getAttribute('href'))
+    expect(hrefs).toEqual(expect.arrayContaining(['/preise', '/campspilot/impressum', '/campspilot/datenschutz', '/campspilot/teilnahmebedingungen']))
+  })
+
+  it('führt strukturierte Daten (SoftwareApplication) mit Starter-Preis aus pakete.ts', () => {
+    const data = JSON.parse(page.querySelector('script[type="application/ld+json"]')!.textContent!)
+    expect(data['@type']).toBe('SoftwareApplication')
+    expect(data.offers.price).toBe('0')
+  })
+
+  it('enthält keine Preiszahlen außerhalb von pakete.ts (Seitenquelle)', () => {
+    const src = readFileSync(resolve(__dirname, 'page.tsx'), 'utf8') + readFileSync(resolve(__dirname, 'landingContent.ts'), 'utf8')
+    expect(src).not.toMatch(/6,9|4,9 ?%|24,90/)
   })
 })

@@ -4,8 +4,8 @@
 -- Ziel:    Supabase "CampsPilot Production" (Ref wkmckfbzhmihyfwiekct). NICHT Legacy-KSV/JK.
 -- Prod-Stand (Annahme, siehe docs/cto/golive-2026-11.md): origin/feat/platform-foundation @ dbd0c09
 --          = 16 Migrationen, letzte 20261027120000_health_data_consent.sql
--- Ziel-Stand: HEAD @ 0225229 = 33 Migrationen
--- Inhalt:  17 fehlende Migrationen, in Anwendungsreihenfolge, unveraendert eingebettet.
+-- Ziel-Stand: HEAD @ 79f0858 = 34 Migrationen
+-- Inhalt:  18 fehlende Migrationen, in Anwendungsreihenfolge, unveraendert eingebettet.
 --          Jede Datei laeuft in EINER eigenen Transaktion: Dateien mit eigenem
 --          begin;/commit; unveraendert, alle anderen hier mit begin;/commit; umschlossen.
 --          Bricht eine Datei ab, sind die vorherigen schon festgeschrieben, die
@@ -36,7 +36,7 @@ end
 $$;
 
 -- ------------------------------------------------------------
--- [01/17] 20261030203000_stripe_checkout_v11.sql
+-- [01/18] 20261030203000_stripe_checkout_v11.sql
 -- sha256 84facb5963e7a926424e77d5c0a6bd6fa23d94d201b8b920ad153b700d2ef5a2
 -- Transaktion: hier umschlossen
 -- ------------------------------------------------------------
@@ -66,7 +66,7 @@ create unique index if not exists uniq_campspilot_stripe_payment_intent
 commit;
 
 -- ------------------------------------------------------------
--- [02/17] 20261105180000_training_offers_memberships.sql
+-- [02/18] 20261105180000_training_offers_memberships.sql
 -- sha256 3611a7dde0214e48fc1791cb1aa2d8fbe688efcc0843bcc2b7dbd325d53d1e92
 -- Transaktion: hier umschlossen
 -- ------------------------------------------------------------
@@ -205,7 +205,7 @@ alter table public.camp_registrations add constraint chk_camp_registrations_paym
 commit;
 
 -- ------------------------------------------------------------
--- [03/17] 20261105190000_training_hardening.sql
+-- [03/18] 20261105190000_training_hardening.sql
 -- sha256 86c4c427f7c62cf95d295eb164cd82a1bdcec661f0a8845f951f978a4341b7aa
 -- Transaktion: hier umschlossen
 -- ------------------------------------------------------------
@@ -234,7 +234,7 @@ revoke all on public.organization_memberships from anon, authenticated;
 commit;
 
 -- ------------------------------------------------------------
--- [04/17] 20261106100000_player_records.sql
+-- [04/18] 20261106100000_player_records.sql
 -- sha256 770b16d80678646290ba730f3a1c0e074af710861763376d2d73197cfe990fad
 -- Transaktion: hier umschlossen
 -- ------------------------------------------------------------
@@ -489,7 +489,7 @@ $$;
 commit;
 
 -- ------------------------------------------------------------
--- [05/17] 20261106110000_training_offer_category.sql
+-- [05/18] 20261106110000_training_offer_category.sql
 -- sha256 9fa400a674463c9413126ebfbe9e24d6e3f7defbb6edc13c21d8a80008cd75b4
 -- Transaktion: hier umschlossen
 -- ------------------------------------------------------------
@@ -507,7 +507,7 @@ alter table public.training_offers
 commit;
 
 -- ------------------------------------------------------------
--- [06/17] 20261106120000_membership_extra_fields.sql
+-- [06/18] 20261106120000_membership_extra_fields.sql
 -- sha256 0cb7fba29954ab54fef872493a65645eeb3be3f60366c7c6b599ff6d8684cf15
 -- Transaktion: hier umschlossen
 -- ------------------------------------------------------------
@@ -535,7 +535,7 @@ revoke all on public.organization_memberships from anon, authenticated;
 commit;
 
 -- ------------------------------------------------------------
--- [07/17] 20261106130000_organization_modules.sql
+-- [07/18] 20261106130000_organization_modules.sql
 -- sha256 52149c772200d9b1a4fdc85abad936d8d45aae062d33ce45f6a4ddd7bc633b7f
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -623,7 +623,7 @@ grant select (modules) on public.organizations to authenticated;
 commit;
 
 -- ------------------------------------------------------------
--- [08/17] 20261106140000_billing_profile_fee_rules.sql
+-- [08/18] 20261106140000_billing_profile_fee_rules.sql
 -- sha256 b3b660c0ac9bf252d3bb0df07d5b45ec492c42cd1099e47f948854e637f737d4
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -816,7 +816,7 @@ comment on column public.camp_registrations.fee_collection is
 commit;
 
 -- ------------------------------------------------------------
--- [09/17] 20261106150000_stripe_express_destination.sql
+-- [09/18] 20261106150000_stripe_express_destination.sql
 -- sha256 5e0bbaa21b54e628814d946e999a550b41d764c9554c987decea70b3355a82e2
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -889,7 +889,7 @@ revoke all on public.organizations from anon;
 commit;
 
 -- ------------------------------------------------------------
--- [10/17] 20261106160000_billing_refunds_and_grants.sql
+-- [10/18] 20261106160000_billing_refunds_and_grants.sql
 -- sha256 d5b415361e3c8fa64c2681c1792f657293985ffb8cd0529ed16f03764518f06b
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -967,7 +967,7 @@ $$;
 commit;
 
 -- ------------------------------------------------------------
--- [11/17] 20261107100000_parent_invoices.sql
+-- [11/18] 20261107100000_parent_invoices.sql
 -- sha256 02d81a3af1839166fc9d775f246911d6e6e0cb5c0d8bf24d0db4a17a7ae4efd9
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -1183,7 +1183,7 @@ revoke all on public.registration_refund_events from public, anon, authenticated
 commit;
 
 -- ------------------------------------------------------------
--- [12/17] 20261107110000_invoice_retry.sql
+-- [12/18] 20261107110000_invoice_retry.sql
 -- sha256 f4951df63ccfcdd0e0100ee945387acf985334621c2ad8c3e9cdeb2bda5730df
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -1226,7 +1226,7 @@ revoke select (booked_price_cents, invoice_pending_reason, invoice_error)
 commit;
 
 -- ------------------------------------------------------------
--- [13/17] 20261107120000_registration_anonymized_at.sql
+-- [13/18] 20261107120000_registration_anonymized_at.sql
 -- sha256 c3c35cabcf5c301393a8fa4685bc99e2df3efbd93762c6d807c58ccce3ca1cd0
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -1323,7 +1323,7 @@ revoke select (anonymized_at) on public.camp_registrations from authenticated;
 commit;
 
 -- ------------------------------------------------------------
--- [14/17] 20261107130000_parent_billing_address.sql
+-- [14/18] 20261107130000_parent_billing_address.sql
 -- sha256 18f4765bf61b27f7a7ca08901816f8df51a04e06e275f36c6b1d3f752b108abc
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -1375,7 +1375,7 @@ revoke select (parent_street, parent_postal_code, parent_city)
 commit;
 
 -- ------------------------------------------------------------
--- [15/17] 20261107140000_stripe_managed_risk.sql
+-- [15/18] 20261107140000_stripe_managed_risk.sql
 -- sha256 bcec3eb29392992a9270ebb43eca9ba3f3754ec2432a4c7b8c4637a38548e47d
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -1433,7 +1433,7 @@ revoke select (stripe_express_account_kind) on public.organizations from anon, a
 commit;
 
 -- ------------------------------------------------------------
--- [16/17] 20261110100000_fee_rule_monthly_fee.sql
+-- [16/18] 20261110100000_fee_rule_monthly_fee.sql
 -- sha256 740c79b83db933af1ee9685c8b7c4f1697d189a9c18191de3b3ecc1cdacd1644
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -1469,7 +1469,7 @@ revoke all on public.organization_fee_rules from public, anon, authenticated;
 commit;
 
 -- ------------------------------------------------------------
--- [17/17] 20261110110000_registration_self_service.sql
+-- [17/18] 20261110110000_registration_self_service.sql
 -- sha256 7ffe1b4af003f85917642dcbd6bd75cd2d3c590c4e64a8560a3f7edf67e10917
 -- Transaktion: eigene (begin/commit in der Datei)
 -- ------------------------------------------------------------
@@ -1501,6 +1501,43 @@ comment on column public.camp_registrations.reminder_sent_at is
 
 -- Backend-only columns, even if column grants were handed out again. No-op when absent.
 revoke select (cancellation_requested_at, reminder_sent_at) on public.camp_registrations from authenticated;
+
+commit;
+
+-- ------------------------------------------------------------
+-- [18/18] 20261110120000_parent_self_cancel.sql
+-- sha256 7682fb3f70c2852eb2056618f43fbce728800cd1154947e3ae97d02c5f1c9eab
+-- Transaktion: eigene (begin/commit in der Datei)
+-- ------------------------------------------------------------
+-- Selbststorno durch Eltern ("Meine Buchung"): Erstattung und Stornierung in einem Schritt.
+--
+-- parent_cancel_started_at: Die Eltern haben die Stornierung ausgeloest; gesetzt, BEVOR die
+--   Erstattung bei Stripe angelegt wird. Ist es gesetzt, die Buchung aber nicht storniert, wurde
+--   moeglicherweise schon erstattet: ein Retry storniert dann nur noch und erstattet nicht erneut.
+-- parent_cancelled_at: Die Eltern haben selbst storniert (Storno committed, in derselben
+--   Transaktion wie der Statuswechsel gesetzt). Basis fuer den Chip "Von Eltern storniert".
+--
+-- Rein additiv, keine Datenaenderung, kein Backfill. Idempotent (ADD COLUMN IF NOT EXISTS).
+-- Rollback:
+--   alter table public.camp_registrations
+--       drop column if exists parent_cancel_started_at, drop column if exists parent_cancelled_at;
+-- Rechte: Backend-Spalten, kein Leserecht fuer authenticated (wie 20261110110000).
+
+begin;
+
+set local lock_timeout = '5s';
+
+alter table public.camp_registrations
+    add column if not exists parent_cancel_started_at timestamptz,
+    add column if not exists parent_cancelled_at timestamptz;
+
+comment on column public.camp_registrations.parent_cancel_started_at is
+    'Eltern haben ueber "Meine Buchung" die Stornierung ausgeloest (gesetzt vor der Stripe-Erstattung). Gesetzt und nicht storniert = Erstattung evtl. schon erfolgt, nur noch stornieren.';
+comment on column public.camp_registrations.parent_cancelled_at is
+    'Zeitpunkt, an dem die Eltern ihre Anmeldung selbst storniert haben (gleiche Transaktion wie der Statuswechsel).';
+
+-- Backend-only columns, even if column grants were handed out again. No-op when absent.
+revoke select (parent_cancel_started_at, parent_cancelled_at) on public.camp_registrations from authenticated;
 
 commit;
 

@@ -3882,6 +3882,41 @@
 .cp-public .booking-facts dt { font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.6; }
 .cp-public .booking-facts dd { margin: 2px 0 0; font-weight: 600; }
 
+/* "So einfach geht's" vor den Camps, alle Vereine (KSV 28.10., verallgemeinert 10.11.). */
+.cp-public .how-sec-top { padding-block: 40px 8px; }
+.cp-public .how-sec-top .d2 { margin-bottom: 20px; }
+@media (max-width: 599px) {
+  .cp-public .how-sec-top { padding-block: 32px 0; }
+  /* Kompakt auf dem Handy: Zahl links, Text rechts, damit die Camps schnell folgen. */
+  .cp-public .how-sec-top .how-steps { gap: 16px; }
+  .cp-public .how-sec-top .how-step {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 4px;
+    padding: 0;
+    min-height: 0;
+  }
+  .cp-public .how-sec-top .how-num { grid-row: 1 / span 2; font-size: 28px; }
+  .cp-public .how-sec-top .how-step .d3 { font-size: 17px; margin: 0; }
+  .cp-public .how-sec-top .how-step p { margin: 0; }
+}
+
+/* Über uns mit Bildern (10.11.): Text links, Bilder rechts; mobil untereinander. */
+.cp-public .about-sec { display: grid; gap: 32px; align-items: center; }
+.cp-public .about-media { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; grid-auto-rows: 160px; }
+.cp-public .about-img { position: relative; border-radius: 24px; overflow: hidden; }
+.cp-public .about-media-1 .about-img-main { grid-column: 1 / -1; grid-row: span 2; }
+.cp-public .about-media-2 .about-img { grid-row: span 2; }
+.cp-public .about-media-3 .about-img-main { grid-column: 1 / -1; grid-row: span 2; }
+@media (min-width: 900px) {
+  .cp-public .about-sec { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 72px; }
+  .cp-public .about-media { grid-auto-rows: 180px; }
+  .cp-public .about-media-3 .about-img-main { grid-column: 1; grid-row: span 2; }
+}
+.cp-public .camp .c-price { white-space: nowrap; }
+.cp-public .c-price .c-price-from { font-size: 0.72em; font-weight: 500; opacity: 0.7; margin-right: 4px; }
+
 /* KSV Tagesrunde 28.10. (mit Serkan abgestimmt): ein Rotton fuer alle Aktionen, Datum einmal pro Karte,
    "freiwillig" an optionalen Feldern, "So einfach geht's" vor den Camps. Nur KSV. */
 .cp-public[data-org='ksv-baunatal'] .camp:not(.full) .c-go {
@@ -3897,23 +3932,7 @@
   font-weight: 400;
   color: var(--muted);
 }
-.cp-public[data-org='ksv-baunatal'] .how-sec-top { padding-block: 40px 8px; }
-.cp-public[data-org='ksv-baunatal'] .how-sec-top .d2 { margin-bottom: 20px; }
 @media (max-width: 599px) {
-  .cp-public[data-org='ksv-baunatal'] .how-sec-top { padding-block: 32px 0; }
-  /* Kompakt auf dem Handy: Zahl links, Text rechts, damit die Camps schnell folgen. */
-  .cp-public[data-org='ksv-baunatal'] .how-sec-top .how-steps { gap: 16px; }
-  .cp-public[data-org='ksv-baunatal'] .how-sec-top .how-step {
-    display: grid;
-    grid-template-columns: 32px minmax(0, 1fr);
-    column-gap: 12px;
-    row-gap: 4px;
-    padding: 0;
-    min-height: 0;
-  }
-  .cp-public[data-org='ksv-baunatal'] .how-sec-top .how-num { grid-row: 1 / span 2; font-size: 28px; }
-  .cp-public[data-org='ksv-baunatal'] .how-sec-top .how-step .d3 { font-size: 17px; margin: 0; }
-  .cp-public[data-org='ksv-baunatal'] .how-sec-top .how-step p { margin: 0; }
   /* "Trikotgröße freiwillig" bricht in der schmalen Spalte um: beide Labels gleich hoch, Felder bleiben auf einer Linie. */
   .cp-public[data-org='ksv-baunatal'] #s-form .row2 .t-lab { display: block; min-height: calc(2 * 1.5em); }
   .cp-public[data-org='ksv-baunatal'] #s-form .row2 .opt-tag { display: block; margin-left: 0; }

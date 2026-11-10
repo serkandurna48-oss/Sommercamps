@@ -13,7 +13,7 @@ import { formatCampDateRange, formatCampRowDate, formatPrice } from '../../lib/p
  * Ort/Uhrzeit fehlen bewusst (kein Datenfeld dafür, siehe Rückfrage zu
  * §6.2 — nichts erfunden statt Platzhaltertext zu zeigen).
  */
-export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect: (camp: CampPublic) => void }) {
+export default function CampRow({ camp, onSelect, priceFrom = false }: { camp: CampPublic; onSelect: (camp: CampPublic) => void; priceFrom?: boolean }) {
   const { day, month, weekdays } = formatCampRowDate(camp.start_date, camp.end_date)
   const pct = camp.capacity > 0 ? Math.round((camp.registered_count / camp.capacity) * 100) : 0
   const tight = !camp.is_full && camp.spots_remaining <= 3
@@ -76,7 +76,7 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
           </span>
         </span>
         <span className="c-foot">
-          <span className="c-price num">{formatPrice(camp.price_cents, camp.currency)}</span>
+          <span className="c-price num">{priceFrom && <span className="c-price-from">ab</span>}{formatPrice(camp.price_cents, camp.currency)}</span>
           <span className="c-go">{!camp.registration_open ? 'Anmeldung ansehen' : camp.is_full ? 'Auf die Warteliste' : 'Platz sichern'}</span>
         </span>
       </span>

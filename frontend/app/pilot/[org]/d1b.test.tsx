@@ -112,24 +112,41 @@ it('gallery-band not shown for org without club assets (unknown slug)', () => {
   expect(html).not.toContain('gallery-band')
 })
 
-it('gallery-band shown for ksv-baunatal, hero not duplicated in gallery', () => {
-  // Use ksv-kinder-pokal as hero_image_url — it also sits in clubAssets.galleryImages.
-  // The gallery filter must remove it so it only appears in h-trad-shot, not gallery-band.
+it('with intro text the club images sit in "Über uns", hero not duplicated', () => {
+  // ksv-kinder-pokal is the hero and also in clubAssets.galleryImages; it must be filtered out.
   const ksvOrg: OrganizationPublic = {
     ...org, slug: 'ksv-baunatal',
     hero_image_url: '/clubs/ksv/ksv-kinder-pokal.jpg',
     intro_text: 'Wir sind KSV.',
   }
   const html = renderToStaticMarkup(<ParentFlow org={ksvOrg} camps={[]} />)
+  expect(html).not.toContain('gallery-band')
+  const about = html.slice(html.indexOf('id="s-ueber-uns"'))
+  const media = about.slice(about.indexOf('about-media'), about.indexOf('how-sec') >= 0 ? about.indexOf('how-sec') : undefined)
+  expect(html).toContain('about-media-2')
+  expect(media).toContain('ksv-torwart.jpg')
+  expect(media).toContain('ksv-kinder-2027.jpg')
+  expect(media).not.toContain('ksv-kinder-pokal')
+})
+
+it('without intro text the club images stay a gallery band', () => {
+  const ksvOrg: OrganizationPublic = { ...org, slug: 'ksv-baunatal', hero_image_url: null, intro_text: null }
+  const html = renderToStaticMarkup(<ParentFlow org={ksvOrg} camps={[]} />)
   expect(html).toContain('gallery-band')
-  // remaining gallery images (not the hero) are shown
-  expect(html).toContain('ksv-torwart.jpg')
-  expect(html).toContain('ksv-kinder-2027.jpg')
-  // ksv-kinder-pokal is the hero — must not also appear inside gallery-band
-  const galleryStart = html.indexOf('gallery-band')
-  const afterGalleryBand = galleryStart >= 0 ? html.slice(galleryStart) : ''
-  const gallerySection = afterGalleryBand.slice(0, afterGalleryBand.indexOf('how-sec'))
-  expect(gallerySection).not.toContain('ksv-kinder-pokal')
+  expect(html).not.toContain('about-media')
+})
+
+it('JK camp cards show "ab" before the price, other clubs do not', () => {
+  const camp = {
+    slug: 'winter', title: 'Winter Camp', start_date: '2027-01-11', end_date: '2027-01-12',
+    registration_start: null, registration_end: null, age_min: 6, age_max: 14, capacity: 30,
+    price_cents: 12900, currency: 'EUR', registration_open: true, location: null, care_info: null,
+    meals_info: null, includes: null, registered_count: 0, waitlist_count: 0, spots_remaining: 30, is_full: false,
+  } as unknown as CampPublic
+  const jk = renderToStaticMarkup(<ParentFlow org={{ ...org, slug: 'jk-performance-academy' }} camps={[camp]} />)
+  expect(jk).toMatch(/c-price-from">ab<\/span>129,00/)
+  const other = renderToStaticMarkup(<ParentFlow org={org} camps={[camp]} />)
+  expect(other).not.toContain('c-price-from')
 })
 
 // ── Hero objectPosition ──

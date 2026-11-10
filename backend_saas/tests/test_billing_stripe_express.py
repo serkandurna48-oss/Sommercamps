@@ -422,7 +422,7 @@ def test_legacy_checkout_unchanged_without_express(env):
     assert kw["stripe_account"] == LEGACY
     assert "application_fee_amount" not in kw["payment_intent_data"]
     assert "transfer_data" not in kw["payment_intent_data"]
-    assert kw["idempotency_key"] == f"campspilot-{token}-first-1000"
+    assert kw["idempotency_key"] == f"campspilot-v2-{token}-first-1000"
     assert _reg(env, token)["stripe_charge_type"] == "direct"
 
 

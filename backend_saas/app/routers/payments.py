@@ -396,7 +396,9 @@ def create_checkout(
     marker = {**CAMPSPILOT_MARKER, "organization_id": str(tenant.organization_id)}
     params = dict(
         mode="payment",
-        payment_method_types=["card"],
+        # No payment_method_types: Stripe API 2026-10-28 rejects it; payment methods
+        # are configured in the Stripe Dashboard (platform settings for connected
+        # accounts). Async methods are settled via checkout.session.async_payment_succeeded.
         line_items=[{
             "price_data": {
                 "currency": currency,
@@ -419,7 +421,7 @@ def create_checkout(
         params.update(
             payment_intent_data=intent_data,
             idempotency_key=(
-                f"campspilot-dest-{registration_token}-{existing or 'first'}-{amount}-{quote['fee_cents']}-{account}"
+                f"campspilot-dest-v2-{registration_token}-{existing or 'first'}-{amount}-{quote['fee_cents']}-{account}"
             ),
         )
     elif mode == DIRECT_FEE:
@@ -434,7 +436,7 @@ def create_checkout(
             payment_intent_data=intent_data,
             stripe_account=account,
             idempotency_key=(
-                f"campspilot-dfee-{registration_token}-{existing or 'first'}-{amount}-{quote['fee_cents']}-{account}"
+                f"campspilot-dfee-v2-{registration_token}-{existing or 'first'}-{amount}-{quote['fee_cents']}-{account}"
             ),
         )
     else:
@@ -443,7 +445,7 @@ def create_checkout(
             payment_intent_data={"metadata": marker},
             stripe_account=account,
             # Same booking, same previous session, same price -> same Stripe session.
-            idempotency_key=f"campspilot-{registration_token}-{existing or 'first'}-{amount}",
+            idempotency_key=f"campspilot-v2-{registration_token}-{existing or 'first'}-{amount}",
         )
     try:
         session = _stripe_dict(client.checkout.Session.create(**params))

@@ -31,15 +31,12 @@ export interface ClubAssets {
 // production slug and the staging demo, so both pages look the same.
 const JK_ASSETS: ClubAssets = {
   heroImage: '/jk/hero.jpg',
+  // Only the team photo: Jan himself is shown in the trainer section right below (Serkan 10.11.).
   galleryImages: [
     '/jk/slideshow/01.jpg',
-    '/jk/camp.jpg',
-    '/jk/slideshow/04.jpg',
   ],
   galleryAltTexts: {
     '/jk/slideshow/01.jpg': 'Spieler der JK Performance Academy mit Trainer Jan-Maximilian Krug',
-    '/jk/camp.jpg': 'Trainer Jan-Maximilian Krug mit Ball',
-    '/jk/slideshow/04.jpg': 'Trikot mit dem Wappen der JK Performance Academy',
   },
   logoImage: '/jk/logo.jpg',
   heroPosition: 'center 25%',

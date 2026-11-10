@@ -3919,6 +3919,25 @@
 .cp-public .camp .c-price { white-space: nowrap; }
 .cp-public .c-price .c-price-from { font-size: 0.72em; font-weight: 500; opacity: 0.7; margin-right: 4px; }
 
+/* Campkarten Akademie, Handy (Serkan 10.11.): kompakter, volle Breite für Titel und Leistungen.
+   Das Datum steht schon unter dem Titel, die große Datumsspalte entfällt. */
+@media (max-width: 599px) {
+  .cp-public[data-theme='akademie'] .camp {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px 18px;
+    border-radius: 20px;
+  }
+  .cp-public[data-theme='akademie'] .camp .c-date { display: none; }
+  .cp-public[data-theme='akademie'] .camp .c-body { gap: 8px; }
+  .cp-public[data-theme='akademie'] .camp .c-name { font-size: 17px; line-height: 1.3; }
+  .cp-public[data-theme='akademie'] .camp .c-when { font-size: 14px; }
+  .cp-public[data-theme='akademie'] .camp .c-foot { padding-top: 4px; }
+  /* Belegung in einer Zeile: kurzer Balken links, Text rechts. */
+  .cp-public[data-theme='akademie'] .camp .cap { flex-direction: row; align-items: center; gap: 10px; }
+  .cp-public[data-theme='akademie'] .camp .cap .bar { flex: 0 0 64px; }
+  .cp-public[data-theme='akademie'] .camp .c-go { padding: 9px 18px; font-size: 14px; }
+}
+
 /* KSV Tagesrunde 28.10. (mit Serkan abgestimmt): ein Rotton fuer alle Aktionen, Datum einmal pro Karte,
    "freiwillig" an optionalen Feldern, "So einfach geht's" vor den Camps. Nur KSV. */
 .cp-public[data-org='ksv-baunatal'] .camp:not(.full) .c-go {

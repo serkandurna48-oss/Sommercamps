@@ -139,7 +139,7 @@ class SessionCreate(BaseModel):
 
     date: date  # local calendar date, Europe/Berlin
     start_time: str  # "HH:MM" local time, Europe/Berlin
-    capacity: Optional[int] = Field(default=None, ge=1, le=8)
+    capacity: Optional[int] = Field(default=None, ge=1, le=12)
     age_min: int = Field(default=4, ge=0, le=99)
     age_max: int = Field(default=18, ge=0, le=99)
     status: Literal["draft", "published"] = "published"
@@ -166,7 +166,7 @@ class SessionSeriesCreate(BaseModel):
     start_date: date  # local calendar date of the first session, Europe/Berlin
     start_time: str  # "HH:MM" local time, Europe/Berlin
     weeks: int = Field(ge=1, le=12)
-    capacity: Optional[int] = Field(default=None, ge=1, le=8)
+    capacity: Optional[int] = Field(default=None, ge=1, le=12)
     age_min: int = Field(default=4, ge=0, le=99)
     age_max: int = Field(default=18, ge=0, le=99)
     status: Literal["draft", "published"] = "published"

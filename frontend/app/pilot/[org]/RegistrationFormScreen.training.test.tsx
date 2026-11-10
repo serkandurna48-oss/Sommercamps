@@ -94,12 +94,12 @@ it('shows session date and time, the price text and the cancellation note instea
   expect(rendered).not.toContain('Camp')
 })
 
-it('offers Überweisung and bar as payment methods', () => {
+it('offers Überweisung, but no cash payment (Serkan/Jan 10.11.)', () => {
   const nodes = render()
   expect(radio(nodes, 'ueberweisung')).toBeDefined()
-  expect(radio(nodes, 'bar')).toBeDefined()
+  expect(radio(nodes, 'bar')).toBeUndefined()
   expect(text(nodes)).toContain('Überweisung')
-  expect(text(nodes)).toContain('Bar beim Training')
+  expect(text(nodes)).not.toContain('Bar beim Training')
 })
 
 it('names the action a booking without a price in the button', () => {
@@ -118,7 +118,7 @@ it('does not submit without a payment method and marks the group invalid', async
   expect(group?.props['aria-invalid']).toBe(true)
 })
 
-it.each(['bar', 'ueberweisung'] as const)('sends payment_method %s with the booking to the session slug', async (method) => {
+it.each(['ueberweisung'] as const)('sends payment_method %s with the booking to the session slug', async (method) => {
   const onSubmitted = vi.fn()
   let nodes = render({ onSubmitted })
   fill(nodes)
@@ -143,7 +143,7 @@ it('reports a full slot to the flow and shows the friendly message', async () =>
   vi.mocked(submitRegistration).mockResolvedValueOnce({ ok: false, status: 409, detail: 'x', conflict: 'full' })
   let nodes = render()
   fill(nodes)
-  change(radio(nodes, 'bar'), true)
+  change(radio(nodes, 'ueberweisung'), true)
   nodes = render()
   await submit(nodes)
   expect(TRAINING.onSlotTaken).toHaveBeenCalledWith('full')
@@ -154,7 +154,7 @@ it('does not reload the slots for a duplicate booking', async () => {
   vi.mocked(submitRegistration).mockResolvedValueOnce({ ok: false, status: 409, detail: 'x', conflict: 'duplicate' })
   let nodes = render()
   fill(nodes)
-  change(radio(nodes, 'bar'), true)
+  change(radio(nodes, 'ueberweisung'), true)
   nodes = render()
   await submit(nodes)
   expect(TRAINING.onSlotTaken).not.toHaveBeenCalled()
@@ -177,7 +177,7 @@ it('shows the optional documentation consent checkbox for trainings only, unchec
 it.each([true, false])('sends documentation_consent %s with a training booking', async (consent) => {
   let nodes = render()
   fill(nodes)
-  change(radio(nodes, 'bar'), true)
+  change(radio(nodes, 'ueberweisung'), true)
   if (consent) change(checkbox(nodes, DOC_HEADING), true)
   nodes = render()
   await submit(nodes)

@@ -173,7 +173,7 @@ export function parseSessionInput(input: Record<string, string>, kind: OfferKind
   let capacity: number | undefined
   if (kind === 'gruppe') {
     const parsed = parseInteger(input.capacity ?? '')
-    if (parsed === null || parsed < 1 || parsed > 8) errors.capacity = 'Plätze von 1 bis 8.'
+    if (parsed === null || parsed < 1 || parsed > 12) errors.capacity = 'Plätze von 1 bis 12.'
     else capacity = parsed
   }
 

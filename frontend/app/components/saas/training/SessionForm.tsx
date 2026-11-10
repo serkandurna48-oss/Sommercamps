@@ -11,7 +11,7 @@ import type { OfferKind } from './trainingLogic'
 const initialState: TrainingFormState = { error: null }
 
 /** Neuer Termin: Datum und Uhrzeit in Berliner Zeit. Einzeltraining hat immer
- * genau einen Platz (kein Feld), Gruppentraining 1 bis 8. */
+ * genau einen Platz (kein Feld), Gruppentraining 1 bis 12. */
 export default function SessionForm({ orgSlug, offerId, kind }: {
   orgSlug: string
   offerId: string
@@ -41,8 +41,8 @@ export default function SessionForm({ orgSlug, offerId, kind }: {
           <input id="session_start_time" name="start_time" type="time" required defaultValue={value('start_time')} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
         {kind === 'gruppe' && (
-          <Field label="Plätze" htmlFor="session_capacity" suffix="Plätze" hint="1 bis 8." error={err('capacity')}>
-            <input id="session_capacity" name="capacity" type="number" inputMode="numeric" min={1} max={8} required defaultValue={value('capacity')} className={INPUT_CLASS} style={INPUT_STYLE} />
+          <Field label="Plätze" htmlFor="session_capacity" suffix="Plätze" hint="1 bis 12." error={err('capacity')}>
+            <input id="session_capacity" name="capacity" type="number" inputMode="numeric" min={1} max={12} required defaultValue={value('capacity')} className={INPUT_CLASS} style={INPUT_STYLE} />
           </Field>
         )}
         <Field label="Mindestalter (optional)" htmlFor="session_age_min" suffix="Jahre" hint="Standard: 4 Jahre." error={err('age_min')}>

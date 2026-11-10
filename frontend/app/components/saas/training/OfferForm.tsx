@@ -67,7 +67,7 @@ export default function OfferForm({ orgSlug, offer, backButton, memberPrice = tr
           </dl>
         ) : (
           <>
-            <Field label="Art" htmlFor="offer_kind" hint="Einzeltraining: ein Kind pro Termin. Gruppentraining: 1 bis 8 Plätze pro Termin. Nach dem Anlegen nicht mehr änderbar." error={err('kind')}>
+            <Field label="Art" htmlFor="offer_kind" hint="Einzeltraining: ein Kind pro Termin. Gruppentraining: 1 bis 12 Plätze pro Termin. Nach dem Anlegen nicht mehr änderbar." error={err('kind')}>
               <select id="offer_kind" name="kind" required defaultValue={value('kind', 'einzel')} className={INPUT_CLASS} style={INPUT_STYLE}>
                 {OFFER_KINDS.map(kind => <option key={kind} value={kind}>{offerKindLabel[kind]}</option>)}
               </select>

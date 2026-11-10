@@ -163,10 +163,10 @@ describe('Terminformular', () => {
     }
   })
 
-  it('Gruppe: Kapazität 1–8 Pflicht', () => {
-    const ok = parseSessionInput({ ...base, capacity: '6' }, 'gruppe')
-    expect(ok.ok && ok.value.capacity).toBe(6)
-    for (const capacity of ['', '0', '9', 'x', '2,5']) {
+  it('Gruppe: Kapazität 1–12 Pflicht', () => {
+    const ok = parseSessionInput({ ...base, capacity: '12' }, 'gruppe')
+    expect(ok.ok && ok.value.capacity).toBe(12)
+    for (const capacity of ['', '0', '13', 'x', '2,5']) {
       const r = parseSessionInput({ ...base, capacity }, 'gruppe')
       expect(r.ok ? [] : Object.keys(r.errors)).toEqual(['capacity'])
     }

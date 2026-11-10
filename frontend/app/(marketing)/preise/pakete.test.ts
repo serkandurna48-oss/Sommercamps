@@ -31,9 +31,9 @@ describe('Preisseite-Texte', () => {
     expect(JSON.stringify(preise)).not.toContain('Keine Gebühr pro Anmeldung')
   })
 
-  it('weist die Stripe-Gebühr getrennt aus', () => {
+  it('nennt die Zahlungsgebühren als enthalten (Ahmads Preismodell)', () => {
     expect(preise.steuerhinweis).toContain('Alle Beträge zzgl. USt.')
-    expect(preise.steuerhinweis).toContain('zzgl. Gebühren des Zahlungsdienstleisters bei Online-Zahlung (Stripe)')
+    expect(preise.steuerhinweis).toContain('enthält die Zahlungsgebühren bei Online-Zahlung (Stripe), es kommt nichts hinzu')
   })
 
   it('hat genau drei Pakete', () => {

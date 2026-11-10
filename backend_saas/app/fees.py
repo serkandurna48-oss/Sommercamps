@@ -159,6 +159,27 @@ def snapshot_paid_registration(cur, registration_id, organization_id) -> None:
     write_snapshot(cur, registration_id, organization_id, fee_quote(rule, int(row["base_cents"] or 0)), "not_collected")
 
 
+def payment_fee_estimate_cents(amount_cents: int, percent: Decimal, fixed_cents: int) -> int:
+    """Estimated Stripe processing fee for one card payment (percent half-up to
+    whole cents + fixed). Default 1.5 % + 25 ct = standard EEA card price."""
+    if amount_cents <= 0:
+        return 0
+    variable = (Decimal(amount_cents) * Decimal(percent) / Decimal(100)).quantize(Decimal(1), rounding=ROUND_HALF_UP)
+    return int(variable) + int(fixed_cents)
+
+
+def net_of_payment_fee(quote: dict[str, Any], amount_cents: int, percent: Decimal, fixed_cents: int) -> dict[str, Any]:
+    """Ahmad's pricing: the plan percent INCLUDES the payment fees. With direct
+    charges (Managed Risk) Stripe takes its fee from the club's account, so the
+    platform withholds only plan fee minus the estimated Stripe fee (never < 0).
+    The club then pays about the plan percent in total. The estimate can differ
+    from Stripe's real fee (non-EEA cards, other methods); the platform carries
+    that difference by design."""
+    gross = int(quote["fee_cents"])
+    payment = payment_fee_estimate_cents(amount_cents, percent, fixed_cents)
+    return {**quote, "gross_fee_cents": gross, "payment_fee_cents": payment, "fee_cents": max(0, gross - payment)}
+
+
 def plan_percent(plan: str, percent: Optional[Decimal]) -> Decimal:
     """Resolve the stored percent: starter/verein default unless overridden;
     individuell always needs an explicit percent."""

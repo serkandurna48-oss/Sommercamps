@@ -345,6 +345,10 @@ def create_checkout(
         # Fee valid on the booking date, computed on the amount actually charged.
         rule = fees.effective_fee(tenant.organization_id, booking["created_at"])
         quote = fees.fee_quote(rule, amount)
+        if mode == DIRECT_FEE:
+            # Stripe charges its fee to the club's account: withhold only the rest,
+            # so the club pays the plan percent in total (Ahmad's pricing).
+            quote = fees.net_of_payment_fee(quote, amount, settings.stripe_fee_percent, settings.stripe_fee_fixed_cents)
         if quote["fee_cents"] >= amount:
             # Stripe: application_fee_amount must be less than the charge.
             # Only possible with an extreme minimum fee; the snapshot keeps

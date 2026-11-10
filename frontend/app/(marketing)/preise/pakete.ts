@@ -48,11 +48,11 @@ export const rechenbeispiel = {
 
 export const pakete = [
   {
-    name: 'Starter', preis: '0 €', zeitraum: 'pro Monat', buchungsgebuehr: '6,9 % je Buchung',
+    name: 'Starter', preis: '0 €', zeitraum: 'pro Monat', buchungsgebuehr: '6,9 % je Buchung, inkl. Zahlungsgebühren',
     zielgruppe: 'Für Vereine, die mit einem Camp starten.', umfang: '1 aktives Camp', features,
   },
   {
-    name: 'Verein', preis: '24,90 €', zeitraum: 'pro Monat', buchungsgebuehr: '4,9 % je Buchung',
+    name: 'Verein', preis: '24,90 €', zeitraum: 'pro Monat', buchungsgebuehr: '4,9 % je Buchung, inkl. Zahlungsgebühren',
     zielgruppe: 'Für Vereine mit mehreren Feriencamps.', umfang: 'Unbegrenzt viele Camps · 298,80 € pro Jahr', features,
   },
   {
@@ -66,7 +66,7 @@ export const preise = {
   titel: 'Ihr Camp. Ihr Paket.',
   einleitung: 'Starter hat keine Grundgebühr: Sie zahlen nur, wenn gebucht wird. Wer mehr Camps veranstaltet, wechselt ins Paket Verein.',
   waehrung: '€',
-  steuerhinweis: 'Alle Beträge zzgl. USt. Die Gebühr je Buchung gilt zzgl. Gebühren des Zahlungsdienstleisters bei Online-Zahlung (Stripe). Bei Überweisung fallen keine Zahlungsgebühren an.',
+  steuerhinweis: 'Alle Beträge zzgl. USt. Die Gebühr je Buchung enthält die Zahlungsgebühren bei Online-Zahlung (Stripe), es kommt nichts hinzu. Bei Überweisung fallen keine Zahlungsgebühren an.',
   beispielTitel: 'Rechenbeispiel',
   anfrage: 'Unverbindlich anfragen',
   formular: '/campspilot',

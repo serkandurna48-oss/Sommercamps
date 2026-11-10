@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 from datetime import date
 from functools import lru_cache
+from decimal import Decimal
 from typing import Optional
 from urllib.parse import urlsplit
 
@@ -137,6 +138,10 @@ class Settings(BaseSettings):
 
     # Opt-in direct-charge Stripe Connect. Never expose secrets to the browser.
     stripe_checkout_enabled: bool = Field(default=False, alias="STRIPE_CHECKOUT_ENABLED")
+    # Pricing (Ahmad): plan percent includes payment fees. For direct charges the
+    # application fee is reduced by this estimate of Stripe's fee per payment.
+    stripe_fee_percent: Decimal = Field(default=Decimal("1.5"), ge=0, le=100, alias="STRIPE_FEE_PERCENT")
+    stripe_fee_fixed_cents: int = Field(default=25, ge=0, le=1000, alias="STRIPE_FEE_FIXED_CENTS")
     stripe_secret_key: Optional[str] = Field(default=None, alias="STRIPE_SECRET_KEY")
     stripe_webhook_secret: Optional[str] = Field(default=None, alias="STRIPE_CONNECT_WEBHOOK_SECRET")
     # Billing B2: signing secret of the PLATFORM webhook endpoint

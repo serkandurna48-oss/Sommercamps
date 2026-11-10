@@ -26,7 +26,7 @@ Pakete:
 
 Alle Beträge zzgl. USt.
 
-Abweichung von Ahmad: Bei Ahmad sind die Zahlungsgebühren im Prozentsatz enthalten. Hier läuft Online-Zahlung über Stripe Managed Risk, und Stripe belastet seine Gebühr direkt beim Verein. Deshalb steht auf der Preisseite: „zzgl. Gebühren des Zahlungsdienstleisters bei Online-Zahlung (Stripe)“. Bei Überweisung fallen keine Zahlungsgebühren an. Serkan entscheidet, ob das so bleibt.
+Stripe-Regel wie bei Ahmad (Serkan, 10.11.): Die Zahlungsgebühren sind im Prozentsatz **enthalten**, für den Verein kommt nichts hinzu. Technik: Bei Managed Risk (Direct Charges) bucht Stripe seine Gebühr beim Verein ab. Deshalb wird die `application_fee_amount` um die geschätzte Stripe-Gebühr gekürzt (`STRIPE_FEE_PERCENT`, Standard 1,5; `STRIPE_FEE_FIXED_CENTS`, Standard 25), nie unter 0. Abweichungen zur echten Stripe-Gebühr (Nicht-EWR-Karten) trägt die Plattform. Eine Umstellung auf `fees_collector=application` würde ein Express-Konto (Preview-API) und Connect-Gebühren der Plattform erfordern und wurde verworfen. Bei Überweisung gilt der volle Prozentsatz, es fallen keine Zahlungsgebühren an.
 
 ### Backend
 - Migration `20261110100000_fee_rule_monthly_fee.sql`:

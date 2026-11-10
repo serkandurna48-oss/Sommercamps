@@ -186,8 +186,8 @@ describe('CX2 – Preis und Fragen', () => {
 
   it('enthält die drei Pakete Starter, Verein und Verband/Individuell', () => {
     expect(pakete.map(({ name, preis, zeitraum, buchungsgebuehr }) => [name, preis, zeitraum, buchungsgebuehr])).toEqual([
-      ['Starter', '0 €', 'pro Monat', '6,9 % je Buchung'],
-      ['Verein', '24,90 €', 'pro Monat', '4,9 % je Buchung'],
+      ['Starter', '0 €', 'pro Monat', '6,9 % je Buchung, inkl. Zahlungsgebühren'],
+      ['Verein', '24,90 €', 'pro Monat', '4,9 % je Buchung, inkl. Zahlungsgebühren'],
       ['Verband/Individuell', 'Individuell', '', 'Individuell je Buchung'],
     ])
     const cards = Array.from(wrapper.querySelectorAll('#preis article'))
@@ -206,7 +206,7 @@ describe('CX2 – Preis und Fragen', () => {
   it('zeigt USt-Hinweis und Stripe-Hinweis, ohne Entwurfskennzeichnung', () => {
     const text = wrapper.querySelector('#preis')?.textContent ?? ''
     expect(text).toContain('Alle Beträge zzgl. USt.')
-    expect(text).toContain('zzgl. Gebühren des Zahlungsdienstleisters bei Online-Zahlung (Stripe)')
+    expect(text).toContain('enthält die Zahlungsgebühren bei Online-Zahlung (Stripe), es kommt nichts hinzu')
     expect(text).not.toContain('Keine Gebühr pro Anmeldung')
     expect(text).not.toContain('Preise gültig für die Saison')
     expect(wrapper.querySelector('#preis small')).toBeNull()

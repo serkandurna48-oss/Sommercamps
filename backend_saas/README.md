@@ -478,6 +478,8 @@ copy .env.example .env        # Windows; `cp .env.example .env` on macOS/Linux
 | `JWT_SECRET` | **yes** | — | Signs platform-admin session tokens (HS256). Own namespace — never the same value as `backend/`'s `JWT_SECRET`. |
 | `TOKEN_EXPIRE_HOURS` | no | `24` | Platform-admin token lifetime. |
 | `STRIPE_CHECKOUT_ENABLED` | no | `false` | Master switch for online payment (Stripe). |
+| `STRIPE_FEE_PERCENT` | no | `1.5` | Estimated Stripe fee percent per card payment. Direct charges (Managed Risk) withhold only plan fee minus this estimate, so the plan percent includes payment fees. |
+| `STRIPE_FEE_FIXED_CENTS` | no | `25` | Fixed part of that estimate in cents. |
 | `STRIPE_SECRET_KEY` | with Stripe | — | `sk_test_…` outside production, `sk_live_…` only with `APP_ENV=production` (checked at runtime). |
 | `STRIPE_CONNECT_WEBHOOK_SECRET` | with Stripe | — | Signing secret of the **Connect** webhook (`/api/v1/payments/stripe/webhook`, "events on connected accounts"). Confirms all direct charges: Managed Risk (`direct_fee`) and legacy Standard accounts; also `account.updated`. Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded`, `charge.refund.updated`, `account.updated`. |
 | `STRIPE_PLATFORM_WEBHOOK_SECRET` | only for B2 destination accounts | — | Signing secret of the **platform** webhook (`/api/v1/payments/stripe/platform-webhook`). Only needed for clubs whose account was created as B2 Express/destination (staging). Not needed for Managed Risk: onboarding, checkout and refunds of `direct_fee` accounts work without it. |

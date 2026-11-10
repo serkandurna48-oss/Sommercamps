@@ -395,6 +395,37 @@
   flex-direction: column;
   gap: 22px;
 }
+/* Mobile: image as its own visible band on top, text below it.
+   Desktop (>= 900px) keeps the full-bleed background with veil. */
+@media (max-width: 899px) {
+  .cp-public .h-akad {
+    min-height: 0;
+    justify-content: flex-start;
+  }
+  .cp-public .h-akad .bg {
+    position: relative;
+    inset: auto;
+    height: clamp(240px, 68vw, 380px);
+    margin-inline: -20px;
+    overflow: hidden;
+  }
+  .cp-public .h-akad .bg img {
+    opacity: 0.92;
+  }
+  .cp-public .h-akad .bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(8, 11, 10, 0.18) 0%, rgba(8, 11, 10, 0) 30%, rgba(8, 11, 10, 0) 62%, var(--band) 100%);
+    pointer-events: none;
+  }
+  .cp-public .h-akad .veil {
+    display: none;
+  }
+  .cp-public .h-akad .in {
+    padding-top: 6px;
+  }
+}
 .cp-public .h-akad h1 {
   color: #fff;
   max-width: 13ch;

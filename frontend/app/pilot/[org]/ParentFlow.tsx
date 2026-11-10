@@ -302,6 +302,10 @@ export default function ParentFlow({
     ? clubAssets.galleryImages.filter(img => img !== heroImg).slice(0, 3)
     : []
 
+  // Mit Über-uns-Text stehen die Bilder dort, sonst als Band (Serkan 10.11.).
+  const aboutImages = org.intro_text?.trim() ? galleryImages : []
+  const bandImages = org.intro_text?.trim() ? [] : galleryImages
+
   // Next camp for sticky CTA
   const nextCamp = camps.find(c => !c.is_full) ?? camps[0] ?? null
 
@@ -507,23 +511,7 @@ export default function ParentFlow({
         )
       })()}
 
-      {/* KSV: kein Laufband (Serkan 28.10.: Ort und Termin stehen schon in den Campkarten). */}
-      {camps.length > 0 && !isKsv && (() => {
-        const marqueeText = camps
-          .map(c => [c.location, formatCampDateRange(c.start_date, c.end_date)].filter(Boolean).join(' · '))
-          .filter(Boolean)
-          .join(' · ')
-        if (!marqueeText.trim()) return null
-        return (
-          <div className="marquee-band fullbleed" aria-hidden="true">
-            <div className="marquee-track">
-              <span className="marquee-inner">{marqueeText} &nbsp;·&nbsp; </span>
-              <span className="marquee-inner">{marqueeText} &nbsp;·&nbsp; </span>
-            </div>
-          </div>
-        )
-      })()}
-
+      {/* Kein Laufband: Ort und Termin stehen schon in den Campkarten (Serkan 28.10. KSV, 10.11. JK). */}
       {camps.length > 0 && (
         <div className="factsstrip pad">
           <div className="factsstrip-in">
@@ -605,7 +593,7 @@ export default function ParentFlow({
               </button>
             </div>
           ) : (
-            filteredCamps.map((camp) => <CampRow key={camp.slug} camp={camp} onSelect={openCamp} />)
+            filteredCamps.map((camp) => <CampRow key={camp.slug} camp={camp} onSelect={openCamp} priceFrom={clubAssets?.campPriceFrom} />)
           )}
         </div>
       </div>
@@ -673,23 +661,41 @@ export default function ParentFlow({
         </section>
       )}
 
-      {/* ── Über uns ── */}
+      {/* ── Über uns (mit Vereinsbildern, wenn vorhanden) ── */}
       {org.intro_text?.trim() && (
-        <div className="pad sec" id="s-ueber-uns" data-section>
-          <div className="sec-head">
-            <div>
-              <span className="sec-label">Über uns</span>
-              <h2 className="d2" data-split>{org.name}</h2>
+        <div className={`pad sec${aboutImages.length > 0 ? ' about-sec' : ''}`} id="s-ueber-uns" data-section>
+          <div className="about-text">
+            <div className="sec-head">
+              <div>
+                <span className="sec-label">Über uns</span>
+                <h2 className="d2" data-split>{org.name}</h2>
+              </div>
             </div>
+            <p className="sec-body-text">{org.intro_text}</p>
           </div>
-          <p className="sec-body-text">{org.intro_text}</p>
+          {aboutImages.length > 0 && (
+            <div className={`about-media about-media-${aboutImages.length}`} data-rise>
+              {aboutImages.map((src, i) => (
+                <div key={src} className={`about-img${i === 0 ? ' about-img-main' : ''}`}>
+                  <Image
+                    src={src}
+                    alt={clubAssets?.galleryAltTexts[src] ?? ''}
+                    unoptimized
+                    fill
+                    sizes="(min-width: 900px) 30vw, 90vw"
+                    style={{ objectFit: 'cover', objectPosition: 'center 25%' }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── Galerie-Band ── */}
-      {galleryImages.length > 0 && (
+      {/* ── Galerie-Band (nur ohne Über-uns-Text) ── */}
+      {bandImages.length > 0 && (
         <div className="gallery-band pad" data-section>
-          {galleryImages.map((src, i) => (
+          {bandImages.map((src, i) => (
             <div key={i} className="gallery-img-wrap" data-gallery-img>
               <Image
                 src={src}
@@ -986,7 +992,7 @@ function WaitScreen({
           <h2 className="d3">Termine mit freien Plätzen</h2>
           <div className="camps">
             {alternatives.map((c) => (
-              <CampRow key={c.slug} camp={c} onSelect={onSelectAlternative} />
+              <CampRow key={c.slug} camp={c} onSelect={onSelectAlternative} priceFrom={getClubAssets(org.slug)?.campPriceFrom} />
             ))}
           </div>
         </div>

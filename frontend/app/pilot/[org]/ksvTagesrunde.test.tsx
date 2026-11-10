@@ -29,9 +29,9 @@ const teurer = { ...camp, slug: 'oster', price_cents: 19900 } as CampPublic
 
 const themes = ['tradition', 'akademie', 'kompakt'] as const
 
-it.each(themes)('KSV %s: kein Laufband, andere Vereine behalten es', theme => {
+it.each(themes)('%s: kein Laufband, weder bei KSV noch bei anderen Vereinen', theme => {
   expect(renderToStaticMarkup(<ParentFlow org={{ ...ksv, theme }} camps={[camp]} />)).not.toContain('marquee-band')
-  expect(renderToStaticMarkup(<ParentFlow org={{ ...org, theme }} camps={[camp]} />)).toContain('marquee-band')
+  expect(renderToStaticMarkup(<ParentFlow org={{ ...org, theme }} camps={[camp]} />)).not.toContain('marquee-band')
 })
 
 it.each(themes)('KSV %s: Start zeigt Preis pro Camp statt Platzsumme', theme => {

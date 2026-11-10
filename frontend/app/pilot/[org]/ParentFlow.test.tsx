@@ -195,11 +195,10 @@ it.each(['tradition', 'akademie', 'kompakt'] as const)('%s zeigt img mit alt=Ver
   expect(html).not.toContain('>DF<') // keine Initialen wenn Logo gesetzt
 })
 
-// ── M5: Marquee ──
-it('marquee rendert Orte der Camps', () => {
+// ── Kein Laufband (10.11.: Ort und Termin stehen in den Campkarten) ──
+it('kein marquee, auch mit Camps', () => {
   const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'akademie' }} camps={[mockCamp]} />)
-  expect(html).toContain('marquee-band')
-  expect(html).toContain('Kassel')
+  expect(html).not.toContain('marquee-band')
 })
 
 it('kein marquee ohne Camps', () => {
@@ -207,10 +206,6 @@ it('kein marquee ohne Camps', () => {
   expect(html).not.toContain('marquee-band')
 })
 
-it('marquee-band trägt Klasse fullbleed für Vollbreite', () => {
-  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'akademie' }} camps={[mockCamp]} />)
-  expect(html).toContain('fullbleed')
-})
 
 // ── M5: Kennzahlen-Leiste enthält keine Hinweiszeile ──
 it('akademie hero-stats enthält keine Anmeldungshinweiszeile', () => {

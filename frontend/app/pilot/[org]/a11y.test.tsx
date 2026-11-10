@@ -39,10 +39,9 @@ const doneResult: RegistrationCreated = {
 
 // ── Statische Checks via SSR ──────────────────────────────────────────────
 
-it('marquee-band trägt aria-hidden="true"', () => {
+it('kein Laufband (aria-hidden-Dekoration entfällt)', () => {
   const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'akademie' }} camps={[camp]} />)
-  expect(html).toContain('marquee-band')
-  expect(html).toMatch(/class="marquee-band[^"]*"[^>]*aria-hidden="true"/)
+  expect(html).not.toContain('marquee-band')
 })
 
 it('DoneScreen h1 trägt role="status"', () => {

@@ -538,6 +538,7 @@ def _handle_webhook(body: bytes, signature: str) -> dict:
         # Legacy (Standard account, no fee): full refunds only, from the charge
         # itself. Otherwise a direct charge with platform fee: amounts are read
         # from Stripe. Each lookup also checks charge type and account.
+        _flag_failed_refund(event_type, obj, DIRECT_FEE, account)
         refunded = _record_refund(obj, account) if event_type == "charge.refunded" else None
         if refunded is None:
             refunded = _record_fee_refund(client, obj, DIRECT_FEE, account)
@@ -589,6 +590,7 @@ def _handle_platform_webhook(body: bytes, signature: str) -> dict:
             return {"received": True, "settled": False}
         return _settle_checkout(client, obj, None, event.get("created"), mode=DESTINATION)
     if event_type in ("charge.refunded", "charge.refund.updated"):
+        _flag_failed_refund(event_type, obj, DESTINATION, None)
         refunded = _record_fee_refund(client, obj, DESTINATION, None)
         return {"received": True, **({"_sync": refunded} if refunded else {})}
     return {"received": True}
@@ -895,6 +897,29 @@ def _store_refund(cur, registration_id, state: dict) -> bool:
             (before["organization_id"], registration_id, delta, fee_delta),
         )
     return bool(delta or fee_delta or after["payment_status"] != before["payment_status"])
+
+
+def _flag_failed_refund(event_type: str, obj: dict, charge_type: str, account: str | None) -> None:
+    """A refund that Stripe reports as failed or canceled (charge.refund.updated) means the
+    money did not go back: make it findable. Never raises into the webhook."""
+    if event_type != "charge.refund.updated" or obj.get("status") not in REFUND_FAILED_STATUSES:
+        return
+    intent = obj.get("payment_intent")
+    if not isinstance(intent, str) or not PAYMENT_INTENT_ID.fullmatch(intent):
+        return
+    try:
+        with db.get_cursor() as cur:
+            cur.execute(
+                """select id, organization_id from camp_registrations
+                   where stripe_charge_type = %s and stripe_payment_intent_id = %s
+                     and (%s::text is null or stripe_checkout_account_id = %s)""",
+                (charge_type, intent, account, account),
+            )
+            row = cur.fetchone()
+        if row is not None:
+            _flag_for_review(row["organization_id"], row["id"], "refund_failed")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not flag failed refund (error_type=%s)", type(exc).__name__)
 
 
 def _record_fee_refund(client, obj: dict, charge_type: str, account: str | None):
@@ -1288,6 +1313,8 @@ def set_online_payment_enabled(
     return _express_status(_payment_org(organization["id"]), get_settings())
 
 
+REFUND_FAILED_STATUSES = ("failed", "canceled")
+
 _REFUND_ERRORS = {
     "charge_already_refunded": (409, "Diese Zahlung ist bereits vollständig erstattet."),
     "insufficient_funds": (409, "Das Stripe-Guthaben des Vereins reicht für die Rückbuchung gerade nicht aus."),
@@ -1331,7 +1358,7 @@ def create_online_refund(organization_id, organization_slug: str, row: dict, amo
         # Direct charge: the PaymentIntent lives on the club's account.
         params["stripe_account"] = row["stripe_checkout_account_id"]
     try:
-        return _stripe_dict(client.Refund.create(**params))
+        refund = _stripe_dict(client.Refund.create(**params))
     except stripe.error.InvalidRequestError as error:
         status_code, message = _REFUND_ERRORS.get(
             getattr(error, "code", None) or "", (502, "Stripe hat die Erstattung abgelehnt. Bitte prüfe sie im Stripe-Dashboard."))
@@ -1339,6 +1366,24 @@ def create_online_refund(organization_id, organization_slug: str, row: dict, amo
         raise HTTPException(status_code, message) from None
     except stripe.error.StripeError:
         raise HTTPException(503, "Zahlungsanbieter derzeit nicht erreichbar") from None
+    if refund.get("status") in REFUND_FAILED_STATUSES:
+        # Stripe answered, but the money is not going back.
+        logger.warning("Refund not accepted by Stripe (organization_slug=%s, status=%s)", organization_slug, refund.get("status"))
+        raise HTTPException(502, "Stripe hat die Erstattung abgelehnt. Bitte prüfe sie im Stripe-Dashboard.")
+    return refund
+
+
+def existing_refund_cents(row: dict) -> int:
+    """Sum of refunds Stripe already holds for this booking's payment (pending or succeeded).
+    Used to resume a parent's cancel after a crash without refunding twice. Raises on any
+    Stripe problem; the caller then falls back to the idempotent create."""
+    client = _stripe_client()
+    params = dict(payment_intent=row["stripe_payment_intent_id"], limit=20)
+    if row["stripe_charge_type"] != DESTINATION:
+        params["stripe_account"] = row["stripe_checkout_account_id"]
+    listed = _stripe_dict(client.Refund.list(**params))
+    return sum(r.get("amount") or 0 for r in listed.get("data", [])
+               if isinstance(r, dict) and r.get("status") not in REFUND_FAILED_STATUSES)
 
 
 @router.post("/admin/organizations/{organization_slug}/registrations/{registration_token}/refund", response_model=RefundResult)

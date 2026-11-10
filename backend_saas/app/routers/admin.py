@@ -147,7 +147,11 @@ def get_organization(
     organization's own org_admin."""
     organization = require_organization(organization_slug)
     schema = OrganizationAdminOut if auth.is_owner else OrganizationOrgAdminOut
-    usage = camps_repo.plan_usage(organization["id"])
+    try:
+        usage = camps_repo.plan_usage(organization["id"])
+    except Exception as exc:  # noqa: BLE001 - the hint is optional, the page must still load
+        logger.warning("plan_usage failed (error_type=%s)", type(exc).__name__)
+        usage = {"plan": None, "active_camps": None}
     return schema.model_validate({**organization, **usage})
 
 

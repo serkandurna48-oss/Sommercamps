@@ -46,6 +46,7 @@ logger = logging.getLogger(__name__)
 # Parents may cancel themselves up to this many days before the camp starts (the one place for the rule).
 SELF_CANCEL_DAYS = 14
 _BERLIN = ZoneInfo("Europe/Berlin")
+_NOTHING_PAID = ("open", "cancelled", "waived")
 
 # Per IP and per token, like the checkout limiter. Reading is cheap, so the limit is higher.
 booking_limiter = SlidingWindowLimiter(60, 3600.0)
@@ -55,9 +56,16 @@ _NOT_FOUND = "Anmeldung nicht gefunden"
 _NOT_PAID_ONLINE = (
     "Bei Überweisung oder Barzahlung storniert der Verein Ihre Anmeldung. Bitte wenden Sie sich an den Verein."
 )
+_PAYMENT_PENDING = (
+    "Die Zahlung ist noch nicht abgeschlossen. Zum Stornieren wenden Sie sich bitte an den Verein."
+)
 _REFUND_FAILED = (
     "Die Erstattung hat gerade nicht geklappt. Ihre Anmeldung wurde nicht storniert. "
-    "Bitte wenden Sie sich an den Verein."
+    "Bitte versuchen Sie es später erneut oder wenden Sie sich an den Verein."
+)
+_CANCEL_INCOMPLETE = (
+    "Ihre Erstattung läuft, die Stornierung konnte aber nicht abgeschlossen werden. "
+    "Der Verein wurde informiert und meldet sich bei Ihnen."
 )
 
 router = APIRouter(prefix="/api/v1/organizations/{organization_slug}/registrations", tags=["Meine Buchung"])
@@ -70,7 +78,7 @@ def berlin_today(now: Optional[datetime] = None) -> date:
 
 class SelfCancel(BaseModel):
     possible: bool
-    reason: Literal["ok", "not_paid_online", "deadline_passed", "already_cancelled", "waitlist"]
+    reason: Literal["ok", "not_paid_online", "payment_pending", "deadline_passed", "already_cancelled", "waitlist"]
     deadline: Optional[date] = None
     refund_cents: Optional[int] = None
     days: int = SELF_CANCEL_DAYS
@@ -103,7 +111,8 @@ _STATUS_SQL = """
            r.child_first_name, r.status, r.payment_status, r.cancellation_requested_at, c.currency,
            coalesce(r.applied_price_cents, r.booked_price_cents, c.price_cents) as amount_cents,
            r.stripe_charge_type, r.stripe_payment_intent_id, r.stripe_checkout_account_id,
-           r.stripe_checkout_amount_cents, r.refunded_cents,
+           r.stripe_checkout_amount_cents, r.refunded_cents, r.payment_method, r.stripe_checkout_session_id,
+           r.parent_cancel_started_at,
            exists (select 1 from invoices i
                    where i.organization_id = r.organization_id and i.registration_id = r.id
                          and i.kind = 'invoice') as invoice_available
@@ -119,7 +128,12 @@ def _self_cancel(row: dict, today: date) -> SelfCancel:
     if row["status"] == "cancelled":
         return SelfCancel(possible=False, reason="already_cancelled")
     if row["status"] == "waitlist":
-        return SelfCancel(possible=True, reason="waitlist")
+        # Leaving the waitlist is only free of money questions when nothing was paid.
+        if row["payment_status"] in _NOTHING_PAID:
+            return SelfCancel(possible=True, reason="waitlist")
+        return SelfCancel(possible=False, reason="not_paid_online")
+    if row["payment_status"] == "open" and (row.get("payment_method") == "online" or row.get("stripe_checkout_session_id")):
+        return SelfCancel(possible=False, reason="payment_pending")
     if row["payment_status"] != "paid" or not payments.is_fee_mode_payment(row):
         return SelfCancel(possible=False, reason="not_paid_online")
     deadline = row["start_date"] - timedelta(days=SELF_CANCEL_DAYS)
@@ -156,6 +170,21 @@ def get_booking(
     return _to_status(_load(registration_token, tenant))
 
 
+def _refund_already_made(row: dict, amount: int) -> Optional[int]:
+    """Resume of an interrupted self-cancel (parent_cancel_started_at set, still booked):
+    cents already refunded, or None when no refund exists yet. The webhook-booked payment
+    status is the first witness, Stripe itself the second (the webhook can be late)."""
+    if row["payment_status"] in ("refunded", "partially_refunded"):
+        return row["refunded_cents"] or amount
+    if row["payment_status"] == "paid":
+        try:
+            found = payments.existing_refund_cents(row)
+        except Exception:  # noqa: BLE001 - fall back to the idempotent create
+            return None
+        return found if found >= amount else None
+    return None
+
+
 @router.post("/{registration_token}/cancel", response_model=BookingStatus)
 def cancel_booking(
     registration_token: UUID,
@@ -167,52 +196,79 @@ def cancel_booking(
     row = _load(registration_token, tenant)
     if row["status"] == "cancelled":
         return _to_status(row)  # idempotent: no second refund, no second mail
-    check = _self_cancel(row, berlin_today())
-    if not check.possible:
-        if check.reason == "deadline_passed":
-            raise HTTPException(409, (
-                f"Eine Stornierung ist bis {SELF_CANCEL_DAYS} Tage vor Campbeginn "
-                f"(bis zum {check.deadline.strftime('%d.%m.%Y')}) möglich. Bitte wenden Sie sich an den Verein."))
-        raise HTTPException(409, _NOT_PAID_ONLINE)
+    started = row["parent_cancel_started_at"] is not None
+    resumed_refund: Optional[int] = None
+    if started and row["payment_status"] in ("refunded", "partially_refunded") and payments.is_fee_mode_payment(row):
+        # The refund of an interrupted attempt is booked: only the cancel is missing.
+        resumed_refund = row["refunded_cents"] or 0
+    else:
+        check = _self_cancel(row, berlin_today())
+        if not check.possible:
+            if check.reason == "deadline_passed":
+                raise HTTPException(409, (
+                    f"Eine Stornierung ist bis {SELF_CANCEL_DAYS} Tage vor Campbeginn "
+                    f"(bis zum {check.deadline.strftime('%d.%m.%Y')}) möglich. Bitte wenden Sie sich an den Verein."))
+            raise HTTPException(409, _PAYMENT_PENDING if check.reason == "payment_pending" else _NOT_PAID_ONLINE)
+        refund_cents = check.refund_cents or 0
+        if refund_cents > 0:
+            if not started:
+                # Intent first, in our own database: if anything breaks after the refund, a retry
+                # knows that the money may already be on its way back.
+                with db.get_cursor() as cur:
+                    cur.execute(
+                        "update camp_registrations set parent_cancel_started_at = now() "
+                        "where id = %s and organization_id = %s and parent_cancel_started_at is null",
+                        (row["id"], tenant.organization_id),
+                    )
+            else:
+                resumed_refund = _refund_already_made(row, refund_cents)
+            if resumed_refund is None:
+                try:
+                    # Same refund code as the club's refund; the key makes a retry the same refund.
+                    payments.create_online_refund(tenant.organization_id, tenant.slug, row, refund_cents, "parent-cancel")
+                except Exception as exc:  # noqa: BLE001 - nothing is cancelled unless Stripe accepted the refund
+                    logger.warning("Parent self-cancel refund failed (organization_slug=%s, error_type=%s)",
+                                   tenant.slug, type(exc).__name__)
+                    raise HTTPException(502, _REFUND_FAILED) from None
+                resumed_refund = refund_cents
+    refund_cents = resumed_refund or 0
 
-    refund_cents = check.refund_cents or 0
-    if refund_cents > 0:
-        try:
-            # Same refund code as the club's refund; the key makes a retry the same refund.
-            payments.create_online_refund(tenant.organization_id, tenant.slug, row, refund_cents, "parent-cancel")
-        except Exception as exc:  # noqa: BLE001 - nothing is cancelled unless Stripe accepted the refund
-            logger.warning("Parent self-cancel refund failed (organization_slug=%s, error_type=%s)",
-                           tenant.slug, type(exc).__name__)
-            raise HTTPException(502, _REFUND_FAILED) from None
-
+    # From here on money may have moved: whatever goes wrong must not look like "nothing happened".
     try:
-        result = registrations_repo.cancel_registration_and_promote_next(tenant, row["camp_id"], registration_token)
-    except RegistrationNotFoundError:
-        raise HTTPException(404, _NOT_FOUND) from None
+        result = registrations_repo.cancel_registration_and_promote_next(
+            tenant, row["camp_id"], registration_token, mark_parent_cancelled=True)
     except InvalidStatusTransitionError:
         return _to_status(_load(registration_token, tenant))  # cancelled meanwhile (double click)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Parent self-cancel incomplete after refund (organization_slug=%s, error_type=%s)",
+                     tenant.slug, type(exc).__name__)
+        if refund_cents > 0:
+            _report_incomplete(tenant, row, registration_token)
+            raise HTTPException(502, _CANCEL_INCOMPLETE) from None
+        if isinstance(exc, RegistrationNotFoundError):
+            raise HTTPException(404, _NOT_FOUND) from None
+        raise
 
-    with db.get_cursor() as cur:
-        cur.execute(
-            "update camp_registrations set cancellation_requested_at = coalesce(cancellation_requested_at, now()) "
-            "where id = %s and organization_id = %s",
-            (row["id"], tenant.organization_id),
-        )
     promoted = result["promoted"]
-    platform_roles.write_audit_log(
-        actor_user_id=None,
-        actor_email=None,
-        action="registration.cancelled_by_parent",
-        organization_id=str(tenant.organization_id),
-        target_type="registration",
-        target_id=str(row["id"]),
-        metadata={"refund_cents": refund_cents, "promoted": promoted is not None},
-    )
+    # The cancel is committed: side effects are always scheduled, a failing audit entry cannot stop them.
+    try:
+        platform_roles.write_audit_log(
+            actor_user_id=None,
+            actor_email=None,
+            action="registration.cancelled_by_parent",
+            organization_id=str(tenant.organization_id),
+            target_type="registration",
+            target_id=str(row["id"]),
+            metadata={"refund_cents": refund_cents, "promoted": promoted is not None},
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Audit entry for parent cancel failed (error_type=%s)", type(exc).__name__)
     logger.info("Registration cancelled by parent (organization_slug=%s, refund=%s, promoted=%s)",
                 tenant.slug, refund_cents > 0, promoted is not None)
-    # Same side effects as the club's cancel: parent mail, storno invoice, next in line.
+    # Same side effects as the club's cancel (storno invoice, next in line), with the parents'
+    # own confirmation mail instead of the club-cancel mail.
     background_tasks.add_task(
-        notifications_sending.send_status_change_notification, registration_token, tenant.organization_id, "cancelled")
+        notifications_sending.send_parent_self_cancel_confirmation, registration_token, tenant.organization_id, refund_cents)
     background_tasks.add_task(payments.expire_open_checkout, tenant.organization_id, registration_token)
     background_tasks.add_task(invoices.sync_by_token, registration_token, tenant.organization_id)
     if promoted is not None:
@@ -220,5 +276,15 @@ def cancel_booking(
             notifications_sending.send_status_change_notification,
             promoted["registration_token"], tenant.organization_id, "promoted")
     background_tasks.add_task(
-        notifications_sending.send_parent_cancelled_notification, registration_token, tenant.organization_id, refund_cents)
+        notifications_sending.send_parent_cancelled_notification,
+        registration_token, tenant.organization_id, refund_cents, promoted is not None)
     return _to_status(_load(registration_token, tenant))
+
+
+def _report_incomplete(tenant: TenantContext, row: dict, registration_token: UUID) -> None:
+    """Refund done, cancel failed: make it findable and tell the club. Never raises."""
+    try:
+        payments._flag_for_review(tenant.organization_id, row["id"], "parent_cancel_incomplete")
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Could not flag incomplete parent cancel (error_type=%s)", type(exc).__name__)
+    notifications_sending.send_parent_cancel_incomplete_notification(registration_token, tenant.organization_id)

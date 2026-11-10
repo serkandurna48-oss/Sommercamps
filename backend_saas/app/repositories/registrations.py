@@ -460,7 +460,7 @@ _ADMIN_REGISTRATION_FIELDS = """
     photo_permission, created_at, extra_answers,
     email_sent_at, email_error,
     applied_price_cents, member_match, payment_method,
-    player_id, documentation_consent, anonymized_at
+    player_id, documentation_consent, anonymized_at, cancellation_requested_at
 """
 
 _LIST_REGISTRATIONS_FOR_CAMP = f"""

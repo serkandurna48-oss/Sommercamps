@@ -69,3 +69,15 @@ def _reset_registration_rate_limit():
     registration_limiter.reset()
     yield
     registration_limiter.reset()
+
+
+@pytest.fixture(autouse=True)
+def _reset_booking_rate_limits():
+    """"Meine Buchung" limiters are process-global like the registration limiter."""
+    from app.routers import booking
+
+    booking.booking_limiter.reset()
+    booking.cancellation_limiter.reset()
+    yield
+    booking.booking_limiter.reset()
+    booking.cancellation_limiter.reset()

@@ -86,6 +86,18 @@ class Settings(BaseSettings):
             raise ValueError("Invalid organization slug for login URL")
         return f"{self.frontend_base_url}/pilot/{org_slug}/login"
 
+    def booking_url(self, org_slug: str, registration_token) -> str:
+        """Link "Meine Buchung" for parent mails: /pilot/<slug>/buchung/<token>."""
+        if not self.frontend_base_is_usable():
+            raise ValueError("FRONTEND_BASE_URL is not configured for this environment")
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", org_slug or ""):
+            raise ValueError("Invalid organization slug for booking URL")
+        return f"{self.frontend_base_url}/pilot/{org_slug}/buchung/{registration_token}"
+
+    def admin_registrations_url(self, org_slug: str) -> str:
+        """Target of club-admin mails about registrations: the admin registrations list."""
+        return self.login_url(org_slug).removesuffix("/login") + "/anmeldungen"
+
     def password_setup_url(self, org_slug: str) -> str:
         """Target of invite links: the organization's set-new-password page."""
         return self.login_url(org_slug).removesuffix("/login") + "/neues-passwort"

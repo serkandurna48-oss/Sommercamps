@@ -274,7 +274,7 @@ export default function ParentFlow({
       <WaitScreen
         org={org}
         camp={selectedCamp}
-        alternatives={camps.filter((c) => c.slug !== selectedCamp.slug && !c.is_full).slice(0, 2)}
+        alternatives={camps.filter((c) => c.slug !== selectedCamp.slug && !c.is_full && campPhase(c) === 'open').slice(0, 2)}
         onBack={backToOrg}
         onJoinWaitlist={goForm}
         onSelectAlternative={openCamp}
@@ -309,7 +309,8 @@ export default function ParentFlow({
   const bandImages = org.intro_text?.trim() ? [] : galleryImages
 
   // Next camp for sticky CTA
-  const nextCamp = camps.find(c => !c.is_full) ?? camps[0] ?? null
+  // Sticky CTA: the next camp parents can actually book (not a preview or closed camp).
+  const nextCamp = camps.find(c => !c.is_full && campPhase(c) === 'open') ?? camps.find(c => campPhase(c) === 'open') ?? camps[0] ?? null
 
   return (
     <section className="screen" id="s-org" ref={orgContainerRef}>

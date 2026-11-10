@@ -3957,7 +3957,7 @@
 .cp-public .past-camps > summary::after { content: '▾'; font-size: 12px; transition: transform 0.25s var(--ease); }
 .cp-public .past-camps[open] > summary::after { transform: rotate(180deg); }
 .cp-public .past-camps > .camps { margin-top: 16px; }
-.cp-public .camp.past { opacity: 0.72; }
+.cp-public .camp.past { opacity: 0.85; }
 .cp-public .camp.past .c-go,
 .cp-public .camp.preview .c-go {
   color: var(--ink);

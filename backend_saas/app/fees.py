@@ -130,7 +130,7 @@ _WRITE_SNAPSHOT = """
 def write_snapshot(cur, registration_id, organization_id, quote: dict, collection: str) -> None:
     """Freeze the fee on a paid registration. First snapshot wins: a booking
     that is set to paid again keeps the fee it was first paid with."""
-    if collection not in ("application_fee", "not_collected"):
+    if collection not in ("application_fee", "not_collected", "platform_collected"):
         raise ValueError("collection")
     cur.execute(_WRITE_SNAPSHOT, (
         quote["rule_id"], quote["plan"], Decimal(quote["percent"]), quote["fixed_cents"],

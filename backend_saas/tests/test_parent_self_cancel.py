@@ -90,17 +90,17 @@ def _cancel(env, token, slug=None):
     return env.client.post(_url(env, token, slug, "/cancel"))
 
 
-def _new(env, paid_online=True, camp=None, online_method=False, **kw):
+def _new(env, paid_online=True, camp=None, online_method=False, charge_type="direct_fee", **kw):
     if paid_online:
         kw.setdefault("payment_status", "paid")
     with env.cursor() as cur:
         token = make_reg(cur, env.org, camp or env.camp, **kw)
         if paid_online:
             cur.execute(
-                """update camp_registrations set payment_method='online', stripe_charge_type='direct_fee',
+                """update camp_registrations set payment_method='online', stripe_charge_type=%s,
                        stripe_payment_intent_id=%s, stripe_checkout_account_id=%s, stripe_checkout_amount_cents=1000
                    where registration_token=%s""",
-                (f"pi_{uuid4().hex[:16]}", ACCOUNT, token),
+                (charge_type, f"pi_{uuid4().hex[:16]}", None if charge_type == "platform" else ACCOUNT, token),
             )
         elif online_method:
             cur.execute("update camp_registrations set payment_method='online' where registration_token=%s", (token,))
@@ -229,6 +229,23 @@ def test_success_refunds_cancels_promotes_mails_and_audits(env):
     dumped = json.dumps(audit, default=str)
     assert str(token) not in dumped and "p@example.com" not in dumped and "Kim" not in dumped
     assert audit["metadata"] == {"refund_cents": 1000, "promoted": True}
+
+
+def test_platform_payment_is_refunded_on_the_platform_account(env):
+    token = _new(env, charge_type="platform")
+    assert _sc(env, token)["reason"] == "ok"
+    row = _row(env, token)
+    r = _cancel(env, token)
+    assert r.status_code == 200, r.text
+    (call,) = env.stripe.calls
+    assert call["payment_intent"] == row["stripe_payment_intent_id"] and call["amount"] == 1000
+    assert "stripe_account" not in call and "refund_application_fee" not in call and "reverse_transfer" not in call
+    assert call["idempotency_key"].startswith(f"campspilot-refund-{row['id']}-1000-")
+    assert _row(env, token)["status"] == "cancelled"
+    # Resume check also lists the refunds on the platform account.
+    env.stripe.listed = [{"amount": 1000, "status": "succeeded"}]
+    assert payments.existing_refund_cents(row) == 1000
+    assert "stripe_account" not in env.stripe.lists[-1]
 
 
 @pytest.mark.parametrize("today,allowed", [(date(2027, 6, 21), True), (date(2027, 6, 22), False)])

@@ -85,7 +85,8 @@ def test_status_mapping_from_v1_retrieve(env):
     env.fake.account_state = {"charges_enabled": False, "payouts_enabled": False, "details_submitted": True,
                               "requirements": {"currently_due": ["a", "b"], "past_due": ["b", "c"]}}
     status = env.client.post(f"{path}/sync", headers=env.admin()).json()
-    assert (status["state"], status["requirements_due"], status["online_payment_mode"]) == ("incomplete", 3, None)
+    # Club account not active yet: the platform collects meanwhile (decision 10.11.2026).
+    assert (status["state"], status["requirements_due"], status["online_payment_mode"]) == ("incomplete", 3, "platform")
     assert env.fake.named("Account.retrieve") == [("Account.retrieve", env.express)]
     env.fake.account_state = {"charges_enabled": True, "payouts_enabled": True, "details_submitted": True,
                               "requirements": {"currently_due": [], "past_due": []}}

@@ -190,3 +190,13 @@ it('SSR output does not contain inline opacity:0 (GSAP must not run in SSR)', ()
   // opacity:0.55 (on svg) is fine — the regex ensures a bare 0 (not 0.xx)
   expect(html).not.toMatch(/opacity\s*:\s*0(?![0-9.])/)
 })
+
+it('getClubAssets returns the same JK gallery for prod and staging demo slug', () => {
+  const prod = getClubAssets('jk-performance-academy')
+  const demo = getClubAssets('jk-academy-demo')
+  expect(prod).not.toBeNull()
+  expect(demo).toEqual(prod)
+  expect(prod!.galleryImages).toHaveLength(3)
+  expect(prod!.galleryImages).not.toContain(prod!.heroImage)
+  for (const src of prod!.galleryImages) expect(prod!.galleryAltTexts[src]).toBeTruthy()
+})

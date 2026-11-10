@@ -552,7 +552,7 @@ export const publicUI = {
     { q: 'Was passiert, wenn ein Camp ausgebucht ist?', a: 'Sie können sich auf die Warteliste setzen. Sobald ein Platz frei wird, rückt das nächste Kind automatisch nach. Erhält Ihr Kind einen Platz, bekommen Sie automatisch eine E-Mail mit der Bestätigung.' },
     { q: 'Wie kann ich stornieren?', a: 'Schreiben Sie dem Camp-Team einfach eine E-Mail. Die genauen Stornobedingungen stehen in den Teilnahmebedingungen.' },
     { q: 'Wer darf mein Kind abholen?', a: 'Die abholberechtigten Personen geben Sie direkt im Anmeldeformular an. Bitte halten Sie bei der Abholung einen Lichtbildausweis bereit.' },
-    { q: 'Wie erreiche ich das Camp-Team?', a: 'Die E-Mail-Adresse des Vereins finden Sie am Ende dieser Seite. Wir antworten in der Regel am selben Tag.' },
-    { q: 'Kommen Kinder ohne Vereinsmitgliedschaft?', a: 'Ja, die Camps stehen allen Kindern offen – eine Mitgliedschaft ist nicht erforderlich.' },
+    { q: 'Wie erreiche ich das Camp-Team?', a: 'Die Kontaktdaten des Camp-Teams finden Sie am Ende dieser Seite.' },
+    { q: 'Kommen Kinder ohne Vereinsmitgliedschaft?', a: 'Ob eine Vereinsmitgliedschaft nötig ist, steht in den Teilnahmebedingungen des Anbieters. Im Zweifel fragen Sie gerne das Camp-Team.' },
   ],
 }

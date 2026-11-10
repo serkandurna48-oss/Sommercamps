@@ -11,7 +11,7 @@ vi.mock('../../../lib/saasAdminApi', async importOriginal => ({
 }))
 
 import { getAdminToken } from '../../../lib/adminSession'
-import { createCampAdmin, SlugConflictError, updateCampAdmin, updateOrganizationAdmin, type CampAdmin } from '../../../lib/saasAdminApi'
+import { createCampAdmin, PlanCampLimitError, SlugConflictError, updateCampAdmin, updateOrganizationAdmin, type CampAdmin } from '../../../lib/saasAdminApi'
 
 function makeFormData(fields: Record<string, string>): FormData {
   const fd = new FormData()
@@ -180,4 +180,18 @@ it.each([undefined, '', 'Injected notes'])('never sends billing_notes from the c
   expect(state.saved).toBe(true)
   expect(updateOrganizationAdmin).toHaveBeenCalledOnce()
   expect(vi.mocked(updateOrganizationAdmin).mock.calls[0][2]).not.toHaveProperty('billing_notes')
+})
+
+it('zeigt beim Veröffentlichen die Backend-Meldung zum Camp-Limit im Paket Starter', async () => {
+  const message = 'Im Paket Starter ist 1 aktives Camp enthalten. Für mehr Camps wechsle ins Paket Verein.'
+  vi.mocked(updateCampAdmin).mockRejectedValueOnce(new PlanCampLimitError(message))
+  const state = await updateCampConfigAction('demo', 'sommer', { error: null, saved: false }, makeFormData({ ...CAMP_FIELDS, status: 'published' }))
+  expect(state).toEqual({ error: message, saved: false })
+})
+
+it('zeigt die Camp-Limit-Meldung auch beim Anlegen', async () => {
+  const message = 'Im Paket Starter ist 1 aktives Camp enthalten. Für mehr Camps wechsle ins Paket Verein.'
+  vi.mocked(createCampAdmin).mockRejectedValueOnce(new PlanCampLimitError(message))
+  const state = await createCampAction('demo', { error: null }, makeFormData(CAMP_FIELDS))
+  expect(state.error).toBe(message)
 })

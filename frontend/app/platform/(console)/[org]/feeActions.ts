@@ -40,6 +40,15 @@ function euroCents(raw: string): number | null | undefined {
   return Math.round(Number(normalized) * 100)
 }
 
+/** Monthly base fee in euros -> cents; null (empty) = plan default; 0 is a real value; undefined = invalid. */
+function monthlyCents(raw: string): number | null | undefined {
+  if (!raw) return null
+  const normalized = raw.replace(',', '.')
+  if (!/^\d{1,5}(\.\d{1,2})?$/.test(normalized)) return undefined
+  const cents = Math.round(Number(normalized) * 100)
+  return cents <= 1000000 ? cents : undefined
+}
+
 export async function readFeeRule(formData: FormData): Promise<{ data?: FeeRuleInput; error?: string }> {
   const plan = text(formData, 'plan') as FeePlan
   if (!PLANS.includes(plan)) return { error: 'Bitte ein Paket wählen.' }
@@ -49,11 +58,13 @@ export async function readFeeRule(formData: FormData): Promise<{ data?: FeeRuleI
   const fixed = euroCents(text(formData, 'fixed_eur'))
   const minimum = euroCents(text(formData, 'min_eur'))
   if (fixed === undefined || minimum === undefined) return { error: 'Beträge in Euro, z. B. 0,25.' }
+  const monthly = monthlyCents(text(formData, 'monthly_eur'))
+  if (monthly === undefined) return { error: 'Grundgebühr in Euro pro Monat, z. B. 24,90 (0 bis 10.000 €).' }
   const validFrom = text(formData, 'valid_from')
   if (!/^\d{4}-\d{2}-\d{2}$/.test(validFrom)) return { error: 'Bitte ein Startdatum wählen.' }
   return {
     data: {
-      plan, percent, fixed_cents: fixed, min_fee_cents: minimum, valid_from: validFrom,
+      plan, percent, fixed_cents: fixed, min_fee_cents: minimum, monthly_fee_cents: monthly, valid_from: validFrom,
       note: text(formData, 'note') || null,
     },
   }

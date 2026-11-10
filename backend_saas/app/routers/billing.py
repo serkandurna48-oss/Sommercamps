@@ -6,8 +6,9 @@ audit entries name changed fields, never their values.
 
 from __future__ import annotations
 
+import calendar
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -85,13 +86,14 @@ def _rule_out(rule: fees.FeeRule) -> FeeRuleOut:
     return FeeRuleOut(
         id=rule.id, plan=rule.plan, percent=rule.percent, fixed_cents=rule.fixed_cents,
         min_fee_cents=rule.min_fee_cents, valid_from=rule.valid_from,
+        monthly_fee_cents=fees.monthly_fee_for(rule),
     )
 
 
 def _fee_rules(organization_id) -> FeeRulesOut:
     with db.get_cursor() as cur:
         cur.execute(
-            """select id, plan, percent, fixed_cents, min_fee_cents, valid_from, note,
+            """select id, plan, percent, fixed_cents, min_fee_cents, monthly_fee_cents, valid_from, note,
                       created_at, created_by_email
                from organization_fee_rules where organization_id = %s
                order by valid_from desc, created_at desc, id desc limit 200""",
@@ -123,12 +125,12 @@ def add_fee_rule(
     with db.get_cursor() as cur:
         cur.execute(
             """insert into organization_fee_rules
-                   (organization_id, plan, percent, fixed_cents, min_fee_cents, valid_from, note,
-                    created_by, created_by_email)
-               values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                   (organization_id, plan, percent, fixed_cents, min_fee_cents, monthly_fee_cents,
+                    valid_from, note, created_by, created_by_email)
+               values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                returning id""",
             (organization["id"], data.plan, percent, data.fixed_cents, data.min_fee_cents,
-             data.valid_from, data.note, auth.user_id, auth.email),
+             data.monthly_fee_cents, data.valid_from, data.note, auth.user_id, auth.email),
         )
         rule_id = cur.fetchone()["id"]
     logger.info("Fee rule added (organization_slug=%s, plan=%s)", organization_slug, data.plan)
@@ -138,11 +140,20 @@ def add_fee_rule(
         organization_id=str(organization["id"]), target_type="fee_rule", target_id=str(rule_id),
         metadata={
             "plan": data.plan, "percent": str(percent), "fixed_cents": data.fixed_cents,
-            "min_fee_cents": data.min_fee_cents, "valid_from": data.valid_from.isoformat(),
+            "min_fee_cents": data.min_fee_cents, "monthly_fee_cents": data.monthly_fee_cents,
+            "valid_from": data.valid_from.isoformat(),
         },
     )
     return _fee_rules(organization["id"])
 
+
+
+def _base_fee_day(month: str) -> date:
+    """Day whose rule sets the monthly base fee: the last day of the month, or
+    today for the running month (and for months still ahead)."""
+    year, mon = int(month[:4]), int(month[5:7])
+    last = date(year, mon, calendar.monthrange(year, mon)[1])
+    return min(last, fees.booking_date(datetime.now(timezone.utc)))
 
 
 @router.get("/platform/organizations/{organization_slug}/fees", response_model=FeeMonthOut)
@@ -155,7 +166,9 @@ def fee_month(
     their refunds so far), plus refunds by the month they happened."""
     del auth
     organization = require_organization(organization_slug)
+    base_day = _base_fee_day(month)
     with db.get_cursor() as cur:
+        monthly_fee = fees.monthly_fee_for(fees.effective_fee(organization["id"], base_day, cur=cur))
         cur.execute(
             """select r.id as registration_id, c.title as camp_title, r.fee_snapshot_at as paid_at,
                       r.payment_status, r.fee_collection, r.fee_base_cents, r.fee_cents,
@@ -195,5 +208,7 @@ def fee_month(
         t.fee_cents += row.fee_cents
         t.fee_refunded_cents += row.fee_refunded_cents
         t.fee_net_cents += row.fee_net_cents
-    return FeeMonthOut(month=month, collected=totals["application_fee"],
+    booking_fees_net = sum(t.fee_net_cents for t in totals.values())
+    return FeeMonthOut(month=month, monthly_fee_cents=monthly_fee, total_cents=booking_fees_net + monthly_fee,
+                       collected=totals["application_fee"],
                        not_collected=totals["not_collected"], bookings=rows, refunds_in_month=refunds)

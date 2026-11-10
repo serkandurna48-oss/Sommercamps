@@ -84,3 +84,14 @@ it('nennt in pakete.ts die Registrierung und alle drei Startschritte', () => {
   expect(answer).toContain('registrieren')
   expect(answer).toMatch(/1\).*Konto.*E-Mail bestätigen.*2\).*manuell.*frei.*3\).*Camp anlegen.*Anmeldelink/)
 })
+
+it('zeigt auf /preise das Rechenbeispiel mit Umsatzschwelle', () => {
+  const page = document.createElement('div')
+  page.innerHTML = renderToStaticMarkup(createElement(PreisePage))
+  const example = page.querySelector('.price-example')!
+  expect(example.textContent).toContain('20 Kinder zu je 150,00 €')
+  expect(example.textContent).toContain('3.000,00 €')
+  expect(example.textContent).toContain('207,00 €')
+  expect(example.textContent).toContain('147,00 €')
+  expect(example.textContent).toContain('14.940,00 €')
+})

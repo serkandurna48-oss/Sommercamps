@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
 import { CAMP_STATUSES } from '../../../lib/i18n/de'
 import { parseZonedDateTime } from '../../../lib/dateTimeInput'
-import { createCampAdmin, SlugConflictError, updateCampAdmin, updateOrganizationAdmin, type CampAdmin, type CampConfigUpdate } from '../../../lib/saasAdminApi'
+import { createCampAdmin, PlanCampLimitError, SlugConflictError, updateCampAdmin, updateOrganizationAdmin, type CampAdmin, type CampConfigUpdate } from '../../../lib/saasAdminApi'
 
 export interface ConfigActionState {
   error: string | null
@@ -174,7 +174,9 @@ export async function updateCampConfigAction(
       includes,
       status: status as 'draft' | 'published' | 'closed' | 'archived',
     })
-  } catch {
+  } catch (err) {
+    // Plan limit: the backend message tells the admin what to do (Paket wechseln).
+    if (err instanceof PlanCampLimitError) return { error: err.message, saved: false }
     return { error: 'Konnte nicht gespeichert werden – Angaben prüfen und erneut versuchen.', saved: false }
   }
 
@@ -258,6 +260,7 @@ export async function createCampAction(
       status: 'draft',
     })
   } catch (err) {
+    if (err instanceof PlanCampLimitError) return { error: err.message }
     if (err instanceof SlugConflictError) {
       return { error: `Die Web-Adresse „${slug}“ ist bereits vergeben – wähle eine andere.` }
     }

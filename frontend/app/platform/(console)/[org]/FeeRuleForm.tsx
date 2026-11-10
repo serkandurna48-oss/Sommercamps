@@ -7,9 +7,9 @@ import { INPUT_CLASS, INPUT_STYLE } from '../../../components/saas/ui/formFieldS
 import { addFeeRuleAction, type FeeRuleActionState } from './feeActions'
 
 const PLAN_HINT: Record<string, string> = {
-  starter: 'Starter: 6,90 %, wenn kein Prozentsatz eingetragen ist.',
-  verein: 'Verein: 4,90 %, wenn kein Prozentsatz eingetragen ist.',
-  individuell: 'Individuell: Prozentsatz ist Pflicht.',
+  starter: 'Starter: 6,90 % und 0 € Grundgebühr, wenn nichts eingetragen ist. 1 aktives Camp.',
+  verein: 'Verein: 4,90 % und 24,90 € Grundgebühr pro Monat, wenn nichts eingetragen ist. Unbegrenzt Camps.',
+  individuell: 'Individuell: Prozentsatz ist Pflicht, Grundgebühr 0 €, wenn nichts eingetragen ist. Unbegrenzt Camps.',
 }
 
 /** Owner only. Appends a rule; bookings keep the fee they were paid with. */
@@ -37,6 +37,9 @@ export default function FeeRuleForm({ orgSlug, today }: { orgSlug: string; today
         </Field>
         <Field label="Mindestgebühr je Buchung (optional)" htmlFor="fee_min" suffix="€">
           <input id="fee_min" name="min_eur" inputMode="decimal" className={INPUT_CLASS} style={INPUT_STYLE} />
+        </Field>
+        <Field label="Grundgebühr pro Monat (optional)" htmlFor="fee_monthly" suffix="€" hint="Leer lassen = Paketstandard. 0 = bewusst keine Grundgebühr. Beträge zzgl. USt.">
+          <input id="fee_monthly" name="monthly_eur" inputMode="decimal" placeholder={plan === 'verein' ? '24,90' : plan === 'starter' ? '0' : ''} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>
         <Field label="Gültig ab" htmlFor="fee_valid_from" hint="Gilt für Buchungen ab diesem Tag; bereits bezahlte Buchungen behalten ihre Gebühr.">
           <input id="fee_valid_from" name="valid_from" type="date" required defaultValue={today} className={INPUT_CLASS} style={INPUT_STYLE} />

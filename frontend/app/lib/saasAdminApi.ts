@@ -149,6 +149,16 @@ export class SlugConflictError extends Error {
   }
 }
 
+/** 409 `plan_camp_limit`: the plan (Starter) allows one active camp. The message
+ * comes from the backend (Du-Form for admins) and is safe to show as is. */
+export const PLAN_CAMP_LIMIT_MESSAGE = 'Im Paket Starter ist 1 aktives Camp enthalten. Für mehr Camps wechsle ins Paket Verein.'
+export class PlanCampLimitError extends AdminActionError {
+  constructor(message: string = PLAN_CAMP_LIMIT_MESSAGE) {
+    super(message)
+    this.name = 'PlanCampLimitError'
+  }
+}
+
 /** Safe to expose through server actions; never includes response bodies or URLs. */
 export class AdminConnectionError extends AdminActionError {}
 
@@ -370,9 +380,25 @@ export interface CampCreateInput {
   status?: 'draft' | 'published'
 }
 
+/** Reads a 409 body; throws PlanCampLimitError for `plan_camp_limit`, else returns. */
+async function throwIfPlanCampLimit(res: Response): Promise<void> {
+  let detail: { code?: unknown; message?: unknown } | undefined
+  try {
+    detail = (await res.clone().json() as { detail?: { code?: unknown; message?: unknown } })?.detail
+  } catch {
+    return
+  }
+  if (detail && typeof detail === 'object' && detail.code === 'plan_camp_limit') {
+    throw new PlanCampLimitError(typeof detail.message === 'string' && detail.message ? detail.message : undefined)
+  }
+}
+
 export async function createCampAdmin(orgSlug: string, token: string, data: CampCreateInput): Promise<CampAdmin> {
   const res = await adminMutate(`/admin/organizations/${orgSlug}/camps`, token, 'POST', data)
-  if (res.status === 409) throw new SlugConflictError(data.slug)
+  if (res.status === 409) {
+    await throwIfPlanCampLimit(res)
+    throw new SlugConflictError(data.slug)
+  }
   if (!res.ok) throw new AdminActionError(de.adminApi.campCreate)
   return res.json() as Promise<CampAdmin>
 }
@@ -397,7 +423,9 @@ export async function updateCampAdmin(
   token: string,
   data: CampConfigUpdate,
 ): Promise<CampAdmin> {
-  const res = await mutateOrThrow(`/admin/organizations/${orgSlug}/camps/${campSlug}`, token, 'PATCH', data)
+  const res = await adminMutate(`/admin/organizations/${orgSlug}/camps/${campSlug}`, token, 'PATCH', data)
+  if (res.status === 409) await throwIfPlanCampLimit(res)
+  if (!res.ok) throw new AdminActionError()
   return res.json() as Promise<CampAdmin>
 }
 
@@ -1361,6 +1389,8 @@ export interface FeeRule {
   percent: string
   fixed_cents: number | null
   min_fee_cents: number | null
+  /** Resolved monthly base fee in cents (own value or plan default). */
+  monthly_fee_cents?: number
   valid_from: string | null
   note: string | null
   created_at: string | null
@@ -1377,8 +1407,35 @@ export interface FeeRuleInput {
   percent: string | null
   fixed_cents: number | null
   min_fee_cents: number | null
+  /** null = plan default (Starter 0 €, Verein 24,90 €, Individuell 0 €). */
+  monthly_fee_cents: number | null
   valid_from: string
   note: string | null
+}
+
+export interface FeeTotals {
+  bookings: number
+  fee_cents: number
+  fee_refunded_cents: number
+  fee_net_cents: number
+}
+
+export interface FeeMonth {
+  month: string
+  /** Base fee of the rule valid on the last day of the month (today in the running month). */
+  monthly_fee_cents: number
+  /** Booking fees net of refunds + base fee. */
+  total_cents: number
+  collected: FeeTotals
+  not_collected: FeeTotals
+  bookings: Array<{ registration_id: string; camp_title: string; fee_cents: number; fee_net_cents: number }>
+  refunds_in_month: { collected_fee_refunded_cents: number; not_collected_fee_refunded_cents: number; refunded_cents: number; events: number }
+}
+
+export async function fetchFeeMonthAdmin(orgSlug: string, token: string, month: string): Promise<FeeMonth> {
+  const res = await adminFetch(`/admin/platform/organizations/${encodeURIComponent(orgSlug)}/fees?month=${encodeURIComponent(month)}`, token)
+  if (!res.ok) throw new AdminActionError('Monatsübersicht konnte nicht geladen werden.')
+  return res.json() as Promise<FeeMonth>
 }
 
 export async function fetchFeeRulesAdmin(orgSlug: string, token: string): Promise<FeeRules> {

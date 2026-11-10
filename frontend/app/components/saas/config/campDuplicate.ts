@@ -20,6 +20,7 @@ export function prefillCampDuplicate(source: CampAdmin): CampDuplicate {
     age_max: source.age_max,
     capacity: source.capacity,
     price_cents: source.price_cents,
+    price_member_cents: source.price_member_cents ?? null,
     currency: source.currency,
     registration_start: source.registration_start,
     registration_end: source.registration_end,

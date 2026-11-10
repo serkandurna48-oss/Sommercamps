@@ -122,6 +122,8 @@ class CampPublic(BaseModel):
     age_max: int
     capacity: int
     price_cents: int
+    # Member price (members module); None = one price for everyone.
+    price_member_cents: Optional[int] = None
     currency: str
     # §6.2: Faktentabelle + Leistungsliste. Alle drei optional — NULL/leer
     # heißt "Abschnitt nicht anzeigen", nicht "Platzhaltertext anzeigen".

@@ -68,6 +68,8 @@ export interface CampPublic {
   age_max: number
   capacity: number
   price_cents: number
+  /** Mitgliederpreis; null/fehlt = ein Preis für alle. Entschieden wird serverseitig. */
+  price_member_cents?: number | null
   currency: string
   registration_open: boolean
   // §6.2: Faktentabelle + Leistungsliste. null/leer = Abschnitt nicht anzeigen.
@@ -123,7 +125,7 @@ export interface RegistrationCreated {
   status: string
   payment_status: string
   payment_reference: string
-  // Nur Trainingsbuchungen: der vom Server berechnete Preis (Mitglied/Nichtmitglied).
+  // Trainings und Camps mit Mitgliederpreis: der vom Server berechnete Preis (Mitglied/Nichtmitglied).
   applied_price_cents?: number
 }
 

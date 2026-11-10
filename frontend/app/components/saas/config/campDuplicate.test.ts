@@ -6,7 +6,7 @@ const source: CampAdmin = {
   id: 'source-id', organization_id: 'org-id', slug: 'alter-link', title: 'Fußballcamp',
   start_date: '2026-07-06', end_date: '2026-07-10', status: 'published',
   registration_start: '2026-01-01T08:00:00Z', registration_end: '2026-06-30T16:00:00Z',
-  age_min: 0, age_max: 13, capacity: 50, price_cents: 19995, currency: 'EUR',
+  age_min: 0, age_max: 13, capacity: 50, price_cents: 19995, price_member_cents: null, currency: 'EUR',
   location: 'Sportplatz', care_info: 'Ab 8 Uhr', meals_info: 'Mittagessen', includes: ['Trikot', 'Ball'],
 }
 
@@ -15,7 +15,7 @@ it('kopiert alle Camp-Felder außer Identität, Termin, Titel, Slug und Status',
   expect(copy).toEqual({
     title: 'Fußballcamp (Kopie)', slug: 'fussballcamp-kopie', start_date: '', end_date: '', status: 'draft',
     registration_start: source.registration_start, registration_end: source.registration_end,
-    age_min: 0, age_max: 13, capacity: 50, price_cents: 19995, currency: 'EUR',
+    age_min: 0, age_max: 13, capacity: 50, price_cents: 19995, price_member_cents: null, currency: 'EUR',
     location: 'Sportplatz', care_info: 'Ab 8 Uhr', meals_info: 'Mittagessen', includes: ['Trikot', 'Ball'],
   })
   copy.includes!.push('Flasche')
@@ -26,6 +26,10 @@ it('kopiert alle Camp-Felder außer Identität, Termin, Titel, Slug und Status',
 
 it.each(['draft', 'published', 'closed', 'archived'] as const)('setzt auch %s auf Entwurf und leert beide Termine', status => {
   expect(prefillCampDuplicate({ ...source, status })).toMatchObject({ status: 'draft', start_date: '', end_date: '' })
+})
+
+it('übernimmt den Mitgliederpreis', () => {
+  expect(prefillCampDuplicate({ ...source, price_member_cents: 17900 }).price_member_cents).toBe(17900)
 })
 
 it('erhält leere optionale Angaben', () => {

@@ -143,6 +143,13 @@ export default function CampConfigForm({
               
             />
           </Field>
+          <Field label="Mitgliederpreis (optional)" htmlFor="price_member_euros" hint="Gilt für Kinder auf deiner Mitgliederliste. Leer lassen, wenn alle gleich viel zahlen.">
+            <PriceInput
+              id="price_member_euros"
+              name="price_member_euros"
+              defaultValue={inputValue('price_member_euros', camp.price_member_cents == null ? '' : (camp.price_member_cents / 100).toFixed(2).replace('.', ','))}
+            />
+          </Field>
         </div>
       </section>
 

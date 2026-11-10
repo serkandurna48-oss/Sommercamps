@@ -90,6 +90,9 @@ export default function CampCreateForm({
       {initialValues && <section className="cp-card flex flex-col gap-4">
         <input type="hidden" name="duplicate" value="1" />
         <input type="hidden" name="includes_null" value={initialValues.includes === null ? '1' : '0'} />
+        <Field label="Mitgliederpreis (optional)" htmlFor="price_member_euros" hint="Gilt für Kinder auf deiner Mitgliederliste. Leer lassen, wenn alle gleich viel zahlen.">
+          <PriceInput id="price_member_euros" name="price_member_euros" defaultValue={submitted.price_member_euros ?? (initialValues.price_member_cents == null ? '' : (initialValues.price_member_cents / 100).toFixed(2).replace('.', ','))} />
+        </Field>
         <Field label="Währung" htmlFor="currency">
           <input id="currency" name="currency" required pattern="[A-Z]{3}" defaultValue={submitted.currency ?? initialValues.currency} className={INPUT_CLASS} style={INPUT_STYLE} />
         </Field>

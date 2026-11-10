@@ -146,6 +146,15 @@ export async function updateCampConfigAction(
   if (![ageMin, ageMax, capacity, priceEuros].every(Number.isFinite)) {
     return { error: 'Zahlenfelder bitte ohne Sonderzeichen eingeben.', saved: false }
   }
+  // Optional member price: empty field = one price for everyone.
+  const memberEurosRaw = formData.has('price_member_euros') ? str(formData, 'price_member_euros') : undefined
+  const memberEuros = memberEurosRaw ? Number(memberEurosRaw.replace(',', '.')) : null
+  if (memberEuros !== null && !Number.isFinite(memberEuros)) {
+    return { error: 'Zahlenfelder bitte ohne Sonderzeichen eingeben.', saved: false }
+  }
+  if (memberEuros !== null && memberEuros > priceEuros) {
+    return { error: 'Der Mitgliederpreis darf nicht höher sein als der normale Preis.', saved: false }
+  }
 
   const includesRaw = str(formData, 'includes')
   const includes = includesRaw
@@ -167,6 +176,7 @@ export async function updateCampConfigAction(
       age_max: ageMax,
       capacity,
       price_cents: Math.round(priceEuros * 100),
+      ...(memberEurosRaw !== undefined ? { price_member_cents: memberEuros === null ? null : Math.round(memberEuros * 100) } : {}),
       ...(str(formData, 'currency') ? { currency: str(formData, 'currency') } : {}),
       location: optionalStr(formData, 'location'),
       care_info: optionalStr(formData, 'care_info'),
@@ -231,8 +241,14 @@ export async function createCampAction(
       const currency = str(formData, 'currency')
       if (!currency || !/^[A-Z]{3}$/.test(currency)) return { error: 'Bitte eine gültige Währung eingeben.' }
       const includes = (str(formData, 'includes') ?? '').split('\n').map(line => line.trim()).filter(Boolean)
+      const memberRaw = str(formData, 'price_member_euros')
+      const memberEuros = memberRaw ? Number(memberRaw.replace(',', '.')) : null
+      if (memberEuros !== null && (!Number.isFinite(memberEuros) || memberEuros > priceEuros)) {
+        return { error: 'Der Mitgliederpreis darf nicht höher sein als der normale Preis.' }
+      }
       details = {
         currency,
+        price_member_cents: memberEuros === null ? null : Math.round(memberEuros * 100),
         registration_start: parseZonedDateTime(formData.get('registration_start')),
         registration_end: parseZonedDateTime(formData.get('registration_end')),
         location: optionalStr(formData, 'location'),

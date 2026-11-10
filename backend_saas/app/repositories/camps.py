@@ -57,7 +57,7 @@ _OCCUPANCY_SUBQUERIES = """
 
 _CAMP_FIELDS_WITH_OCCUPANCY = f"""
     c.slug, c.title, c.start_date, c.end_date, c.registration_start, c.registration_end,
-    c.age_min, c.age_max, c.capacity, c.price_cents, c.currency,
+    c.age_min, c.age_max, c.capacity, c.price_cents, c.price_member_cents, c.currency,
     c.location, c.care_info, c.meals_info, c.includes,
     {_OCCUPANCY_SUBQUERIES}
 """
@@ -119,6 +119,16 @@ class CampSlugConflictError(Exception):
         super().__init__(f"Camp slug '{slug}' already exists for organization '{organization_id}'")
 
 
+class CampMemberPriceError(Exception):
+    """The member price would be higher than the regular price. Maps to 422."""
+
+    code = "member_price_too_high"
+    message = "Der Mitgliederpreis darf nicht höher sein als der normale Preis."
+
+    def __init__(self):
+        super().__init__(self.message)
+
+
 class PlanCampLimitError(Exception):
     """The organization's plan (starter) allows one active camp and it already
     has one. Maps to 409 `plan_camp_limit`."""
@@ -171,15 +181,15 @@ def _is_active(status: str, end_date, today) -> bool:
 _ADMIN_CAMP_FIELDS = """
     id, organization_id, slug, title, start_date, end_date,
     registration_start, registration_end, age_min, age_max, capacity,
-    price_cents, currency, location, care_info, meals_info, includes, status
+    price_cents, price_member_cents, currency, location, care_info, meals_info, includes, status
 """
 
 _INSERT_CAMP = f"""
     insert into camps (
         organization_id, slug, title, start_date, end_date,
         registration_start, registration_end, age_min, age_max, capacity,
-        price_cents, currency, location, care_info, meals_info, includes, status
-    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        price_cents, price_member_cents, currency, location, care_info, meals_info, includes, status
+    ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     returning {_ADMIN_CAMP_FIELDS}
 """
 
@@ -262,6 +272,7 @@ def create_camp(organization_id: UUID, data: CampCreate) -> dict:
                     data.age_max,
                     data.capacity,
                     data.price_cents,
+                    data.price_member_cents,
                     data.currency,
                     data.location,
                     data.care_info,
@@ -326,4 +337,8 @@ def update_camp(organization_id: UUID, camp_slug: str, data: CampUpdate) -> Opti
                 ):
                     _enforce_plan_camp_limit(cur, organization_id, exclude_camp_id=current["id"])
         cur.execute(query, (*fields.values(), organization_id, camp_slug))
-        return cur.fetchone()
+        row = cur.fetchone()
+        if row is not None and row["price_member_cents"] is not None and row["price_member_cents"] > row["price_cents"]:
+            # Raising inside get_cursor rolls the update back.
+            raise CampMemberPriceError()
+        return row

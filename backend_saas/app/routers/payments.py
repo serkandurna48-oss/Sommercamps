@@ -334,8 +334,10 @@ def create_checkout(
     # and live on the registration (admin-correctable).
     # Camps charge the price at booking time (a later price change does not
     # touch existing bookings); rows without it fall back to the camp price.
+    # Camps with a member price store the decided price in applied_price_cents too.
     booked = booking.get("booked_price_cents")
-    amount = booking["applied_price_cents"] if is_training else (booked if booked is not None else booking["price_cents"])
+    applied = booking.get("applied_price_cents")
+    amount = applied if is_training or applied is not None else (booked if booked is not None else booking["price_cents"])
     currency = (booking["currency"] or "").lower()
     if not isinstance(amount, int) or amount < 50 or currency != "eur":
         raise HTTPException(409, "Dieser Camp-Preis ist nicht für Stripe Checkout verfügbar")

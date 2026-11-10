@@ -126,6 +126,8 @@ export interface RegistrationAdmin {
   documentation_consent?: boolean | null
   // Spielerakte gelöscht: Kinddaten entfernt, Geburtsdatum ist nur Platzhalter.
   anonymized_at?: string | null
+  // Eltern haben über "Meine Buchung" eine Stornierung angefragt; der Verein storniert selbst.
+  cancellation_requested_at?: string | null
   // Löschschutz (GoBD): Rechnung/Storno vorhanden bzw. Plattformgebühr erfasst.
   has_invoice?: boolean
   fee_recorded?: boolean

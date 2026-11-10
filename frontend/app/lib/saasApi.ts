@@ -284,3 +284,58 @@ export async function createStripeCheckout(
   }
   return data.url
 }
+
+/** "Meine Buchung": what the public status endpoint returns (no health, contact or address data). */
+export interface BookingStatus {
+  camp_title: string
+  start_date: string
+  end_date: string
+  starts_at: string | null
+  child_first_name: string
+  status: 'registered' | 'waitlist' | 'cancelled'
+  payment_status: string
+  amount_cents: number
+  currency: string
+  cancellation_requested_at: string | null
+  invoice_available: boolean
+}
+
+export type BookingStatusResult =
+  | { kind: 'ok'; data: BookingStatus }
+  | { kind: 'not_found' | 'rate_limited' | 'error' }
+
+export type CancellationRequestResult =
+  | { kind: 'ok'; cancellationRequestedAt: string }
+  | { kind: 'already_cancelled' | 'not_found' | 'rate_limited' | 'error' }
+
+function bookingUrl(orgSlug: string, token: string): string {
+  return `${baseUrl()}/api/v1/organizations/${encodeURIComponent(orgSlug)}/registrations/${encodeURIComponent(token)}`
+}
+
+/** The registration token is a bearer capability: never cached, never logged. */
+export async function fetchBookingStatus(orgSlug: string, token: string): Promise<BookingStatusResult> {
+  try {
+    const res = await fetch(bookingUrl(orgSlug, token), { cache: 'no-store' })
+    if (res.status === 404 || res.status === 422) return { kind: 'not_found' }
+    if (res.status === 429) return { kind: 'rate_limited' }
+    if (!res.ok) return { kind: 'error' }
+    return { kind: 'ok', data: (await res.json()) as BookingStatus }
+  } catch {
+    return { kind: 'error' }
+  }
+}
+
+/** Idempotent on the server: a repeated request answers 200 with the first timestamp. */
+export async function requestBookingCancellation(orgSlug: string, token: string): Promise<CancellationRequestResult> {
+  try {
+    const res = await fetch(`${bookingUrl(orgSlug, token)}/cancellation-request`, { method: 'POST' })
+    if (res.status === 409) return { kind: 'already_cancelled' }
+    if (res.status === 404 || res.status === 422) return { kind: 'not_found' }
+    if (res.status === 429) return { kind: 'rate_limited' }
+    if (!res.ok) return { kind: 'error' }
+    const body = await res.json()
+    return { kind: 'ok', cancellationRequestedAt: String(body?.cancellation_requested_at ?? '') }
+  } catch {
+    return { kind: 'error' }
+  }
+}

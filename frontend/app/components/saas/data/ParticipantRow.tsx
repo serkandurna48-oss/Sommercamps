@@ -91,6 +91,9 @@ export default function ParticipantRow({
                 tone={PAYMENT_STATUS_TONE[effective.payment_status] ?? 'neutral'}
                 label={paymentStatusLabel[effective.payment_status] ?? effective.payment_status}
               />
+              {effective.cancellation_requested_at && effective.status !== 'cancelled' && (
+                <StatusChip tone="error" label="Storno angefragt" />
+              )}
             </div>} action={<IconChevronDown
               className={`shrink-0 transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}
             />} />

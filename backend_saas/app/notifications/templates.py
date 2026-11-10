@@ -39,6 +39,12 @@ def _when(start: date, end: date, starts_at: Optional[datetime]) -> str:
     return f"{_date_range(local.date(), local.date())}, {local:%H:%M} Uhr"
 
 
+def _booking_link_block(booking_url: Optional[str]) -> str:
+    if not booking_url:
+        return ""
+    return f'<p><a href="{escape(booking_url)}">Ihre Anmeldung ansehen</a></p>\n'
+
+
 def build_registration_mail(
     *,
     status: str,
@@ -57,6 +63,7 @@ def build_registration_mail(
     promoted: bool = False,
     starts_at: Optional[datetime] = None,
     payment_method: Optional[str] = None,
+    booking_url: Optional[str] = None,
 ) -> MailMessage:
     """payment_method is only set for training bookings ('bar' | 'ueberweisung').
     Classic camps leave it None and keep the unchanged camp mail.
@@ -141,7 +148,7 @@ def build_registration_mail(
 <p>Guten Tag,</p>
 {intro}
 {payment_block}
-{cancel_note}<p>Bei Fragen wenden Sie sich direkt an {e_org_name}:<br>
+{cancel_note}{_booking_link_block(booking_url)}<p>Bei Fragen wenden Sie sich direkt an {e_org_name}:<br>
 E-Mail: {e_org_email}{phone_line}</p>
 <p>Viele Grüße,<br>{e_org_name}</p>"""
     else:
@@ -152,7 +159,7 @@ E-Mail: {e_org_email}{phone_line}</p>
 ({dates}) ist bei uns eingegangen. Das Camp ist aktuell ausgebucht –
 die Anmeldung steht auf der Warteliste. Es sind noch keine Kosten fällig.</p>
 <p>Sollte ein Platz frei werden, meldet sich {e_org_name} direkt bei Ihnen.</p>
-<p>Bei Fragen wenden Sie sich direkt an {e_org_name}:<br>
+{_booking_link_block(booking_url)}<p>Bei Fragen wenden Sie sich direkt an {e_org_name}:<br>
 E-Mail: {e_org_email}{phone_line}</p>
 <p>Viele Grüße,<br>{e_org_name}</p>"""
 
@@ -237,5 +244,69 @@ def build_provider_mail(
     return MailMessage(
         to_email=contact_email,
         subject=subject,
+        html_content=html,
+    )
+
+
+def build_reminder_mail(
+    *,
+    org_name: str,
+    org_email: str,
+    org_phone: Optional[str],
+    camp_title: str,
+    camp_start: date,
+    camp_end: date,
+    location: Optional[str],
+    care_info: Optional[str],
+    parent_email: str,
+    booking_url: Optional[str],
+) -> MailMessage:
+    """Reminder to the parent three days before camp start. No child name in
+    subject or body; the link leads to "Meine Buchung"."""
+    e_org_name = escape(org_name)
+    e_org_email = escape(org_email)
+    e_camp_title = escape(camp_title)
+    e_phone = escape(org_phone) if org_phone else None
+    phone_line = f"<br>Telefon: {e_phone}" if e_phone else ""
+    dates = _date_range(camp_start, camp_end)
+    details = [f"Zeitraum: <strong>{dates}</strong>"]
+    if location:
+        details.append(f"Ort: <strong>{escape(location)}</strong>")
+    if care_info:
+        details.append(f"Zeit: <strong>{escape(care_info)}</strong>")
+    html = f"""\
+<p>Guten Tag,</p>
+<p>in drei Tagen beginnt <strong>{e_camp_title}</strong>. Hier die wichtigsten Angaben:</p>
+<p>{"<br>".join(details)}</p>
+{_booking_link_block(booking_url)}<p>Bei Fragen wenden Sie sich direkt an {e_org_name}:<br>
+E-Mail: {e_org_email}{phone_line}</p>
+<p>Wir freuen uns auf Sie und Ihr Kind.</p>
+<p>Viele Grüße,<br>{e_org_name}</p>"""
+    return MailMessage(
+        to_email=parent_email,
+        subject=f"Erinnerung: {camp_title} beginnt am {camp_start.day}.{camp_start.month}.",
+        html_content=html,
+        reply_to=org_email,
+    )
+
+
+def build_cancellation_request_mail(
+    *,
+    org_name: str,
+    camp_title: str,
+    admin_url: Optional[str],
+    to_email: str,
+) -> MailMessage:
+    """To club admins (du-Form) when parents ask for a cancellation. No names, no health data."""
+    e_org_name = escape(org_name)
+    link = f'<p><a href="{escape(admin_url)}">Anmeldungen im Adminbereich öffnen</a></p>\n' if admin_url else ""
+    html = f"""\
+<p>Hallo,</p>
+<p>für <strong>{escape(camp_title)}</strong> wurde eine Stornierung angefragt. Die Anmeldung ist noch nicht storniert.</p>
+{link}<p>In der Anmeldungsliste ist sie mit „Storno angefragt“ markiert. Bitte melde dich bei den Eltern und storniere die Anmeldung, wenn es passt.</p>
+<p>Viele Grüße<br>{e_org_name} über CampsPilot</p>"""
+    return MailMessage(
+        to_email=to_email,
+        subject=f"Stornierung angefragt – {camp_title}",
         html_content=html,
     )

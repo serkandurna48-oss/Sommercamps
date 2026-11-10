@@ -156,3 +156,15 @@ describe('A2: Mailstatus im Teilnehmerdetail', () => {
     expect([...container.querySelectorAll('button')].some(b => b.textContent?.includes('Mail') && b.textContent.includes('senden'))).toBe(false)
   })
 })
+
+it('kennzeichnet eine angefragte Stornierung', async () => {
+  await render({ ...registration, cancellation_requested_at: '2027-02-01T09:00:00Z' })
+  expect(container.textContent).toContain('Storno angefragt')
+})
+
+it('zeigt kein Kennzeichen ohne Stornoanfrage und nicht bei stornierter Anmeldung', async () => {
+  await render()
+  expect(container.textContent).not.toContain('Storno angefragt')
+  await render({ ...registration, status: 'cancelled', cancellation_requested_at: '2027-02-01T09:00:00Z' })
+  expect(container.textContent).not.toContain('Storno angefragt')
+})

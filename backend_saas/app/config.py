@@ -86,6 +86,18 @@ class Settings(BaseSettings):
             raise ValueError("Invalid organization slug for login URL")
         return f"{self.frontend_base_url}/pilot/{org_slug}/login"
 
+    def booking_url(self, org_slug: str, registration_token) -> str:
+        """Link "Meine Buchung" for parent mails: /pilot/<slug>/buchung/<token>."""
+        if not self.frontend_base_is_usable():
+            raise ValueError("FRONTEND_BASE_URL is not configured for this environment")
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", org_slug or ""):
+            raise ValueError("Invalid organization slug for booking URL")
+        return f"{self.frontend_base_url}/pilot/{org_slug}/buchung/{registration_token}"
+
+    def admin_registrations_url(self, org_slug: str) -> str:
+        """Target of club-admin mails about registrations: the admin registrations list."""
+        return self.login_url(org_slug).removesuffix("/login") + "/anmeldungen"
+
     def password_setup_url(self, org_slug: str) -> str:
         """Target of invite links: the organization's set-new-password page."""
         return self.login_url(org_slug).removesuffix("/login") + "/neues-passwort"
@@ -151,6 +163,14 @@ class Settings(BaseSettings):
     # requests. Never expose this key to the frontend — full-DB-bypass
     # power, unlike supabase_anon_key.
     supabase_service_role_key: Optional[str] = Field(default=None, alias="SUPABASE_SERVICE_ROLE_KEY")
+
+    # Daily jobs (POST /internal/cron/daily, called by .github/workflows/daily-jobs.yml).
+    # Unset or blank = the endpoint answers 503 and does nothing. Compared in
+    # constant time; never logged.
+    cron_secret: Optional[str] = Field(default=None, alias="CRON_SECRET")
+    # Health-data retention (allergies/medical_notes 30 days after camp end).
+    # False (default) = the job only counts affected rows; true = it clears them.
+    retention_apply: bool = Field(default=False, alias="RETENTION_APPLY")
 
     # Number of trusted reverse-proxy hops in front of this service.
     # 0 (default, Render direct): use request.client.host; never trust

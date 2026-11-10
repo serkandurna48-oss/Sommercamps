@@ -43,7 +43,7 @@ from . import players
 from ..registration_lifecycle import CAPACITY_COUNTING_STATUSES, validate_transition
 from ..schemas import RegistrationCreate
 from ..tenancy import ACTIVE_PLAN_STATUSES, TenantContext
-from ..utils import age_on_date, is_registration_open
+from ..utils import age_on_date, is_camp_over, is_registration_open
 
 
 logger = logging.getLogger(__name__)
@@ -317,7 +317,7 @@ _GET_TARGET = f"""
       and (c.offer_id is null or o.status = 'published')
 """
 
-_LOCK_CAMP_CAPACITY = "select capacity, status, price_cents from camps where id = %s for update"
+_LOCK_CAMP_CAPACITY = "select capacity, status, price_cents, price_member_cents from camps where id = %s for update"
 
 # SHARE allows registrations in different camps to proceed together, but
 # conflicts with publication/plan UPDATEs. KEY SHARE does not protect these
@@ -355,7 +355,8 @@ _INSERT_REGISTRATION = """
         medical_notes, allergies, health_data_consent, jersey_size, pickup_authorized,
         photo_permission, terms_accepted, privacy_accepted,
         extra_answers, player_id,
-        parent_street, parent_postal_code, parent_city
+        parent_street, parent_postal_code, parent_city,
+        applied_price_cents, member_match
     ) values (
         %s, %s, %s,
         %s, %s, %s, %s,
@@ -364,9 +365,11 @@ _INSERT_REGISTRATION = """
         %s, %s, %s, %s, %s,
         %s, %s, %s,
         %s, %s,
-        %s, %s, %s
+        %s, %s, %s,
+        %s, %s
     )
-    returning registration_token, status, payment_status, child_first_name, child_last_name
+    returning registration_token, status, payment_status, child_first_name, child_last_name,
+        applied_price_cents
 """
 
 # Case-insensitive auf Vor-/Nachname, exaktes Geburtsdatum, gleicher Camp,
@@ -460,7 +463,7 @@ _ADMIN_REGISTRATION_FIELDS = """
     photo_permission, created_at, extra_answers,
     email_sent_at, email_error,
     applied_price_cents, member_match, payment_method,
-    player_id, documentation_consent, anonymized_at, cancellation_requested_at
+    player_id, documentation_consent, anonymized_at, cancellation_requested_at, parent_cancelled_at
 """
 
 _LIST_REGISTRATIONS_FOR_CAMP = f"""
@@ -753,7 +756,7 @@ def update_payment_status(
 
 
 def validate_registration_window(camp: RegistrationTarget) -> None:
-    if not is_registration_open(camp.registration_start, camp.registration_end):
+    if not is_registration_open(camp.registration_start, camp.registration_end) or is_camp_over(camp.end_date):
         raise RegistrationWindowClosedError(f"Registration window closed for camp '{camp.slug}'")
 
 
@@ -761,6 +764,30 @@ def validate_child_age(camp: RegistrationTarget, child_birth_date: date) -> None
     age_at_start = age_on_date(child_birth_date, camp.start_date)
     if not (camp.age_min <= age_at_start <= camp.age_max):
         raise ChildAgeNotEligibleError(age_at_start, camp.age_min, camp.age_max)
+
+
+def _camp_member_price(cur, tenant: TenantContext, organization: dict, locked: dict, data: RegistrationCreate):
+    """Member price for a classic camp, decided server-side like for trainings.
+
+    Only camps with a member price and organizations with the members module do a
+    lookup. Everything else keeps the old behavior: (None, None), so the row has no
+    applied price and the camp price applies (KSV and every one-price camp).
+    """
+    member_price = locked.get("price_member_cents")
+    if member_price is None or "members" not in set(organization.get("modules") or ()):
+        return None, None
+    from .memberships import normalize_match_key
+
+    cur.execute(
+        _FIND_ACTIVE_MEMBER,
+        (
+            tenant.organization_id,
+            normalize_match_key(data.child_first_name, data.child_last_name),
+            data.child_birth_date,
+        ),
+    )
+    member_match = cur.fetchone() is not None
+    return (member_price if member_match else locked["price_cents"]), member_match
 
 
 def create_registration(
@@ -846,8 +873,10 @@ def create_registration(
         active_count = cur.fetchone()["active_count"]
 
         new_status = "registered" if active_count < locked["capacity"] else "waitlist"
+        applied_price, member_match = _camp_member_price(cur, tenant, organization, locked, data)
         # Waitlisted bookings too: they become payable once promoted.
-        address = billing_address_for(data, locked.get("price_cents"), tenant.slug, camp.slug)
+        address = billing_address_for(
+            data, applied_price if applied_price is not None else locked.get("price_cents"), tenant.slug, camp.slug)
 
         player_id = players.find_or_create_player(
             cur, tenant.organization_id, data.child_first_name, data.child_last_name, data.child_birth_date)
@@ -877,6 +906,8 @@ def create_registration(
                 psycopg2.extras.Json(dict(data.extra_answers)),
                 player_id,
                 *address,
+                applied_price,
+                member_match,
             ),
         )
         return cur.fetchone()
@@ -1083,7 +1114,9 @@ def promote_next_waitlisted_registration(tenant: TenantContext, camp_id: UUID) -
         return _lock_and_promote_next_waitlisted(cur, tenant, camp_id)
 
 
-def cancel_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, registration_token: UUID) -> dict:
+def cancel_registration_and_promote_next(
+    tenant: TenantContext, camp_id: UUID, registration_token: UUID, *, mark_parent_cancelled: bool = False
+) -> dict:
     """
     Cancels one registration — strictly scoped by `WHERE registration_token
     = %s AND organization_id = %s AND camp_id = %s`, looked up by the
@@ -1134,6 +1167,9 @@ def cancel_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, r
     doesn't allow a transition to 'cancelled' — this includes an
     already-cancelled registration, which is rejected rather than treated
     as a harmless no-op (see registration_lifecycle.validate_transition).
+
+    mark_parent_cancelled=True (parents' self-cancel) stamps parent_cancelled_at in the
+    same transaction as the status change, so the marker can never exist without the cancel.
     """
     with db.get_cursor() as cur:
         cur.execute(_LOAD_AND_LOCK_REGISTRATION, (registration_token, tenant.organization_id, camp_id))
@@ -1148,6 +1184,11 @@ def cancel_registration_and_promote_next(tenant: TenantContext, camp_id: UUID, r
         # this function/module, only used for the same-transaction UPDATE.
         cur.execute(_UPDATE_STATUS, ("cancelled", registration["id"], tenant.organization_id))
         cancelled = cur.fetchone()
+        if mark_parent_cancelled:
+            cur.execute(
+                "update camp_registrations set parent_cancelled_at = now() where id = %s and organization_id = %s",
+                (registration["id"], tenant.organization_id),
+            )
 
         promoted = None
         if current_status in CAPACITY_COUNTING_STATUSES:

@@ -33,7 +33,9 @@ from ..payment_reference import payment_reference as build_payment_reference
 from .mail import get_provider
 from .templates import (
     build_cancellation_mail,
-    build_cancellation_request_mail,
+    build_parent_cancel_incomplete_mail,
+    build_parent_cancelled_mail,
+    build_parent_self_cancel_mail,
     build_provider_mail,
     build_registration_mail,
 )
@@ -613,7 +615,7 @@ def resend_registration_mail(registration_token: UUID, organization_id: UUID) ->
         raise
 
 
-_CANCELLATION_REQUEST_RECIPIENTS = """
+_PARENT_CANCELLED_RECIPIENTS = """
     SELECT DISTINCT notification_email
     FROM organization_members
     WHERE organization_id = %s
@@ -624,13 +626,32 @@ _CANCELLATION_REQUEST_RECIPIENTS = """
 """
 
 
-def send_cancellation_request_notification(registration_token: UUID, organization_id: UUID) -> None:
-    """Best-effort mail to the club admins that parents asked for a cancellation.
+def _money(cents: int, currency: Optional[str]) -> str:
+    value = f"{cents / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"{value} €" if (currency or "EUR") == "EUR" else f"{value} {currency}"
 
-    Recipients: org admins with e-mail notifications on (channel 'email', an address, and the
-    event 'cancellation' or 'new_registration'); without any, the organization's contact
-    address. The mail names the camp and links to the admin list, nothing about the child
-    or the parents. Never raises."""
+
+def _club_recipients(organization_id: UUID, ctx: dict) -> list[str]:
+    with db.get_cursor() as cur:
+        cur.execute(_PARENT_CANCELLED_RECIPIENTS, (organization_id,))
+        recipients = [row["notification_email"] for row in cur.fetchall()]
+    if not recipients and ctx.get("org_email"):
+        recipients = [ctx["org_email"]]
+    return recipients
+
+
+def _admin_url(ctx: dict) -> Optional[str]:
+    try:
+        return get_settings().admin_registrations_url(ctx.get("org_slug") or "")
+    except ValueError:
+        return None
+
+
+def _send_to_club(registration_token: UUID, organization_id: UUID, build, label: str) -> None:
+    """Best-effort mail to the club admins (org admins with e-mail notifications on and the
+    event 'cancellation' or 'new_registration'; without any, the organization's contact
+    address). `build(ctx, admin_url, to_email)` returns the message. Names the camp and links
+    to the admin list, nothing about the child or the parents. Never raises."""
     try:
         reg = _fetch_registration(registration_token, organization_id)
         if reg is None:
@@ -638,24 +659,66 @@ def send_cancellation_request_notification(registration_token: UUID, organizatio
         ctx = _fetch_mail_context(organization_id, reg["camp_id"])
         if ctx is None:
             return
-        with db.get_cursor() as cur:
-            cur.execute(_CANCELLATION_REQUEST_RECIPIENTS, (organization_id,))
-            recipients = [row["notification_email"] for row in cur.fetchall()]
-        if not recipients and ctx.get("org_email"):
-            recipients = [ctx["org_email"]]
-        try:
-            admin_url: Optional[str] = get_settings().admin_registrations_url(ctx.get("org_slug") or "")
-        except ValueError:
-            admin_url = None
+        recipients = _club_recipients(organization_id, ctx)
+        admin_url = _admin_url(ctx)
         provider = get_provider()
         for address in recipients:
-            msg = build_cancellation_request_mail(
-                org_name=ctx["org_name"], camp_title=ctx["camp_title"], admin_url=admin_url, to_email=address,
-            )
+            msg = build(ctx, admin_url, address)
             msg.sender_name = f"{ctx['org_name']} über CampsPilot"
             try:
                 provider.send(msg)
             except Exception as exc:  # noqa: BLE001 - one recipient must not block the others
-                logger.warning("send_cancellation_request_notification failed (error_type=%s)", type(exc).__name__)
+                logger.warning("%s failed (error_type=%s)", label, type(exc).__name__)
     except Exception as exc:  # noqa: BLE001
-        logger.warning("send_cancellation_request_notification failed (error_type=%s)", type(exc).__name__)
+        logger.warning("%s failed (error_type=%s)", label, type(exc).__name__)
+
+
+def send_parent_cancelled_notification(
+    registration_token: UUID, organization_id: UUID, refund_cents: int = 0, promoted: bool = False
+) -> None:
+    """Club admins: parents cancelled themselves (with the refunded amount, or a waitlist
+    removal when refund_cents is 0). Never raises."""
+    def build(ctx, admin_url, address):
+        return build_parent_cancelled_mail(
+            org_name=ctx["org_name"], camp_title=ctx["camp_title"],
+            refund_text=_money(refund_cents, ctx.get("currency")) if refund_cents > 0 else None,
+            admin_url=admin_url, to_email=address, promoted=promoted,
+        )
+    _send_to_club(registration_token, organization_id, build, "send_parent_cancelled_notification")
+
+
+def send_parent_cancel_incomplete_notification(registration_token: UUID, organization_id: UUID) -> None:
+    """Club admins: refund done but cancel failed, please cancel by hand. Never raises."""
+    def build(ctx, admin_url, address):
+        return build_parent_cancel_incomplete_mail(
+            org_name=ctx["org_name"], camp_title=ctx["camp_title"], admin_url=admin_url, to_email=address)
+    _send_to_club(registration_token, organization_id, build, "send_parent_cancel_incomplete_notification")
+
+
+def send_parent_self_cancel_confirmation(registration_token: UUID, organization_id: UUID, refund_cents: int = 0) -> None:
+    """Parent mail after their own cancellation. Best effort, never raises; a failure is stored
+    in email_error like the other status mails."""
+    try:
+        reg = _fetch_registration(registration_token, organization_id)
+        if reg is None:
+            return
+        ctx = _fetch_mail_context(organization_id, reg["camp_id"])
+        if ctx is None:
+            return
+        msg = build_parent_self_cancel_mail(
+            org_name=ctx["org_name"], org_email=ctx["org_email"], org_phone=ctx.get("org_phone"),
+            camp_title=ctx["camp_title"],
+            refund_text=_money(refund_cents, ctx.get("currency")) if refund_cents > 0 else None,
+            parent_email=reg["parent_email"],
+        )
+        msg.sender_name = f"{ctx['org_name']} über CampsPilot"
+        provider = get_provider()
+        provider.send(msg)
+        if getattr(provider, "delivers", True):
+            _mark_sent(registration_token, organization_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("send_parent_self_cancel_confirmation failed (error_type=%s)", type(exc).__name__)
+        try:
+            _mark_error(registration_token, f"cancelled: {_error_code(exc)}", organization_id)
+        except Exception:
+            pass

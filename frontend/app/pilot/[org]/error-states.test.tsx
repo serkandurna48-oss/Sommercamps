@@ -104,19 +104,19 @@ it('Camp voll: erklärt die Warteliste und öffnet deren Formular', async () => 
 })
 
 it.each([
-  ['noch nicht geöffnet', '2099-01-01T00:00:00Z', false],
-  ['geschlossen', null, false],
-  ['geschlossen', null, true],
-] as const)('Anmeldung %s (Beginn: %s, voll: %s): erklärt die Sperre und bietet alle Camps', async (label, start, full) => {
+  ['Anmeldung ab', '2099-01-01T00:00:00Z', false],
+  ['Die Anmeldung ist derzeit geschlossen.', null, false],
+  ['Die Anmeldung ist derzeit geschlossen.', null, true],
+] as const)('Camp ohne offene Anmeldung (%s, Beginn: %s, voll: %s): zeigt die Details mit Hinweis, kein Formular', async (notice, start, full) => {
   await renderFlow([{ ...camp, registration_open: false, registration_start: start,
     registration_end: start ? null : '2000-01-01T00:00:00Z', is_full: full }])
   await openCamp()
-  expect(host.textContent).toContain(`Anmeldung ${label}`)
+  expect(host.querySelector('#s-camp')).not.toBeNull()
+  expect(host.textContent).toContain(notice)
   expect(document.activeElement).toBe(host.querySelector('h1'))
-  expect(host.textContent).toContain('Bitte sehen Sie sich die anderen Camps')
-  expect(host.querySelector('img')?.getAttribute('alt')).toBe(org.name)
+  expect(host.textContent).not.toContain('Jetzt anmelden')
   expect(host.querySelector('form')).toBeNull()
-  await act(async () => action('Alle Camps ansehen').click())
+  await act(async () => action('Zurück zur Übersicht').click())
   expect(host.querySelector('#s-org')).not.toBeNull()
 })
 

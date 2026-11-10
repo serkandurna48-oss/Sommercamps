@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import type { CampPublic } from '../../lib/saasApi'
-import { formatCampDateRange, formatCampRowDate, formatPrice } from '../../lib/parentFlowFormat'
+import { campPhase, campPriceShort, formatCampDateRange, formatCampRowDate, formatRegistrationStart } from '../../lib/parentFlowFormat'
 
 /**
  * Eine Campzeile — Ticket §6.1 / reference card(). Identisches Markup in
@@ -14,6 +14,8 @@ import { formatCampDateRange, formatCampRowDate, formatPrice } from '../../lib/p
  * §6.2 — nichts erfunden statt Platzhaltertext zu zeigen).
  */
 export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect: (camp: CampPublic) => void }) {
+  const price = campPriceShort(camp)
+  const phase = campPhase(camp)
   const { day, month, weekdays } = formatCampRowDate(camp.start_date, camp.end_date)
   const pct = camp.capacity > 0 ? Math.round((camp.registered_count / camp.capacity) * 100) : 0
   const tight = !camp.is_full && camp.spots_remaining <= 3
@@ -34,7 +36,7 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
   return (
     <button
       type="button"
-      className={`camp${camp.is_full ? ' full' : ''}`}
+      className={`camp${camp.is_full && phase === 'open' ? ' full' : ''}${phase === 'past' ? ' past' : ''}${phase === 'preview' ? ' preview' : ''}`}
       onClick={() => onSelect(camp)}
       data-rise
     >
@@ -49,9 +51,11 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
           <span className="c-when">{formatCampDateRange(camp.start_date, camp.end_date)}</span>
         </span>
         <span className="tags">
-          {camp.is_full && <span className="chip public-availability">Ausgebucht</span>}
+          {phase === 'past' && <span className="chip public-availability">Vorbei</span>}
+          {phase === 'preview' && <span className="chip public-availability">Vorschau</span>}
+          {phase === 'open' && camp.is_full && <span className="chip public-availability">Ausgebucht</span>}
           <span className="tag">{camp.age_min}–{camp.age_max} Jahre</span>
-          {!camp.is_full && camp.spots_remaining <= 10 && (
+          {phase === 'open' && !camp.is_full && camp.spots_remaining <= 10 && (
             <span className="chip" style={{ color: 'var(--brand-strong)', background: 'transparent', border: '1px solid var(--brand)' }}>
               Noch {camp.spots_remaining} {camp.spots_remaining === 1 ? 'Platz' : 'Plätze'}
             </span>
@@ -63,21 +67,25 @@ export default function CampRow({ camp, onSelect }: { camp: CampPublic; onSelect
             {camp.includes.length > 3 && <li className="more">+{camp.includes.length - 3} weitere</li>}
           </ul>
         )}
-        <span className="cap">
-          <span className={`bar${camp.is_full ? ' full' : ''}`}>
-            <i ref={barRef} />
+        {phase === 'preview' && camp.registration_start ? (
+          <span className="cap"><span className="t">Anmeldung ab {formatRegistrationStart(camp.registration_start)}</span></span>
+        ) : phase === 'past' ? null : (
+          <span className="cap">
+            <span className={`bar${camp.is_full ? ' full' : ''}`}>
+              <i ref={barRef} />
+            </span>
+            <span className={`t num${tight ? ' tight' : ''}`}>
+              {camp.is_full
+                ? `${camp.capacity} von ${camp.capacity} belegt, ${camp.waitlist_count} auf der Warteliste`
+                : tight
+                  ? `Nur noch ${camp.spots_remaining} Plätze frei`
+                  : `${camp.spots_remaining} von ${camp.capacity} Plätzen frei`}
+            </span>
           </span>
-          <span className={`t num${tight ? ' tight' : ''}`}>
-            {camp.is_full
-              ? `${camp.capacity} von ${camp.capacity} belegt, ${camp.waitlist_count} auf der Warteliste`
-              : tight
-                ? `Nur noch ${camp.spots_remaining} Plätze frei`
-                : `${camp.spots_remaining} von ${camp.capacity} Plätzen frei`}
-          </span>
-        </span>
+        )}
         <span className="c-foot">
-          <span className="c-price num">{formatPrice(camp.price_cents, camp.currency)}</span>
-          <span className="c-go">{!camp.registration_open ? 'Anmeldung ansehen' : camp.is_full ? 'Auf die Warteliste' : 'Platz sichern'}</span>
+          <span className="c-price num">{price.from && <span className="c-price-from">ab</span>}{price.text}</span>
+          <span className="c-go">{phase === 'past' || phase === 'preview' ? 'Ansehen' : !camp.registration_open ? 'Anmeldung ansehen' : camp.is_full ? 'Auf die Warteliste' : 'Platz sichern'}</span>
         </span>
       </span>
     </button>

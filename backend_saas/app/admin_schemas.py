@@ -15,7 +15,7 @@ from datetime import date, datetime
 from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from app.schemas import RegistrationCreated, RegistrationQuestion
 
@@ -229,6 +229,9 @@ class CampCreate(BaseModel):
     age_max: int = Field(ge=0)
     capacity: int = Field(gt=0)
     price_cents: int = Field(ge=0)
+    # Optional member price: applies when the child is on the club's member list
+    # (members module). Never higher than price_cents.
+    price_member_cents: Optional[int] = Field(default=None, ge=0)
     currency: str = "EUR"
     # Eltern-Flow-Auftrag §6.2: Faktentabelle + Leistungsliste. Optional —
     # NULL heißt "Abschnitt wird nicht angezeigt", kein Platzhaltertext.
@@ -252,6 +255,12 @@ class CampCreate(BaseModel):
             raise ValueError("currency must be a 3-letter uppercase ISO-4217-shaped code")
         return value
 
+    @model_validator(mode="after")
+    def _member_price_not_higher(self):
+        if self.price_member_cents is not None and self.price_member_cents > self.price_cents:
+            raise ValueError("price_member_cents must not be higher than price_cents")
+        return self
+
 
 class CampUpdate(BaseModel):
     """Same fields as CampCreate minus `slug` (immutable — a slug rename
@@ -271,6 +280,8 @@ class CampUpdate(BaseModel):
     age_max: Optional[int] = Field(default=None, ge=0)
     capacity: Optional[int] = Field(default=None, gt=0)
     price_cents: Optional[int] = Field(default=None, ge=0)
+    # Explicit null removes the member price (exclude_unset keeps it as a real update).
+    price_member_cents: Optional[int] = Field(default=None, ge=0)
     currency: Optional[str] = None
     location: Optional[str] = None
     care_info: Optional[str] = None
@@ -390,6 +401,10 @@ class OrganizationOrgAdminOut(BaseModel):
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
     plan_status: str
+    # Read-only, only filled by GET /admin/organizations/{slug}: the plan valid today
+    # (starter | verein | individuell) and the camps counting against the Starter limit.
+    plan: Optional[str] = None
+    active_camps: Optional[int] = None
     # Nur lesend — "Kein Theme-Editor im Admin" (Eltern-Flow-Auftrag
     # Abschnitt 1). Wird bewusst NICHT auf OrganizationCreate/Update
     # geführt, damit es über diese API nicht setzbar ist. Default spiegelt
@@ -460,6 +475,7 @@ class CampAdminOut(BaseModel):
     age_max: int
     capacity: int
     price_cents: int
+    price_member_cents: Optional[int] = None
     currency: str
     location: Optional[str] = None
     care_info: Optional[str] = None
@@ -515,8 +531,10 @@ class RegistrationAdminOut(RegistrationCreated):
     documentation_consent: Optional[bool] = None
     # Player record deleted: child data removed ("Gelöscht"), no age to show.
     anonymized_at: Optional[datetime] = None
-    # Parents asked for a cancellation via "Meine Buchung"; the club still has to cancel.
+    # Legacy: parents asked for a cancellation (old request flow). Not set any more.
     cancellation_requested_at: Optional[datetime] = None
+    # Set when the parents cancelled themselves (refund and cancel in one step).
+    parent_cancelled_at: Optional[datetime] = None
     # Delete guard (GoBD): an invoice/storno exists, or the platform fee is recorded.
     has_invoice: bool = False
     fee_recorded: bool = False

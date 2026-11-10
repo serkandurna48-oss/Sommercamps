@@ -1,4 +1,4 @@
-"""Section B: public "Meine Buchung" status, cancellation request, links in parent mails.
+"""Section B: public "Meine Buchung" status, links in parent mails (self-cancel: test_parent_self_cancel.py).
 
 Disposable local Postgres (REVIEW_POSTGRES_PORT), FakeProvider for mail, synthetic data only.
 """
@@ -23,7 +23,8 @@ from .test_review_postgres import local_database, real_db  # noqa: F401
 FORBIDDEN = ("Pia", "Parent", "p@example.com", "0561 1234", "Geheimweg", "34117", "Kassel", "Nuesse", "Asthma",
              "emergency", "allerg", "medical", "parent_", "iban", "registration_token")
 EXPECTED_KEYS = {"camp_title", "start_date", "end_date", "starts_at", "child_first_name", "status", "payment_status",
-                 "amount_cents", "currency", "cancellation_requested_at", "invoice_available"}
+                 "amount_cents", "currency", "cancellation_requested_at", "invoice_available",
+                 "self_cancel"}
 
 
 @pytest.fixture
@@ -34,7 +35,7 @@ def env(real_db):
     booking.cancellation_limiter.reset()
     with cursor() as cur:
         cur.execute("delete from camp_registrations")
-        cur.execute("delete from audit_log where action = 'registration.cancellation_requested'")
+        cur.execute("delete from audit_log where action like 'registration.cancel%'")
         cur.execute("delete from organization_members where organization_id = %s", (org,))
         other, other_slug = make_other_org(cur)
         camp_id = make_camp(cur, org, date(2027, 7, 9), start=date(2027, 7, 5), title="Sommercamp")
@@ -146,108 +147,6 @@ def test_status_is_rate_limited_per_ip(env, monkeypatch):
     token = _new(env)
     codes = [env.client.get(_url(env, token)).status_code for _ in range(5)]
     assert codes == [200, 200, 200, 429, 429]
-
-
-# ---------- POST cancellation-request ----------
-
-def test_cancellation_request_sets_timestamp_audits_and_mails_admins(env):
-    token = _new(env)
-    with env.cursor() as cur:
-        a, b, c = uuid4(), uuid4(), uuid4()
-        for uid in (a, b, c):
-            cur.execute("insert into auth.users(id) values (%s)", (uid,))
-        cols = "(organization_id,user_id,role,notification_channel,notification_email,notification_events)"
-        cur.execute(f"insert into organization_members {cols} values (%s,%s,'org_admin','email','admin1@example.com','{{new_registration}}')", (env.org, a))
-        cur.execute(f"insert into organization_members {cols} values (%s,%s,'org_admin','none','muted@example.com','{{new_registration}}')", (env.org, b))
-        cur.execute(f"insert into organization_members {cols} values (%s,%s,'org_admin','email','other-topic@example.com','{{daily_summary}}')", (env.org, c))
-    r = env.client.post(_url(env, token, suffix="/cancellation-request"))
-    assert r.status_code == 200, r.text
-    assert r.json()["cancellation_requested_at"] is not None
-    row = _row(env, token)
-    assert row["cancellation_requested_at"] is not None and row["status"] == "registered"  # not cancelled
-    assert [m.to_email for m in env.mail.sent] == ["admin1@example.com"]
-    mail = env.mail.sent[0]
-    assert "Sommercamp" in mail.subject
-    assert f"/pilot/{env.slug}/anmeldungen" in mail.html_content
-    blob = (mail.subject + mail.html_content).lower()
-    for word in ("kim", "pia", "parent", "p@example.com", "nuesse", "asthma", "geheimweg", str(token)):
-        assert word.lower() not in blob
-    with env.cursor() as cur:
-        cur.execute("select actor_email, actor_user_id, target_type, target_id, metadata, organization_id from audit_log "
-                    "where action='registration.cancellation_requested'")
-        (audit,) = cur.fetchall()
-    assert audit["organization_id"] == env.org and audit["actor_email"] is None and audit["actor_user_id"] is None
-    assert audit["target_id"] == str(row["id"]) and str(token) not in json.dumps(audit, default=str)
-    assert "p@example.com" not in json.dumps(audit, default=str)
-
-
-def test_cancellation_request_falls_back_to_org_contact_email(env):
-    token = _new(env)
-    assert env.client.post(_url(env, token, suffix="/cancellation-request")).status_code == 200
-    assert [m.to_email for m in env.mail.sent] == ["review@example.com"]
-
-
-def test_cancellation_request_is_idempotent(env):
-    token = _new(env)
-    first = env.client.post(_url(env, token, suffix="/cancellation-request"))
-    stamp = _row(env, token)["cancellation_requested_at"]
-    second = env.client.post(_url(env, token, suffix="/cancellation-request"))
-    assert first.status_code == second.status_code == 200
-    assert second.json()["cancellation_requested_at"] == first.json()["cancellation_requested_at"]
-    assert _row(env, token)["cancellation_requested_at"] == stamp
-    assert len(env.mail.sent) == 1  # no second admin mail
-    with env.cursor() as cur:
-        cur.execute("select count(*) as n from audit_log where action='registration.cancellation_requested'")
-        assert cur.fetchone()["n"] == 1
-
-
-def test_cancellation_request_on_cancelled_booking_is_409(env):
-    token = _new(env, status="cancelled")
-    r = env.client.post(_url(env, token, suffix="/cancellation-request"))
-    assert r.status_code == 409
-    assert _row(env, token)["cancellation_requested_at"] is None
-    assert env.mail.sent == []
-
-
-def test_cancellation_request_cancelled_with_earlier_request_still_409(env):
-    token = _new(env, status="cancelled", cancellation_requested=True)
-    assert env.client.post(_url(env, token, suffix="/cancellation-request")).status_code == 409
-
-
-def test_cancellation_request_unknown_other_org_and_anonymized_404(env):
-    assert env.client.post(_url(env, uuid4(), suffix="/cancellation-request")).status_code == 404
-    mine = _new(env)
-    assert env.client.post(_url(env, mine, slug=env.other_slug, suffix="/cancellation-request")).status_code == 404
-    assert _row(env, mine)["cancellation_requested_at"] is None
-    anon = _new(env, anonymized=True, allergies=None, medical=None)
-    assert env.client.post(_url(env, anon, suffix="/cancellation-request")).status_code == 404
-    assert env.mail.sent == []
-
-
-def test_cancellation_request_waitlist_is_allowed(env):
-    token = _new(env, status="waitlist")
-    assert env.client.post(_url(env, token, suffix="/cancellation-request")).status_code == 200
-
-
-def test_cancellation_request_survives_mail_failure(env):
-    class Boom:
-        delivers = True
-
-        def send(self, message):
-            raise RuntimeError("provider down")
-
-    reset_provider_for_testing(Boom())
-    token = _new(env)
-    r = env.client.post(_url(env, token, suffix="/cancellation-request"))
-    assert r.status_code == 200
-    assert _row(env, token)["cancellation_requested_at"] is not None
-
-
-def test_cancellation_request_is_rate_limited(env, monkeypatch):
-    monkeypatch.setattr(booking, "cancellation_limiter", booking.SlidingWindowLimiter(2, 3600.0))
-    token = _new(env)
-    codes = [env.client.post(_url(env, token, suffix="/cancellation-request")).status_code for _ in range(4)]
-    assert codes == [200, 200, 429, 429]
 
 
 # ---------- admin list ----------

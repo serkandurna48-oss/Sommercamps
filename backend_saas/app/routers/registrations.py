@@ -239,7 +239,8 @@ def create_registration(
             "payment_method": data.payment_method,
         }
         if is_training
-        else {}
+        # Camps with a member price: the mail shows the price decided for this child.
+        else ({"applied_price_cents": row["applied_price_cents"]} if row.get("applied_price_cents") is not None else {})
     )
     background_tasks.add_task(
         send_registration_notification,

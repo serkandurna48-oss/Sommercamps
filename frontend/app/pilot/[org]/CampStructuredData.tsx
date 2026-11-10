@@ -12,7 +12,9 @@ export default function CampStructuredData({ org, camps }: {
       startDate: camp.start_date,
       endDate: camp.end_date,
       ...(camp.location && { location: { '@type': 'Place', name: camp.location } }),
-      offers: { '@type': 'Offer', price: camp.price_cents / 100, priceCurrency: 'EUR' },
+      offers: camp.price_member_cents != null && camp.price_member_cents < camp.price_cents
+        ? { '@type': 'AggregateOffer', lowPrice: camp.price_member_cents / 100, highPrice: camp.price_cents / 100, priceCurrency: 'EUR' }
+        : { '@type': 'Offer', price: camp.price_cents / 100, priceCurrency: 'EUR' },
       organizer: { '@type': 'SportsOrganization', name: org.name },
     }
 

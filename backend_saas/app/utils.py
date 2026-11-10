@@ -10,7 +10,11 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from typing import Optional
 
+from zoneinfo import ZoneInfo
+
 from dateutil.relativedelta import relativedelta
+
+_BERLIN = ZoneInfo("Europe/Berlin")
 
 
 def age_on_date(birth_date: date, reference_date: date) -> int:
@@ -48,3 +52,11 @@ def is_registration_open(
     if registration_end is not None and now > registration_end:
         return False
     return True
+
+
+def is_camp_over(end_date: date, *, now: Optional[datetime] = None) -> bool:
+    """True once the camp's last day (Europe/Berlin) has passed. A camp that
+    ends today is not over. Past camps stay visible to parents as an archive,
+    but nobody can register for them anymore."""
+    now = now if now is not None else datetime.now(timezone.utc)
+    return end_date < now.astimezone(_BERLIN).date()

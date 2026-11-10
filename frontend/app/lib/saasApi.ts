@@ -68,6 +68,8 @@ export interface CampPublic {
   age_max: number
   capacity: number
   price_cents: number
+  /** Mitgliederpreis; null/fehlt = ein Preis für alle. Entschieden wird serverseitig. */
+  price_member_cents?: number | null
   currency: string
   registration_open: boolean
   // §6.2: Faktentabelle + Leistungsliste. null/leer = Abschnitt nicht anzeigen.
@@ -123,7 +125,7 @@ export interface RegistrationCreated {
   status: string
   payment_status: string
   payment_reference: string
-  // Nur Trainingsbuchungen: der vom Server berechnete Preis (Mitglied/Nichtmitglied).
+  // Trainings und Camps mit Mitgliederpreis: der vom Server berechnete Preis (Mitglied/Nichtmitglied).
   applied_price_cents?: number
 }
 
@@ -296,17 +298,34 @@ export interface BookingStatus {
   payment_status: string
   amount_cents: number
   currency: string
+  /** Set when the parents cancelled themselves. */
   cancellation_requested_at: string | null
   invoice_available: boolean
+  /** Whether parents may cancel themselves, and why not (the server decides). */
+  self_cancel: SelfCancel
+}
+
+export interface SelfCancel {
+  possible: boolean
+  reason: 'ok' | 'not_paid_online' | 'payment_pending' | 'deadline_passed' | 'already_cancelled' | 'waitlist'
+  /** Last day for a cancellation (start minus `days`); null when no online payment is involved. */
+  deadline: string | null
+  /** Amount refunded to the payment method; null without an online payment. */
+  refund_cents: number | null
+  days: number
 }
 
 export type BookingStatusResult =
   | { kind: 'ok'; data: BookingStatus }
   | { kind: 'not_found' | 'rate_limited' | 'error' }
 
-export type CancellationRequestResult =
-  | { kind: 'ok'; cancellationRequestedAt: string }
-  | { kind: 'already_cancelled' | 'not_found' | 'rate_limited' | 'error' }
+export type ParentCancelResult =
+  | { kind: 'ok'; data: BookingStatus }
+  /** 409: not allowed (any more); `message` is the server's Sie-text. */
+  | { kind: 'not_allowed'; message: string }
+  /** 502: the refund failed, nothing was cancelled. */
+  | { kind: 'refund_failed'; message: string }
+  | { kind: 'not_found' | 'rate_limited' | 'error' }
 
 function bookingUrl(orgSlug: string, token: string): string {
   return `${baseUrl()}/api/v1/organizations/${encodeURIComponent(orgSlug)}/registrations/${encodeURIComponent(token)}`
@@ -325,16 +344,25 @@ export async function fetchBookingStatus(orgSlug: string, token: string): Promis
   }
 }
 
-/** Idempotent on the server: a repeated request answers 200 with the first timestamp. */
-export async function requestBookingCancellation(orgSlug: string, token: string): Promise<CancellationRequestResult> {
+async function detailOf(res: Response): Promise<string> {
   try {
-    const res = await fetch(`${bookingUrl(orgSlug, token)}/cancellation-request`, { method: 'POST' })
-    if (res.status === 409) return { kind: 'already_cancelled' }
+    const body = await res.json()
+    return typeof body?.detail === 'string' ? body.detail : ''
+  } catch {
+    return ''
+  }
+}
+
+/** Refunds and cancels in one step. Idempotent on the server: a repeated call answers 200 with the cancelled booking. */
+export async function cancelBookingAsParent(orgSlug: string, token: string): Promise<ParentCancelResult> {
+  try {
+    const res = await fetch(`${bookingUrl(orgSlug, token)}/cancel`, { method: 'POST', cache: 'no-store' })
+    if (res.status === 409) return { kind: 'not_allowed', message: await detailOf(res) }
+    if (res.status === 502) return { kind: 'refund_failed', message: await detailOf(res) }
     if (res.status === 404 || res.status === 422) return { kind: 'not_found' }
     if (res.status === 429) return { kind: 'rate_limited' }
     if (!res.ok) return { kind: 'error' }
-    const body = await res.json()
-    return { kind: 'ok', cancellationRequestedAt: String(body?.cancellation_requested_at ?? '') }
+    return { kind: 'ok', data: (await res.json()) as BookingStatus }
   } catch {
     return { kind: 'error' }
   }

@@ -147,7 +147,12 @@ def get_organization(
     organization's own org_admin."""
     organization = require_organization(organization_slug)
     schema = OrganizationAdminOut if auth.is_owner else OrganizationOrgAdminOut
-    return schema.model_validate(organization)
+    try:
+        usage = camps_repo.plan_usage(organization["id"])
+    except Exception as exc:  # noqa: BLE001 - the hint is optional, the page must still load
+        logger.warning("plan_usage failed (error_type=%s)", type(exc).__name__)
+        usage = {"plan": None, "active_camps": None}
+    return schema.model_validate({**organization, **usage})
 
 
 @router.post(
@@ -404,6 +409,10 @@ def update_camp(
 
     try:
         row = camps_repo.update_camp(organization["id"], camp_slug, data)
+    except camps_repo.CampMemberPriceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": exc.code, "message": exc.message}
+        ) from exc
     except PlanCampLimitError as exc:
         logger.info("Camp update rejected: plan camp limit (organization_slug=%s)", organization_slug)
         raise HTTPException(

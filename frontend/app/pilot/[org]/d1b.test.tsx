@@ -112,24 +112,42 @@ it('gallery-band not shown for org without club assets (unknown slug)', () => {
   expect(html).not.toContain('gallery-band')
 })
 
-it('gallery-band shown for ksv-baunatal, hero not duplicated in gallery', () => {
-  // Use ksv-kinder-pokal as hero_image_url — it also sits in clubAssets.galleryImages.
-  // The gallery filter must remove it so it only appears in h-trad-shot, not gallery-band.
+it('with intro text the club images sit in "Über uns", hero not duplicated', () => {
+  // ksv-kinder-pokal is the hero and also in clubAssets.galleryImages; it must be filtered out.
   const ksvOrg: OrganizationPublic = {
     ...org, slug: 'ksv-baunatal',
     hero_image_url: '/clubs/ksv/ksv-kinder-pokal.jpg',
     intro_text: 'Wir sind KSV.',
   }
   const html = renderToStaticMarkup(<ParentFlow org={ksvOrg} camps={[]} />)
+  expect(html).not.toContain('gallery-band')
+  const about = html.slice(html.indexOf('id="s-ueber-uns"'))
+  const media = about.slice(about.indexOf('about-media'), about.indexOf('how-sec') >= 0 ? about.indexOf('how-sec') : undefined)
+  expect(html).toContain('about-media-2')
+  expect(media).toContain('ksv-torwart.jpg')
+  expect(media).toContain('ksv-kinder-2027.jpg')
+  expect(media).not.toContain('ksv-kinder-pokal')
+})
+
+it('without intro text the club images stay a gallery band', () => {
+  const ksvOrg: OrganizationPublic = { ...org, slug: 'ksv-baunatal', hero_image_url: null, intro_text: null }
+  const html = renderToStaticMarkup(<ParentFlow org={ksvOrg} camps={[]} />)
   expect(html).toContain('gallery-band')
-  // remaining gallery images (not the hero) are shown
-  expect(html).toContain('ksv-torwart.jpg')
-  expect(html).toContain('ksv-kinder-2027.jpg')
-  // ksv-kinder-pokal is the hero — must not also appear inside gallery-band
-  const galleryStart = html.indexOf('gallery-band')
-  const afterGalleryBand = galleryStart >= 0 ? html.slice(galleryStart) : ''
-  const gallerySection = afterGalleryBand.slice(0, afterGalleryBand.indexOf('how-sec'))
-  expect(gallerySection).not.toContain('ksv-kinder-pokal')
+  expect(html).not.toContain('about-media')
+})
+
+it('camp cards show "ab <member price>" only for camps with a lower member price', () => {
+  const base = {
+    slug: 'winter', title: 'Winter Camp', start_date: '2027-01-11', end_date: '2027-01-12',
+    registration_start: null, registration_end: null, age_min: 6, age_max: 14, capacity: 30,
+    price_cents: 16900, currency: 'EUR', registration_open: true, location: null, care_info: null,
+    meals_info: null, includes: null, registered_count: 0, waitlist_count: 0, spots_remaining: 30, is_full: false,
+  } as unknown as CampPublic
+  const withMember = renderToStaticMarkup(<ParentFlow org={org} camps={[{ ...base, price_member_cents: 14900 }]} />)
+  expect(withMember).toMatch(/c-price-from">ab<\/span>149,00/)
+  const onePrice = renderToStaticMarkup(<ParentFlow org={org} camps={[base]} />)
+  expect(onePrice).not.toContain('c-price-from')
+  expect(onePrice).toContain('169,00')
 })
 
 // ── Hero objectPosition ──
@@ -189,4 +207,34 @@ it('SSR output does not contain inline opacity:0 (GSAP must not run in SSR)', ()
   const html = renderToStaticMarkup(<ParentFlow org={org} camps={[]} />)
   // opacity:0.55 (on svg) is fine — the regex ensures a bare 0 (not 0.xx)
   expect(html).not.toMatch(/opacity\s*:\s*0(?![0-9.])/)
+})
+
+it('getClubAssets returns the same JK gallery for prod and staging demo slug', () => {
+  const prod = getClubAssets('jk-performance-academy')
+  const demo = getClubAssets('jk-academy-demo')
+  expect(prod).not.toBeNull()
+  expect(demo).toEqual(prod)
+  expect(prod!.galleryImages).toEqual(['/jk/slideshow/01.jpg'])
+  expect(prod!.galleryImages).not.toContain(prod!.heroImage)
+  for (const src of prod!.galleryImages) expect(prod!.galleryAltTexts[src]).toBeTruthy()
+})
+
+it('past camps sit collapsed under "Vergangene Camps", preview camps show "Vorschau" and the start of registration', () => {
+  const base = {
+    registration_end: null, age_min: 6, age_max: 14, capacity: 30, price_cents: 14900, currency: 'EUR',
+    location: null, care_info: null, meals_info: null, includes: null, registered_count: 0, waitlist_count: 0,
+    spots_remaining: 30, is_full: false,
+  }
+  const preview = { ...base, slug: 'ostern', title: 'Ostercamp', start_date: '2099-03-22', end_date: '2099-03-24',
+    registration_start: '2099-01-15T08:00:00Z', registration_open: false } as unknown as CampPublic
+  const past = { ...base, slug: 'sommer-alt', title: 'Sommercamp Alt', start_date: '2020-07-08', end_date: '2020-07-10',
+    registration_start: null, registration_open: false } as unknown as CampPublic
+  const html = renderToStaticMarkup(<ParentFlow org={org} camps={[preview]} pastCamps={[past]} />)
+  expect(html).toContain('Vorschau')
+  expect(html).toContain('Anmeldung ab 15. Jan. 2099')
+  const archive = html.slice(html.indexOf('past-camps'))
+  expect(archive).toContain('Vergangene Camps (1)')
+  expect(archive).toContain('Sommercamp Alt')
+  expect(archive).toContain('Vorbei')
+  expect(html.slice(0, html.indexOf('past-camps'))).not.toContain('Sommercamp Alt')
 })

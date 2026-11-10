@@ -1,8 +1,9 @@
 import Image from 'next/image'
 import type { OrganizationPublic } from '../../lib/saasApi'
 import { orgShortCode } from '../../lib/parentFlowFormat'
+import { demoLegalHref } from './demoMode'
 
-export default function PublicFooter({ org }: { org: OrganizationPublic }) {
+export default function PublicFooter({ org, demo = false }: { org: OrganizationPublic; demo?: boolean }) {
   const short = orgShortCode(org.name)
   return (
     <footer className="foot">
@@ -26,9 +27,9 @@ export default function PublicFooter({ org }: { org: OrganizationPublic }) {
           </a>
         </div>
         <nav className="foot-links" aria-label="Rechtliche Hinweise">
-          <a href={`/pilot/${org.slug}/impressum`}>Impressum</a>
-          <a href={`/pilot/${org.slug}/datenschutz`}>Datenschutz</a>
-          <a href={`/pilot/${org.slug}/teilnahmebedingungen`}>Teilnahmebedingungen</a>
+          <a href={demoLegalHref(demo, `/pilot/${org.slug}/impressum`)}>Impressum</a>
+          <a href={demoLegalHref(demo, `/pilot/${org.slug}/datenschutz`)}>Datenschutz</a>
+          <a href={demoLegalHref(demo, `/pilot/${org.slug}/teilnahmebedingungen`)}>Teilnahmebedingungen</a>
         </nav>
       </div>
       <span className="by">

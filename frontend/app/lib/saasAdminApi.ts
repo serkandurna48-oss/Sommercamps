@@ -36,6 +36,8 @@ export interface CampAdmin {
   age_max: number
   capacity: number
   price_cents: number
+  /** Mitgliederpreis (Mitgliederliste), null = ein Preis für alle. */
+  price_member_cents?: number | null
   currency: string
   location: string | null
   care_info: string | null
@@ -61,6 +63,9 @@ export interface OrganizationAdmin {
   logo_url: string | null
   primary_color: string | null
   plan_status: string
+  /** Nur in der Einzelabfrage: gültiges Paket (starter | verein | individuell) und aktive Camps (Starter-Grenze). */
+  plan?: string | null
+  active_camps?: number | null
   theme: string
   iban: string | null
   intro_heading: string | null
@@ -127,7 +132,10 @@ export interface RegistrationAdmin {
   // Spielerakte gelöscht: Kinddaten entfernt, Geburtsdatum ist nur Platzhalter.
   anonymized_at?: string | null
   // Eltern haben über "Meine Buchung" eine Stornierung angefragt; der Verein storniert selbst.
+  /** Altbestand: frühere Stornoanfrage der Eltern (wird nicht mehr gesetzt). */
   cancellation_requested_at?: string | null
+  /** Die Eltern haben selbst storniert (Erstattung und Storno in einem Schritt). */
+  parent_cancelled_at?: string | null
   // Löschschutz (GoBD): Rechnung/Storno vorhanden bzw. Plattformgebühr erfasst.
   has_invoice?: boolean
   fee_recorded?: boolean
@@ -309,6 +317,7 @@ export interface CampConfigUpdate {
   age_max?: number
   capacity?: number
   price_cents?: number
+  price_member_cents?: number | null
   currency?: string
   location?: string | null
   care_info?: string | null

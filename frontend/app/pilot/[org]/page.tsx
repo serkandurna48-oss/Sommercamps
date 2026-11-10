@@ -1,19 +1,11 @@
 import type { Metadata } from 'next'
-import AnalyticsConsentBanner from '../AnalyticsConsent'
 import { notFound } from 'next/navigation'
-import { computeBrandSafe } from '../../lib/brandPipeline'
-import { readableTextOn } from '../../lib/readableTextOn'
 import { getPublicCamps, getPublicOrganization, getPublicTrainingOffers } from './publicData'
 import { hasModule } from '../../lib/orgModules'
 import { filterFutureCamps } from './campUtils'
-import CampStructuredData from './CampStructuredData'
-import GrainOverlay from './GrainOverlay'
-import ParentFlow from './ParentFlow'
+import PublicClubView from './PublicClubView'
 import PublicLoadError from './PublicLoadError'
-import { publicFontClassName } from './publicFonts'
 import { clubMetadata, getSiteUrl, neutralMetadata } from './socialMetadata'
-import './publicTheme.css'
-import './training/trainingPages.css'
 
 type PageProps = {
   params: Promise<{ org: string }>
@@ -34,14 +26,6 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   } catch {
     return neutralMetadata
   }
-}
-
-// Muss mit --surface je Theme in publicTheme.css übereinstimmen (Ticket §5:
-// Ground für die Kontrast-Pipeline ist --surface des aktiven Themes).
-const THEME_SURFACE: Record<string, string> = {
-  tradition: '#FFFFFF',
-  akademie: '#161C1A',
-  kompakt: '#FFFFFF',
 }
 
 /** Trainings sind ergänzend: jeder Fehler (auch synchron) wird zur leeren Liste. */
@@ -84,34 +68,21 @@ export default async function PilotOrgPage({ params, searchParams }: PageProps) 
   if (campsOutcome.status === 'rejected') return <PublicLoadError org={org} />
   const allCamps = campsOutcome.value
   const camps = filterFutureCamps(allCamps)
+  // Past camps stay reachable as an archive (newest first), never bookable.
+  const pastCamps = allCamps.filter(c => !camps.includes(c)).sort((a, b) => b.end_date.localeCompare(a.end_date))
   // Ein Fehler beim Laden der Trainings darf die Camp-Seite nicht beeinträchtigen.
   // Ohne Trainings-Modul gibt es keinen Trainingsbereich (die API antwortet dann ohnehin 404).
   const trainings = hasModule(org, 'trainings') && trainingsOutcome.status === 'fulfilled' && Array.isArray(trainingsOutcome.value) ? trainingsOutcome.value : []
   const hadPastCamps = allCamps.length > 0 && camps.length === 0
-  const ground = THEME_SURFACE[org.theme] ?? THEME_SURFACE.tradition
-  const brand = computeBrandSafe(org.primary_color, ground)
-
   return (
-    <div
-      className={`cp-public ${publicFontClassName(org.theme)}`}
-      data-theme={org.theme}
-      data-org={org.slug}
-      style={
-        {
-          '--brand': brand.brand,
-          '--brand-strong': brand.strong,
-          '--brand-on': brand.on,
-          '--on-primary': readableTextOn(brand.brand),
-        } as React.CSSProperties
-      }
-    >
-      <CampStructuredData org={org} camps={allCamps} />
-      <GrainOverlay />
-      <div className="app">
-        <ParentFlow org={org} camps={camps} trainings={trainings} hadPastCamps={hadPastCamps} initialCampSlug={typeof selectedSlug === 'string' ? selectedSlug : undefined} />
-      </div>
-      {/* Inside the themed wrapper so the banner uses the club's colors and fonts. */}
-      <AnalyticsConsentBanner orgSlug={org.slug} isLanding />
-    </div>
+    <PublicClubView
+      org={org}
+      allCamps={allCamps}
+      camps={camps}
+      pastCamps={pastCamps}
+      trainings={trainings}
+      hadPastCamps={hadPastCamps}
+      initialCampSlug={typeof selectedSlug === 'string' ? selectedSlug : undefined}
+    />
   )
 }

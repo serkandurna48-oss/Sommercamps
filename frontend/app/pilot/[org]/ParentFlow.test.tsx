@@ -65,7 +65,7 @@ it.each(['tradition', 'akademie', 'kompakt'] as const)('%s does not render img-s
 })
 
 const mockCamp = {
-  slug: 'camp-a', title: 'Sommercamp A', start_date: '2026-07-07', end_date: '2026-07-11',
+  slug: 'camp-a', title: 'Sommercamp A', start_date: '2099-07-07', end_date: '2099-07-11',
   registration_start: null, registration_end: null,
   age_min: 8, age_max: 14, capacity: 30, price_cents: 19900, currency: 'EUR',
   registration_open: true, location: 'Kassel', care_info: null, meals_info: null, includes: null,
@@ -110,7 +110,7 @@ it('akademie h1 trägt data-scale="md" bei JKs Leitsatz', () => {
 // ── M3: CampScreen ──
 it('CampScreen rendert Camp-Titel, Preis und CTA', () => {
   const camp: CampPublic = {
-    slug: 'camp-a', title: 'Sommercamp A', start_date: '2026-07-07', end_date: '2026-07-11',
+    slug: 'camp-a', title: 'Sommercamp A', start_date: '2099-07-07', end_date: '2099-07-11',
     registration_start: null, registration_end: null,
     age_min: 8, age_max: 14, capacity: 30, price_cents: 19900, currency: 'EUR',
     registration_open: true, location: 'Kassel', care_info: null, meals_info: null, includes: null,
@@ -195,11 +195,10 @@ it.each(['tradition', 'akademie', 'kompakt'] as const)('%s zeigt img mit alt=Ver
   expect(html).not.toContain('>DF<') // keine Initialen wenn Logo gesetzt
 })
 
-// ── M5: Marquee ──
-it('marquee rendert Orte der Camps', () => {
+// ── Kein Laufband (10.11.: Ort und Termin stehen in den Campkarten) ──
+it('kein marquee, auch mit Camps', () => {
   const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'akademie' }} camps={[mockCamp]} />)
-  expect(html).toContain('marquee-band')
-  expect(html).toContain('Kassel')
+  expect(html).not.toContain('marquee-band')
 })
 
 it('kein marquee ohne Camps', () => {
@@ -207,10 +206,6 @@ it('kein marquee ohne Camps', () => {
   expect(html).not.toContain('marquee-band')
 })
 
-it('marquee-band trägt Klasse fullbleed für Vollbreite', () => {
-  const html = renderToStaticMarkup(<ParentFlow org={{ ...org, theme: 'akademie' }} camps={[mockCamp]} />)
-  expect(html).toContain('fullbleed')
-})
 
 // ── M5: Kennzahlen-Leiste enthält keine Hinweiszeile ──
 it('akademie hero-stats enthält keine Anmeldungshinweiszeile', () => {

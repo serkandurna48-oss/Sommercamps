@@ -27,7 +27,24 @@ export interface ClubAssets {
   }
 }
 
+// JK Performance Academy: same shoot as the hero (frontend/public/jk). Used for the
+// production slug and the staging demo, so both pages look the same.
+const JK_ASSETS: ClubAssets = {
+  heroImage: '/jk/hero.jpg',
+  // Only the team photo: Jan himself is shown in the trainer section right below (Serkan 10.11.).
+  galleryImages: [
+    '/jk/slideshow/01.jpg',
+  ],
+  galleryAltTexts: {
+    '/jk/slideshow/01.jpg': 'Spieler der JK Performance Academy mit Trainer Jan-Maximilian Krug',
+  },
+  logoImage: '/jk/logo.jpg',
+  heroPosition: 'center 25%',
+}
+
 const ASSETS: Record<string, ClubAssets> = {
+  'jk-performance-academy': JK_ASSETS,
+  'jk-academy-demo': JK_ASSETS,
   'ksv-baunatal': {
     heroImage: '/clubs/ksv/ksv-1-mannschaft.jpg',
     galleryImages: [

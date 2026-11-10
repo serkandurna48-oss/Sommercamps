@@ -47,7 +47,7 @@ function PendingHint() {
 function useActiveHref(orgSlug: string, modules: readonly OrgModule[]) {
   const pathname = usePathname() ?? ''
   const preview = useAdminPreview()
-  const toPath = (href: string) => (preview ? previewHref(href, preview.empty).split('?')[0] : href)
+  const toPath = (href: string) => (preview ? previewHref(href, preview.empty, preview.basePath).split('?')[0] : href)
   const active = activeTabHref(pathname, adminNavItems(orgSlug, modules).map(item => toPath(item.href)))
   return (href: string) => active !== undefined && toPath(href) === active
 }

@@ -7,7 +7,7 @@ import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, OrganizationPublic, RegistrationCreated, TrainingOfferListItem } from '../../lib/saasApi'
 import { offerCategoryLabel, offerKindLabel } from '../../components/saas/training/trainingLogic'
 import { fromPriceText } from '../../lib/trainingFormat'
-import { formatCampDateRange, formatPrice, orgShortCode } from '../../lib/parentFlowFormat'
+import { campHasMemberPrice, campPhase, campPriceLong, formatCampDateRange, formatPrice, formatRegistrationStart, orgShortCode } from '../../lib/parentFlowFormat'
 import { truncateIntroForHero } from './campUtils'
 import {
   type FilterState,
@@ -51,27 +51,34 @@ interface DoneState {
 export default function ParentFlow({
   org,
   camps,
+  pastCamps = [],
   trainings = [],
   hadPastCamps = false,
   testFilter,
   initialCampSlug,
+  demo = false,
 }: {
   org: OrganizationPublic
   camps: CampPublic[]
+  /** Bereits stattgefundene Camps: eingeklappt als Archiv, anklickbar, ohne Anmeldung. */
+  pastCamps?: CampPublic[]
   trainings?: TrainingOfferListItem[]
   hadPastCamps?: boolean
   testFilter?: FilterState
   initialCampSlug?: string
+  /** Public demo (/demo/verein): registration stays local, legal links stay inside the demo. */
+  demo?: boolean
 }) {
   const router = useRouter()
   const isKsv = org.slug === 'ksv-baunatal'
   // KSV-Start zeigt den Preis statt der Platzsumme (Serkan 28.10.).
-  const minPriceCents = camps.length > 0 ? Math.min(...camps.map(c => c.price_cents)) : 0
-  const samePrice = camps.every(c => c.price_cents === minPriceCents)
+  const lowestPrice = (c: CampPublic) => (campHasMemberPrice(c) ? c.price_member_cents as number : c.price_cents)
+  const minPriceCents = camps.length > 0 ? Math.min(...camps.map(lowestPrice)) : 0
+  const samePrice = camps.every(c => c.price_cents === minPriceCents && !campHasMemberPrice(c))
   const priceStat = `${samePrice ? '' : 'ab '}${minPriceCents % 100 === 0
     ? `${minPriceCents / 100} €`
     : formatPrice(minPriceCents, camps[0]?.currency ?? 'EUR')}`
-  // "So einfach geht's": bei KSV vor den Camps, sonst wie bisher unten (Serkan 28.10.).
+  // "So einfach geht's" steht bei allen Vereinen vor der Camp-Liste (vorher nur bei KSV, Serkan 28.10.).
   const howSection = (
     <div className={`pad how-sec${isKsv ? ' how-sec-top' : ''}`}>
       <div>
@@ -90,7 +97,7 @@ export default function ParentFlow({
     </div>
   )
   const [screen, setScreen] = useState<ScreenName>(() => initialCampSlug
-    ? (camps.find(camp => camp.slug === initialCampSlug)?.is_full ? 'wait' : 'camp')
+    ? (camps.find(camp => camp.slug === initialCampSlug)?.is_full && campPhase(camps.find(camp => camp.slug === initialCampSlug)!) === 'open' ? 'wait' : 'camp')
     : 'org')
   const [selectedSlug, setSelectedSlug] = useState<string | null>(initialCampSlug ?? null)
   const [done, setDone] = useState<DoneState | null>(null)
@@ -105,7 +112,10 @@ export default function ParentFlow({
   const [parentPrefill, setParentPrefill] = useState<ParentDetails | null>(null)
   const [siblingMode, setSiblingMode] = useState(false)
 
-  const selectedCamp = useMemo(() => camps.find((c) => c.slug === selectedSlug) ?? null, [camps, selectedSlug])
+  const selectedCamp = useMemo(
+    () => camps.find((c) => c.slug === selectedSlug) ?? pastCamps.find((c) => c.slug === selectedSlug) ?? null,
+    [camps, pastCamps, selectedSlug],
+  )
   const shortCode = orgShortCode(org.name)
   const contactName = `Camp-Team ${org.name}`
 
@@ -154,7 +164,7 @@ export default function ParentFlow({
 
   function openCamp(camp: CampPublic) {
     selectCamp(camp.slug)
-    setScreen(camp.is_full ? 'wait' : 'camp')
+    setScreen(camp.is_full && campPhase(camp) === 'open' ? 'wait' : 'camp')
     window.scrollTo(0, 0)
   }
 
@@ -205,7 +215,8 @@ export default function ParentFlow({
     </PublicState>
   }
 
-  if (selectedCamp && !selectedCamp.registration_open && screen !== 'org' && screen !== 'done' && screen !== 'form') {
+  // The camp page itself explains past/preview/closed camps; only the waitlist screen needs the notice.
+  if (selectedCamp && !selectedCamp.registration_open && screen === 'wait') {
     return <RegistrationUnavailable org={org} camp={selectedCamp} onBack={backToOrg} />
   }
 
@@ -221,6 +232,7 @@ export default function ParentFlow({
         questions={org.registration_questions ?? []}
         parentPrefill={parentPrefill}
         onPrefillConsumed={() => setParentPrefill(null)}
+        demo={demo}
         siblingCamps={siblingMode ? camps : []}
         onCampChange={selectCamp}
         onBack={() => {
@@ -244,6 +256,7 @@ export default function ParentFlow({
         org={org}
         camp={selectedCamp}
         result={done.result}
+        demo={demo}
         childName={done.childName}
         parentEmail={done.parentEmail}
         onBackToOrg={backToOrg}
@@ -265,8 +278,9 @@ export default function ParentFlow({
     return (
       <WaitScreen
         org={org}
+        demo={demo}
         camp={selectedCamp}
-        alternatives={camps.filter((c) => c.slug !== selectedCamp.slug && !c.is_full).slice(0, 2)}
+        alternatives={camps.filter((c) => c.slug !== selectedCamp.slug && !c.is_full && campPhase(c) === 'open').slice(0, 2)}
         onBack={backToOrg}
         onJoinWaitlist={goForm}
         onSelectAlternative={openCamp}
@@ -296,8 +310,13 @@ export default function ParentFlow({
     ? clubAssets.galleryImages.filter(img => img !== heroImg).slice(0, 3)
     : []
 
+  // Mit Über-uns-Text stehen die Bilder dort, sonst als Band (Serkan 10.11.).
+  const aboutImages = org.intro_text?.trim() ? galleryImages : []
+  const bandImages = org.intro_text?.trim() ? [] : galleryImages
+
   // Next camp for sticky CTA
-  const nextCamp = camps.find(c => !c.is_full) ?? camps[0] ?? null
+  // Sticky CTA: the next camp parents can actually book (not a preview or closed camp).
+  const nextCamp = camps.find(c => !c.is_full && campPhase(c) === 'open') ?? camps.find(c => campPhase(c) === 'open') ?? camps[0] ?? null
 
   return (
     <section className="screen" id="s-org" ref={orgContainerRef}>
@@ -501,23 +520,7 @@ export default function ParentFlow({
         )
       })()}
 
-      {/* KSV: kein Laufband (Serkan 28.10.: Ort und Termin stehen schon in den Campkarten). */}
-      {camps.length > 0 && !isKsv && (() => {
-        const marqueeText = camps
-          .map(c => [c.location, formatCampDateRange(c.start_date, c.end_date)].filter(Boolean).join(' · '))
-          .filter(Boolean)
-          .join(' · ')
-        if (!marqueeText.trim()) return null
-        return (
-          <div className="marquee-band fullbleed" aria-hidden="true">
-            <div className="marquee-track">
-              <span className="marquee-inner">{marqueeText} &nbsp;·&nbsp; </span>
-              <span className="marquee-inner">{marqueeText} &nbsp;·&nbsp; </span>
-            </div>
-          </div>
-        )
-      })()}
-
+      {/* Kein Laufband: Ort und Termin stehen schon in den Campkarten (Serkan 28.10. KSV, 10.11. JK). */}
       {camps.length > 0 && (
         <div className="factsstrip pad">
           <div className="factsstrip-in">
@@ -556,7 +559,7 @@ export default function ParentFlow({
         <span>Die Anmeldung dauert etwa vier Minuten. Sie brauchen kein Benutzerkonto.</span>
       </div>
 
-      {isKsv && howSection}
+      {howSection}
 
       {/* ── Camps ── */}
       <div className="pad sec" id="s-camps" tabIndex={-1}>
@@ -602,6 +605,14 @@ export default function ParentFlow({
             filteredCamps.map((camp) => <CampRow key={camp.slug} camp={camp} onSelect={openCamp} />)
           )}
         </div>
+        {pastCamps.length > 0 && (
+          <details className="past-camps">
+            <summary>Vergangene Camps ({pastCamps.length})</summary>
+            <div className="camps">
+              {pastCamps.map((camp) => <CampRow key={camp.slug} camp={camp} onSelect={openCamp} />)}
+            </div>
+          </details>
+        )}
       </div>
 
       {trainings.length > 0 && (
@@ -667,23 +678,41 @@ export default function ParentFlow({
         </section>
       )}
 
-      {/* ── Über uns ── */}
+      {/* ── Über uns (mit Vereinsbildern, wenn vorhanden) ── */}
       {org.intro_text?.trim() && (
-        <div className="pad sec" id="s-ueber-uns" data-section>
-          <div className="sec-head">
-            <div>
-              <span className="sec-label">Über uns</span>
-              <h2 className="d2" data-split>{org.name}</h2>
+        <div className={`pad sec${aboutImages.length > 0 ? ' about-sec' : ''}`} id="s-ueber-uns" data-section>
+          <div className="about-text">
+            <div className="sec-head">
+              <div>
+                <span className="sec-label">Über uns</span>
+                <h2 className="d2" data-split>{org.name}</h2>
+              </div>
             </div>
+            <p className="sec-body-text">{org.intro_text}</p>
           </div>
-          <p className="sec-body-text">{org.intro_text}</p>
+          {aboutImages.length > 0 && (
+            <div className={`about-media about-media-${aboutImages.length}`} data-rise>
+              {aboutImages.map((src, i) => (
+                <div key={src} className={`about-img${i === 0 ? ' about-img-main' : ''}`}>
+                  <Image
+                    src={src}
+                    alt={clubAssets?.galleryAltTexts[src] ?? ''}
+                    unoptimized
+                    fill
+                    sizes="(min-width: 900px) 30vw, 90vw"
+                    style={{ objectFit: 'cover', objectPosition: 'center 25%' }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── Galerie-Band ── */}
-      {galleryImages.length > 0 && (
+      {/* ── Galerie-Band (nur ohne Über-uns-Text) ── */}
+      {bandImages.length > 0 && (
         <div className="gallery-band pad" data-section>
-          {galleryImages.map((src, i) => (
+          {bandImages.map((src, i) => (
             <div key={i} className="gallery-img-wrap" data-gallery-img>
               <Image
                 src={src}
@@ -720,8 +749,6 @@ export default function ParentFlow({
         </div>
       )}
 
-      {!isKsv && howSection}
-
       <div className="pad faq-sec">
         <div>
           <span className="sec-label">FAQ</span>
@@ -753,7 +780,7 @@ export default function ParentFlow({
         </div>
       </div>
 
-      <PublicFooter org={org} />
+      <PublicFooter org={org} demo={demo} />
 
       {/* ── Mobile Sticky CTA ── */}
       {!isKsv && <div className={`sticky-cta${showStickyCta ? ' sticky-cta-on' : ''}`} aria-hidden={!showStickyCta} inert={!showStickyCta}>
@@ -789,7 +816,7 @@ export function CampScreen({
   useParentFlowMotion(org.theme, containerRef)
   const headingRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => { headingRef.current?.focus() }, [])
-  if (!camp.registration_open) return <RegistrationUnavailable org={org} camp={camp} onBack={onBack} />
+  const [phase] = useState(() => campPhase(camp))
 
   const startDay = parseInt(camp.start_date.slice(8, 10))
   const startMonth = new Date(camp.start_date + 'T12:00:00').toLocaleString('de-DE', { month: 'long' })
@@ -830,18 +857,21 @@ export function CampScreen({
         </div>
         <div className="camp-hd-meta">
           <div className="tags">
-            <span className={`chip ${camp.registration_open ? 'ok' : 'info'}`}>
-              {camp.registration_open ? 'Anmeldung geöffnet' : 'Anmeldung geschlossen'}
+            <span className={`chip ${phase === 'open' ? 'ok' : 'info'}`}>
+              {phase === 'open' ? 'Anmeldung geöffnet'
+                : phase === 'past' ? 'Camp hat stattgefunden'
+                  : phase === 'preview' && camp.registration_start ? `Anmeldung ab ${formatRegistrationStart(camp.registration_start)}`
+                    : 'Anmeldung geschlossen'}
             </span>
           </div>
-          <div className="cap">
+          {phase !== 'past' && phase !== 'preview' && <div className="cap">
             <div className={`bar${camp.is_full ? ' full' : ''}`}>
               <i style={{ width: `${pct}%` }} />
             </div>
             <span className={`t num${tight ? ' tight' : ''}`}>
               {tight ? `Nur noch ${camp.spots_remaining} Plätze frei` : `${camp.spots_remaining} von ${camp.capacity} Plätzen frei`}
             </span>
-          </div>
+          </div>}
         </div>
       </div>
 
@@ -890,18 +920,25 @@ export function CampScreen({
       <div className="dock">
         <div className="line">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span className="sum num">{formatPrice(camp.price_cents, camp.currency)}</span>
+            <span className="sum num">{campPriceLong(camp)}</span>
             <span className="muted" style={{ fontSize: 12 }}>pro Kind</span>
           </div>
-          <button
-            className="btn primary btn-pill"
-            type="button"
-            onClick={onRegister}
-            disabled={!camp.registration_open}
-            style={{ width: 'auto', flexGrow: 1, maxWidth: 250 }}
-          >
-            Jetzt anmelden
-          </button>
+          {phase === 'open' ? (
+            <button
+              className="btn primary btn-pill"
+              type="button"
+              onClick={onRegister}
+              style={{ width: 'auto', flexGrow: 1, maxWidth: 250 }}
+            >
+              Jetzt anmelden
+            </button>
+          ) : (
+            <span className="muted" style={{ fontSize: 14, textAlign: 'right' }}>
+              {phase === 'past' ? 'Dieses Camp hat bereits stattgefunden.'
+                : phase === 'preview' && camp.registration_start ? `Anmeldung ab ${formatRegistrationStart(camp.registration_start)}`
+                  : 'Die Anmeldung ist derzeit geschlossen.'}
+            </span>
+          )}
         </div>
       </div>
     </section>
@@ -915,9 +952,11 @@ function WaitScreen({
   onBack,
   onJoinWaitlist,
   onSelectAlternative,
+  demo = false,
 }: {
   org: OrganizationPublic
   camp: CampPublic
+  demo?: boolean
   alternatives: CampPublic[]
   onBack: () => void
   onJoinWaitlist: () => void
@@ -985,7 +1024,7 @@ function WaitScreen({
           </div>
         </div>
       )}
-      <PublicFooter org={org} />
+      <PublicFooter org={org} demo={demo} />
     </section>
   )
 }

@@ -8,8 +8,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = new URL(request.url)
 
   // Path "/" — marketing redirect only; no token-refresh on root.
+  // SaaS build (no NEXT_PUBLIC_ACTIVE_CLUB) or explicit marketing mode: "/" is the marketing landing.
+  // Legacy club builds (ACTIVE_CLUB=ksv|jk) keep serving their own root page.
   if (pathname === '/') {
-    if (process.env.NEXT_PUBLIC_SITE_MODE === 'campspilot-marketing') {
+    const legacyClubBuild = Boolean(process.env.NEXT_PUBLIC_ACTIVE_CLUB?.trim())
+    if (process.env.NEXT_PUBLIC_SITE_MODE === 'campspilot-marketing' || !legacyClubBuild) {
       return NextResponse.redirect(new URL('/campspilot', request.url))
     }
     return NextResponse.next()

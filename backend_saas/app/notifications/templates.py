@@ -290,23 +290,85 @@ E-Mail: {e_org_email}{phone_line}</p>
     )
 
 
-def build_cancellation_request_mail(
+def build_parent_cancelled_mail(
+    *,
+    org_name: str,
+    camp_title: str,
+    refund_text: Optional[str],
+    admin_url: Optional[str],
+    to_email: str,
+    promoted: bool = False,
+) -> MailMessage:
+    """To club admins (du-Form) when parents cancelled themselves. refund_text is the
+    formatted refunded amount, None for a waitlist removal; promoted = the next waitlist
+    entry got the place. No names, no health data."""
+    e_org_name = escape(org_name)
+    e_camp = escape(camp_title)
+    link = f'<p><a href="{escape(admin_url)}">Anmeldungen im Adminbereich öffnen</a></p>\n' if admin_url else ""
+    if refund_text:
+        body = (f"<p>Eltern haben die Anmeldung für <strong>{e_camp}</strong> storniert. "
+                f"Die Zahlung von {escape(refund_text)} wurde über Stripe erstattet.</p>\n"
+                "<p>Die Anmeldung ist storniert."
+                + (" Der nächste Eintrag der Warteliste ist automatisch nachgerückt." if promoted else "")
+                + " Du musst nichts weiter tun.</p>")
+        subject = f"Von Eltern storniert – {camp_title}"
+    else:
+        body = (f"<p>Eltern haben ihr Kind für <strong>{e_camp}</strong> von der Warteliste abgemeldet. "
+                "Es war nichts bezahlt, daher gibt es keine Erstattung.</p>")
+        subject = f"Von der Warteliste abgemeldet – {camp_title}"
+    html = f"""\
+<p>Hallo,</p>
+{body}
+{link}<p>Viele Grüße<br>{e_org_name} über CampsPilot</p>"""
+    return MailMessage(to_email=to_email, subject=subject, html_content=html)
+
+
+def build_parent_self_cancel_mail(
+    *,
+    org_name: str,
+    org_email: str,
+    org_phone: Optional[str],
+    camp_title: str,
+    refund_text: Optional[str],
+    parent_email: str,
+) -> MailMessage:
+    """To the parent after their own cancellation (instead of the club-cancel mail)."""
+    e_org_name = escape(org_name)
+    e_camp = escape(camp_title)
+    phone_line = f"<br>Telefon: {escape(org_phone)}" if org_phone else ""
+    if refund_text:
+        body = (f"<p>Sie haben die Anmeldung für <strong>{e_camp}</strong> storniert. "
+                f"{escape(refund_text)} werden auf Ihr Zahlungsmittel erstattet (je nach Bank einige Werktage).</p>")
+    else:
+        body = (f"<p>Sie haben Ihr Kind für <strong>{e_camp}</strong> von der Warteliste abgemeldet. "
+                "Es sind keine Kosten entstanden.</p>")
+    html = f"""\
+<p>Guten Tag,</p>
+{body}
+<p>Bei Fragen wenden Sie sich bitte an {e_org_name}:<br>
+E-Mail: {escape(org_email)}{phone_line}</p>
+<p>Viele Grüße,<br>{e_org_name}</p>"""
+    return MailMessage(
+        to_email=parent_email,
+        subject=f"Anmeldung storniert – {camp_title}",
+        html_content=html,
+        reply_to=org_email,
+    )
+
+
+def build_parent_cancel_incomplete_mail(
     *,
     org_name: str,
     camp_title: str,
     admin_url: Optional[str],
     to_email: str,
 ) -> MailMessage:
-    """To club admins (du-Form) when parents ask for a cancellation. No names, no health data."""
-    e_org_name = escape(org_name)
+    """To club admins (du-Form): the refund of a parents' self-cancel went through but the
+    cancellation itself failed. No names, no health data."""
     link = f'<p><a href="{escape(admin_url)}">Anmeldungen im Adminbereich öffnen</a></p>\n' if admin_url else ""
     html = f"""\
 <p>Hallo,</p>
-<p>für <strong>{escape(camp_title)}</strong> wurde eine Stornierung angefragt. Die Anmeldung ist noch nicht storniert.</p>
-{link}<p>In der Anmeldungsliste ist sie mit „Storno angefragt“ markiert. Bitte melde dich bei den Eltern und storniere die Anmeldung, wenn es passt.</p>
-<p>Viele Grüße<br>{e_org_name} über CampsPilot</p>"""
-    return MailMessage(
-        to_email=to_email,
-        subject=f"Stornierung angefragt – {camp_title}",
-        html_content=html,
-    )
+<p>Eltern wollten die Anmeldung für <strong>{escape(camp_title)}</strong> selbst stornieren. Die Zahlung wurde über Stripe erstattet, die Anmeldung konnte aber nicht storniert werden.</p>
+<p>Bitte storniere die Anmeldung von Hand. Die Erstattung musst du nicht noch einmal anstoßen.</p>
+{link}<p>Viele Grüße<br>{escape(org_name)} über CampsPilot</p>"""
+    return MailMessage(to_email=to_email, subject=f"Storno unvollständig – {camp_title}", html_content=html)

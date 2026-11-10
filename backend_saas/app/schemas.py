@@ -17,7 +17,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, StrictBool, computed_field, field_validator, model_validator
 
-from .utils import is_registration_open
+from .utils import is_camp_over, is_registration_open
 from .payment_reference import payment_reference as build_payment_reference
 
 _QUESTION_KEY_RE = _re.compile(r'^[a-z][a-z0-9_]{0,29}$')
@@ -122,6 +122,8 @@ class CampPublic(BaseModel):
     age_max: int
     capacity: int
     price_cents: int
+    # Member price (members module); None = one price for everyone.
+    price_member_cents: Optional[int] = None
     currency: str
     # §6.2: Faktentabelle + Leistungsliste. Alle drei optional — NULL/leer
     # heißt "Abschnitt nicht anzeigen", nicht "Platzhaltertext anzeigen".
@@ -160,8 +162,9 @@ class CampPublic(BaseModel):
         be published" is satisfied by construction, not re-checked here.
         Capacity is deliberately NOT considered yet (out of CP-S404 scope;
         CP-S405 checks capacity only at registration write time).
+        A camp whose last day has passed is closed too (archive, 10.11.2026).
         """
-        return is_registration_open(self.registration_start, self.registration_end)
+        return is_registration_open(self.registration_start, self.registration_end) and not is_camp_over(self.end_date)
 
 
 _CLIENT_PRICE_FIELDS = frozenset({

@@ -57,6 +57,46 @@ export function formatPrice(cents: number, currency: string): string {
   return currency === 'EUR' ? `${amount} €` : `${amount} ${currency}`
 }
 
+export type CampPhase = 'open' | 'preview' | 'closed' | 'past'
+
+/**
+ * Phase eines Camps für die Elternseite: vorbei (letzter Tag vorbei, Europe/Berlin),
+ * Vorschau (Anmeldung startet erst), geschlossen (Anmeldefenster zu) oder offen.
+ */
+export function campPhase(
+  camp: { end_date: string; registration_start: string | null; registration_open?: boolean },
+  now: number = Date.now(),
+): CampPhase {
+  const today = new Date(now).toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' })
+  if (camp.end_date < today) return 'past'
+  if (camp.registration_start && Date.parse(camp.registration_start) > now) return 'preview'
+  if (camp.registration_open === false) return 'closed'
+  return 'open'
+}
+
+/** "2027-01-15T09:00:00Z" -> "15. Jan. 2027" (Europe/Berlin). */
+export function formatRegistrationStart(iso: string): string {
+  return new Date(iso).toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Berlin' })
+}
+
+/** Camp mit eigenem, niedrigerem Mitgliederpreis (Mitgliederliste des Vereins). */
+export function campHasMemberPrice(camp: { price_cents: number; price_member_cents?: number | null }): boolean {
+  return camp.price_member_cents != null && camp.price_member_cents < camp.price_cents
+}
+
+/** Kurzpreis für Karten und Leisten: bei Mitgliederpreis der niedrigste Preis mit "ab". */
+export function campPriceShort(camp: { price_cents: number; price_member_cents?: number | null; currency: string }): { from: boolean; text: string } {
+  return campHasMemberPrice(camp)
+    ? { from: true, text: formatPrice(camp.price_member_cents as number, camp.currency) }
+    : { from: false, text: formatPrice(camp.price_cents, camp.currency) }
+}
+
+/** Voller Preistext vor der Anmeldung; entschieden wird serverseitig anhand der Mitgliederliste. */
+export function campPriceLong(camp: { price_cents: number; price_member_cents?: number | null; currency: string }): string {
+  if (!campHasMemberPrice(camp)) return formatPrice(camp.price_cents, camp.currency)
+  return `${formatPrice(camp.price_member_cents as number, camp.currency)} für Mitglieder, ${formatPrice(camp.price_cents, camp.currency)} sonst – geprüft bei der Anmeldung`
+}
+
 /** "TT.MM.JJJJ" -> "JJJJ-MM-TT", oder null bei ungültigem Format/Datum. */
 export function parseGermanDate(value: string): string | null {
   const match = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(value.trim())

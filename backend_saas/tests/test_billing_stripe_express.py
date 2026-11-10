@@ -422,7 +422,7 @@ def test_legacy_checkout_unchanged_without_express(env):
     assert kw["stripe_account"] == LEGACY
     assert "application_fee_amount" not in kw["payment_intent_data"]
     assert "transfer_data" not in kw["payment_intent_data"]
-    assert kw["idempotency_key"] == f"campspilot-{token}-first-1000"
+    assert kw["idempotency_key"] == f"campspilot-v2-{token}-first-1000"
     assert _reg(env, token)["stripe_charge_type"] == "direct"
 
 
@@ -444,6 +444,22 @@ def test_no_account_no_online_payment(env):
     _activate_express(env)
     assert env.client.get(f"/api/v1/organizations/{env.slug}/camps/summer-1/payment-options").json() == {
         "online_payment_available": True}
+
+
+def test_camp_member_price_is_charged_in_checkout(env):
+    _activate_express(env)
+    with env.cursor() as cur:  # summer-1 costs 1000; member price 800
+        cur.execute("update camps set price_member_cents=800 where organization_id=%s and slug='summer-1'", (env.org,))
+    member = _register(env)  # not on the member list: regular price
+    assert _reg(env, member)["applied_price_cents"] == 1000
+    assert _checkout(env, member).status_code == 200
+    (_, kw), = env.fake.named("Session.create")
+    assert kw["line_items"][0]["price_data"]["unit_amount"] == 1000
+    with env.cursor() as cur:  # an admin-corrected applied price wins over the booked price
+        cur.execute("update camp_registrations set applied_price_cents=800, stripe_checkout_session_id=null "
+                    "where registration_token=%s", (member,))
+    assert _checkout(env, member).status_code == 200
+    assert env.fake.named("Session.create")[-1][1]["line_items"][0]["price_data"]["unit_amount"] == 800
 
 
 def test_training_express_checkout_uses_applied_price(env, real_db):
@@ -769,3 +785,13 @@ def test_fee_and_stripe_columns_not_readable_by_authenticated(env):
     finally:
         with env.cursor() as cur:
             cur.execute("grant select on public.camp_registrations to authenticated")
+
+
+@pytest.mark.parametrize("status", ["failed", "canceled"])
+def test_admin_refund_with_failed_status_is_502(env, status):
+    token, session_id = _paid_destination(env)
+    _post_webhook(env, PLATFORM_HOOK, _completed(session_id, intent=env.intent), PLATFORM_SECRET)
+    orig = env.fake.Refund.create
+    env.fake.Refund.create = staticmethod(lambda **kw: {**orig(**kw), "status": status})
+    r = _refund(env, token, 400)
+    assert r.status_code == 502, r.text

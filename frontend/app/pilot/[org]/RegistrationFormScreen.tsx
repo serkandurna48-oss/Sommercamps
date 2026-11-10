@@ -5,10 +5,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, RegistrationCreated, RegistrationQuestion, TrainingPaymentMethod } from '../../lib/saasApi'
 import { submitRegistration } from '../../lib/saasApi'
 import { captureSaasEvent } from '../../lib/saasAnalytics'
-import { formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
+import { campHasMemberPrice, campPriceLong, campPriceShort, formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
 import { trainingSubmitErrorMessage } from '../../lib/trainingFormat'
 import ExtraQuestions from './ExtraQuestions'
 import { getClubAssets } from './clubAssets'
+import { demoLegalHref } from './demoMode'
 import { submitErrorMessage } from './submitError'
 import { parentDetailsOnly, type ParentDetails } from './siblingRegistration'
 
@@ -167,6 +168,7 @@ export default function RegistrationFormScreen({
   siblingCamps = [],
   onCampChange,
   training,
+  demo = false,
 }: {
   orgSlug: string
   orgName: string
@@ -183,6 +185,8 @@ export default function RegistrationFormScreen({
   siblingCamps?: CampPublic[]
   onCampChange?: (slug: string) => void
   training?: TrainingFormConfig
+  /** Public demo: the form answers locally and never calls the API. */
+  demo?: boolean
 }) {
   // Hook order (slots 0–8): do not reorder — RegistrationFormScreen.test.tsx
   // mocks React hooks by a shared counter. New hooks go to the end only.
@@ -337,7 +341,10 @@ export default function RegistrationFormScreen({
     inFlight.current = true
     setSubmitting(true)
     try {
-      const outcome = await submitRegistration(orgSlug, camp.slug, {
+      const outcome = demo
+        // Demo: answer locally, never call the API.
+        ? { ok: true as const, data: { registration_token: 'demo-token', status: camp.is_full ? 'waitlist' : 'registered', payment_status: camp.is_full ? 'none' : 'open', payment_reference: 'CP-DEMO0001' } satisfies RegistrationCreated }
+        : await submitRegistration(orgSlug, camp.slug, {
         parent_first_name: parentFirstName,
         parent_last_name: parentLastName,
         parent_email: form.parentEmail.trim(),
@@ -387,7 +394,7 @@ export default function RegistrationFormScreen({
         }
         return
       }
-      captureSaasEvent('camp_registration_succeeded', orgSlug, camp.slug, {
+      if (!demo) captureSaasEvent('camp_registration_succeeded', orgSlug, camp.slug, {
         result: outcome.data.status === 'registered' || outcome.data.status === 'waitlist' ? outcome.data.status : 'other',
       })
       setSubmitted(true)
@@ -462,7 +469,7 @@ export default function RegistrationFormScreen({
                   <dd>{camp.location}</dd>
                 </div>
               )}
-              <div className="d3c-aside-price num">{training ? training.priceText : formatPrice(camp.price_cents, camp.currency)}</div>
+              <div className="d3c-aside-price num">{training ? training.priceText : campPriceLong(camp)}</div>
               {!training && camp.spots_remaining != null && !camp.is_full && (
                 <span className={`d3c-aside-spots${camp.spots_remaining <= 10 ? ' accent' : ''}`}>
                   {camp.spots_remaining} Plätze frei
@@ -487,7 +494,7 @@ export default function RegistrationFormScreen({
               <b>{camp.title}</b>
               <span>{training ? training.dateTimeLabel : formatCampDateRange(camp.start_date, camp.end_date)}</span>
             </span>
-            {!training && <span className="d3c-mob-bar-price num">{formatPrice(camp.price_cents, camp.currency)}</span>}
+            {!training && <span className="d3c-mob-bar-price num">{campPriceShort(camp).from ? 'ab ' : ''}{campPriceShort(camp).text}</span>}
           </button>
           {asideOpen && (
             <div className="d3c-mob-bar-body pad">
@@ -504,7 +511,7 @@ export default function RegistrationFormScreen({
                 )}
                 <div className="d3c-aside-row">
                   <dt>Preis</dt>
-                  <dd className="num">{training ? training.priceText : formatPrice(camp.price_cents, camp.currency)}</dd>
+                  <dd className="num">{training ? training.priceText : campPriceLong(camp)}</dd>
                 </div>
                 {!training && camp.spots_remaining != null && !camp.is_full && camp.spots_remaining <= 10 && (
                   <div className="d3c-aside-row">
@@ -906,7 +913,7 @@ export default function RegistrationFormScreen({
                     />
                     <span className="txt">
                       <b>Teilnahmebedingungen<span className="consent-req"> Pflichtfeld *</span></b>
-                      <span>Ich habe die <a href={`/pilot/${orgSlug}/teilnahmebedingungen`} target="_blank" rel="noopener noreferrer">Teilnahmebedingungen</a> gelesen und melde mein Kind verbindlich an.</span>
+                      <span>Ich habe die <a href={demoLegalHref(demo, `/pilot/${orgSlug}/teilnahmebedingungen`)} target="_blank" rel="noopener noreferrer">Teilnahmebedingungen</a> gelesen und melde mein Kind verbindlich an.</span>
                       {badFields.agb && <span id="err-agb" role="alert" style={{ color: 'var(--error)' }}>{badFields.agb}</span>}
                     </span>
                   </label>
@@ -925,7 +932,7 @@ export default function RegistrationFormScreen({
                     <span className="txt">
                       <b>Datenschutz<span className="consent-req"> Pflichtfeld *</span></b>
                       <span>
-                        Ich habe die <a href={`/pilot/${orgSlug}/datenschutz`} target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a> gelesen und stimme der Verarbeitung der Daten für {training ? 'die Buchung' : 'die Camp-Anmeldung'} zu.
+                        Ich habe die <a href={demoLegalHref(demo, `/pilot/${orgSlug}/datenschutz`)} target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a> gelesen und stimme der Verarbeitung der Daten für {training ? 'die Buchung' : 'die Camp-Anmeldung'} zu.
                       </span>
                       {badFields.privacy && <span id="err-privacy" role="alert" style={{ color: 'var(--error)' }}>{badFields.privacy}</span>}
                     </span>
@@ -957,7 +964,7 @@ export default function RegistrationFormScreen({
                     </svg>
                     <span>
                       Informationen zur Verarbeitung und Speicherung der Daten Ihres Kindes finden Sie in der{' '}
-                      <a href={`/pilot/${orgSlug}/datenschutz`} target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>.
+                      <a href={demoLegalHref(demo, `/pilot/${orgSlug}/datenschutz`)} target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>.
                     </span>
                   </div>
                 </div>
@@ -987,7 +994,7 @@ export default function RegistrationFormScreen({
               )}
               <div className="line">
                 <span style={{ fontSize: 14, color: 'var(--ink-2)' }}>{camp.title}, 1 Kind</span>
-                <span className="sum num">{training ? training.priceText : formatPrice(camp.price_cents, camp.currency)}</span>
+                <span className="sum num">{training ? training.priceText : campPriceLong(camp)}</span>
               </div>
               {serverError && (errorStatus === 409 || errorStatus === 404) ? (
                 <a className="btn primary btn-pill" href={errorStatus === 409 && contactEmail ? `mailto:${contactEmail}` : training ? `/pilot/${orgSlug}/training` : `/pilot/${orgSlug}`}>
@@ -1004,7 +1011,9 @@ export default function RegistrationFormScreen({
                     ? 'Auf die Warteliste setzen'
                     : training
                       ? 'Verbindlich buchen'
-                      : `Verbindlich anmelden · ${formatPrice(camp.price_cents, camp.currency)}`}
+                      : campHasMemberPrice(camp)
+                        ? 'Verbindlich anmelden'
+                        : `Verbindlich anmelden · ${formatPrice(camp.price_cents, camp.currency)}`}
               </button>}
               <span className="fine">
                 {training

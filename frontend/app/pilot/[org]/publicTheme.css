@@ -4241,9 +4241,89 @@
   .cp-public[data-theme='akademie'] #s-camp .dock { background: color-mix(in srgb, var(--paper) 90%, transparent); }
 }
 
-/* Zweites Titelbild für schmale Bildschirme (17.11.). */
-@media (max-width: 699px) { .cp-public .hero-image-wide { display: none; } }
-@media (min-width: 700px) { .cp-public .hero-image-narrow { display: none; } }
+/* Titelbild als Streifen über dem Text (17.11.): für breite Gruppenfotos, die am Handy sonst
+   unter der Überschrift liegen. Ein Motiv auf allen Bildschirmen. */
+@media (max-width: 699px) {
+  .cp-public .h-akad.hero-banner { min-height: 0; justify-content: flex-start; }
+  .cp-public .h-akad.hero-banner .bg { position: relative; inset: auto; height: 58vw; flex-shrink: 0; overflow: hidden; }
+  .cp-public .h-akad.hero-banner .bg::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 45%;
+    background: linear-gradient(to top, var(--band), transparent);
+    pointer-events: none;
+  }
+  .cp-public .h-akad.hero-banner .in { padding: 4px 24px 36px; }
+  .cp-public .h-akad.hero-banner .hero-scrim::before { display: none; }
+}
+
+/* Abschluss-Leiste im Formular: Regel zum Mitgliederpreis unter dem Betrag. */
+.cp-public .dock .dock-price-rule { margin: -4px 0 0; text-align: right; color: var(--muted); }
+
+/* Campkarten am Handy (17.11.): einspaltig keine gleich hohen Zeilen, sonst bleiben Karten ohne
+   Leistungsliste halb leer. Ab zwei Spalten gilt weiter die gleiche Höhe. */
+@media (max-width: 699px) {
+  .cp-public[data-theme] .camps { grid-auto-rows: auto; }
+  .cp-public[data-theme] .camps .camp .inc:empty { display: none; }
+  .cp-public[data-theme] .camps .camp .inc { min-height: 0; }
+  .cp-public[data-theme] .camps .camp .c-name { min-height: 0; }
+}
+
+/* Trainingsangebote auf der Vereinsseite: linksbündig, ab Tablet zweispaltig, Hinweis ohne Termine. */
+.cp-public #s-trainings .tr-list { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (min-width: 700px) {
+  .cp-public #s-trainings .tr-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.cp-public #s-trainings .tr-card {
+  align-items: flex-start;
+  text-align: left;
+  gap: 4px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line-2, var(--line));
+}
+.cp-public #s-trainings .tr-price { font-size: 14px; font-weight: 500; color: var(--ink-2); }
+.cp-public .tr-soon {
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid var(--line-2, var(--line));
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brand-strong);
+}
+
+/* Team: Gründer als erste, größere Karte; darunter die Karten des Teams. */
+.cp-public .team-lead {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line-2, var(--line));
+}
+.cp-public .team-lead-portrait { position: relative; aspect-ratio: 1; border-radius: 16px; overflow: hidden; background: var(--surface-2, var(--surface)); }
+.cp-public .team-lead-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cp-public .team-lead-name { margin: 0; font-family: var(--display); font-weight: var(--dw, 700); font-size: 20px; line-height: 1.15; letter-spacing: var(--h-tracking, 0); color: var(--ink); }
+.cp-public .team-lead-bio { margin: 4px 0 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); max-width: 60ch; }
+@media (min-width: 700px) {
+  .cp-public .team-lead { grid-template-columns: 200px minmax(0, 1fr); gap: 28px; padding: 20px; }
+  .cp-public .team-lead-name { font-size: 28px; }
+  .cp-public .team-lead-bio { font-size: 16px; }
+}
+
+/* Partner mit Foto: Bild und Text nebeneinander, die Kontaktzeile schmal darunter. */
+.cp-public .sponsor-feature .sponsor-grid { grid-template-columns: minmax(0, 1fr); }
+.cp-public .sponsor-feature .sponsor-intro { order: 2; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
+.cp-public .sponsor-entry-body { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; }
+@media (min-width: 800px) {
+  .cp-public .sponsor-entry-wide { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 32px; align-items: center; }
+}
 
 /* KSV Tagesrunde 28.10. (mit Serkan abgestimmt): ein Rotton fuer alle Aktionen, Datum einmal pro Karte,
    "freiwillig" an optionalen Feldern, "So einfach geht's" vor den Camps. Nur KSV. */

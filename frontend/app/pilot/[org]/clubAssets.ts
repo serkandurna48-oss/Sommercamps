@@ -2,8 +2,8 @@
 
 export interface ClubAssets {
   heroImage: string
-  /** Optional hero for narrow screens (below 700 px); the regular hero stays on wider screens. */
-  heroImageMobile?: string
+  /** Below 700 px show the hero photo as a banner above the text instead of behind it (wide group photos). */
+  heroMobileBanner?: boolean
   galleryImages: readonly string[]
   galleryAltTexts: Readonly<Record<string, string>>
   logoImage?: string
@@ -14,6 +14,10 @@ export interface ClubAssets {
   /** Show the club's primary registration CTA before the dates CTA. */
   heroCtaEmphasis?: boolean
   sponsor?: {
+    /** Section label; without it the block is labelled as "Sponsor / Anzeige" (also on each entry). */
+    label?: string
+    /** Position on the page; default is directly after the trainings. */
+    placement?: 'afterTrainings' | 'afterTeam'
     heading: string
     intro: string
     entries: readonly {
@@ -40,6 +44,8 @@ export interface ClubAssets {
   team?: {
     label: string
     heading: string
+    /** Role line for the founder/trainer from the club's own data, shown as the first, larger card. */
+    leadRole?: string
     photo?: { src: string; alt: string }
     members: readonly {
       name: string
@@ -55,11 +61,11 @@ export interface ClubAssets {
 // production slug and the staging demo, so both pages look the same.
 const JK_ASSETS: ClubAssets = {
   heroImage: '/jk/hero.jpg',
-  // On phones the group photo would sit under the headline; the close team shot works there.
-  heroImageMobile: '/jk/hero-mobile.jpg',
-  // Group photo: the people stand in the lower half of the frame.
+  // Group photo: the people stand in the lower half of the frame. On phones it is a banner
+  // above the text, so one picture works on every screen.
   heroPosition: 'center 78%',
-  heroPositionMobile: '50% 78%',
+  heroPositionMobile: '50% 88%',
+  heroMobileBanner: true,
   // Five photos from training, shown as a slideshow next to the "Über uns" text (Serkan 17.11.).
   aboutSlideshow: true,
   galleryImages: [
@@ -89,6 +95,7 @@ const JK_ASSETS: ClubAssets = {
   team: {
     label: 'Trainerteam',
     heading: 'Unser Team',
+    leadRole: 'Gründer',
     photo: { src: '/jk/team/trainerteam.jpg', alt: 'Trainerteam der JK Performance Academy' },
     // Names and roles as confirmed by Jan (17.11.2026).
     members: [
@@ -96,10 +103,13 @@ const JK_ASSETS: ClubAssets = {
       { name: 'Christian Andrecht', role: 'Partner-Trainer', imageSrc: '/jk/team/christian-andrecht.jpg', imagePosition: 'center 25%' },
       { name: 'Danny Breitfelder', role: 'Gast-Profi', imageSrc: '/jk/team/danny-breitfelder.jpg', imagePosition: '45% 20%' },
       { name: 'Jil Krug', imageSrc: '/jk/team/jil-krug.jpg', imagePosition: 'center 25%' },
+      // Members without a photo are not shown on the page until one is added.
       { name: 'Serkan Durna', role: 'Gast-Profi und IT-Koordinator' },
     ],
   },
   sponsor: {
+    label: 'Partner',
+    placement: 'afterTeam',
     heading: 'Unsere Partner',
     intro: 'Sie möchten die JK Performance Academy unterstützen? Sprechen Sie mit uns über Möglichkeiten einer Partnerschaft.',
     entries: [

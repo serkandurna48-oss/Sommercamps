@@ -59,10 +59,10 @@ it('JK page shows the slideshow in "Über uns", camp photos, the trainer team an
   expect((camps.match(/camp-gallery-item /g) ?? [])).toHaveLength(4)
 
   expect(html).toContain('id="team-heading"')
-  for (const name of ['Jan Baruschka', 'Christian Andrecht', 'Danny Breitfelder', 'Jil Krug', 'Serkan Durna']) expect(html).toContain(name)
-  expect(html).toContain('Gast-Profi und IT-Koordinator')
-  // A member without a photo gets initials instead of a broken image.
-  expect(html).toContain('<span class="team-initials" aria-hidden="true">SD</span>')
+  for (const name of ['Jan Baruschka', 'Christian Andrecht', 'Danny Breitfelder', 'Jil Krug']) expect(html).toContain(name)
+  // Members without a photo stay hidden until a photo exists.
+  expect(html).not.toContain('Serkan Durna')
+  expect(html).not.toContain('team-initials')
 
   expect(html).toContain('Sporthaus Kassel')
   expect(html).toContain('sponsor-photo')
@@ -134,13 +134,41 @@ it('"Über uns": several blank lines in the stored text collapse to one paragrap
   expect(html).toContain('Eins.\n\nZwei.\n\nDrei.')
 })
 
-it('JK hero: wide photo plus a separate image for narrow screens; other clubs have one image', () => {
+it('JK hero: one photo for every screen, shown as a banner above the text on phones', () => {
   const jk = renderToStaticMarkup(<ParentFlow org={{ ...base, slug: 'jk-performance-academy', hero_image_url: '/jk/hero.jpg' }} camps={[camp]} />)
-  expect(jk).toContain('hero-image-wide')
-  expect(jk).toContain('hero-image-narrow')
-  expect(jk).toContain('/jk/hero-mobile.jpg')
-  expect(existsSync(join(process.cwd(), 'public', 'jk', 'hero-mobile.jpg'))).toBe(true)
+  expect(jk).toContain('hero h-akad hero-photo hero-banner')
+  expect((jk.match(/class="hero-image"/g) ?? [])).toHaveLength(1)
+  expect(existsSync(join(process.cwd(), 'public', 'jk', 'hero-mobile.jpg'))).toBe(false)
   const other = renderToStaticMarkup(<ParentFlow org={{ ...base, slug: 'demo', hero_image_url: '/x.jpg' }} camps={[camp]} />)
-  expect(other).not.toContain('hero-image-narrow')
-  expect(other).not.toContain('hero-image-wide')
+  expect(other).not.toContain('hero-banner')
+})
+
+it('JK: founder leads the team section, no separate trainer block; partner comes after the team with its own label', () => {
+  const org = { ...base, slug: 'jk-performance-academy', contact_person_name: 'Jan-Maximilian Krug', trainer_image_url: '/jk/training.jpg', trainer_text: 'Gründer der JK Performance Academy.' }
+  const html = renderToStaticMarkup(<ParentFlow org={org} camps={[camp]} />)
+  expect(html).not.toContain('class="trainer-sec"')
+  const team = html.slice(html.indexOf('id="team-heading"'))
+  expect(team).toContain('team-lead')
+  expect(team.indexOf('Jan-Maximilian Krug')).toBeLessThan(team.indexOf('Jan Baruschka'))
+  expect(html.indexOf('id="s-ueber-uns"')).toBeLessThan(html.indexOf('id="team-heading"'))
+  expect(html.indexOf('id="team-heading"')).toBeLessThan(html.indexOf('id="sponsor-heading"'))
+  expect(html).not.toContain('Sponsor / Anzeige')
+  expect(html).toContain('sponsor-entry-wide')
+})
+
+it('clubs without a team keep the single trainer block and the sponsor block after the trainings', () => {
+  const org = { ...base, slug: 'ksv-baunatal', theme: 'tradition' as const, contact_person_name: 'Trainer', trainer_image_url: '/t.jpg', trainer_text: 'Text.' }
+  const html = renderToStaticMarkup(<ParentFlow org={org} camps={[camp]} />)
+  expect(html).toContain('class="trainer-sec"')
+  expect(html).toContain('Sponsor / Anzeige')
+  expect(html.indexOf('id="sponsor-heading"')).toBeLessThan(html.indexOf('id="s-ueber-uns"'))
+})
+
+it('training cards show the offer price and "Termine folgen" while no session is planned', () => {
+  const offer = { slug: 'athletik', title: 'Athletik', kind: 'gruppe', description: '', duration_minutes: 60, location: 'Platz', price_member_cents: 3900, price_nonmember_cents: 4900, category: 'athletik', from_price_member_cents: null, from_price_nonmember_cents: null }
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...base, slug: 'demo' }} camps={[camp]} trainings={[offer] as never} />)
+  expect(html).toContain('Termine folgen')
+  expect(html).toContain('ab 39')
+  const planned = renderToStaticMarkup(<ParentFlow org={{ ...base, slug: 'demo' }} camps={[camp]} trainings={[{ ...offer, from_price_member_cents: 3900, from_price_nonmember_cents: 4900 }] as never} />)
+  expect(planned).not.toContain('Termine folgen')
 })

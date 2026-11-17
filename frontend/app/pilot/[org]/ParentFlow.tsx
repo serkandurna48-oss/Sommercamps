@@ -7,7 +7,7 @@ import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, OrganizationPublic, RegistrationCreated, TrainingOfferListItem } from '../../lib/saasApi'
 import { offerCategoryLabel, offerKindLabel } from '../../components/saas/training/trainingLogic'
 import { fromPriceText } from '../../lib/trainingFormat'
-import { campHasMemberPrice, campPhase, campPriceLong, formatCampDateRange, formatPrice, formatRegistrationStart, orgShortCode } from '../../lib/parentFlowFormat'
+import { campHasMemberPrice, campPhase, campPriceDetail, campPriceShort, formatCampDateRange, formatPrice, formatRegistrationStart, orgShortCode } from '../../lib/parentFlowFormat'
 import { truncateIntroForHero } from './campUtils'
 import {
   type FilterState,
@@ -294,6 +294,8 @@ export default function ParentFlow({
   const heroFromOrg = org.hero_image_url?.trim() || null
   const heroFallback = !heroFromOrg ? (clubAssets?.heroImage ?? null) : null
   const heroImg = heroFromOrg ?? heroFallback
+  // Optional second hero for narrow screens, where a wide group photo would sit under the text.
+  const heroImgMobile = heroImg && clubAssets?.heroImageMobile && clubAssets.heroImageMobile !== heroImg ? clubAssets.heroImageMobile : null
   const heroPosition = clubAssets?.heroPosition ?? 'center 20%'
   const heroImageStyle = {
     '--hero-position': heroPosition,
@@ -415,7 +417,10 @@ export default function ParentFlow({
               </div>
               {!isKsv && <button className="nav-cta" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>}
             </nav>
-            <div className="bg">{heroImg && <Image id="shotB" className="hero-image" src={heroImg} alt="" unoptimized fill priority style={heroImageStyle} />}</div>
+            <div className="bg">
+              {heroImg && <Image id="shotB" className={`hero-image${heroImgMobile ? ' hero-image-wide' : ''}`} src={heroImg} alt="" unoptimized fill priority style={heroImageStyle} />}
+              {heroImgMobile && <Image className="hero-image hero-image-narrow" src={heroImgMobile} alt="" unoptimized fill priority style={{ '--hero-position': 'center 25%', '--hero-position-mobile': 'center 25%', '--hero-desktop-scale': 1 } as CSSProperties} />}
+            </div>
             {!heroImg && <div className="veil" />}
             <div className="in">
               <div className={heroCopyClass}>
@@ -709,7 +714,7 @@ export default function ParentFlow({
                 <h2 className="d2" data-split>{org.name}</h2>
               </div>
             </div>
-            <p className="sec-body-text">{org.intro_text}</p>
+            <p className="sec-body-text">{org.intro_text.replace(/(\r?\n[ \t]*){3,}/g, '\n\n')}</p>
           </div>
           {slideshowImages.length > 0 && <AboutSlideshow images={slideshowImages} />}
           {aboutImages.length > 0 && (
@@ -979,9 +984,9 @@ export function CampScreen({
 
       <div className="dock">
         <div className="line">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span className="sum num">{campPriceLong(camp)}</span>
-            <span className="muted" style={{ fontSize: 12 }}>pro Kind</span>
+          <div className="dock-price">
+            <span className="sum num">{campPriceShort(camp).from && <span className="c-price-from">ab</span>}{campPriceShort(camp).text}</span>
+            <span className="muted dock-price-note">{campPriceDetail(camp) ?? 'pro Kind'}</span>
           </div>
           {phase === 'open' ? (
             <button

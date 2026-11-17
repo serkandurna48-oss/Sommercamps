@@ -2,6 +2,8 @@
 
 export interface ClubAssets {
   heroImage: string
+  /** Optional hero for narrow screens (below 700 px); the regular hero stays on wider screens. */
+  heroImageMobile?: string
   galleryImages: readonly string[]
   galleryAltTexts: Readonly<Record<string, string>>
   logoImage?: string
@@ -53,6 +55,8 @@ export interface ClubAssets {
 // production slug and the staging demo, so both pages look the same.
 const JK_ASSETS: ClubAssets = {
   heroImage: '/jk/hero.jpg',
+  // On phones the group photo would sit under the headline; the close team shot works there.
+  heroImageMobile: '/jk/hero-mobile.jpg',
   // Group photo: the people stand in the lower half of the frame.
   heroPosition: 'center 78%',
   heroPositionMobile: '50% 78%',

@@ -999,7 +999,7 @@ export default function RegistrationFormScreen({
               )}
               <div className="line">
                 <span style={{ fontSize: 14, color: 'var(--ink-2)' }}>{camp.title}, 1 Kind</span>
-                <span className="sum num">{training ? training.priceText : campPriceLong(camp)}</span>
+                <span className={`sum num${training ? ' sum-long' : ''}`}>{training ? training.priceText : <>{campPriceShort(camp).from && <span className="c-price-from">ab</span>}{campPriceShort(camp).text}</>}</span>
               </div>
               {serverError && (errorStatus === 409 || errorStatus === 404) ? (
                 <a className="btn primary btn-pill" href={errorStatus === 409 && contactEmail ? `mailto:${contactEmail}` : training ? `/pilot/${orgSlug}/training` : `/pilot/${orgSlug}`}>

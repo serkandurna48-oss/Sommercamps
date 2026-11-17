@@ -118,3 +118,29 @@ it('slideshow: advances on its own, but not with reduced motion', () => {
   expect(run(false)).toBe(1)
   expect(run(true)).toBe(0)
 })
+
+it('camp detail: the price bar stays short so the register button fits on a phone', () => {
+  const memberCamp = { ...camp, slug: 'camp-m', price_member_cents: 12900 }
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...base, slug: 'jk-performance-academy' }} camps={[memberCamp]} initialCampSlug="camp-m" />)
+  const dock = html.slice(html.indexOf('class="dock"'))
+  expect(dock).toContain('129,00')
+  expect(dock).toContain('Mitglieder 129,00 € · sonst 149,00 €')
+  expect(dock).not.toContain('geprüft bei der Anmeldung')
+  expect(dock).toContain('Jetzt anmelden')
+})
+
+it('"Über uns": several blank lines in the stored text collapse to one paragraph gap', () => {
+  const html = renderToStaticMarkup(<ParentFlow org={{ ...base, slug: 'demo', intro_text: 'Eins.\n\n\n\nZwei.\n \n\t\n\nDrei.' }} camps={[camp]} />)
+  expect(html).toContain('Eins.\n\nZwei.\n\nDrei.')
+})
+
+it('JK hero: wide photo plus a separate image for narrow screens; other clubs have one image', () => {
+  const jk = renderToStaticMarkup(<ParentFlow org={{ ...base, slug: 'jk-performance-academy', hero_image_url: '/jk/hero.jpg' }} camps={[camp]} />)
+  expect(jk).toContain('hero-image-wide')
+  expect(jk).toContain('hero-image-narrow')
+  expect(jk).toContain('/jk/hero-mobile.jpg')
+  expect(existsSync(join(process.cwd(), 'public', 'jk', 'hero-mobile.jpg'))).toBe(true)
+  const other = renderToStaticMarkup(<ParentFlow org={{ ...base, slug: 'demo', hero_image_url: '/x.jpg' }} camps={[camp]} />)
+  expect(other).not.toContain('hero-image-narrow')
+  expect(other).not.toContain('hero-image-wide')
+})

@@ -4228,6 +4228,23 @@
   background: var(--surface-2, var(--surface));
 }
 
+/* Leiste mit Preis und Aktion (17.11.): der Preis darf die Schaltfläche nie aus dem Bild schieben. */
+.cp-public .dock .line > * { min-width: 0; }
+.cp-public .dock .line > .btn { flex-shrink: 0; }
+.cp-public .dock-price { display: flex; flex-direction: column; gap: 1px; }
+.cp-public .dock .dock-price-note { font-size: 12px; line-height: 1.35; }
+.cp-public .dock .sum.sum-long { font-family: var(--ui); font-size: 14px; font-weight: 600; letter-spacing: 0; line-height: 1.35; white-space: normal; text-align: right; }
+.cp-public .dock .sum .c-price-from { font-size: 0.6em; font-weight: 500; opacity: 0.75; margin-right: 5px; letter-spacing: 0; }
+
+/* Fixierte Leiste am Handy: deckend genug, damit der Inhalt dahinter nicht durchscheint. */
+@media (max-width: 899px) {
+  .cp-public[data-theme='akademie'] #s-camp .dock { background: color-mix(in srgb, var(--paper) 90%, transparent); }
+}
+
+/* Zweites Titelbild für schmale Bildschirme (17.11.). */
+@media (max-width: 699px) { .cp-public .hero-image-wide { display: none; } }
+@media (min-width: 700px) { .cp-public .hero-image-narrow { display: none; } }
+
 /* KSV Tagesrunde 28.10. (mit Serkan abgestimmt): ein Rotton fuer alle Aktionen, Datum einmal pro Karte,
    "freiwillig" an optionalen Feldern, "So einfach geht's" vor den Camps. Nur KSV. */
 .cp-public[data-org='ksv-baunatal'] .camp:not(.full) .c-go {

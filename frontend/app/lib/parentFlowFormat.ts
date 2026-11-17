@@ -97,6 +97,12 @@ export function campPriceLong(camp: { price_cents: number; price_member_cents?: 
   return `${formatPrice(camp.price_member_cents as number, camp.currency)} für Mitglieder, ${formatPrice(camp.price_cents, camp.currency)} sonst – geprüft bei der Anmeldung`
 }
 
+/** Kurze Preiszeile für schmale Leisten: beide Preise ohne Fließtext, oder null ohne Mitgliederpreis. */
+export function campPriceDetail(camp: { price_cents: number; price_member_cents?: number | null; currency: string }): string | null {
+  if (!campHasMemberPrice(camp)) return null
+  return `Mitglieder ${formatPrice(camp.price_member_cents as number, camp.currency)} · sonst ${formatPrice(camp.price_cents, camp.currency)}`
+}
+
 /** "TT.MM.JJJJ" -> "JJJJ-MM-TT", oder null bei ungültigem Format/Datum. */
 export function parseGermanDate(value: string): string | null {
   const match = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(value.trim())

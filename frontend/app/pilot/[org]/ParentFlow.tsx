@@ -294,8 +294,6 @@ export default function ParentFlow({
   const heroFromOrg = org.hero_image_url?.trim() || null
   const heroFallback = !heroFromOrg ? (clubAssets?.heroImage ?? null) : null
   const heroImg = heroFromOrg ?? heroFallback
-  // Optional second hero for narrow screens, where a wide group photo would sit under the text.
-  const heroImgMobile = heroImg && clubAssets?.heroImageMobile && clubAssets.heroImageMobile !== heroImg ? clubAssets.heroImageMobile : null
   const heroPosition = clubAssets?.heroPosition ?? 'center 20%'
   const heroImageStyle = {
     '--hero-position': heroPosition,
@@ -319,6 +317,54 @@ export default function ParentFlow({
   // Mit Über-uns-Text stehen die Bilder dort, sonst als Band (Serkan 10.11.).
   const aboutImages = org.intro_text?.trim() && slideshowImages.length === 0 ? galleryImages : []
   const bandImages = org.intro_text?.trim() ? [] : galleryImages
+
+  // Partner/sponsor block: built once, placed depending on the club (default: after the trainings).
+  const sponsorLabel = clubAssets?.sponsor?.label ?? 'Sponsor / Anzeige'
+  const sponsorFeature = Boolean(clubAssets?.sponsor?.entries.some(entry => entry.imageWide))
+  const sponsorPlacement = clubAssets?.sponsor?.placement ?? 'afterTrainings'
+  const sponsorSection = clubAssets?.sponsor ? (
+    <section className={`pad sec sponsor-section${sponsorFeature ? ' sponsor-feature' : ''}`} aria-labelledby="sponsor-heading" data-section>
+            <div className="sec-head">
+              <div>
+                <span className="sec-label">{sponsorLabel}</span>
+                <h2 className="d2" id="sponsor-heading">{clubAssets.sponsor.heading}</h2>
+              </div>
+            </div>
+            <div className="sponsor-grid">
+              <div className="sponsor-intro card">
+                <p>{clubAssets.sponsor.intro}</p>
+                {org.contact_email && (
+                  <a className="sponsor-contact" href={`mailto:${org.contact_email}?subject=${encodeURIComponent(`Partnerschaft ${org.name}`)}`}>
+                    Kontakt zum Verein
+                  </a>
+                )}
+              </div>
+              {clubAssets.sponsor.entries.map(entry => {
+                const href = entry.linkHref && (entry.linkHref.startsWith('/') && !entry.linkHref.startsWith('//') || /^https:\/\//i.test(entry.linkHref))
+                  ? entry.linkHref : null
+                const logoSrc = entry.logoSrc?.startsWith('/') && !entry.logoSrc.startsWith('//') ? entry.logoSrc : null
+                const imageSrc = entry.imageSrc?.startsWith('/') && !entry.imageSrc.startsWith('//') ? entry.imageSrc : null
+                return (
+                  <article className={`sponsor-entry card${entry.imageWide ? ' sponsor-entry-wide' : ''}`} key={entry.name}>
+                    {!clubAssets?.sponsor?.label && <span className="sec-label">Sponsor / Anzeige</span>}
+                    {logoSrc && <Image src={logoSrc} alt={entry.logoAlt || entry.name} width={180} height={96} unoptimized className="sponsor-logo" />}
+                    {imageSrc && !entry.imageWide && <Image src={imageSrc} alt={entry.imageAlt || entry.name} width={180} height={96} unoptimized className="sponsor-image" />}
+                    {imageSrc && entry.imageWide && (
+                      <div className="sponsor-photo">
+                        <Image src={imageSrc} alt={entry.imageAlt || entry.name} unoptimized fill sizes="(min-width: 900px) 40vw, 92vw" style={{ objectFit: 'cover', objectPosition: 'center 30%' }} />
+                      </div>
+                    )}
+                    <div className="sponsor-entry-body">
+                      <h3 className="d3">{entry.name}</h3>
+                      {entry.text && <p>{entry.text}</p>}
+                      {href && entry.linkLabel && <a href={href} rel={href.startsWith('https://') ? 'noopener noreferrer' : undefined}>{entry.linkLabel}</a>}
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          </section>
+  ) : null
 
   // Next camp for sticky CTA
   // Sticky CTA: the next camp parents can actually book (not a preview or closed camp).
@@ -405,7 +451,7 @@ export default function ParentFlow({
         const ageMax = camps.length > 0 ? Math.max(...camps.map(c => c.age_max)) : null
         const totalSeats = camps.reduce((s, c) => s + c.capacity, 0)
         return (
-          <header className={`hero h-akad${heroImg ? ' hero-photo' : ''}`} lang="de">
+          <header className={`hero h-akad${heroImg ? ' hero-photo' : ''}${heroImg && clubAssets?.heroMobileBanner ? ' hero-banner' : ''}`} lang="de">
             <nav className="h-akad-nav" aria-label="Seitennavigation">
               <div className="nav-left">
                 <span className="nav-logo">
@@ -417,10 +463,7 @@ export default function ParentFlow({
               </div>
               {!isKsv && <button className="nav-cta" type="button" onClick={scrollToCamps}>Jetzt anmelden</button>}
             </nav>
-            <div className="bg">
-              {heroImg && <Image id="shotB" className={`hero-image${heroImgMobile ? ' hero-image-wide' : ''}`} src={heroImg} alt="" unoptimized fill priority style={heroImageStyle} />}
-              {heroImgMobile && <Image className="hero-image hero-image-narrow" src={heroImgMobile} alt="" unoptimized fill priority style={{ '--hero-position': 'center 25%', '--hero-position-mobile': 'center 25%', '--hero-desktop-scale': 1 } as CSSProperties} />}
-            </div>
+            <div className="bg">{heroImg && <Image id="shotB" className="hero-image" src={heroImg} alt="" unoptimized fill priority style={heroImageStyle} />}</div>
             {!heroImg && <div className="veil" />}
             <div className="in">
               <div className={heroCopyClass}>
@@ -646,7 +689,9 @@ export default function ParentFlow({
           </div>
           <ul className="tr-list" style={{ marginTop: 0 }}>
             {trainings.map((offer) => {
-              const fromPrice = fromPriceText(offer.from_price_member_cents, offer.from_price_nonmember_cents)
+              // from_price_* is only set while the offer has upcoming sessions.
+              const hasDates = offer.from_price_member_cents != null || offer.from_price_nonmember_cents != null
+              const fromPrice = fromPriceText(offer.from_price_member_cents ?? offer.price_member_cents, offer.from_price_nonmember_cents ?? offer.price_nonmember_cents)
               return (
                 <li key={offer.slug}>
                   <Link className="tr-card" href={`/pilot/${org.slug}/training/${offer.slug}`}>
@@ -654,6 +699,7 @@ export default function ParentFlow({
                     {offerCategoryLabel(offer.category) && <span className="tr-badge" data-testid="offer-category">{offerCategoryLabel(offer.category)}</span>}
                     <span className="tr-meta">{offerKindLabel[offer.kind] ?? offer.kind} · {offer.duration_minutes} Minuten</span>
                     {fromPrice && <span className="tr-price">{fromPrice}</span>}
+                    {!hasDates && <span className="tr-soon">Termine folgen</span>}
                   </Link>
                 </li>
               )
@@ -662,47 +708,7 @@ export default function ParentFlow({
         </div>
       )}
 
-      {clubAssets?.sponsor && (
-        <section className="pad sec sponsor-section" aria-labelledby="sponsor-heading" data-section>
-          <div className="sec-head">
-            <div>
-              <span className="sec-label">Sponsor / Anzeige</span>
-              <h2 className="d2" id="sponsor-heading">{clubAssets.sponsor.heading}</h2>
-            </div>
-          </div>
-          <div className="sponsor-grid">
-            <div className="sponsor-intro card">
-              <p>{clubAssets.sponsor.intro}</p>
-              {org.contact_email && (
-                <a className="sponsor-contact" href={`mailto:${org.contact_email}?subject=${encodeURIComponent(`Partnerschaft ${org.name}`)}`}>
-                  Kontakt zum Verein
-                </a>
-              )}
-            </div>
-            {clubAssets.sponsor.entries.map(entry => {
-              const href = entry.linkHref && (entry.linkHref.startsWith('/') && !entry.linkHref.startsWith('//') || /^https:\/\//i.test(entry.linkHref))
-                ? entry.linkHref : null
-              const logoSrc = entry.logoSrc?.startsWith('/') && !entry.logoSrc.startsWith('//') ? entry.logoSrc : null
-              const imageSrc = entry.imageSrc?.startsWith('/') && !entry.imageSrc.startsWith('//') ? entry.imageSrc : null
-              return (
-                <article className="sponsor-entry card" key={entry.name}>
-                  <span className="sec-label">Sponsor / Anzeige</span>
-                  {logoSrc && <Image src={logoSrc} alt={entry.logoAlt || entry.name} width={180} height={96} unoptimized className="sponsor-logo" />}
-                  {imageSrc && !entry.imageWide && <Image src={imageSrc} alt={entry.imageAlt || entry.name} width={180} height={96} unoptimized className="sponsor-image" />}
-                  {imageSrc && entry.imageWide && (
-                    <div className="sponsor-photo">
-                      <Image src={imageSrc} alt={entry.imageAlt || entry.name} unoptimized fill sizes="(min-width: 900px) 40vw, 92vw" style={{ objectFit: 'cover', objectPosition: 'center 30%' }} />
-                    </div>
-                  )}
-                  <h3 className="d3">{entry.name}</h3>
-                  {entry.text && <p>{entry.text}</p>}
-                  {href && entry.linkLabel && <a href={href} rel={href.startsWith('https://') ? 'noopener noreferrer' : undefined}>{entry.linkLabel}</a>}
-                </article>
-              )
-            })}
-          </div>
-        </section>
-      )}
+      {sponsorPlacement === 'afterTrainings' && sponsorSection}
 
       {/* ── Über uns (mit Vereinsbildern, wenn vorhanden) ── */}
       {org.intro_text?.trim() && (
@@ -753,7 +759,7 @@ export default function ParentFlow({
         </div>
       )}
 
-      {org.trainer_image_url?.trim() && (
+      {org.trainer_image_url?.trim() && !clubAssets?.team && (
         <div className="pad sec" data-section>
           <div className="sec-head" style={{ marginBottom: 24 }}>
             <span className="sec-label">{publicUI.trainer.heading}</span>
@@ -796,13 +802,23 @@ export default function ParentFlow({
               />
             </div>
           )}
+          {org.trainer_image_url?.trim() && (
+            <div className="team-lead" data-rise>
+              <div className="team-lead-portrait">
+                <Image src={org.trainer_image_url} alt={org.contact_person_name?.trim() || `Gründer von ${org.name}`} unoptimized fill sizes="(min-width: 700px) 220px, 96px" style={{ objectFit: 'cover', objectPosition: 'center 20%' }} />
+              </div>
+              <div className="team-lead-body">
+                {clubAssets.team.leadRole && <p className="team-role">{clubAssets.team.leadRole}</p>}
+                {org.contact_person_name && <h3 className="team-lead-name">{org.contact_person_name}</h3>}
+                {org.trainer_text?.trim() && <p className="team-lead-bio">{org.trainer_text}</p>}
+              </div>
+            </div>
+          )}
           <ul className="team-grid">
-            {clubAssets.team.members.map(member => (
+            {clubAssets.team.members.filter(member => member.imageSrc).map(member => (
               <li className="team-card" key={member.name} data-rise>
                 <div className="team-portrait">
-                  {member.imageSrc
-                    ? <Image src={member.imageSrc} alt={member.name} unoptimized fill sizes="(min-width: 900px) 18vw, 44vw" style={{ objectFit: 'cover', objectPosition: member.imagePosition ?? 'center 25%' }} />
-                    : <span className="team-initials" aria-hidden="true">{member.name.split(/\s+/).map(part => part[0]).join('').slice(0, 2)}</span>}
+                  <Image src={member.imageSrc as string} alt={member.name} unoptimized fill sizes="(min-width: 900px) 18vw, 44vw" style={{ objectFit: 'cover', objectPosition: member.imagePosition ?? 'center 25%' }} />
                 </div>
                 <div className="team-meta">
                   <h3 className="team-name">{member.name}</h3>
@@ -813,6 +829,8 @@ export default function ParentFlow({
           </ul>
         </section>
       )}
+
+      {sponsorPlacement === 'afterTeam' && sponsorSection}
 
       <div className="pad faq-sec">
         <div>

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, RegistrationCreated, RegistrationQuestion, TrainingPaymentMethod } from '../../lib/saasApi'
 import { submitRegistration } from '../../lib/saasApi'
 import { captureSaasEvent } from '../../lib/saasAnalytics'
-import { campHasMemberPrice, campPriceLong, campPriceShort, formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
+import { campHasMemberPrice, campPriceDetail, campPriceLong, campPriceShort, formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
 import { trainingSubmitErrorMessage } from '../../lib/trainingFormat'
 import ExtraQuestions from './ExtraQuestions'
 import { getClubAssets } from './clubAssets'
@@ -787,7 +787,7 @@ export default function RegistrationFormScreen({
                   <fieldset className="f billing-address" aria-describedby="hint-billing-address" style={{ border: 'none', padding: 0, margin: '24px 0 0' }}>
                     <legend className="d3" style={{ fontSize: '1.05em', marginBottom: 4 }}>Rechnungsanschrift</legend>
                     <p className="hint" id="hint-billing-address" style={{ marginTop: 0 }}>
-                      Für Ihre Rechnung von {orgName}. Wir verwenden die Anschrift nur für die Rechnungsstellung.
+                      Für Ihre Buchung und eine Rechnung von {orgName}. Wir verwenden die Anschrift nur dafür.
                     </p>
                     <label htmlFor="parent_street" className={`field${badFields.billingStreet ? ' bad' : ''}`} ref={(el) => { fieldRefs.current.billingStreet = el }}>
                       <span className="t-lab">Straße und Hausnummer *</span>
@@ -1001,6 +1001,7 @@ export default function RegistrationFormScreen({
                 <span style={{ fontSize: 14, color: 'var(--ink-2)' }}>{camp.title}, 1 Kind</span>
                 <span className={`sum num${training ? ' sum-long' : ''}`}>{training ? training.priceText : <>{campPriceShort(camp).from && <span className="c-price-from">ab</span>}{campPriceShort(camp).text}</>}</span>
               </div>
+              {!training && campPriceDetail(camp) && <p className="dock-price-note dock-price-rule">{campPriceDetail(camp)} – geprüft bei der Anmeldung</p>}
               {serverError && (errorStatus === 409 || errorStatus === 404) ? (
                 <a className="btn primary btn-pill" href={errorStatus === 409 && contactEmail ? `mailto:${contactEmail}` : training ? `/pilot/${orgSlug}/training` : `/pilot/${orgSlug}`}>
                   {errorStatus === 409 && contactEmail ? 'Kontakt aufnehmen' : training ? 'Alle Angebote ansehen' : 'Alle Camps ansehen'}

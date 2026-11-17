@@ -23,6 +23,28 @@ export interface ClubAssets {
       imageAlt?: string
       linkHref?: string
       linkLabel?: string
+      /** Show `imageSrc` as a wide photo above the text instead of a small logo-sized image. */
+      imageWide?: boolean
+    }[]
+  }
+  /** Show the gallery images in "Über uns" as a slideshow (all images) instead of the static grid (max. 3). */
+  aboutSlideshow?: boolean
+  /** Photos shown as a strip inside the camps section. */
+  campGallery?: {
+    heading: string
+    images: readonly { src: string; alt: string }[]
+  }
+  /** Trainer team shown below the founder/trainer block. */
+  team?: {
+    label: string
+    heading: string
+    photo?: { src: string; alt: string }
+    members: readonly {
+      name: string
+      role?: string
+      imageSrc?: string
+      /** CSS object-position for the portrait crop. */
+      imagePosition?: string
     }[]
   }
 }
@@ -31,15 +53,61 @@ export interface ClubAssets {
 // production slug and the staging demo, so both pages look the same.
 const JK_ASSETS: ClubAssets = {
   heroImage: '/jk/hero.jpg',
-  // Only the team photo: Jan himself is shown in the trainer section right below (Serkan 10.11.).
+  // Group photo: the people stand in the lower half of the frame.
+  heroPosition: 'center 78%',
+  heroPositionMobile: '50% 78%',
+  // Five photos from training, shown as a slideshow next to the "Über uns" text (Serkan 17.11.).
+  aboutSlideshow: true,
   galleryImages: [
-    '/jk/slideshow/01.jpg',
+    '/jk/about/01.jpg',
+    '/jk/about/02.jpg',
+    '/jk/about/03.jpg',
+    '/jk/about/04.jpg',
+    '/jk/about/05.jpg',
   ],
   galleryAltTexts: {
-    '/jk/slideshow/01.jpg': 'Spieler der JK Performance Academy mit Trainer Jan-Maximilian Krug',
+    '/jk/about/01.jpg': 'Trainer Jan-Maximilian Krug klatscht mit einem Spieler ab',
+    '/jk/about/02.jpg': 'Spieler der JK Performance Academy beim gemeinsamen Aufwärmen',
+    '/jk/about/03.jpg': 'Trainer erklärt einem jungen Spieler eine Übung am Ball',
+    '/jk/about/04.jpg': 'Spieler bei einer Ballübung im Training',
+    '/jk/about/05.jpg': 'Zwei Spieler der JK Performance Academy Arm in Arm',
   },
   logoImage: '/jk/logo.jpg',
-  heroPosition: 'center 25%',
+  campGallery: {
+    heading: 'Eindrücke aus unseren Camps',
+    images: [
+      { src: '/jk/camps/04.jpg', alt: 'Zweikampf vor dem Tor im Camp' },
+      { src: '/jk/camps/01.jpg', alt: 'Spieler mit Bällen beim Camp-Training' },
+      { src: '/jk/camps/03.jpg', alt: 'Spieler beim Torschuss, ein Trainer schaut zu' },
+      { src: '/jk/camps/02.jpg', alt: 'Spieler jongliert den Ball im Camp' },
+    ],
+  },
+  team: {
+    label: 'Trainerteam',
+    heading: 'Unser Team',
+    photo: { src: '/jk/team/trainerteam.jpg', alt: 'Trainerteam der JK Performance Academy' },
+    // Names and roles as confirmed by Jan (17.11.2026).
+    members: [
+      { name: 'Jan Baruschka', role: 'Partner-Trainer', imageSrc: '/jk/team/jan-baruschka.jpg', imagePosition: 'center 30%' },
+      { name: 'Christian Andrecht', role: 'Partner-Trainer', imageSrc: '/jk/team/christian-andrecht.jpg', imagePosition: 'center 25%' },
+      { name: 'Danny Breitfelder', role: 'Gast-Profi', imageSrc: '/jk/team/danny-breitfelder.jpg', imagePosition: '45% 20%' },
+      { name: 'Jil Krug', imageSrc: '/jk/team/jil-krug.jpg', imagePosition: 'center 25%' },
+      { name: 'Serkan Durna', role: 'Gast-Profi und IT-Koordinator' },
+    ],
+  },
+  sponsor: {
+    heading: 'Unsere Partner',
+    intro: 'Sie möchten die JK Performance Academy unterstützen? Sprechen Sie mit uns über Möglichkeiten einer Partnerschaft.',
+    entries: [
+      {
+        name: 'Sporthaus Kassel',
+        text: 'Partner der JK Performance Academy.',
+        imageSrc: '/jk/partner/sporthaus-kassel.jpg',
+        imageAlt: 'Trainer der JK Performance Academy mit dem Sporthaus Kassel',
+        imageWide: true,
+      },
+    ],
+  },
 }
 
 const ASSETS: Record<string, ClubAssets> = {

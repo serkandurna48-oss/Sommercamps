@@ -291,10 +291,10 @@ describe('m2pin – reduced-motion: kein Pin', () => {
 
 // ── m3ch: .d2-Headlines haben max-width in ch (≥ 12) ─────────────────────────
 describe('m3ch – .d2 hat max-width in ch', () => {
-  it('.cp-scope .d2 hat max-width: Xch mit X ≥ 12', () => {
+  it('.cp-mkt .d2 hat max-width: Xch mit X ≥ 12', () => {
     const css = readFileSync(resolve(__dirname, 'marketing.css'), 'utf-8')
     // Suche nach .d2 { ... max-width: Xch ... }
-    const block = css.match(/\.cp-scope\s+\.d2\s*\{([^}]*)\}/)?.[1] ?? ''
+    const block = css.match(/\.cp-mkt\s+\.d2\s*\{([^}]*)\}/)?.[1] ?? ''
     const match = block.match(/max-width:\s*(\d+)ch/)
     expect(match, '.d2 muss max-width in ch-Einheiten haben').not.toBeNull()
     expect(Number(match![1])).toBeGreaterThanOrEqual(12)
@@ -303,9 +303,9 @@ describe('m3ch – .d2 hat max-width in ch', () => {
 
 // ── m4pill: Hero-Buttons sind Pills ───────────────────────────────────────────
 describe('m4pill – Hero-Buttons sind Pills', () => {
-  it('.cp-scope .btn hat border-radius: 9999px', () => {
+  it('.cp-mkt .btn hat border-radius: 9999px', () => {
     const css = readFileSync(resolve(__dirname, 'marketing.css'), 'utf-8')
-    const block = css.match(/\.cp-scope\s+\.btn\s*\{([^}]*)\}/)?.[1] ?? ''
+    const block = css.match(/\.cp-mkt\s+\.btn\s*\{([^}]*)\}/)?.[1] ?? ''
     expect(block).toMatch(/border-radius\s*:\s*9999px/)
   })
 })
@@ -359,5 +359,21 @@ describe('Startseite – Navigation und Ziele', () => {
   it('enthält keine Preiszahlen außerhalb von pakete.ts (Seitenquelle)', () => {
     const src = readFileSync(resolve(__dirname, 'page.tsx'), 'utf8') + readFileSync(resolve(__dirname, 'landingContent.ts'), 'utf8')
     expect(src).not.toMatch(/6,9|4,9 ?%|24,90/)
+  })
+})
+
+// ── Scope: marketing styles must not share the admin scope class ─────────────
+// Both stylesheets stay in the document after a client-side navigation into
+// the admin area. With a shared class they restyled its links and buttons.
+describe('Marketing-CSS teilt keine Klasse mit der Verwaltung', () => {
+  it.each(['marketing.css', 'landing.css'])('%s enthält keinen .cp-scope-Selektor', (file) => {
+    const css = readFileSync(resolve(__dirname, file), 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '')
+    expect(css).not.toMatch(/\.cp-scope\b/)
+  })
+
+  it('das Marketing-Layout setzt cp-mkt, nicht cp-scope', () => {
+    const src = readFileSync(resolve(__dirname, 'layout.tsx'), 'utf-8')
+    expect(src).toContain('cp-mkt')
+    expect(src).not.toContain('cp-scope')
   })
 })

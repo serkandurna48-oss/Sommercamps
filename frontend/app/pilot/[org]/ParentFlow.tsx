@@ -18,6 +18,7 @@ import {
   parseUrlFilter,
 } from './campFilterUtils'
 import { getClubAssets } from './clubAssets'
+import AboutSlideshow from './AboutSlideshow'
 import CampFilter from './CampFilter'
 import CampRow from './CampRow'
 import RegistrationFormScreen from './RegistrationFormScreen'
@@ -306,12 +307,15 @@ export default function ParentFlow({
   const heroIntro = truncateIntroForHero(introFull)
 
   // Gallery: up to 3 club images, never duplicate the hero
-  const galleryImages = clubAssets
-    ? clubAssets.galleryImages.filter(img => img !== heroImg).slice(0, 3)
+  const galleryAll = clubAssets ? clubAssets.galleryImages.filter(img => img !== heroImg) : []
+  const galleryImages = galleryAll.slice(0, 3)
+  // Clubs with a slideshow show every gallery image next to the "Über uns" text.
+  const slideshowImages = clubAssets?.aboutSlideshow && org.intro_text?.trim()
+    ? galleryAll.map(src => ({ src, alt: clubAssets.galleryAltTexts[src] ?? '' }))
     : []
 
   // Mit Über-uns-Text stehen die Bilder dort, sonst als Band (Serkan 10.11.).
-  const aboutImages = org.intro_text?.trim() ? galleryImages : []
+  const aboutImages = org.intro_text?.trim() && slideshowImages.length === 0 ? galleryImages : []
   const bandImages = org.intro_text?.trim() ? [] : galleryImages
 
   // Next camp for sticky CTA
@@ -613,6 +617,18 @@ export default function ParentFlow({
             </div>
           </details>
         )}
+        {clubAssets?.campGallery && clubAssets.campGallery.images.length > 0 && (
+          <div className="camp-gallery" role="group" aria-label={clubAssets.campGallery.heading}>
+            <p className="camp-gallery-title">{clubAssets.campGallery.heading}</p>
+            <ul className="camp-gallery-grid">
+              {clubAssets.campGallery.images.map((image, i) => (
+                <li key={image.src} className={`camp-gallery-item camp-gallery-item-${i + 1}`} data-rise>
+                  <Image src={image.src} alt={image.alt} unoptimized fill sizes="(min-width: 900px) 30vw, 46vw" style={{ objectFit: 'cover', objectPosition: 'center 35%' }} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {trainings.length > 0 && (
@@ -667,7 +683,12 @@ export default function ParentFlow({
                 <article className="sponsor-entry card" key={entry.name}>
                   <span className="sec-label">Sponsor / Anzeige</span>
                   {logoSrc && <Image src={logoSrc} alt={entry.logoAlt || entry.name} width={180} height={96} unoptimized className="sponsor-logo" />}
-                  {imageSrc && <Image src={imageSrc} alt={entry.imageAlt || entry.name} width={180} height={96} unoptimized className="sponsor-image" />}
+                  {imageSrc && !entry.imageWide && <Image src={imageSrc} alt={entry.imageAlt || entry.name} width={180} height={96} unoptimized className="sponsor-image" />}
+                  {imageSrc && entry.imageWide && (
+                    <div className="sponsor-photo">
+                      <Image src={imageSrc} alt={entry.imageAlt || entry.name} unoptimized fill sizes="(min-width: 900px) 40vw, 92vw" style={{ objectFit: 'cover', objectPosition: 'center 30%' }} />
+                    </div>
+                  )}
                   <h3 className="d3">{entry.name}</h3>
                   {entry.text && <p>{entry.text}</p>}
                   {href && entry.linkLabel && <a href={href} rel={href.startsWith('https://') ? 'noopener noreferrer' : undefined}>{entry.linkLabel}</a>}
@@ -680,7 +701,7 @@ export default function ParentFlow({
 
       {/* ── Über uns (mit Vereinsbildern, wenn vorhanden) ── */}
       {org.intro_text?.trim() && (
-        <div className={`pad sec${aboutImages.length > 0 ? ' about-sec' : ''}`} id="s-ueber-uns" data-section>
+        <div className={`pad sec${aboutImages.length > 0 || slideshowImages.length > 0 ? ' about-sec' : ''}`} id="s-ueber-uns" data-section>
           <div className="about-text">
             <div className="sec-head">
               <div>
@@ -690,6 +711,7 @@ export default function ParentFlow({
             </div>
             <p className="sec-body-text">{org.intro_text}</p>
           </div>
+          {slideshowImages.length > 0 && <AboutSlideshow images={slideshowImages} />}
           {aboutImages.length > 0 && (
             <div className={`about-media about-media-${aboutImages.length}`} data-rise>
               {aboutImages.map((src, i) => (
@@ -747,6 +769,44 @@ export default function ParentFlow({
             </div>
           </div>
         </div>
+      )}
+
+      {clubAssets?.team && (
+        <section className="pad sec team-sec" aria-labelledby="team-heading" data-section>
+          <div className="sec-head">
+            <div>
+              <span className="sec-label">{clubAssets.team.label}</span>
+              <h2 className="d2" id="team-heading" data-split>{clubAssets.team.heading}</h2>
+            </div>
+          </div>
+          {clubAssets.team.photo && (
+            <div className="team-photo" data-rise>
+              <Image
+                src={clubAssets.team.photo.src}
+                alt={clubAssets.team.photo.alt}
+                unoptimized
+                fill
+                sizes="(min-width: 900px) 80vw, 92vw"
+                style={{ objectFit: 'cover', objectPosition: 'center 35%' }}
+              />
+            </div>
+          )}
+          <ul className="team-grid">
+            {clubAssets.team.members.map(member => (
+              <li className="team-card" key={member.name} data-rise>
+                <div className="team-portrait">
+                  {member.imageSrc
+                    ? <Image src={member.imageSrc} alt={member.name} unoptimized fill sizes="(min-width: 900px) 18vw, 44vw" style={{ objectFit: 'cover', objectPosition: member.imagePosition ?? 'center 25%' }} />
+                    : <span className="team-initials" aria-hidden="true">{member.name.split(/\s+/).map(part => part[0]).join('').slice(0, 2)}</span>}
+                </div>
+                <div className="team-meta">
+                  <h3 className="team-name">{member.name}</h3>
+                  {member.role && <p className="team-role">{member.role}</p>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <div className="pad faq-sec">

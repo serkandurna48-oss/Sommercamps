@@ -4088,6 +4088,146 @@
   .cp-public[data-theme] .camps .camp .cap .bar { flex: 0 0 auto; }
 }
 
+/* ── Vereinsbilder (17.11.): Diashow bei "Über uns", Camp-Eindrücke, Trainerteam, Partnerfoto.
+   Alle Blöcke erscheinen nur, wenn clubAssets sie für den Verein liefert. ── */
+.cp-public .about-slides { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.cp-public .about-slides-stage {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--surface-2, var(--surface));
+}
+.cp-public .about-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 0.7s var(--ease, ease); }
+.cp-public .about-slide.is-active { opacity: 1; }
+.cp-public .about-slides-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cp-public .about-slides-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  border: 1px solid var(--line-2, var(--line));
+  background: transparent;
+  color: var(--ink);
+  font-size: 18px;
+  cursor: pointer;
+  transition: background 0.2s var(--ease, ease), border-color 0.2s var(--ease, ease);
+}
+.cp-public .about-slides-nav:hover { background: var(--surface-2, var(--surface)); border-color: var(--brand-strong); }
+.cp-public .about-slides-dots { display: flex; align-items: center; gap: 2px; }
+.cp-public .about-slides-dot {
+  position: relative;
+  width: 24px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.cp-public .about-slides-dot::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--track-full, var(--line));
+  transform: translate(-50%, -50%);
+  transition: width 0.25s var(--ease, ease), background 0.25s var(--ease, ease);
+}
+.cp-public .about-slides-dot.is-active::before { width: 20px; background: var(--brand-strong); }
+@media (prefers-reduced-motion: reduce) {
+  .cp-public .about-slide,
+  .cp-public .about-slides-dot::before { transition: none; }
+}
+
+.cp-public .camp-gallery { margin-top: 40px; }
+.cp-public .camp-gallery-title {
+  margin: 0 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted, var(--ink-2));
+}
+.cp-public .camp-gallery-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: 150px;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cp-public .camp-gallery-item { position: relative; border-radius: 20px; overflow: hidden; background: var(--surface-2, var(--surface)); }
+.cp-public .camp-gallery-item-1 { grid-column: 1 / -1; grid-row: span 2; }
+@media (min-width: 900px) {
+  .cp-public .camp-gallery-grid { grid-template-columns: 1.5fr 1fr 1fr; grid-auto-rows: 210px; gap: 14px; }
+  .cp-public .camp-gallery-item-1 { grid-column: 1; grid-row: span 2; }
+  .cp-public .camp-gallery-item-3 { grid-row: span 2; }
+  .cp-public .camp-gallery-item-4 { grid-column: 2; }
+}
+
+.cp-public .team-photo {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--surface-2, var(--surface));
+}
+@media (min-width: 900px) {
+  .cp-public .team-photo { aspect-ratio: 21 / 9; }
+}
+.cp-public .team-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 700px) {
+  .cp-public .team-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
+}
+.cp-public .team-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line-2, var(--line));
+}
+.cp-public .team-portrait {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  background: var(--surface-2, var(--surface));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cp-public .team-initials {
+  font-family: var(--display);
+  font-weight: var(--dw, 700);
+  font-size: 40px;
+  letter-spacing: 0.02em;
+  color: var(--brand-strong);
+}
+.cp-public .team-meta { display: flex; flex-direction: column; gap: 3px; padding: 14px 16px 16px; }
+.cp-public .team-name { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.25; color: var(--ink); }
+.cp-public .team-role { margin: 0; font-size: 13px; line-height: 1.4; color: var(--brand-strong); }
+
+.cp-public .sponsor-photo {
+  position: relative;
+  align-self: stretch;
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--surface-2, var(--surface));
+}
+
 /* KSV Tagesrunde 28.10. (mit Serkan abgestimmt): ein Rotton fuer alle Aktionen, Datum einmal pro Karte,
    "freiwillig" an optionalen Feldern, "So einfach geht's" vor den Camps. Nur KSV. */
 .cp-public[data-org='ksv-baunatal'] .camp:not(.full) .c-go {

@@ -31,5 +31,5 @@ export const metadata: Metadata = {
 }
 
 export default function CampsPilotLayout({ children }: { children: React.ReactNode }) {
-  return <div className={`${archivo.variable} cp-scope`}>{children}</div>
+  return <div className={`${archivo.variable} cp-mkt`}>{children}</div>
 }

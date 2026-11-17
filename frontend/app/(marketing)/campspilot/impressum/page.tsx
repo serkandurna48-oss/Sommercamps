@@ -7,7 +7,7 @@ export async function generateMetadata() {
 
 export default function CampsPilotImpressumPage() {
   return (
-    <div className="cp-scope">
+    <div className="cp-mkt">
       <LegalPlaceholder
         title="Impressum"
         note="Das Impressum ist Pflicht, bevor diese Seite öffentlich geht."

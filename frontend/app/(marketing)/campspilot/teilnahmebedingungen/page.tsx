@@ -7,7 +7,7 @@ export async function generateMetadata() {
 
 export default function CampsPilotTeilnahmebedingungenPage() {
   return (
-    <div className="cp-scope">
+    <div className="cp-mkt">
       <LegalPlaceholder title="Teilnahmebedingungen" />
     </div>
   )

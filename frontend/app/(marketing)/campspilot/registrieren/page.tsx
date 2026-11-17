@@ -9,7 +9,7 @@ export async function generateMetadata() {
 
 export default function RegistrierenPage() {
   return (
-    <div className="cp-scope">
+    <div className="cp-mkt">
       <nav className="nav solid" id="nav">
         <div className="wrap nav-in">
           <Link className="brand" href="/campspilot">

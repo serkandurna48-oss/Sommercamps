@@ -7,7 +7,7 @@ export async function generateMetadata() {
 
 export default function CampsPilotDatenschutzPage() {
   return (
-    <div className="cp-scope">
+    <div className="cp-mkt">
       <LegalPlaceholder title="Datenschutz" />
     </div>
   )

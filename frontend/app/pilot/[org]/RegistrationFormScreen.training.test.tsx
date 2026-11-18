@@ -162,7 +162,7 @@ it('does not reload the slots for a duplicate booking', async () => {
 })
 
 const DOC_HEADING = 'Trainingsdokumentation, freiwillig'
-const DOC_TEXT = 'Ich bin einverstanden, dass der Verein Trainingsinhalte und die Entwicklung meines Kindes intern dokumentiert (z. B. Notizen, Ziele, Messwerte). Diese Notizen sind nur für den Verein bestimmt.'
+const DOC_TEXT = 'Ich bin einverstanden, dass Testverein Trainingsinhalte und die Entwicklung meines Kindes intern dokumentiert (z. B. Notizen, Ziele, Messwerte). Diese Notizen sind nur für Testverein bestimmt.'
 
 it('shows the optional documentation consent checkbox for trainings only, unchecked by default', () => {
   const training = render()

@@ -63,7 +63,7 @@ const JK_ASSETS: ClubAssets = {
   heroImage: '/jk/hero.jpg',
   // Group photo: the people stand in the lower half of the frame. On phones it is a banner
   // above the text, so one picture works on every screen.
-  heroPosition: 'center 78%',
+  heroPosition: 'center 65%',
   heroPositionMobile: '50% 88%',
   heroMobileBanner: true,
   // Five photos from training, shown as a slideshow next to the "Über uns" text (Serkan 17.11.).

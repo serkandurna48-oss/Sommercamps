@@ -61,6 +61,10 @@ def _validate_slug(value: str) -> str:
     return value
 
 
+# Raised from 5 to 8 (JK needs 7, 18.11.2026). Keep in sync with
+# frontend/app/components/saas/config/registrationQuestions.ts MAX_QUESTIONS.
+MAX_REGISTRATION_QUESTIONS = 8
+
 class OrganizationCreate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
@@ -135,9 +139,9 @@ class OrganizationCreate(BaseModel):
 
     @field_validator("registration_questions")
     @classmethod
-    def _max_five_questions(cls, value: list) -> list:
-        if value is not None and len(value) > 5:
-            raise ValueError('At most 5 registration questions are allowed per organization')
+    def _max_questions(cls, value: list) -> list:
+        if value is not None and len(value) > MAX_REGISTRATION_QUESTIONS:
+            raise ValueError(f'At most {MAX_REGISTRATION_QUESTIONS} registration questions are allowed per organization')
         return value
 
     @field_validator("logo_url", "hero_image_url", "trainer_image_url")
@@ -205,9 +209,9 @@ class OrganizationUpdate(BaseModel):
 
     @field_validator("registration_questions")
     @classmethod
-    def _max_five_questions(cls, value: Optional[list]) -> Optional[list]:
-        if value is not None and len(value) > 5:
-            raise ValueError('At most 5 registration questions are allowed per organization')
+    def _max_questions(cls, value: Optional[list]) -> Optional[list]:
+        if value is not None and len(value) > MAX_REGISTRATION_QUESTIONS:
+            raise ValueError(f'At most {MAX_REGISTRATION_QUESTIONS} registration questions are allowed per organization')
         return value
 
     @field_validator("logo_url", "hero_image_url", "trainer_image_url")

@@ -650,6 +650,10 @@ export default function RegistrationFormScreen({
                         <option value="140">140</option>
                         <option value="152">152</option>
                         <option value="164">164</option>
+                        <option value="176">176</option>
+                        <option value="S">S</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
                       </select>
                     </label>}
                   </div>
@@ -947,8 +951,8 @@ export default function RegistrationFormScreen({
                     <span className="txt">
                       <b>Fotos, freiwillig</b>
                       <span>
-                        Der Verein darf Fotos meines Kindes {training ? 'vom Training' : 'vom Camp'} auf seiner Website und in sozialen Netzwerken zeigen. Ohne diese Einwilligung nimmt Ihr Kind
-                        ganz normal teil.
+                        {orgName}, die Trainer oder beauftragte Fotografen und Videografen dürfen Fotos und Videos meines Kindes {training ? 'vom Training' : 'vom Camp'} machen
+                        und auf der Website und in sozialen Netzwerken zeigen. Ohne diese Einwilligung nimmt Ihr Kind ganz normal teil.
                       </span>
                     </span>
                   </label>
@@ -958,7 +962,7 @@ export default function RegistrationFormScreen({
                       <span className="txt">
                         <b>Trainingsdokumentation, freiwillig</b>
                         <span>
-                          Ich bin einverstanden, dass der Verein Trainingsinhalte und die Entwicklung meines Kindes intern dokumentiert (z. B. Notizen, Ziele, Messwerte). Diese Notizen sind nur für den Verein bestimmt.
+                          {`Ich bin einverstanden, dass ${orgName} Trainingsinhalte und die Entwicklung meines Kindes intern dokumentiert (z. B. Notizen, Ziele, Messwerte). Diese Notizen sind nur für ${orgName} bestimmt.`}
                         </span>
                       </span>
                     </label>
@@ -1032,7 +1036,7 @@ export default function RegistrationFormScreen({
                   ? 'Auf der Warteliste entstehen noch keine Kosten.'
                   : hasBankDetails
                     ? `Den Betrag überweisen Sie anschließend selbst an ${orgName}. Die Bankdaten stehen auf der nächsten Seite.`
-                    : 'Der Verein meldet sich zur Zahlung.'}
+                    : `${orgName} meldet sich zur Zahlung.`}
               </span>
             </div>
           </form>

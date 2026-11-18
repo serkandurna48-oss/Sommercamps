@@ -335,7 +335,7 @@ export default function ParentFlow({
                 <p>{clubAssets.sponsor.intro}</p>
                 {org.contact_email && (
                   <a className="sponsor-contact" href={`mailto:${org.contact_email}?subject=${encodeURIComponent(`Partnerschaft ${org.name}`)}`}>
-                    Kontakt zum Verein
+                    Kontakt zu {org.name}
                   </a>
                 )}
               </div>
@@ -634,7 +634,7 @@ export default function ParentFlow({
             <div className="no-future-camps">
               <PublicState inline org={org} title="Aktuell keine Camps"
                 message={hadPastCamps ? 'Aktuell sind keine weiteren Camp-Termine veröffentlicht.' : 'Aktuell sind keine Camps veröffentlicht.'}
-                instruction={org.contact_email ? 'Bitte wenden Sie sich bei Fragen zu Terminen an den Verein.' : 'Bitte sehen Sie zu einem späteren Zeitpunkt erneut nach.'}>
+                instruction={org.contact_email ? `Bitte wenden Sie sich bei Fragen zu Terminen an ${org.name}.` : 'Bitte sehen Sie zu einem späteren Zeitpunkt erneut nach.'}>
                 {org.contact_email
                   ? <a href={`mailto:${org.contact_email}`} className="btn primary btn-pill">Kontakt aufnehmen</a>
                   : <RetryButton />}

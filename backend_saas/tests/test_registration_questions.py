@@ -108,12 +108,12 @@ class TestQuestionSchemaValidation:
     Punkt 8: '6. Frage → 422, ungültiger Typ → 422'.
     """
 
-    def test_six_questions_rejected_with_422(self):
-        """Mehr als 5 Fragen → 422 beim Speichern der Vereinskonfiguration."""
+    def test_nine_questions_rejected_with_422(self):
+        """Mehr als 8 Fragen → 422 beim Speichern der Vereinskonfiguration (Grenze seit 18.11.2026: 8)."""
         headers = _owner_headers()
         six_questions = [
             {"key": f"q{i}", "label": f"Frage {i}", "type": "text", "required": False}
-            for i in range(6)
+            for i in range(9)
         ]
         with TestClient(app) as client:
             response = client.patch(
@@ -136,11 +136,11 @@ class TestQuestionSchemaValidation:
             )
         assert response.status_code == 422
 
-    def test_five_questions_accepted(self, monkeypatch):
-        """Genau 5 Fragen sind erlaubt (Pydantic-Validierung passiert)."""
+    def test_eight_questions_accepted(self, monkeypatch):
+        """Genau 8 Fragen sind erlaubt (JK braucht 7; Pydantic-Validierung passiert)."""
         five_questions = [
             {"key": f"q{i}", "label": f"Frage {i}", "type": "text", "required": False}
-            for i in range(5)
+            for i in range(8)
         ]
         monkeypatch.setattr(organizations, "update_organization", lambda slug, data: {
             **_org_row(slug),

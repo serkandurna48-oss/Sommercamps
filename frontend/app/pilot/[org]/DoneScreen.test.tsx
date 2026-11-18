@@ -111,7 +111,7 @@ it('CX32: bestätigt den Eingang mit Camp, Kind, Zeitraum und versendeter E-Mail
   expect(html).toContain('Mia')
   expect(html).toContain('5.–9. Juli 2027')
   expect(html).toContain('Wir haben eine Bestätigung an eva@example.de geschickt.')
-  expect(html).toContain('Der Verein meldet sich bei Ihnen mit den weiteren Details.')
+  expect(html).toContain('Testverein meldet sich bei Ihnen mit den weiteren Details.')
 })
 
 it('F4: ohne IBAN kündigt Verein Zahlungsdetails an statt nachfragen zu fordern', () => {
@@ -119,7 +119,7 @@ it('F4: ohne IBAN kündigt Verein Zahlungsdetails an statt nachfragen zu fordern
   expect(html).toContain('sendet')
   expect(html).not.toContain('Bitte erfragen')
   expect(html).not.toContain('Bankverbindung ist hier noch nicht hinterlegt')
-  expect(html).toContain('Der Verein meldet sich zur Zahlung')
+  expect(html).toContain('Testverein meldet sich zur Zahlung')
   expect(html).not.toContain('class="done-transfer"')
   expect(html).toContain('CP-1234')
 })
@@ -142,4 +142,12 @@ it('zeigt keinen Überweisungsblock bei Warteliste', () => {
   const html = render({ result: { status: 'waitlist' } })
   expect(html).not.toContain('done-transfer')
   expect(html).not.toContain('DE89370400440532013000')
+})
+
+it('JK-Korrektur: Kontakt und Zahlungshinweis nennen den Vereinsnamen statt "der Verein"', () => {
+  const html = render({ org: { name: 'JK Performance Academy', iban: null } })
+  expect(html).toContain('Kontakt zu JK Performance Academy')
+  expect(html).toContain('JK Performance Academy meldet sich zur Zahlung')
+  expect(html).not.toContain('Kontakt zum Verein')
+  expect(html).not.toContain('Der Verein meldet sich')
 })

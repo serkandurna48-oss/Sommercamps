@@ -262,7 +262,7 @@ describe('Bestätigung', () => {
 
   it('names the reference without IBAN when the club has none', () => {
     const html = render({ org: { iban: null } })
-    expect(html).toContain('Der Verein meldet sich zur Zahlung.')
+    expect(html).toContain('Testverein meldet sich zur Zahlung.')
     expect(html).toContain('CP-1234')
   })
 

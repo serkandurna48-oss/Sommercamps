@@ -94,7 +94,7 @@ export default function TrainingDoneScreen({
           )}
           {paymentMethod === 'ueberweisung' && !org.iban && (
             <div className="note quiet">
-              <p>Der Verein meldet sich zur Zahlung. Ihre Referenz: <strong>{result.payment_reference}</strong>.</p>
+              <p>{org.name} meldet sich zur Zahlung. Ihre Referenz: <strong>{result.payment_reference}</strong>.</p>
             </div>
           )}
           {paymentMethod === 'online' && (
@@ -111,7 +111,7 @@ export default function TrainingDoneScreen({
                   {paying ? 'Weiterleitung zu Stripe …' : price ? `Jetzt ${price} online bezahlen` : 'Jetzt online bezahlen'}
                 </button>
               )}
-              {payError && <p role="alert" style={{ marginTop: 10 }}>Online-Zahlung ist gerade nicht möglich. Bitte wenden Sie sich an den Verein.</p>}
+              {payError && <p role="alert" style={{ marginTop: 10 }}>Online-Zahlung ist gerade nicht möglich. Bitte wenden Sie sich an {org.name}.</p>}
             </div>
           )}
           {paymentMethod === 'bar' && (
@@ -125,7 +125,7 @@ export default function TrainingDoneScreen({
         <p>Kostenlose Absage bis 24 h vorher – bitte direkt beim Verein melden.</p>
         {(org.contact_person_name || org.contact_email || org.contact_phone) && (
           <div className="done-contact">
-            <h2 className="d3">Kontakt zum Verein</h2>
+            <h2 className="d3">Kontakt zu {org.name}</h2>
             <p>{org.contact_person_name || org.name}</p>
             {org.contact_email && <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>}
             {org.contact_phone && <a href={`tel:${org.contact_phone.replace(/[^+\d]/g, '')}`}>{org.contact_phone}</a>}

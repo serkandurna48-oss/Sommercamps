@@ -72,6 +72,11 @@ services:
       - key: CRON_SECRET
         sync: false           # Geheimnis für POST /internal/cron/daily (tägliche Jobs, GitHub-Workflow daily-jobs.yml).
                                # Ohne Wert antwortet der Endpunkt mit 503. Gleicher Wert wie GitHub-Secret CRON_SECRET.
+      - key: SENTRY_DSN
+        sync: false           # DSN des Sentry-Projekts campspilot-backend (Region de). Leer = Fehlerüberwachung aus.
+                               # Es werden keine Formulardaten, Namen, Mailadressen oder Tokens gesendet (app/monitoring.py).
+      - key: SENTRY_ENVIRONMENT
+        sync: false           # "production" bzw. "staging"; leer = Wert von APP_ENV
       - key: RETENTION_APPLY
         sync: false           # "true" = Allergien/Medizinhinweise 30 Tage nach Campende wirklich auf NULL setzen.
                                # Standard (leer/false): der Job zählt nur. Erst nach geprüftem Zähllauf einschalten.

@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse
 
 from .. import reminders, retention
 from ..config import get_settings
+from ..monitoring import SentryTestError
 
 logger = logging.getLogger(__name__)
 
@@ -69,3 +70,11 @@ def run_daily(authorization: str | None = Header(default=None)) -> JSONResponse:
     if failed:
         return JSONResponse(status_code=500, content={**result, "failed_jobs": failed})
     return JSONResponse(status_code=200, content=result)
+
+
+@router.post("/sentry-test")
+def sentry_test(authorization: str | None = Header(default=None)) -> None:
+    """Raises one deliberate error so delivery to Sentry can be verified per
+    environment. Same secret as the daily jobs; carries no data."""
+    _authorize(authorization)
+    raise SentryTestError("CampsPilot Sentry test (backend)")

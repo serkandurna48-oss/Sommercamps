@@ -116,4 +116,13 @@ describe('CampsPilot opt-in analytics', () => {
     const environments = vi.mocked(fetch).mock.calls.map((call) => JSON.parse(String(call[1]?.body)).properties.environment)
     expect(environments).toEqual(['staging', 'production'])
   })
+
+  it('asks again when only consent to the older, narrower version exists', () => {
+    window.localStorage.setItem('campspilot-analytics-consent-v1', 'accepted')
+    expect(ANALYTICS_CONSENT_KEY).toBe('campspilot-analytics-consent-v2')
+    expect(getAnalyticsConsent()).toBeNull()
+    captureSaasEvent('camp_registration_section_completed', 'ksv-baunatal', 'herbstcamp', { section: 1 })
+    expect(fetch).not.toHaveBeenCalled()
+    expect(window.localStorage.getItem('campspilot-analytics-consent-v1')).toBeNull()
+  })
 })

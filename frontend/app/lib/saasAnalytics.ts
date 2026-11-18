@@ -6,7 +6,10 @@
  * PostHog EU ingest: https://posthog.com/docs/api/capture
  * No SDK/autocapture, cookies or session replay are used.
  */
-export const ANALYTICS_CONSENT_KEY = 'campspilot-analytics-consent-v1'
+// v2 (18.11.2026): analytics now also counts form sections and failed field
+// keys. Earlier consent covered less, so everyone is asked once more.
+export const ANALYTICS_CONSENT_KEY = 'campspilot-analytics-consent-v2'
+const OUTDATED_CONSENT_KEYS = ['campspilot-analytics-consent-v1'] as const
 const SESSION_KEY = 'campspilot-analytics-session-v1'
 const POSTHOG_CAPTURE_URL = 'https://eu.i.posthog.com/i/v0/e'
 
@@ -79,6 +82,8 @@ export function isAnalyticsEnabled(): boolean {
 export function getAnalyticsConsent(): AnalyticsConsent | null {
   if (typeof window === 'undefined') return null
   try {
+    // An answer to an older version is not consent to this one; drop it.
+    for (const key of OUTDATED_CONSENT_KEYS) window.localStorage.removeItem(key)
     const stored = window.localStorage.getItem(ANALYTICS_CONSENT_KEY)
     return stored === 'accepted' || stored === 'rejected' ? stored : null
   } catch {

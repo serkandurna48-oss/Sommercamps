@@ -2,6 +2,8 @@
 
 Alles nur nach Einwilligung im Banner (`frontend/app/lib/saasAnalytics.ts`). Kein SDK, kein Cookie, keine Aufzeichnung.
 
+Einwilligung Version 2 (`campspilot-analytics-consent-v2`, ab 18.11.2026): Die alte Zustimmung deckte nur Beginn, Erfolg und Fehlschlagen ab. Alle Eltern werden deshalb einmal neu gefragt; eine Antwort zur Version 1 wird gelöscht und nicht übernommen. Folge: Bis genug Eltern neu zugestimmt haben, sind die Zahlen kleiner als vorher.
+
 ## Ereignisse
 
 | Ereignis | Wann | Eigenschaften |

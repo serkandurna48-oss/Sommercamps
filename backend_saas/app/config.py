@@ -70,6 +70,11 @@ class Settings(BaseSettings):
         parts.port  # Reject malformed ports at startup.
         return value.rstrip("/")
 
+    def api_docs_enabled(self) -> bool:
+        """Swagger UI, ReDoc and the OpenAPI schema describe every endpoint and
+        field. They stay available locally and on staging, never in production."""
+        return self.app_env.strip().lower() not in ("production", "prod")
+
     def frontend_base_is_usable(self) -> bool:
         """Outside local/test/development a loopback origin means FRONTEND_BASE_URL
         was never set; links built from it would reach no real user."""

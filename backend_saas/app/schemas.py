@@ -17,6 +17,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, StrictBool, computed_field, field_validator, model_validator
 
+from .name_validation import validate_name_text, validate_people_list
 from .utils import is_camp_over, is_registration_open
 from .payment_reference import payment_reference as build_payment_reference
 
@@ -240,6 +241,19 @@ class RegistrationCreate(BaseModel):
         if isinstance(data, dict):
             return {k: v for k, v in data.items() if k not in _CLIENT_PRICE_FIELDS}
         return data
+
+    @field_validator(
+        "child_first_name", "child_last_name", "parent_first_name", "parent_last_name", "emergency_contact_name",
+        mode="after",
+    )
+    @classmethod
+    def _name_characters(cls, value: Optional[str]) -> Optional[str]:
+        return validate_name_text(value) if value else value
+
+    @field_validator("pickup_authorized", mode="after")
+    @classmethod
+    def _pickup_list_characters(cls, value: Optional[str]) -> Optional[str]:
+        return validate_people_list(value) if value else value
 
     @field_validator('extra_answers', mode='after')
     @classmethod

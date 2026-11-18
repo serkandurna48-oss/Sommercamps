@@ -74,11 +74,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         db.close_pool()
 
 
-app = FastAPI(
-    title=settings.app_name,
-    version="0.1.0",
-    lifespan=lifespan,
-)
+def create_app(app_settings=settings) -> FastAPI:
+    """The bare application object. Separate from the module-level wiring so
+    tests can build it for another APP_ENV."""
+    docs = app_settings.api_docs_enabled()
+    return FastAPI(
+        title=app_settings.app_name,
+        version="0.1.0",
+        lifespan=lifespan,
+        # Mystery-shopper finding 18.11.2026: /docs and /openapi.json were public on production.
+        docs_url="/docs" if docs else None,
+        redoc_url="/redoc" if docs else None,
+        openapi_url="/openapi.json" if docs else None,
+    )
+
+
+app = create_app()
 
 # No wildcard, no allow_credentials (this API has no cookie/session auth to
 # protect against CSRF via CORS anyway) — just an explicit, staging-safe

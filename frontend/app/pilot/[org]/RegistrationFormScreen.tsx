@@ -20,6 +20,23 @@ const POSTAL_CODE_RE = /^[0-9A-Za-z][0-9A-Za-z -]{2,8}[0-9A-Za-z]$/
 // Newlines would add own lines to the invoice; same rule as the backend.
 const CONTROL_CHARS_RE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/
 const CONTROL_CHARS_MSG = 'Bitte verwenden Sie keine Zeilenumbrüche oder Steuerzeichen.'
+// Mirrors backend_saas/app/name_validation.py - keep both in sync.
+// A short denylist on purpose: real names come with typographic hyphens, non-breaking
+// spaces, quotes and two people in one field. Refused is only what markup or a
+// spreadsheet formula needs: < > =, control characters, line breaks, bidi overrides.
+const NAME_FORBIDDEN_RE = /[<>=\p{Cc}\u2028\u2029\u202a-\u202e\u2066-\u2069]/u
+const NAME_LETTER_RE = /\p{L}/u
+const NAME_TEXT_MSG = 'Bitte verwenden Sie keine Zeichen wie < > oder = und keine Zeilenumbrüche.'
+const NAME_LETTER_MSG = 'Bitte geben Sie einen Namen mit Buchstaben an.'
+const NAME_MAX = 80
+
+/** Returns the message for an invalid name, or null. Empty input is handled by the caller. */
+function nameProblem(value: string): string | null {
+  if (value.length > NAME_MAX) return `Bitte höchstens ${NAME_MAX} Zeichen.`
+  if (NAME_FORBIDDEN_RE.test(value)) return NAME_TEXT_MSG
+  if (!NAME_LETTER_RE.test(value)) return NAME_LETTER_MSG
+  return null
+}
 const STREET_MAX = 120
 const CITY_MAX = 80
 
@@ -102,12 +119,23 @@ type FieldKey =
   | 'billingCity'
 
 // One source for blur feedback, progress and submit validation.
-function validateForm(form: FormState, training = false, needsAddress = false): Partial<Record<FieldKey, string>> {
+export function validateForm(form: FormState, training = false, needsAddress = false): Partial<Record<FieldKey, string>> {
   const bad: Partial<Record<FieldKey, string>> = {}
-  if (!form.childFirstName.trim()) bad.childFirstName = 'Bitte tragen Sie den Vornamen ein.'
-  if (!form.childLastName.trim()) bad.childLastName = 'Bitte tragen Sie den Nachnamen ein.'
+  const childFirst = form.childFirstName.trim()
+  const childLast = form.childLastName.trim()
+  if (!childFirst) bad.childFirstName = 'Bitte tragen Sie den Vornamen ein.'
+  else { const problem = nameProblem(childFirst); if (problem) bad.childFirstName = problem }
+  if (!childLast) bad.childLastName = 'Bitte tragen Sie den Nachnamen ein.'
+  else { const problem = nameProblem(childLast); if (problem) bad.childLastName = problem }
   if (parseGermanDate(form.childBirthDate) === null) bad.childBirthDate = 'Bitte im Format TT.MM.JJJJ.'
-  if (!form.parentName.trim().includes(' ')) bad.parentName = 'Bitte Vor- und Nachnamen angeben.'
+  const parentName = form.parentName.trim()
+  if (!parentName.includes(' ')) bad.parentName = 'Bitte Vor- und Nachnamen angeben.'
+  else {
+    // Sent as first word + rest (see handleSubmit); the server checks both parts.
+    const space = parentName.indexOf(' ')
+    const problem = nameProblem(parentName.slice(0, space)) ?? nameProblem(parentName.slice(space + 1).trim())
+    if (problem) bad.parentName = problem
+  }
   if (!EMAIL_RE.test(form.parentEmail.trim())) bad.parentEmail = 'Diese Adresse ist unvollständig. Beispiel: name@beispiel.de'
   if (!form.parentPhone.trim()) bad.parentPhone = 'Bitte tragen Sie eine Telefonnummer ein.'
   else if (!PHONE_RE.test(form.parentPhone.trim())) bad.parentPhone = 'Bitte verwenden Sie nur Ziffern, Leerzeichen und ein + am Anfang.'

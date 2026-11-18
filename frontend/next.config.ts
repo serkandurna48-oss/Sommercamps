@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import { existsSync } from "fs";
 import { resolve, dirname } from "path";
+import { SECURITY_HEADERS } from "./app/lib/securityHeaders";
 
 // In a git-worktree setup node_modules may live several levels above frontend/
 // (e.g. wt/node_modules). Turbopack needs to know the directory that contains
@@ -19,6 +20,9 @@ const nextConfig: NextConfig = {
   // Fallback auf localhost:8000 ist nur für lokale Entwicklung gedacht
   turbopack: {
     root: findTurbopackRoot(process.cwd()),
+  },
+  async headers() {
+    return [{ source: "/:path*", headers: [...SECURITY_HEADERS] }];
   },
 };
 

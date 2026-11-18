@@ -17,6 +17,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
+from .name_validation import validate_name_text, validate_people_list
+
 from app.schemas import RegistrationCreated, RegistrationQuestion
 
 # Mirrors chk_organizations_slug_format / chk_camps_slug_format in
@@ -380,6 +382,16 @@ class RegistrationDetailsUpdate(BaseModel):
     allergies: Optional[str] = None
     pickup_authorized: Optional[str] = None
     parent_email: Optional[EmailStr] = None
+
+    @field_validator("child_first_name", "child_last_name", mode="after")
+    @classmethod
+    def _name_characters(cls, value: str) -> str:
+        return validate_name_text(value)
+
+    @field_validator("pickup_authorized", mode="after")
+    @classmethod
+    def _pickup_list_characters(cls, value: Optional[str]) -> Optional[str]:
+        return validate_people_list(value) if value else value
 
     @field_validator("jersey_size", "allergies", "pickup_authorized", mode="after")
     @classmethod

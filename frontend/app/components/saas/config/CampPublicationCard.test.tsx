@@ -81,6 +81,18 @@ it('does not promise reachability before the club is approved', async () => {
   expect(container.textContent).not.toContain('Anmeldelink kopieren')
 })
 
+it.each(['draft', 'submitted', 'rejected'])('does not promise reachability for review status %s', async (reviewStatus) => {
+  await act(() => root.render(<CampPublicationCard orgSlug="review" org={{ ...org, site_published: true, review_status: reviewStatus }} camp={{ ...camp, status: 'published' }} pending={false} />))
+  expect(container.textContent).toContain('wartet auf Freigabe')
+  expect(container.textContent).not.toContain('Camp ist für Eltern erreichbar')
+})
+
+it('does not promise reachability for a suspended account', async () => {
+  await act(() => root.render(<CampPublicationCard orgSlug="review" org={{ ...org, site_published: true, review_status: 'approved', plan_status: 'suspended' }} camp={{ ...camp, status: 'published' }} pending={false} />))
+  expect(container.textContent).toContain('Vereinsseite: Öffentlich, Konto nicht aktiv')
+  expect(container.textContent).not.toContain('Camp ist für Eltern erreichbar')
+})
+
 it.each([undefined, null, 'approved'])('treats review status %s as approved', async (reviewStatus) => {
   await act(() => root.render(<CampPublicationCard orgSlug="review" org={{ ...org, site_published: true, review_status: reviewStatus as never }} camp={{ ...camp, status: 'published' }} pending={false} />))
   expect(container.textContent).toContain('Vereinsseite: Öffentlich')

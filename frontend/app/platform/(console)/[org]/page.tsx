@@ -17,6 +17,7 @@ import ModulesForm from './ModulesForm'
 import { orgModules } from '../../../lib/orgModules'
 import ReviewBox from './ReviewBox'
 import { computeSetupSteps, setupProgressCount } from '../../setupProgress'
+import { isPubliclyServed, publicReachBlocker } from '../../../lib/publicReach'
 
 /** Ohne das erbt diese Seite den Layout-Titel "CampsPilot Plattform" —
  * gleicher Tab-Titel egal welchen Verein man sich gerade ansieht
@@ -104,12 +105,12 @@ export default async function PlatformOrgDetailPage({ params, searchParams }: {
           <ButtonLink href={`/pilot/${org.slug}/dashboard`} variant="primary">Vereinsverwaltung öffnen</ButtonLink>
           <ButtonLink href={`/pilot/${org.slug}/konfiguration`}>Bearbeiten</ButtonLink>
           <ButtonLink href={`/platform/${org.slug}/preview`}>Vorschau</ButtonLink>
-          {org.site_published && <ButtonLink href={`/pilot/${org.slug}`}>Öffentliche Seite</ButtonLink>}
+          {isPubliclyServed(org) && <ButtonLink href={`/pilot/${org.slug}`}>Öffentliche Seite</ButtonLink>}
         </div>
       </div>
 
       <div className="mb-8">
-        <PublishToggle orgSlug={org.slug} published={org.site_published} approved={!org.review_status || org.review_status === 'approved'} />
+        <PublishToggle orgSlug={org.slug} published={org.site_published} reachBlocker={publicReachBlocker(org)} />
       </div>
 
       <ReviewBox org={org} camps={camps} />

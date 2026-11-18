@@ -26,7 +26,7 @@ afterEach(async () => {
 })
 
 it('explains the consequence and cancels withdrawal when confirmation is declined', async () => {
-  await act(() => root.render(<PublishToggle orgSlug="review" published />))
+  await act(() => root.render(<PublishToggle orgSlug="review" published reachBlocker={null} />))
   expect(container.querySelector('button')!.textContent).toBe('Vereinsseite zurückziehen')
   await act(async () => container.querySelector('button')!.click())
   expect(window.confirm).toHaveBeenCalledWith('Vereinsseite zurückziehen?\nEltern können dann keine Camps mehr sehen oder buchen.')
@@ -36,7 +36,7 @@ it('explains the consequence and cancels withdrawal when confirmation is decline
 it('withdraws only after confirmation and displays a server failure', async () => {
   vi.mocked(window.confirm).mockReturnValue(true)
   vi.mocked(setOrganizationPublishedAction).mockResolvedValue({ error: 'Bitte erneut versuchen.' })
-  await act(() => root.render(<PublishToggle orgSlug="review" published />))
+  await act(() => root.render(<PublishToggle orgSlug="review" published reachBlocker={null} />))
   await act(async () => container.querySelector('button')!.click())
   expect(setOrganizationPublishedAction).toHaveBeenCalledWith('review', false, { error: null }, expect.any(FormData))
   expect(container.querySelector('[role="alert"]')!.textContent).toBe('Bitte erneut versuchen.')
@@ -46,7 +46,7 @@ it('withdraws only after confirmation and displays a server failure', async () =
 })
 
 it('publishes a draft without a withdrawal confirmation', async () => {
-  await act(() => root.render(<PublishToggle orgSlug="review" published={false} />))
+  await act(() => root.render(<PublishToggle orgSlug="review" published={false} reachBlocker="unpublished" />))
   await act(async () => container.querySelector('button')!.click())
   expect(window.confirm).not.toHaveBeenCalled()
   expect(setOrganizationPublishedAction).toHaveBeenCalledWith('review', true, { error: null }, expect.any(FormData))
@@ -55,7 +55,7 @@ it('publishes a draft without a withdrawal confirmation', async () => {
 it('Veröffentlichte Vereinsseite: Camp-Prüfung, Elternlink und Kopierbestätigung', async () => {
   const writeText = vi.fn().mockResolvedValue(undefined)
   vi.stubGlobal('navigator', { clipboard: { writeText } })
-  await act(() => root.render(<PublishToggle orgSlug="testverein" published />))
+  await act(() => root.render(<PublishToggle orgSlug="testverein" published reachBlocker={null} />))
   expect(container.textContent).toContain('Auf der Elternseite erscheinen nur veröffentlichte Camps.')
   expect(container.querySelector('a[href="/pilot/testverein/dashboard"]')?.textContent).toBe('Weiter zur Camp-Übersicht')
   expect(container.querySelector('a[href="/pilot/testverein"]')?.textContent).toBe('Elternseite ansehen')
@@ -70,7 +70,7 @@ it('Veröffentlichte Vereinsseite: Camp-Prüfung, Elternlink und Kopierbestätig
 })
 
 it('Entwurf: erklärt den nächsten Schritt ohne technische 404-Meldung und ohne teilbaren Elternlink', async () => {
-  await act(() => root.render(<PublishToggle orgSlug="testverein" published={false} />))
+  await act(() => root.render(<PublishToggle orgSlug="testverein" published={false} reachBlocker="unpublished" />))
   expect(container.textContent).toContain('Veröffentliche die Seite nach der Freigabe.')
   expect(container.textContent).not.toContain('nicht gefunden')
   expect(container.querySelector('a[href="/pilot/testverein"]')).toBeNull()
@@ -79,7 +79,7 @@ it('Entwurf: erklärt den nächsten Schritt ohne technische 404-Meldung und ohne
 // Prod check 18.11.2026: a published but not yet approved club showed
 // "für Eltern erreichbar" while parents got "Vereinsseite nicht verfügbar".
 it('says the truth while publication waits for approval', async () => {
-  await act(() => root.render(<PublishToggle orgSlug="testverein" published approved={false} />))
+  await act(() => root.render(<PublishToggle orgSlug="testverein" published reachBlocker="not_approved" />))
   expect(container.textContent).toContain('Veröffentlicht – wartet auf Freigabe')
   expect(container.textContent).toContain('Eltern sehen die Vereinsseite erst nach der Freigabe durch CampsPilot.')
   expect(container.textContent).not.toContain('für Eltern erreichbar')
@@ -87,7 +87,9 @@ it('says the truth while publication waits for approval', async () => {
   expect(container.querySelector('button')!.textContent).toBe('Vereinsseite zurückziehen')
 })
 
-it('treats a club without review status as approved (existing clubs)', async () => {
-  await act(() => root.render(<PublishToggle orgSlug="testverein" published />))
-  expect(container.textContent).toContain('Die Vereinsseite ist für Eltern erreichbar.')
+it('names an inactive account instead of promising reachability', async () => {
+  await act(() => root.render(<PublishToggle orgSlug="testverein" published reachBlocker="inactive" />))
+  expect(container.textContent).toContain('Veröffentlicht – für Eltern nicht erreichbar')
+  expect(container.textContent).toContain('Eltern sehen die Vereinsseite erst, wenn das Konto wieder aktiv ist.')
+  expect(container.textContent).not.toContain('Anmeldelink kopieren')
 })

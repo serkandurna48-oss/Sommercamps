@@ -7,6 +7,7 @@ import Button, { ButtonLink } from '../ui/Button'
 import ParentLinkActions from '../state/ParentLinkActions'
 import { de } from '../../../lib/i18n/de'
 import { setOrganizationPublishedAction, type PublishActionState } from '../actions/configActions'
+import { publicReachHint, type PublicReachBlocker } from '../../../lib/publicReach'
 
 /** Publication is separate from saving organization details. Withdrawal
  * requires confirmation because it hides all camps from parents.
@@ -22,14 +23,13 @@ import { setOrganizationPublishedAction, type PublishActionState } from '../acti
 export default function PublishToggle({
   orgSlug,
   published,
-  approved = true,
+  reachBlocker,
   emphasis = 'primary',
 }: {
   orgSlug: string
   published: boolean
-  /** review_status is approved (or unset for clubs from before the review step).
-   * The public API serves a club only when published AND approved. */
-  approved?: boolean
+  /** From publicReachBlocker(org). Required so no caller can forget it. */
+  reachBlocker: PublicReachBlocker | null
   emphasis?: 'primary' | 'secondary'
 }) {
   const feedbackId = useId()
@@ -37,7 +37,8 @@ export default function PublishToggle({
   const preview = useAdminPreview()
   const boundAction = preview ? previewNoopAction : setOrganizationPublishedAction.bind(null, orgSlug, !published)
   const [state, formAction, pending] = useActionState<PublishActionState, FormData>(boundAction, { error: null })
-  const live = published && approved
+  const live = published && reachBlocker === null
+  const waitingHint = publicReachHint(reachBlocker)
 
   return (
     <div
@@ -50,13 +51,17 @@ export default function PublishToggle({
     >
       <div>
         <p className="cp-subheading" style={{ color: 'var(--cp-ink)' }}>
-          {live ? 'Veröffentlicht' : published ? 'Veröffentlicht – wartet auf Freigabe' : 'Entwurf – noch nicht öffentlich sichtbar'}
+          {live
+            ? 'Veröffentlicht'
+            : published
+              ? (reachBlocker === 'not_approved' ? 'Veröffentlicht – wartet auf Freigabe' : 'Veröffentlicht – für Eltern nicht erreichbar')
+              : 'Entwurf – noch nicht öffentlich sichtbar'}
         </p>
         <p id={hintId} className="cp-chip mt-0.5" style={{ color: 'var(--cp-muted)' }}>
           {live
             ? 'Die Vereinsseite ist für Eltern erreichbar.'
             : published
-              ? 'Eltern sehen die Vereinsseite erst nach der Freigabe durch CampsPilot.'
+              ? waitingHint
               : 'Deine Vereinsseite ist noch nicht für Eltern sichtbar. Veröffentliche die Seite nach der Freigabe.'}
         </p>
         {state.error && (

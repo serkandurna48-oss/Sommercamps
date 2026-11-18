@@ -62,6 +62,12 @@ it('truncateIntroForHero cuts at sentence boundary', () => {
   expect(truncateIntroForHero(long)).toBe('Erster Satz.')
 })
 
+it('truncateIntroForHero keeps a long first sentence whole instead of cutting it mid-sentence', () => {
+  const first = 'Die JK Performance Academy steht für individuelle Talententwicklung, begeistert durch Freude an Entwicklung, fördert und fordert Kinder & Jugendliche individuell – Individualisierung.'
+  expect(first.length).toBeGreaterThan(140)
+  expect(truncateIntroForHero(first + '\n\nMit Gründer Jan-Maximilian Krug und seinen Partnern hat die Academy das Ziel der Talententwicklung.')).toBe(first)
+})
+
 it('truncateIntroForHero cuts at word boundary when no sentence fits within 140 chars', () => {
   // 35 words × 5 chars = 175 chars, no period → no sentence boundary
   const long = ('wort1 '.repeat(35)).trimEnd()

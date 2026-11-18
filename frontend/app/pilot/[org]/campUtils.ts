@@ -25,7 +25,8 @@ export function filterFutureCamps(camps: CampPublic[]): CampPublic[] {
 export function truncateIntroForHero(text: string): string {
   if (text.length <= 140) return text
   const sentMatch = /^[\s\S]+?[.!?](?=\s|$)/.exec(text)
-  if (sentMatch && sentMatch[0].length <= 140) return sentMatch[0]
+  // A whole first sentence up to 240 chars reads better than a sentence cut off with "…" (JK, 18.11.2026).
+  if (sentMatch && sentMatch[0].length <= 240) return sentMatch[0]
   const slice = text.slice(0, 140)
   const lastSpace = slice.lastIndexOf(' ')
   if (lastSpace > 0) return text.slice(0, lastSpace) + '…'

@@ -349,7 +349,7 @@ export default function DoneScreen({
         </ol>
         {(org.contact_person_name || org.contact_email || org.contact_phone) && <div className="done-contact">
           <h2 className="d3">Kontakt zu {org.name}</h2>
-          <p>{org.contact_person_name || org.name}</p>
+          {org.contact_person_name && <p>{org.contact_person_name}</p>}
           {org.contact_email && <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>}
           {org.contact_phone && <a href={`tel:${org.contact_phone.replace(/[^+\d]/g, '')}`}>{org.contact_phone}</a>}
         </div>}

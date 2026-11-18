@@ -7,7 +7,7 @@ import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, OrganizationPublic, RegistrationCreated, TrainingOfferListItem } from '../../lib/saasApi'
 import { offerCategoryLabel, offerKindLabel } from '../../components/saas/training/trainingLogic'
 import { fromPriceText } from '../../lib/trainingFormat'
-import { campHasMemberPrice, campPhase, campPriceDetail, campPriceShort, formatCampDateRange, formatPrice, formatRegistrationStart, orgShortCode } from '../../lib/parentFlowFormat'
+import { campHasMemberPrice, campPhase, campPriceDetail, campPriceShort, formatCampDateRange, formatPrice, formatRegistrationStart, orgShortCode, endWithName } from '../../lib/parentFlowFormat'
 import { truncateIntroForHero } from './campUtils'
 import {
   type FilterState,
@@ -299,6 +299,8 @@ export default function ParentFlow({
     '--hero-position': heroPosition,
     '--hero-position-mobile': clubAssets?.heroPositionMobile ?? heroPosition,
     '--hero-desktop-scale': clubAssets?.heroDesktopScale ?? 1,
+    ...(clubAssets?.heroMobileScale ? { '--hero-mobile-scale': clubAssets.heroMobileScale } : {}),
+    ...(clubAssets?.heroMobileOrigin ? { '--hero-mobile-origin': clubAssets.heroMobileOrigin } : {}),
   } as CSSProperties
   const heroCopyClass = `in-main${heroImg ? ' hero-scrim' : ''}`
 
@@ -634,7 +636,7 @@ export default function ParentFlow({
             <div className="no-future-camps">
               <PublicState inline org={org} title="Aktuell keine Camps"
                 message={hadPastCamps ? 'Aktuell sind keine weiteren Camp-Termine veröffentlicht.' : 'Aktuell sind keine Camps veröffentlicht.'}
-                instruction={org.contact_email ? `Bitte wenden Sie sich bei Fragen zu Terminen an ${org.name}.` : 'Bitte sehen Sie zu einem späteren Zeitpunkt erneut nach.'}>
+                instruction={org.contact_email ? `Bitte wenden Sie sich bei Fragen zu Terminen an ${endWithName(org.name)}` : 'Bitte sehen Sie zu einem späteren Zeitpunkt erneut nach.'}>
                 {org.contact_email
                   ? <a href={`mailto:${org.contact_email}`} className="btn primary btn-pill">Kontakt aufnehmen</a>
                   : <RetryButton />}
@@ -1085,7 +1087,7 @@ function WaitScreen({
           </span>
         </div>
       </div>
-      <CampSummary camp={camp} />
+      <CampSummary camp={camp} orgName={org.name} />
       <div className="pad" style={{ paddingBottom: 28 }}>
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
           <h2 className="d3">So läuft die Warteliste</h2>

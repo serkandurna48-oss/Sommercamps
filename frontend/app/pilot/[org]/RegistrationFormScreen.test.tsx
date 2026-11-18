@@ -225,7 +225,7 @@ it('JK-Korrektur: Trikotgrößen bis 176 und S/M/L, Fototext nennt Verein, Train
   const sizes = nodes.filter((node) => node.type === 'option').map((node) => node.props.value)
   expect(sizes).toEqual(expect.arrayContaining(['128', '140', '152', '164', '176', 'S', 'M', 'L']))
   const all = text(nodes)
-  expect(all).toContain('die Trainer oder beauftragte Fotografen und Videografen dürfen Fotos und Videos meines Kindes')
+  expect(all).toContain('Testverein, die Trainer von Testverein oder von Testverein beauftragte Fotografen und Videografen dürfen Fotos und Videos meines Kindes vom Camp machen und auf der Website und in den sozialen Netzwerken von Testverein zeigen.')
   expect(all).toContain('Testverein')
   expect(all).not.toContain('Der Verein darf Fotos')
 })

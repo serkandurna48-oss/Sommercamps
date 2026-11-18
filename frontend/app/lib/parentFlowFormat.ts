@@ -126,3 +126,8 @@ export function orgShortCode(name: string): string {
     .map((w) => w.charAt(0).toUpperCase())
     .join('')
 }
+
+/** Ends a sentence after an organisation name without doubling the period ("… e. V." stays "… e. V."). */
+export function endWithName(name: string): string {
+  return name.trimEnd().endsWith('.') ? name.trimEnd() : `${name.trimEnd()}.`
+}

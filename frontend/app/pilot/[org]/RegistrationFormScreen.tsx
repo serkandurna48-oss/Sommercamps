@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CampPublic, RegistrationCreated, RegistrationQuestion, TrainingPaymentMethod } from '../../lib/saasApi'
 import { submitRegistration } from '../../lib/saasApi'
 import { captureSaasEvent } from '../../lib/saasAnalytics'
-import { campHasMemberPrice, campPriceDetail, campPriceLong, campPriceShort, formatCampDateRange, formatPrice, parseGermanDate } from '../../lib/parentFlowFormat'
+import { campHasMemberPrice, campPriceDetail, campPriceLong, campPriceShort, formatCampDateRange, formatPrice, parseGermanDate, endWithName } from '../../lib/parentFlowFormat'
 import { trainingSubmitErrorMessage } from '../../lib/trainingFormat'
 import ExtraQuestions from './ExtraQuestions'
 import { getClubAssets } from './clubAssets'
@@ -140,18 +140,18 @@ function formatBirthDate(value: string): string {
     + digits.slice(2, 4) + (digits.length >= 4 ? '.' : '') + digits.slice(4)
 }
 
-function ageHintForCamp(value: string, camp: CampPublic, training = false): string | null {
+function ageHintForCamp(value: string, camp: CampPublic, orgName: string, training = false): string | null {
   const birth = parseGermanDate(value)
   if (!birth) return null
   const age = Number(camp.start_date.slice(0, 4)) - Number(birth.slice(0, 4))
     - (camp.start_date.slice(5, 10) < birth.slice(5, 10) ? 1 : 0)
   if (training) {
     return age < camp.age_min || age > camp.age_max
-      ? `Dieses Training ist für Kinder von ${camp.age_min} bis ${camp.age_max} Jahren vorgesehen. Bitte prüfen Sie das Geburtsdatum oder sprechen Sie mit dem Verein.`
+      ? `Dieses Training ist für Kinder von ${camp.age_min} bis ${camp.age_max} Jahren vorgesehen. Bitte prüfen Sie das Geburtsdatum oder wenden Sie sich an ${endWithName(orgName)}`
       : null
   }
   return age < camp.age_min || age > camp.age_max
-    ? `Dieses Camp ist für Kinder von ${camp.age_min} bis ${camp.age_max} Jahren vorgesehen. Bitte prüfen Sie das Geburtsdatum oder sprechen Sie mit dem Verein. Sie können die Anmeldung trotzdem absenden.`
+    ? `Dieses Camp ist für Kinder von ${camp.age_min} bis ${camp.age_max} Jahren vorgesehen. Bitte prüfen Sie das Geburtsdatum oder wenden Sie sich an ${endWithName(orgName)} Sie können die Anmeldung trotzdem absenden.`
     : null
 }
 
@@ -290,7 +290,7 @@ export default function RegistrationFormScreen({
   const needsAddress = (training ? Boolean(training.billingAddressRequired) : camp.price_cents > 0)
     || Boolean(serverFields.billingStreet || serverFields.billingPostalCode || serverFields.billingCity)
   const validation = useMemo(() => validateForm(form, Boolean(training), needsAddress), [form, training, needsAddress])
-  const ageHint = (submitAttempted || touched.childBirthDate) ? ageHintForCamp(form.childBirthDate, camp, Boolean(training)) : null
+  const ageHint = (submitAttempted || touched.childBirthDate) ? ageHintForCamp(form.childBirthDate, camp, orgName, Boolean(training)) : null
 
   const extraDone = useMemo(
     () => questions.every((q) => !q.required || (form.extraAnswers[q.key] ?? '').trim() !== ''),
@@ -374,7 +374,7 @@ export default function RegistrationFormScreen({
       if (!outcome.ok) {
         captureSaasEvent('camp_registration_failed', orgSlug, camp.slug, { error_kind: 'api', status_code: outcome.status })
         setErrorStatus(outcome.status)
-        setServerError(training ? trainingSubmitErrorMessage(outcome.status, outcome.conflict) : submitErrorMessage(outcome.status))
+        setServerError(training ? trainingSubmitErrorMessage(outcome.status, outcome.conflict) : submitErrorMessage(outcome.status, orgName))
         const mapping = {
           child_first_name: 'childFirstName', child_last_name: 'childLastName', child_birth_date: 'childBirthDate',
           parent_first_name: 'parentName', parent_last_name: 'parentName', parent_email: 'parentEmail',
@@ -406,7 +406,7 @@ export default function RegistrationFormScreen({
     } catch {
       captureSaasEvent('camp_registration_failed', orgSlug, camp.slug, { error_kind: 'network', status_code: 0 })
       setErrorStatus(0)
-      setServerError(training ? trainingSubmitErrorMessage(0) : submitErrorMessage(0))
+      setServerError(training ? trainingSubmitErrorMessage(0) : submitErrorMessage(0, orgName))
     } finally {
       inFlight.current = false
       setSubmitting(false)
@@ -895,7 +895,7 @@ export default function RegistrationFormScreen({
                     {paymentMethod === 'online' && training.onlinePayeeIsPlatform && (
                       <p className="note quiet" data-testid="online-payee">Sicher per Karte über Stripe. Zahlungsempfänger ist CampsPilot im Auftrag von {orgName}.</p>
                     )}
-                    <p className="note quiet">Kostenlose Absage bis 24 h vorher – bitte direkt beim Verein melden.</p>
+                    <p className="note quiet">{`Kostenlose Absage bis 24 h vorher – bitte direkt bei ${orgName} melden.`}</p>
                   </div>
                 </section>
               )}
@@ -951,8 +951,7 @@ export default function RegistrationFormScreen({
                     <span className="txt">
                       <b>Fotos, freiwillig</b>
                       <span>
-                        {orgName}, die Trainer oder beauftragte Fotografen und Videografen dürfen Fotos und Videos meines Kindes {training ? 'vom Training' : 'vom Camp'} machen
-                        und auf der Website und in sozialen Netzwerken zeigen. Ohne diese Einwilligung nimmt Ihr Kind ganz normal teil.
+                        {`${orgName}, die Trainer von ${orgName} oder von ${orgName} beauftragte Fotografen und Videografen dürfen Fotos und Videos meines Kindes ${training ? 'vom Training' : 'vom Camp'} machen und auf der Website und in den sozialen Netzwerken von ${orgName} zeigen. Ohne diese Einwilligung nimmt Ihr Kind ganz normal teil.`}
                       </span>
                     </span>
                   </label>

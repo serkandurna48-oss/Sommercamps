@@ -89,7 +89,7 @@ it('shows session date and time, the price text and the cancellation note instea
   const rendered = text(render())
   expect(rendered).toContain('Do., 12. Nov. 2026, 16:00 Uhr')
   expect(rendered).toContain('35 € für Mitglieder, 45 € sonst – geprüft bei der Buchung')
-  expect(rendered).toContain('Kostenlose Absage bis 24 h vorher – bitte direkt beim Verein melden.')
+  expect(rendered).toContain('Kostenlose Absage bis 24 h vorher – bitte direkt bei Testverein melden.')
   expect(rendered).not.toContain('0,00')
   expect(rendered).not.toContain('Camp')
 })

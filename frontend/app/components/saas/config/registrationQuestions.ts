@@ -1,6 +1,6 @@
 import type { RegistrationQuestion } from '../../../lib/saasApi'
 
-export const MAX_QUESTIONS = 5
+export const MAX_QUESTIONS = 8
 const FIELDS = new Set(['key', 'label', 'type', 'required', 'options', 'other_label'])
 type Result = { questions: RegistrationQuestion[]; error: null } | { questions: null; error: string }
 
@@ -13,7 +13,7 @@ export function readRegistrationQuestions(value: unknown): Result {
   }
   if (value == null) value = []
   if (!Array.isArray(value)) return { questions: null, error: 'Zusatzfelder müssen als Liste vorliegen.' }
-  if (value.length > MAX_QUESTIONS) return { questions: null, error: 'Es sind höchstens 5 Zusatzfelder möglich.' }
+  if (value.length > MAX_QUESTIONS) return { questions: null, error: `Es sind höchstens ${MAX_QUESTIONS} Zusatzfelder möglich.` }
   const questions: RegistrationQuestion[] = []
   const keys = new Set<string>()
   for (const [index, item] of value.entries()) {

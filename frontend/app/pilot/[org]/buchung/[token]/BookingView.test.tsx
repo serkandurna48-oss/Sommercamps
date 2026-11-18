@@ -102,7 +102,7 @@ describe('BookingView', () => {
 
   it('explains transfer and cash bookings and names the club contact, without a button', async () => {
     await show({ payment_status: 'paid' })
-    expect(text()).toContain('Bei Überweisung oder Barzahlung storniert der Verein Ihre Anmeldung.')
+    expect(text()).toContain('Bei Überweisung oder Barzahlung storniert KSV Test Ihre Anmeldung.')
     expect(text()).toContain('Bitte wenden Sie sich an KSV Test')
     expect(text()).toContain('verein@example.com')
     expect(button('Anmeldung stornieren')).toBeUndefined()

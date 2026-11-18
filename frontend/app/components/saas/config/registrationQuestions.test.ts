@@ -26,7 +26,7 @@ describe('existing registration_questions contract', () => {
     [{ ...choice, options: ['A', null] }], [{ ...choice, options: ['A', 'A'] }], [{ ...choice, options: [' '] }],
     [{ ...choice, options: ['A', ' A '] }], [{ ...choice, options: ['x'.repeat(81)] }],
     [{ ...choice, options: Array.from({ length: 21 }, (_, i) => String(i)) }], [{ ...choice, other_label: {} }],
-    [{ ...text, unknown: true }], Array.from({ length: 6 }, (_, i) => ({ ...text, key: `q${i}` })),
+    [{ ...text, unknown: true }], Array.from({ length: 9 }, (_, i) => ({ ...text, key: `q${i}` })),
   ])('rejects malformed data without throwing: %j', value => {
     const result = readRegistrationQuestions(value)
     expect(result.error).toBeTruthy()
@@ -47,4 +47,12 @@ describe('existing registration_questions contract', () => {
     expect(first.key).toMatch(/^[a-z][a-z0-9_]{0,29}$/)
     expect(readRegistrationQuestions([{ ...first, label: 'Neues Feld' }]).error).toBeNull()
   })
+})
+
+it('accepts eight questions (JK needs seven) and reports the limit in the error', () => {
+  const text = { key: 'q', label: 'Frage', type: 'text', required: false }
+  const eight = Array.from({ length: 8 }, (_, i) => ({ ...text, key: `q${i}` }))
+  expect(readRegistrationQuestions(eight).questions).toHaveLength(8)
+  const nine = [...eight, { ...text, key: 'q8' }]
+  expect(readRegistrationQuestions(nine).error).toBe('Es sind höchstens 8 Zusatzfelder möglich.')
 })

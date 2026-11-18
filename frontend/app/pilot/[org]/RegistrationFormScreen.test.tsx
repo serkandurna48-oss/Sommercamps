@@ -178,7 +178,7 @@ it('promises bank details on the next screen only when the club stored an IBAN',
   expect(withIban).toContain('Die Bankdaten stehen auf der nächsten Seite.')
   const withoutIban = text(render(vi.fn(), false, false))
   expect(withoutIban).not.toContain('Die Bankdaten stehen auf der nächsten Seite.')
-  expect(withoutIban).toContain('Der Verein meldet sich zur Zahlung.')
+  expect(withoutIban).toContain('Testverein meldet sich zur Zahlung.')
 })
 
 it('rejects a parent name without a space and shows a validation error', async () => {
@@ -218,4 +218,14 @@ it('opens the organization privacy policy in a new tab with noopener', () => {
   expect(link?.props.href).toBe('/pilot/testverein/datenschutz')
   expect(link?.props.target).toBe('_blank')
   expect(String(link?.props.rel).split(' ')).toContain('noopener')
+})
+
+it('JK-Korrektur: Trikotgrößen bis 176 und S/M/L, Fototext nennt Verein, Trainer und Fotografen', () => {
+  const nodes = render()
+  const sizes = nodes.filter((node) => node.type === 'option').map((node) => node.props.value)
+  expect(sizes).toEqual(expect.arrayContaining(['128', '140', '152', '164', '176', 'S', 'M', 'L']))
+  const all = text(nodes)
+  expect(all).toContain('Testverein, die Trainer von Testverein oder von Testverein beauftragte Fotografen und Videografen dürfen Fotos und Videos meines Kindes vom Camp machen und auf der Website und in den sozialen Netzwerken von Testverein zeigen.')
+  expect(all).toContain('Testverein')
+  expect(all).not.toContain('Der Verein darf Fotos')
 })

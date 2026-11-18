@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { cancelBookingAsParent, fetchBookingStatus, type BookingStatus } from '../../../../lib/saasApi'
-import { formatCampDateRange, formatPrice } from '../../../../lib/parentFlowFormat'
+import { endWithName, formatCampDateRange, formatPrice } from '../../../../lib/parentFlowFormat'
 
 type Contact = { name: string; contact_email: string; contact_phone?: string | null }
 type Load =
@@ -68,9 +68,9 @@ function NoSelfCancel({ data, org }: { data: BookingStatus; org: Contact }) {
     reason = 'Die Zahlung ist noch nicht abgeschlossen.'
     lead = 'Zum Stornieren wenden Sie sich bitte an'
   } else if (data.payment_status === 'partially_refunded' || data.payment_status === 'refunded') {
-    reason = 'Diese Anmeldung kann nur der Verein stornieren.'
+    reason = `Diese Anmeldung kann nur ${org.name} stornieren.`
   } else {
-    reason = 'Bei Überweisung oder Barzahlung storniert der Verein Ihre Anmeldung.'
+    reason = `Bei Überweisung oder Barzahlung storniert ${org.name} Ihre Anmeldung.`
   }
   return <p>{reason} <ContactInline org={org} lead={lead} /></p>
 }
@@ -106,12 +106,12 @@ export default function BookingView({ orgSlug, token, org }: { orgSlug: string; 
       setDone({ refundCents })
       setConfirming(false)
     } else if (result.kind === 'not_allowed' || result.kind === 'refund_failed') {
-      setError(result.message || 'Die Stornierung ist gerade nicht möglich. Bitte wenden Sie sich an den Verein.')
+      setError(result.message || `Die Stornierung ist gerade nicht möglich. Bitte wenden Sie sich an ${endWithName(org.name)}`)
     } else {
       setError(
         result.kind === 'rate_limited'
           ? 'Zu viele Anfragen. Bitte versuchen Sie es später erneut.'
-          : 'Die Stornierung ist gerade nicht möglich. Bitte versuchen Sie es später erneut oder wenden Sie sich direkt an den Verein.',
+          : `Die Stornierung ist gerade nicht möglich. Bitte versuchen Sie es später erneut oder wenden Sie sich direkt an ${endWithName(org.name)}`,
       )
     }
   }
@@ -173,7 +173,7 @@ export default function BookingView({ orgSlug, token, org }: { orgSlug: string; 
           <p>Ihr Kind steht auf der Warteliste. Es entstehen noch keine Kosten. {org.name} meldet sich, sobald ein Platz frei wird.</p>
         )}
         {data.invoice_available && (
-          <p>Ihre Rechnung wurde Ihnen per E-Mail geschickt. Falls sie fehlt, wenden Sie sich bitte an den Verein.</p>
+          <p>Ihre Rechnung wurde Ihnen per E-Mail geschickt. {`Falls sie fehlt, wenden Sie sich bitte an ${endWithName(org.name)}`}</p>
         )}
       </section>
 

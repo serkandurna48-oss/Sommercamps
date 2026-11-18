@@ -14,7 +14,7 @@ test('cancel page promises only what the mail contains', async () => {
   const html = await render('cancel')
   expect(html).toContain('Ihre Buchung bleibt reserviert')
   expect(html).toContain('Bestätigungsmail steht, wie Sie per Überweisung zahlen')
-  expect(html).toContain('wenden Sie sich direkt an den Verein')
+  expect(html).toContain('wenden Sie sich direkt an den Veranstalter des Camps')
   expect(html).not.toContain('Angaben aus Ihrer Anmeldebestätigung')
 })
 

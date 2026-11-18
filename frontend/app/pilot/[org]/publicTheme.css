@@ -4248,7 +4248,7 @@
   .cp-public .h-akad.hero-banner { min-height: 0; justify-content: flex-start; }
   .cp-public .h-akad.hero-banner .bg { inset: 0 0 auto 0; height: 118vw; overflow: hidden; }
   /* Zoom on the group, anchored near the bottom edge where the players stand. */
-  .cp-public .h-akad.hero-banner .bg img { transform: scale(1.7); transform-origin: 50% 96%; animation: none; }
+  .cp-public .h-akad.hero-banner .bg img { transform: scale(var(--hero-mobile-scale, 1.7)); transform-origin: var(--hero-mobile-origin, 50% 96%); animation: none; }
   .cp-public .h-akad.hero-banner .bg::after {
     content: '';
     position: absolute;

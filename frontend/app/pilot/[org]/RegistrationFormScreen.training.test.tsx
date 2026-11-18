@@ -89,7 +89,7 @@ it('shows session date and time, the price text and the cancellation note instea
   const rendered = text(render())
   expect(rendered).toContain('Do., 12. Nov. 2026, 16:00 Uhr')
   expect(rendered).toContain('35 € für Mitglieder, 45 € sonst – geprüft bei der Buchung')
-  expect(rendered).toContain('Kostenlose Absage bis 24 h vorher – bitte direkt beim Verein melden.')
+  expect(rendered).toContain('Kostenlose Absage bis 24 h vorher – bitte direkt bei Testverein melden.')
   expect(rendered).not.toContain('0,00')
   expect(rendered).not.toContain('Camp')
 })
@@ -162,7 +162,7 @@ it('does not reload the slots for a duplicate booking', async () => {
 })
 
 const DOC_HEADING = 'Trainingsdokumentation, freiwillig'
-const DOC_TEXT = 'Ich bin einverstanden, dass der Verein Trainingsinhalte und die Entwicklung meines Kindes intern dokumentiert (z. B. Notizen, Ziele, Messwerte). Diese Notizen sind nur für den Verein bestimmt.'
+const DOC_TEXT = 'Ich bin einverstanden, dass Testverein Trainingsinhalte und die Entwicklung meines Kindes intern dokumentiert (z. B. Notizen, Ziele, Messwerte). Diese Notizen sind nur für Testverein bestimmt.'
 
 it('shows the optional documentation consent checkbox for trainings only, unchecked by default', () => {
   const training = render()

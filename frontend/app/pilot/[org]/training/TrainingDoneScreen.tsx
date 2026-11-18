@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { endWithName } from '../../../lib/parentFlowFormat'
 import type { OrganizationPublic, RegistrationCreated, TrainingOfferPublic, TrainingPaymentMethod, TrainingSessionPublic } from '../../../lib/saasApi'
 import { bookingPriceText, formatSessionDateTime } from '../../../lib/trainingFormat'
 import { redirectToTrainingCheckout } from '../../../lib/trainingCheckout'
@@ -94,7 +95,7 @@ export default function TrainingDoneScreen({
           )}
           {paymentMethod === 'ueberweisung' && !org.iban && (
             <div className="note quiet">
-              <p>Der Verein meldet sich zur Zahlung. Ihre Referenz: <strong>{result.payment_reference}</strong>.</p>
+              <p>{org.name} meldet sich zur Zahlung. Ihre Referenz: <strong>{result.payment_reference}</strong>.</p>
             </div>
           )}
           {paymentMethod === 'online' && (
@@ -111,7 +112,7 @@ export default function TrainingDoneScreen({
                   {paying ? 'Weiterleitung zu Stripe …' : price ? `Jetzt ${price} online bezahlen` : 'Jetzt online bezahlen'}
                 </button>
               )}
-              {payError && <p role="alert" style={{ marginTop: 10 }}>Online-Zahlung ist gerade nicht möglich. Bitte wenden Sie sich an den Verein.</p>}
+              {payError && <p role="alert" style={{ marginTop: 10 }}>Online-Zahlung ist gerade nicht möglich. {`Bitte wenden Sie sich an ${endWithName(org.name)}`}</p>}
             </div>
           )}
           {paymentMethod === 'bar' && (
@@ -122,11 +123,11 @@ export default function TrainingDoneScreen({
 
       <div className="pad" style={{ paddingBottom: 30, display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 28 }}>
         <h2 className="d3">Was als Nächstes passiert</h2>
-        <p>Kostenlose Absage bis 24 h vorher – bitte direkt beim Verein melden.</p>
+        <p>{`Kostenlose Absage bis 24 h vorher – bitte direkt bei ${org.name} melden.`}</p>
         {(org.contact_person_name || org.contact_email || org.contact_phone) && (
           <div className="done-contact">
-            <h2 className="d3">Kontakt zum Verein</h2>
-            <p>{org.contact_person_name || org.name}</p>
+            <h2 className="d3">Kontakt zu {org.name}</h2>
+            {org.contact_person_name && <p>{org.contact_person_name}</p>}
             {org.contact_email && <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>}
             {org.contact_phone && <a href={`tel:${org.contact_phone.replace(/[^+\d]/g, '')}`}>{org.contact_phone}</a>}
           </div>

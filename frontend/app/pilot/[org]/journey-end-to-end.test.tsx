@@ -6,7 +6,7 @@
  *   - Elternformular befüllen + absenden → onSubmitted erhält RegistrationCreated
  *     mit CP-Referenz
  *   - DoneScreen mit IBAN: Überweisungsblock mit IBAN + Verwendungszweck sichtbar
- *   - DoneScreen ohne IBAN: "Der Verein meldet sich zur Zahlung" statt IBAN-Block
+ *   - DoneScreen ohne IBAN: "<Vereinsname> meldet sich zur Zahlung" statt IBAN-Block
  *   - Admin-Zahlung: PaymentSection zeigt offene Anmeldung, "Als bezahlt markieren"
  *     ändert den Status und zeigt Quittung
  *
@@ -224,7 +224,7 @@ describe('Elternformular → DoneScreen', () => {
     expect(html).toContain('CP-1A2B3C4D')
     expect(html).not.toContain('DE89370400440532013000')
     expect(html).not.toContain('class="done-transfer"')
-    expect(html).toContain('Der Verein meldet sich zur Zahlung')
+    expect(html).toContain('Reise-Verein meldet sich zur Zahlung')
   })
 })
 

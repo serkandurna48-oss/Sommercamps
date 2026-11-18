@@ -76,7 +76,7 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
               <li>Notfallnummer während des Camps (Pflichtangabe)</li>
               <li>Trikotgröße, medizinische Hinweise und Allergien (optional)</li>
               <li>Wer das Kind abholen darf (optional)</li>
-              <li>Einwilligung zur Nutzung von Fotos (optional, separat abgefragt)</li>
+              <li>Einwilligung zu Fotos und Videos (optional, separat abgefragt)</li>
             </ul>
           </section>
 

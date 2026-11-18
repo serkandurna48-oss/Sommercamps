@@ -73,7 +73,7 @@ export default function DoneScreen({
       const url = await createStripeCheckout(org.slug, camp.slug, result.registration_token)
       window.location.assign(url)
     } catch {
-      setStripeError('Online-Zahlung ist gerade nicht möglich. Sie können überweisen oder den Verein kontaktieren.')
+      setStripeError(`Online-Zahlung ist gerade nicht möglich. Sie können überweisen oder ${org.name} kontaktieren.`)
       setStripeLoading(false)
     }
   }
@@ -268,7 +268,7 @@ export default function DoneScreen({
           )}
           {!waitlisted && !iban && (
             <div className="note quiet">
-              <p>Der Verein meldet sich zur Zahlung. Ihre Referenz: <strong>{result.payment_reference}</strong>.</p>
+              <p>{org.name} meldet sich zur Zahlung. Ihre Referenz: <strong>{result.payment_reference}</strong>.</p>
             </div>
           )}
         </div>
@@ -276,7 +276,7 @@ export default function DoneScreen({
 
       <div className="pad" style={{ paddingBottom: 30, display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 28 }}>
         <h2 className="d3">Was als Nächstes passiert</h2>
-        <p>Der Verein meldet sich bei Ihnen mit den weiteren Details.</p>
+        <p>{org.name} meldet sich bei Ihnen mit den weiteren Details.</p>
         <ol className="steps">
           <li data-rise>
             <div className="col">
@@ -308,8 +308,8 @@ export default function DoneScreen({
                   <span className="dot next">3</span>
                 </div>
                 <div className="txt">
-                  <b>Der Verein informiert Sie über das Nachrücken</b>
-                  <span>Der Verein informiert Sie persönlich — keine automatische Nachricht, keine Frist.</span>
+                  <b>{org.name} informiert Sie über das Nachrücken</b>
+                  <span>{org.name} informiert Sie persönlich — keine automatische Nachricht, keine Frist.</span>
                 </div>
               </li>
             </>
@@ -321,7 +321,7 @@ export default function DoneScreen({
                   <span className="rail" />
                 </div>
                 <div className="txt">
-                  <b>{iban ? 'Sie überweisen den Betrag' : 'Der Verein meldet sich zur Zahlung'}</b>
+                  <b>{iban ? 'Sie überweisen den Betrag' : `${org.name} meldet sich zur Zahlung`}</b>
                   <span>{iban ? `${payTo} vermerkt den Zahlungseingang von Hand — das kann einige Tage dauern.` : `${payTo} sendet Ihnen die Zahlungsdetails direkt.`}</span>
                 </div>
               </li>
@@ -348,8 +348,8 @@ export default function DoneScreen({
           )}
         </ol>
         {(org.contact_person_name || org.contact_email || org.contact_phone) && <div className="done-contact">
-          <h2 className="d3">Kontakt zum Verein</h2>
-          <p>{org.contact_person_name || org.name}</p>
+          <h2 className="d3">Kontakt zu {org.name}</h2>
+          {org.contact_person_name && <p>{org.contact_person_name}</p>}
           {org.contact_email && <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a>}
           {org.contact_phone && <a href={`tel:${org.contact_phone.replace(/[^+\d]/g, '')}`}>{org.contact_phone}</a>}
         </div>}

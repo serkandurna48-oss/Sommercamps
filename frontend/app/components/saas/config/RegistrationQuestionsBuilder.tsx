@@ -39,7 +39,7 @@ export default function RegistrationQuestionsBuilder({ value, theme, orgSlug, di
     <fieldset disabled={disabled} className="flex min-w-0 flex-col gap-4" aria-labelledby={`${id}-heading`}>
       <h3 id={`${id}-heading`} className="cp-heading" style={{ color: 'var(--cp-ink)' }}>Zusatzfelder bei der Anmeldung</h3>
       <p className="cp-chip" style={{ color: 'var(--cp-muted)' }}>
-        Bis zu 5 Felder für alle Camps dieses Vereins. Änderungen werden mit den Vereinseinstellungen gespeichert.
+        Bis zu {MAX_QUESTIONS} Felder für alle Camps dieses Vereins. Änderungen werden mit den Vereinseinstellungen gespeichert.
       </p>
       {loaded.error ? (
         <>

@@ -15,7 +15,7 @@ export default function RegistrationUnavailable({ org, camp, onBack }: {
     <PublicState org={org}
       title={notYetOpen ? 'Anmeldung noch nicht geöffnet' : 'Anmeldung geschlossen'}
       message={notYetOpen ? 'Die Anmeldung für dieses Camp hat noch nicht begonnen.' : 'Die Anmeldung für dieses Camp ist derzeit geschlossen.'}
-      instruction="Bitte sehen Sie sich die anderen Camps des Vereins an."
+      instruction={`Bitte sehen Sie sich die anderen Camps von ${org.name} an.`}
     >
       <button type="button" className="btn primary btn-pill" onClick={onBack}>Alle Camps ansehen</button>
     </PublicState>

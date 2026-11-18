@@ -9,6 +9,10 @@ export interface ClubAssets {
   logoImage?: string
   heroPosition?: string
   heroPositionMobile?: string
+  /** Phone zoom of the akademie hero (default 1.7); lower for taller 4:3 group photos. */
+  heroMobileScale?: number
+  /** transform-origin for that phone zoom (default '50% 96%'). */
+  heroMobileOrigin?: string
   /** Optional desktop-only zoom. Mobile keeps its original crop and scale. */
   heroDesktopScale?: number
   /** Show the club's primary registration CTA before the dates CTA. */
@@ -63,7 +67,10 @@ const JK_ASSETS: ClubAssets = {
   heroImage: '/jk/hero.jpg',
   // Group photo: the people stand in the lower half of the frame. On phones it is a banner
   // above the text, so one picture works on every screen.
-  heroPosition: 'center 78%',
+  heroPosition: 'center 65%',
+  // 4:3 team photo (18.11.2026): smaller zoom keeps the back row's heads on phones.
+  heroMobileScale: 1.15,
+  heroMobileOrigin: '50% 90%',
   heroPositionMobile: '50% 88%',
   heroMobileBanner: true,
   // Five photos from training, shown as a slideshow next to the "Über uns" text (Serkan 17.11.).

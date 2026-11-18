@@ -117,12 +117,12 @@ it('reorders in both directions and removes fields while retaining their keys', 
   expect(container.textContent).toContain('keine Zusatzfelder')
 })
 
-it('limits adding to five fields', async () => {
+it('limits adding to eight fields', async () => {
   await render()
-  for (let i = 0; i < 5; i++) await click('Feld hinzufügen')
+  for (let i = 0; i < 8; i++) await click('Feld hinzufügen')
   expect(button('Feld hinzufügen').disabled).toBe(true)
   await click('Feld hinzufügen')
-  expect(payload()).toHaveLength(5)
+  expect(payload()).toHaveLength(8)
   await click('Feld 3 entfernen')
   expect(button('Feld hinzufügen').disabled).toBe(false)
 })

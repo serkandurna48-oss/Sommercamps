@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { endWithName } from '../../../lib/parentFlowFormat'
 import type { OrganizationPublic, RegistrationCreated, TrainingOfferDetail, TrainingPaymentMethod, TrainingSessionPublic } from '../../../lib/saasApi'
 import { fetchTrainingOffer, getStripePaymentOptions } from '../../../lib/saasApi'
 import {
@@ -127,13 +128,13 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
         {offer.location && <div className="r"><dt>Ort</dt><dd>{offer.location}</dd></div>}
         {uniformPrice && <div className="r"><dt>Preis</dt><dd>{uniformPrice}</dd></div>}
       </dl>
-      <p className="note quiet tr-notice">Kostenlose Absage bis 24 h vorher – bitte direkt beim Verein melden.</p>
+      <p className="note quiet tr-notice">{`Kostenlose Absage bis 24 h vorher – bitte direkt bei ${org.name} melden.`}</p>
 
       {notice && <div className="note tr-notice" role="status">{notice}</div>}
 
       <h2 className="d3" style={{ marginTop: 28 }}>Termin wählen</h2>
       {offer.sessions.length === 0 ? (
-        <p className="tr-lead">Aktuell sind keine Termine buchbar. Bitte melden Sie sich beim Verein{org.contact_email ? <>: <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a></> : '.'}</p>
+        <p className="tr-lead">Aktuell sind keine Termine buchbar. Bitte melden Sie sich bei {org.contact_email ? <>{org.name}: <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a></> : endWithName(org.name)}</p>
       ) : (
         <ul className="tr-sessions">
           {offer.sessions.map(item => {

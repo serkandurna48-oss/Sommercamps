@@ -131,8 +131,8 @@ it('shows price, date, location and availability in the aside above the form', (
 })
 
 it('clearly identifies the waitlist and handles a missing venue', async () => {
-  await act(async () => root.render(<CampSummary camp={{ ...camp, is_full: true, location: null }} />))
+  await act(async () => root.render(<CampSummary camp={{ ...camp, is_full: true, location: null }} orgName="Demo" />))
   expect(host.textContent).toContain('Warteliste — das Camp ist ausgebucht')
   expect(host.textContent).toContain('Es entstehen noch keine Kosten')
-  expect(host.textContent).toContain('Den Treffpunkt teilt Ihnen der Verein mit')
+  expect(host.textContent).toContain('Den Treffpunkt teilt Ihnen Demo mit')
 })

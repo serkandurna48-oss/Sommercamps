@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { endWithName } from '../../../lib/parentFlowFormat'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { hasModule } from '../../../lib/orgModules'
@@ -44,7 +45,7 @@ export default async function TrainingOffersPage({ params }: PageProps) {
         <h1 className="d1">Training buchen</h1>
         <p className="tr-lead">Wählen Sie ein Angebot und anschließend einen freien Termin.</p>
         {offers.length === 0 ? (
-          <p className="tr-lead">Aktuell gibt es keine buchbaren Trainingsangebote. Bei Fragen wenden Sie sich an den Verein{org.contact_email ? <>: <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a></> : '.'}</p>
+          <p className="tr-lead">Aktuell gibt es keine buchbaren Trainingsangebote. Bei Fragen wenden Sie sich an {org.contact_email ? <>{org.name}: <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a></> : endWithName(org.name)}</p>
         ) : (
           <ul className="tr-list">
             {offers.map(offer => {

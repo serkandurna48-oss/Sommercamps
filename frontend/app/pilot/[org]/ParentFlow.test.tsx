@@ -18,7 +18,7 @@ const org: OrganizationPublic = {
 
 it('explains payment without promising an IBAN or a reserved place for every submission', () => {
   const html = renderToStaticMarkup(<ParentFlow org={org} camps={[]} />)
-  expect(html).toContain('Falls keine Bankdaten hinterlegt sind, meldet sich der Verein zur Zahlung.')
+  expect(html).toContain('Falls keine Bankdaten hinterlegt sind, meldet sich das Camp-Team zur Zahlung.')
   expect(html).toContain('Auf der Warteliste entstehen noch keine Kosten.')
   expect(html).not.toContain('sobald das Formular abgeschickt wurde')
 })

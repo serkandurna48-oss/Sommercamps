@@ -116,7 +116,7 @@ describe('Angebotsdetail', () => {
     expect(html).toContain('30 Minuten')
     expect(html).toContain('Sportplatz Nord')
     expect(html).toContain('35 € für Mitglieder, 45 € sonst – geprüft bei der Buchung')
-    expect(html).toContain('Kostenlose Absage bis 24 h vorher – bitte direkt beim Verein melden.')
+    expect(html).toContain('Kostenlose Absage bis 24 h vorher – bitte direkt bei Testverein melden.')
     expect(html).toContain('Do., 12. Nov. 2026, 16:00 Uhr')
     expect(html).toContain('Platz frei')
   })
@@ -262,7 +262,7 @@ describe('Bestätigung', () => {
 
   it('names the reference without IBAN when the club has none', () => {
     const html = render({ org: { iban: null } })
-    expect(html).toContain('Der Verein meldet sich zur Zahlung.')
+    expect(html).toContain('Testverein meldet sich zur Zahlung.')
     expect(html).toContain('CP-1234')
   })
 
@@ -287,7 +287,7 @@ describe('Bestätigung', () => {
 
   it('mentions the free cancellation and gives no membership hint', () => {
     const html = render()
-    expect(html).toContain('Kostenlose Absage bis 24 h vorher – bitte direkt beim Verein melden.')
+    expect(html).toContain('Kostenlose Absage bis 24 h vorher – bitte direkt bei Testverein melden.')
     expect(html).not.toContain('Mitglied')
   })
 })

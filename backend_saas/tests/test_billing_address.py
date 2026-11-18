@@ -146,6 +146,11 @@ def test_tolerance_expires(env, tolerance):
     tolerance(date.today() - timedelta(days=1))
     r = _book_camp(env, _without_address())
     assert r.status_code == 422 and r.json()["detail"] == MSG
+
+
+def test_tolerance_boundary_is_inclusive(tolerance):
+    # Fixed dates only: this must not depend on the day the suite runs.
+    tolerance(date(2026, 11, 13))
     assert registrations_repo._legacy_tolerance_active(date(2026, 11, 14)) is False
     tolerance(date(2026, 11, 14))
     assert registrations_repo._legacy_tolerance_active(date(2026, 11, 14)) is True  # inclusive

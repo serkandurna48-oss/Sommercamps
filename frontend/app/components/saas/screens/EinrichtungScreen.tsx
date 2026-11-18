@@ -19,6 +19,7 @@ import Field from '../ui/Field'
 import Link from '../preview/AdminLink'
 import { INPUT_CLASS, INPUT_STYLE } from '../ui/formFieldStyles'
 import { PAGE_FORM } from '../ui/pageLayout'
+import { isPubliclyServed } from '../../../lib/publicReach'
 
 type WizardStep = 1 | 2 | 3 | 4
 type SaveState = { ok: boolean; error?: string }
@@ -521,7 +522,7 @@ function Step4Pruefen({
         </ul>
       </section>
 
-      {org.site_published ? <div className="mb-6">
+      {isPubliclyServed(org) ? <div className="mb-6">
         <ButtonLink
           href={`/pilot/${orgSlug}`}
           variant="secondary"

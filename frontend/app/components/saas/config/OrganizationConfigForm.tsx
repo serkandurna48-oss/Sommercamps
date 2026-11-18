@@ -1,6 +1,7 @@
 'use client'
 
 import { useAdminPreview, previewNoopAction } from '../preview/AdminPreviewContext'
+import { publicReachBlocker } from '../../../lib/publicReach'
 
 import { useId, useActionState, useState } from 'react'
 import { de } from '../../../lib/i18n/de'
@@ -76,7 +77,7 @@ export default function OrganizationConfigForm({
 
   return (
     <div className="flex flex-col gap-10">
-      <PublishToggle orgSlug={orgSlug} published={org.site_published} emphasis={publishFirst ? 'primary' : 'secondary'} />
+      <PublishToggle orgSlug={orgSlug} published={org.site_published} reachBlocker={publicReachBlocker(org)} emphasis={publishFirst ? 'primary' : 'secondary'} />
 
       <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-8">
         {Object.values(urlErrors).some(Boolean) && (

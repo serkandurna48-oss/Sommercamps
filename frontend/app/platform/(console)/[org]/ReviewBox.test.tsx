@@ -89,23 +89,23 @@ function getBtn(text: string): HTMLButtonElement | undefined {
   )
 }
 
-it('blocks approval for a missing logo and names the missing item in the tooltip', async () => {
-  await renderBox({ ...reviewOrg, logo_url: null })
+it('blocks approval for missing terms and names the missing item in the tooltip', async () => {
+  await renderBox({ ...reviewOrg, terms_text: null })
   expect(getBtn('Freigeben')?.disabled).toBe(true)
-  expect(container.querySelector('[role="tooltip"]')?.textContent).toBe('Es fehlen: Logo')
-  expect(container.querySelector('[aria-label="Fehlende Angaben"]')?.textContent).toBe('Fehlt: Logo')
+  expect(container.querySelector('[role="tooltip"]')?.textContent).toBe('Es fehlen: Teilnahmebedingungen')
+  expect(container.querySelector('[aria-label="Fehlende Angaben"]')?.textContent).toBe('Fehlt: Teilnahmebedingungen')
   await submitForm('approve')
   expect(reviewOrganizationAction).not.toHaveBeenCalled()
-  expect(container.querySelector('[role="alert"]')?.textContent).toContain('Logo')
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain('Teilnahmebedingungen')
 })
 
 it('requires an explicit in-page confirmation before overriding the checklist', async () => {
-  await renderBox({ ...reviewOrg, logo_url: null })
+  await renderBox({ ...reviewOrg, terms_text: null })
   await act(() => getBtn('Trotzdem freigeben')!.click())
   expect(reviewOrganizationAction).not.toHaveBeenCalled()
   const panel = container.querySelector<HTMLElement>('[aria-label="Ausnahme bestätigen"]')!
   expect(document.activeElement).toBe(panel)
-  expect(panel.textContent).toContain('Es fehlen: Logo')
+  expect(panel.textContent).toContain('Es fehlen: Teilnahmebedingungen')
   expect(panel.textContent).toContain('öffentlich')
   await act(async () => {
     panel.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
@@ -116,7 +116,7 @@ it('requires an explicit in-page confirmation before overriding the checklist', 
 })
 
 it('cancels the override without approval and restores focus', async () => {
-  await renderBox({ ...reviewOrg, logo_url: null })
+  await renderBox({ ...reviewOrg, terms_text: null })
   await act(() => getBtn('Trotzdem freigeben')!.click())
   await act(() => getBtn('Abbrechen')!.click())
   expect(container.querySelector('[aria-label="Ausnahme bestätigen"]')).toBeNull()

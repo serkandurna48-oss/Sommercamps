@@ -31,6 +31,18 @@ function camp(overrides: Partial<CampAdmin> = {}): CampAdmin {
 }
 
 describe('computeOnboardingSteps', () => {
+  // Prod check 18.11.2026: the dashboard said "Deine Anmeldeseite ist live"
+  // for a published club that still waited for approval.
+  it.each(['draft', 'submitted', 'rejected'])('is not done while review status is %s', (reviewStatus) => {
+    const result = computeOnboardingSteps(org({ site_published: true, review_status: reviewStatus }), [camp({ status: 'published' })])
+    expect(result.step3Done).toBe(false)
+  })
+
+  it('is not done for a suspended account', () => {
+    const result = computeOnboardingSteps(org({ site_published: true, review_status: 'approved', plan_status: 'suspended' }), [camp({ status: 'published' })])
+    expect(result.step3Done).toBe(false)
+  })
+
   it('alle Schritte offen bei leerem Verein (kein Feld, kein Camp)', () => {
     const result = computeOnboardingSteps(
       org({ contact_email: '', legal_address: null, terms_text: null }),
@@ -50,9 +62,9 @@ describe('computeOnboardingSteps', () => {
   })
 
   it('Schritt 3 erfordert site_published UND ein veröffentlichtes Camp', () => {
-    expect(computeOnboardingSteps(org({ site_published: true }), [camp()]).step3Done).toBe(false)
+    expect(computeOnboardingSteps(org({ site_published: true, review_status: 'approved' }), [camp()]).step3Done).toBe(false)
     expect(computeOnboardingSteps(org(), [camp({ status: 'published' })]).step3Done).toBe(false)
-    expect(computeOnboardingSteps(org({ site_published: true }), [camp({ status: 'published' })]).step3Done).toBe(true)
+    expect(computeOnboardingSteps(org({ site_published: true, review_status: 'approved' }), [camp({ status: 'published' })]).step3Done).toBe(true)
   })
 
   it('Schritt 1 scheitert, wenn Pflichtfeld leer oder nur Leerzeichen', () => {
@@ -63,7 +75,7 @@ describe('computeOnboardingSteps', () => {
 
   it('Schritt 3 unabhängig von Schritt 1: auch mit fehlendem Pflichtfeld möglich', () => {
     const result = computeOnboardingSteps(
-      org({ site_published: true, contact_email: '' }),
+      org({ site_published: true, review_status: 'approved', contact_email: '' }),
       [camp({ status: 'published' })]
     )
     expect(result.step3Done).toBe(true)
@@ -78,7 +90,7 @@ describe('computeOnboardingSteps', () => {
 
   it('Schritt 3 erkennt veröffentlichtes Camp unter mehreren', () => {
     const result = computeOnboardingSteps(
-      org({ site_published: true }),
+      org({ site_published: true, review_status: 'approved' }),
       [camp({ slug: 'a', status: 'draft' }), camp({ slug: 'b', status: 'published' })]
     )
     expect(result.step3Done).toBe(true)

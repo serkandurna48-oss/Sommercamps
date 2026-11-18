@@ -3,20 +3,27 @@ import { computeReviewChecklist, exactReviewDate, relativeReviewDate, submittedO
 import { reviewCamp, reviewOrg } from './reviewFixtures'
 
 describe('Freigabecheckliste', () => {
-  it('prüft genau die sechs geforderten Angaben', () => {
+  it('prüft dieselben Pflichtangaben wie der Einrichtungsassistent des Vereins', () => {
     const items = computeReviewChecklist(reviewOrg, [reviewCamp])
-    expect(items.map(item => item.id)).toEqual(['logo', 'color', 'email', 'address', 'terms', 'camp'])
+    expect(items.map(item => item.id)).toEqual(['color', 'email', 'address', 'terms', 'camp'])
     expect(items.every(item => item.done)).toBe(true)
   })
 
   it.each([
-    ['logo_url', 'logo'], ['primary_color', 'color'], ['contact_email', 'email'],
+    ['primary_color', 'color'], ['contact_email', 'email'],
     ['legal_address', 'address'], ['terms_text', 'terms'],
   ])('erkennt fehlendes Feld %s unabhängig von den übrigen Angaben', (field, id) => {
     for (const missing of [null, '', '  \n ']) {
       const items = computeReviewChecklist({ ...reviewOrg, [field]: missing }, [reviewCamp])
       expect(items.filter(item => !item.done).map(item => item.id)).toEqual([id])
     }
+  })
+
+  // Prod check 18.11.2026: the club wizard accepts colour without logo, the
+  // review then blocked with "Fehlt: Logo" - a club could not know.
+  it('verlangt kein Logo, das der Verein nirgends als Pflicht sieht', () => {
+    const items = computeReviewChecklist({ ...reviewOrg, logo_url: null }, [reviewCamp])
+    expect(items.every(item => item.done)).toBe(true)
   })
 
   it('erkennt ein fehlendes Camp', () => {
@@ -54,4 +61,5 @@ it('formatiert relativen Zeitpunkt und exaktes Datum mit expliziter Zeitzone', (
   expect(exactReviewDate(reviewOrg.submitted_at)).toBe('20.10.2026, 12:00 Uhr (Berlin)')
   expect(relativeReviewDate(null, 0)).toBe('Nicht angegeben')
   expect(exactReviewDate('falsch')).toBe('Nicht angegeben')
+
 })

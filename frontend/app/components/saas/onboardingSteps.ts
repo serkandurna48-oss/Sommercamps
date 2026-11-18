@@ -1,4 +1,5 @@
 import type { CampAdmin, OrganizationAdmin } from '../../lib/saasAdminApi'
+import { isPubliclyServed } from '../../lib/publicReach'
 
 export interface OnboardingSteps {
   /** contact_email + legal_address + terms_text all non-empty */
@@ -6,7 +7,8 @@ export interface OnboardingSteps {
   /** at least one camp exists */
   step2Done: boolean
   /**
-   * site_published + at least one published camp.
+   * club page really served to parents (published, approved, active plan;
+   * see lib/publicReach.ts) + at least one published camp.
    * When true, the onboarding card must not be rendered.
    */
   step3Done: boolean
@@ -15,7 +17,7 @@ export interface OnboardingSteps {
 export function computeOnboardingSteps(org: OrganizationAdmin, camps: CampAdmin[]): OnboardingSteps {
   const step1Done = !!org.contact_email?.trim() && !!org.legal_address?.trim() && !!org.terms_text?.trim()
   const step2Done = camps.length > 0
-  const step3Done = org.site_published && camps.some(c => c.status === 'published')
+  const step3Done = isPubliclyServed(org) && camps.some(c => c.status === 'published')
   return { step1Done, step2Done, step3Done }
 }
 

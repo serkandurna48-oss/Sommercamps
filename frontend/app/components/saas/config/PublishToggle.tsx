@@ -7,6 +7,7 @@ import Button, { ButtonLink } from '../ui/Button'
 import ParentLinkActions from '../state/ParentLinkActions'
 import { de } from '../../../lib/i18n/de'
 import { setOrganizationPublishedAction, type PublishActionState } from '../actions/configActions'
+import { publicReachHint, type PublicReachBlocker } from '../../../lib/publicReach'
 
 /** Publication is separate from saving organization details. Withdrawal
  * requires confirmation because it hides all camps from parents.
@@ -22,10 +23,13 @@ import { setOrganizationPublishedAction, type PublishActionState } from '../acti
 export default function PublishToggle({
   orgSlug,
   published,
+  reachBlocker,
   emphasis = 'primary',
 }: {
   orgSlug: string
   published: boolean
+  /** From publicReachBlocker(org). Required so no caller can forget it. */
+  reachBlocker: PublicReachBlocker | null
   emphasis?: 'primary' | 'secondary'
 }) {
   const feedbackId = useId()
@@ -33,24 +37,32 @@ export default function PublishToggle({
   const preview = useAdminPreview()
   const boundAction = preview ? previewNoopAction : setOrganizationPublishedAction.bind(null, orgSlug, !published)
   const [state, formAction, pending] = useActionState<PublishActionState, FormData>(boundAction, { error: null })
+  const live = published && reachBlocker === null
+  const waitingHint = publicReachHint(reachBlocker)
 
   return (
     <div
       id="publication"
       className="flex flex-wrap items-center justify-between gap-4 cp-card"
       style={{
-        borderColor: published ? 'var(--cp-field-line)' : 'var(--cp-error-line)',
-        background: published ? 'var(--cp-surface)' : 'var(--cp-error-bg)',
+        borderColor: live ? 'var(--cp-field-line)' : 'var(--cp-error-line)',
+        background: live ? 'var(--cp-surface)' : 'var(--cp-error-bg)',
       }}
     >
       <div>
         <p className="cp-subheading" style={{ color: 'var(--cp-ink)' }}>
-          {published ? 'Veröffentlicht' : 'Entwurf – noch nicht öffentlich sichtbar'}
+          {live
+            ? 'Veröffentlicht'
+            : published
+              ? (reachBlocker === 'not_approved' ? 'Veröffentlicht – wartet auf Freigabe' : 'Veröffentlicht – für Eltern nicht erreichbar')
+              : 'Entwurf – noch nicht öffentlich sichtbar'}
         </p>
         <p id={hintId} className="cp-chip mt-0.5" style={{ color: 'var(--cp-muted)' }}>
-          {published
+          {live
             ? 'Die Vereinsseite ist für Eltern erreichbar.'
-            : 'Deine Vereinsseite ist noch nicht für Eltern sichtbar. Veröffentliche die Seite nach der Freigabe.'}
+            : published
+              ? waitingHint
+              : 'Deine Vereinsseite ist noch nicht für Eltern sichtbar. Veröffentliche die Seite nach der Freigabe.'}
         </p>
         {state.error && (
           <p className="cp-chip mt-1" style={{ color: 'var(--cp-error)' }} id={feedbackId} role="alert">
@@ -70,7 +82,7 @@ export default function PublishToggle({
           {pending ? 'Wird gespeichert …' : published ? 'Vereinsseite zurückziehen' : 'Vereinsseite veröffentlichen'}
         </Button>
       </form>
-      {published && !pending && <div className="flex w-full flex-col items-start gap-3">
+      {live && !pending && <div className="flex w-full flex-col items-start gap-3">
         <p className="cp-body">{de.onboarding.publicationHint}</p>
         <ButtonLink href={`/pilot/${orgSlug}/dashboard`} variant="secondary">{de.onboarding.publicationNext}</ButtonLink>
         <ParentLinkActions orgSlug={orgSlug} />

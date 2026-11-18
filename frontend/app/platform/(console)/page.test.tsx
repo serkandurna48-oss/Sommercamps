@@ -18,6 +18,6 @@ it('lädt Camps nur für eingereichte Vereine und übergibt sie der Client-Check
   vi.mocked(fetchCampsAdmin).mockResolvedValue([reviewCamp as Awaited<ReturnType<typeof fetchCampsAdmin>>[number]])
   const html = renderToStaticMarkup(await PlatformPage())
   expect(fetchCampsAdmin).toHaveBeenCalledExactlyOnceWith(reviewOrg.slug, 'test-token')
-  expect(html).toContain('6/6 Prüfpunkte vollständig')
+  expect(html).toContain('5/5 Prüfpunkte vollständig')
   expect(html).toContain('1 gesamt · 1 Entwurf · 0 veröffentlicht')
 })

@@ -16,11 +16,58 @@ export type SaaSEvent =
   | 'camp_registration_started'
   | 'camp_registration_succeeded'
   | 'camp_registration_failed'
+  | 'camp_registration_section_completed'
+  | 'camp_registration_abandoned'
 
 export type EventDetails = {
   result?: 'registered' | 'waitlist' | 'other'
   error_kind?: 'validation' | 'api' | 'network'
   status_code?: number
+  /** Form section that just became complete (1-4). */
+  section?: number
+  /** How many sections were complete in order from the top when the parent left (0-4). */
+  last_section?: number
+  /** Number of complete sections at that moment. */
+  sections_done?: number
+  /** Field KEYS that failed validation - never labels, values or free text. */
+  fields?: readonly string[]
+}
+
+/**
+ * The only field identifiers that may leave the browser. They are our own
+ * code names for form fields. Anything else (in particular the free-text
+ * keys of club-defined extra questions) is reported as 'other'.
+ */
+export const ANALYTICS_FIELD_KEYS = [
+  'childFirstName', 'childLastName', 'childBirthDate',
+  'parentName', 'parentEmail', 'parentPhone',
+  'billingStreet', 'billingPostalCode', 'billingCity',
+  'emergencyPhone', 'agb', 'privacy',
+  'extra_question', 'payment_method',
+] as const
+// Deliberately NOT listed: 'healthDataConsent'. That check only fails when a
+// parent typed something into the allergy field, so the key alone would reveal
+// that health information exists for this child (GDPR Art. 9). It is sent as 'other'.
+const FIELD_KEY_SET: ReadonlySet<string> = new Set(ANALYTICS_FIELD_KEYS)
+
+export function safeFieldKeys(fields: readonly string[]): string[] {
+  // At most every listed key plus 'other'; duplicates collapse.
+  return [...new Set(fields.map((field) => (FIELD_KEY_SET.has(field) ? field : 'other')))]
+}
+
+function sectionNumber(value: unknown, min: number): number | null {
+  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= 4 ? value : null
+}
+
+/** production | staging | development. Vercel previews (staging) must never
+ * be counted as production; the PostHog funnel filters on this property. */
+export function analyticsEnvironment(): 'production' | 'staging' | 'development' {
+  const explicit = (process.env.NEXT_PUBLIC_ANALYTICS_ENVIRONMENT ?? '').trim().toLowerCase()
+  if (explicit === 'production' || explicit === 'staging' || explicit === 'development') return explicit
+  const vercel = (process.env.NEXT_PUBLIC_VERCEL_ENV ?? '').trim().toLowerCase()
+  if (vercel === 'production') return 'production'
+  if (vercel === 'preview') return 'staging'
+  return 'development'
 }
 
 /** Analytics stays fully off (no banner, no privacy text) until a PostHog key
@@ -78,9 +125,10 @@ export function captureSaasEvent(
       window.sessionStorage.setItem(SESSION_KEY, sessionId)
     }
 
-    const properties: Record<string, string | number | boolean> = {
+    const properties: Record<string, string | number | boolean | string[]> = {
       $process_person_profile: false,
       surface: 'parent_flow',
+      environment: analyticsEnvironment(),
       organization: publicSlug(orgSlug),
     }
     if (campSlug) properties.camp = publicSlug(campSlug)
@@ -88,6 +136,18 @@ export function captureSaasEvent(
     if (details.error_kind) properties.error_kind = details.error_kind
     if (typeof details.status_code === 'number' && details.status_code >= 0 && details.status_code <= 599) {
       properties.status_code = details.status_code
+    }
+    const section = sectionNumber(details.section, 1)
+    if (section !== null) properties.section = section
+    const lastSection = sectionNumber(details.last_section, 0)
+    if (lastSection !== null) properties.last_section = lastSection
+    const sectionsDone = sectionNumber(details.sections_done, 0)
+    if (sectionsDone !== null) properties.sections_done = sectionsDone
+    if (details.fields && details.fields.length > 0) {
+      const fields = safeFieldKeys(details.fields)
+      properties.fields = fields
+      properties.first_field = fields[0]
+      properties.field_count = fields.length
     }
 
     void fetch(POSTHOG_CAPTURE_URL, {

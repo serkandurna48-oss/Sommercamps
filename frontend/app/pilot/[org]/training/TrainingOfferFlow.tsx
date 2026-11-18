@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { endWithName } from '../../../lib/parentFlowFormat'
 import type { OrganizationPublic, RegistrationCreated, TrainingOfferDetail, TrainingPaymentMethod, TrainingSessionPublic } from '../../../lib/saasApi'
 import { fetchTrainingOffer, getStripePaymentOptions } from '../../../lib/saasApi'
 import {
@@ -133,7 +134,7 @@ export default function TrainingOfferFlow({ org, initialOffer }: { org: Organiza
 
       <h2 className="d3" style={{ marginTop: 28 }}>Termin wählen</h2>
       {offer.sessions.length === 0 ? (
-        <p className="tr-lead">Aktuell sind keine Termine buchbar. Bitte melden Sie sich bei {org.name}{org.contact_email ? <>: <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a></> : '.'}</p>
+        <p className="tr-lead">Aktuell sind keine Termine buchbar. Bitte melden Sie sich bei {org.contact_email ? <>{org.name}: <a href={`mailto:${org.contact_email}`}>{org.contact_email}</a></> : endWithName(org.name)}</p>
       ) : (
         <ul className="tr-sessions">
           {offer.sessions.map(item => {

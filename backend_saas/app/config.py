@@ -173,6 +173,12 @@ class Settings(BaseSettings):
     # Unset or blank = the endpoint answers 503 and does nothing. Compared in
     # constant time; never logged.
     cron_secret: Optional[str] = Field(default=None, alias="CRON_SECRET")
+
+    # Error monitoring. Empty DSN = off (local, tests, CI). See app/monitoring.py.
+    sentry_dsn: str = Field(default="", alias="SENTRY_DSN")
+    sentry_environment: str = Field(default="", alias="SENTRY_ENVIRONMENT")
+    # Render sets RENDER_GIT_COMMIT on every deploy.
+    sentry_release: str = Field(default="", alias="RENDER_GIT_COMMIT")
     # Health-data retention (allergies/medical_notes 30 days after camp end).
     # False (default) = the job only counts affected rows; true = it clears them.
     retention_apply: bool = Field(default=False, alias="RETENTION_APPLY")

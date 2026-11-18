@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import { existsSync } from "fs";
 import { resolve, dirname } from "path";
 
@@ -22,4 +23,15 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Error monitoring works at runtime without this wrapper (see instrumentation*.ts).
+// The wrapper only uploads source maps so stack traces show real file names, and
+// it needs a secret build token. Without SENTRY_AUTH_TOKEN the build is unchanged.
+export default process.env.SENTRY_AUTH_TOKEN
+  ? withSentryConfig(nextConfig, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      sentryUrl: "https://de.sentry.io/",
+      silent: true,
+      telemetry: false,
+    })
+  : nextConfig;

@@ -252,7 +252,12 @@ export default function RegistrationFormScreen({
 
   const assets = getClubAssets(orgSlug)
 
+  // Funnel bookkeeping (see the analytics effects below); refs only, no re-render.
+  function markEdited() { funnel.current.edited = true }
+  function markFinished() { funnel.current.finished = true }
+
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
+    markEdited()
     setForm((prev) => ({ ...prev, [key]: value }))
     const field = key === 'termsAccepted' ? 'agb' : key === 'privacyAccepted' ? 'privacy' : key
     setServerFields((prev) => ({ ...prev, [field]: undefined }))
@@ -317,6 +322,58 @@ export default function RegistrationFormScreen({
     return bad
   }, [submitAttempted, touched, validation, serverFields])
 
+  // Analytics (opt-in only, see lib/saasAnalytics.ts): which section parents
+  // complete and where they leave. Sends section numbers, never form content.
+  // Counting starts with the first edit by the parent, so a form prefilled for
+  // a sibling does not look "started" or "half done" before anyone touched it.
+  const funnel = useRef({
+    edited: false, finished: false, abandonedSent: false, furthest: 0, sectionsDone: 0,
+    reported: new Set<number>(), orgSlug, campSlug: camp.slug,
+  })
+  useEffect(() => {
+    const state = funnel.current
+    const done = ([1, 2, 3, 4] as const).filter((section) => sectionDone[section])
+    // Sections complete in order from the top: [1,2,4] -> 2. Autofill can complete a later one first.
+    let furthest = 0
+    while (furthest < 4 && sectionDone[(furthest + 1) as 1 | 2 | 3 | 4]) furthest++
+    state.furthest = furthest
+    state.sectionsDone = done.length
+    state.orgSlug = orgSlug
+    state.campSlug = camp.slug
+    if (submitted) state.finished = true
+    if (demo || !state.edited) return
+    for (const section of done) {
+      if (state.reported.has(section)) continue
+      state.reported.add(section)
+      captureSaasEvent('camp_registration_section_completed', orgSlug, camp.slug, { section })
+    }
+  }, [sectionDone, submitted, demo, orgSlug, camp.slug])
+  useEffect(() => {
+    if (demo) return
+    const reportAbandoned = () => {
+      const state = funnel.current
+      if (!state.edited || state.finished || state.abandonedSent) return
+      state.abandonedSent = true
+      captureSaasEvent('camp_registration_abandoned', state.orgSlug, state.campSlug, {
+        last_section: state.furthest, sections_done: state.sectionsDone,
+      })
+    }
+    // A page restored from the back/forward cache is live again: the parent can still finish.
+    const pageRestored = (event: PageTransitionEvent) => {
+      if (event.persisted) funnel.current.abandonedSent = false
+    }
+    // pagehide covers tab close and leaving the site; the cleanup covers in-app
+    // navigation. Depends on `demo` only, so switching the camp inside the form
+    // (sibling flow) is not counted as leaving.
+    window.addEventListener('pagehide', reportAbandoned)
+    window.addEventListener('pageshow', pageRestored)
+    return () => {
+      window.removeEventListener('pagehide', reportAbandoned)
+      window.removeEventListener('pageshow', pageRestored)
+      reportAbandoned()
+    }
+  }, [demo])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     onPrefillConsumed?.()
@@ -328,7 +385,14 @@ export default function RegistrationFormScreen({
     setServerFields({})
 
     if (Object.keys(validation).length > 0 || !extraDone || (training && !paymentMethod)) {
-      captureSaasEvent('camp_registration_failed', orgSlug, camp.slug, { error_kind: 'validation' })
+      if (!demo) captureSaasEvent('camp_registration_failed', orgSlug, camp.slug, {
+        error_kind: 'validation',
+        fields: [
+          ...Object.keys(validation),
+          ...(!extraDone ? ['extra_question'] : []),
+          ...(training && !paymentMethod ? ['payment_method'] : []),
+        ],
+      })
       focusFirstInvalid()
       return
     }
@@ -372,7 +436,6 @@ export default function RegistrationFormScreen({
         } : {}),
       })
       if (!outcome.ok) {
-        captureSaasEvent('camp_registration_failed', orgSlug, camp.slug, { error_kind: 'api', status_code: outcome.status })
         setErrorStatus(outcome.status)
         setServerError(training ? trainingSubmitErrorMessage(outcome.status, outcome.conflict) : submitErrorMessage(outcome.status))
         const mapping = {
@@ -388,6 +451,9 @@ export default function RegistrationFormScreen({
           if (message) fields[field] = message
         }
         setServerFields(fields)
+        captureSaasEvent('camp_registration_failed', orgSlug, camp.slug, {
+          error_kind: 'api', status_code: outcome.status, fields: Object.keys(fields),
+        })
         const first = Object.keys(fields)[0] as FieldKey | undefined
         if (first) focusFirstInvalid()
         else requestAnimationFrame(() => serverErrorRef.current?.focus())
@@ -399,6 +465,8 @@ export default function RegistrationFormScreen({
       if (!demo) captureSaasEvent('camp_registration_succeeded', orgSlug, camp.slug, {
         result: outcome.data.status === 'registered' || outcome.data.status === 'waitlist' ? outcome.data.status : 'other',
       })
+      // Set before onSubmitted: the parent may unmount this form before the next effect runs.
+      markFinished()
       setSubmitted(true)
       const childName = form.childFirstName.trim() || 'Ihr Kind'
       if (training && paymentMethod) onSubmitted(outcome.data, childName, form.parentEmail.trim(), parentDetailsOnly(form), paymentMethod)
@@ -856,7 +924,7 @@ export default function RegistrationFormScreen({
                 stepLabel={orgSlug === 'ksv-baunatal' && !training ? 'SCHRITT 3 VON 4' : undefined}
                 answers={form.extraAnswers}
                 submitAttempted={submitAttempted}
-                onChange={(key, value) => setForm((prev) => ({ ...prev, extraAnswers: { ...prev.extraAnswers, [key]: value } }))}
+                onChange={(key, value) => { markEdited(); setForm((prev) => ({ ...prev, extraAnswers: { ...prev.extraAnswers, [key]: value } })) }}
               />
 
               {training && (

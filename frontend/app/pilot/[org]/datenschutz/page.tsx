@@ -179,7 +179,10 @@ export default async function OrgDatenschutzPage({ params }: { params: Promise<{
               Freiwillig und nur nach gesonderter Zustimmung nutzen wir PostHog Cloud EU
               (PostHog Inc., EU-Rechenzentrum) zur Auswertung pseudonymisierter Ereignisse wie
               Aufrufen von Camp-Seiten und dem Beginn, Erfolg oder technischen Fehlschlagen
-              einer Anmeldung. Übertragen werden nur öffentliche Vereins-/Camp-Kennungen,
+              einer Anmeldung. Dazu gehört, welcher Abschnitt des Formulars ausgefüllt wurde,
+              bei welchem Feld eine Eingabeprüfung fehlschlug (nur die Bezeichnung des Feldes,
+              nie sein Inhalt) und ob das Formular ohne Absenden verlassen wurde.
+              Übertragen werden nur öffentliche Vereins-/Camp-Kennungen,
               Ereignistyp, ggf. technischer HTTP-Status sowie eine zufällige Kennung für
               die aktuelle Browser-Sitzung (damit können Ereignisse innerhalb eines Tabs
               zusammengefasst werden). Keine Namen, E-Mail-Adressen, Geburtsdaten,

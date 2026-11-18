@@ -75,3 +75,19 @@ it('Entwurf: erklärt den nächsten Schritt ohne technische 404-Meldung und ohne
   expect(container.textContent).not.toContain('nicht gefunden')
   expect(container.querySelector('a[href="/pilot/testverein"]')).toBeNull()
 })
+
+// Prod check 18.11.2026: a published but not yet approved club showed
+// "für Eltern erreichbar" while parents got "Vereinsseite nicht verfügbar".
+it('says the truth while publication waits for approval', async () => {
+  await act(() => root.render(<PublishToggle orgSlug="testverein" published approved={false} />))
+  expect(container.textContent).toContain('Veröffentlicht – wartet auf Freigabe')
+  expect(container.textContent).toContain('Eltern sehen die Vereinsseite erst nach der Freigabe durch CampsPilot.')
+  expect(container.textContent).not.toContain('für Eltern erreichbar')
+  expect(container.textContent).not.toContain('Anmeldelink kopieren')
+  expect(container.querySelector('button')!.textContent).toBe('Vereinsseite zurückziehen')
+})
+
+it('treats a club without review status as approved (existing clubs)', async () => {
+  await act(() => root.render(<PublishToggle orgSlug="testverein" published />))
+  expect(container.textContent).toContain('Die Vereinsseite ist für Eltern erreichbar.')
+})

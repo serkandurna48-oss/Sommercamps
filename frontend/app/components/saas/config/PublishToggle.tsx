@@ -22,10 +22,14 @@ import { setOrganizationPublishedAction, type PublishActionState } from '../acti
 export default function PublishToggle({
   orgSlug,
   published,
+  approved = true,
   emphasis = 'primary',
 }: {
   orgSlug: string
   published: boolean
+  /** review_status is approved (or unset for clubs from before the review step).
+   * The public API serves a club only when published AND approved. */
+  approved?: boolean
   emphasis?: 'primary' | 'secondary'
 }) {
   const feedbackId = useId()
@@ -33,24 +37,27 @@ export default function PublishToggle({
   const preview = useAdminPreview()
   const boundAction = preview ? previewNoopAction : setOrganizationPublishedAction.bind(null, orgSlug, !published)
   const [state, formAction, pending] = useActionState<PublishActionState, FormData>(boundAction, { error: null })
+  const live = published && approved
 
   return (
     <div
       id="publication"
       className="flex flex-wrap items-center justify-between gap-4 cp-card"
       style={{
-        borderColor: published ? 'var(--cp-field-line)' : 'var(--cp-error-line)',
-        background: published ? 'var(--cp-surface)' : 'var(--cp-error-bg)',
+        borderColor: live ? 'var(--cp-field-line)' : 'var(--cp-error-line)',
+        background: live ? 'var(--cp-surface)' : 'var(--cp-error-bg)',
       }}
     >
       <div>
         <p className="cp-subheading" style={{ color: 'var(--cp-ink)' }}>
-          {published ? 'Veröffentlicht' : 'Entwurf – noch nicht öffentlich sichtbar'}
+          {live ? 'Veröffentlicht' : published ? 'Veröffentlicht – wartet auf Freigabe' : 'Entwurf – noch nicht öffentlich sichtbar'}
         </p>
         <p id={hintId} className="cp-chip mt-0.5" style={{ color: 'var(--cp-muted)' }}>
-          {published
+          {live
             ? 'Die Vereinsseite ist für Eltern erreichbar.'
-            : 'Deine Vereinsseite ist noch nicht für Eltern sichtbar. Veröffentliche die Seite nach der Freigabe.'}
+            : published
+              ? 'Eltern sehen die Vereinsseite erst nach der Freigabe durch CampsPilot.'
+              : 'Deine Vereinsseite ist noch nicht für Eltern sichtbar. Veröffentliche die Seite nach der Freigabe.'}
         </p>
         {state.error && (
           <p className="cp-chip mt-1" style={{ color: 'var(--cp-error)' }} id={feedbackId} role="alert">
@@ -70,7 +77,7 @@ export default function PublishToggle({
           {pending ? 'Wird gespeichert …' : published ? 'Vereinsseite zurückziehen' : 'Vereinsseite veröffentlichen'}
         </Button>
       </form>
-      {published && !pending && <div className="flex w-full flex-col items-start gap-3">
+      {live && !pending && <div className="flex w-full flex-col items-start gap-3">
         <p className="cp-body">{de.onboarding.publicationHint}</p>
         <ButtonLink href={`/pilot/${orgSlug}/dashboard`} variant="secondary">{de.onboarding.publicationNext}</ButtonLink>
         <ParentLinkActions orgSlug={orgSlug} />

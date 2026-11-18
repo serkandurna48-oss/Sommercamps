@@ -9,6 +9,7 @@ import SuccessNote from '../state/SuccessNote'
 import { DEV_PREVIEW_BASE, previewParentHref, useAdminPreview } from '../preview/AdminPreviewContext'
 
 export type PublicationOrganization = Pick<OrganizationAdmin, 'site_published' | 'contact_email' | 'iban' | 'terms_text'>
+  & { review_status?: string | null }
 
 const statusLabels: Record<CampAdmin['status'], string> = {
   draft: 'Entwurf', published: 'Öffentlich', closed: 'Geschlossen', archived: 'Archiviert',
@@ -31,7 +32,10 @@ export default function CampPublicationCard({ orgSlug, org, camp, pending, empha
   const preview = useAdminPreview()
   const orgSettings = preview ? `${preview.basePath ?? DEV_PREVIEW_BASE}/konfiguration` : `/pilot/${orgSlug}/konfiguration`
   const registrationLink = preview ? previewParentHref(preview) : `/pilot/${encodeURIComponent(orgSlug)}?camp=${encodeURIComponent(camp.slug)}`
-  const reachable = org.site_published && camp.status === 'published'
+  // Mirrors the public API: a club is served only when published AND approved
+  // (unset review status = club from before the review step).
+  const approved = !org.review_status || org.review_status === 'approved'
+  const reachable = org.site_published && approved && camp.status === 'published'
   const checks = [
     { label: 'Kontakt-E-Mail', ready: !!org.contact_email?.trim(), href: `${orgSettings}#contact_email` },
     { label: 'Bankverbindung', ready: !!org.iban?.trim(), href: `${orgSettings}#iban` },
@@ -52,7 +56,7 @@ export default function CampPublicationCard({ orgSlug, org, camp, pending, empha
     <section aria-labelledby="publication-heading" className="cp-card flex min-w-0 flex-col gap-4" style={{ background: 'var(--cp-surface)', borderColor: 'var(--cp-line)' }}>
       <h3 id="publication-heading" className="cp-heading">Veröffentlichung</h3>
       <dl className="cp-body grid grid-cols-1 gap-2">
-        <div><dt className="inline">Vereinsseite: </dt><dd className="inline font-semibold">{org.site_published ? 'Öffentlich' : 'Entwurf'}</dd></div>
+        <div><dt className="inline">Vereinsseite: </dt><dd className="inline font-semibold">{org.site_published ? (approved ? 'Öffentlich' : 'Öffentlich, wartet auf Freigabe') : 'Entwurf'}</dd></div>
         <div><dt className="inline">Camp: </dt><dd className="inline font-semibold">{statusLabels[camp.status]}</dd></div>
         <div>
           <dt>Anmeldezeitraum <span className="font-normal">(deutsche Zeit)</span></dt>
@@ -70,6 +74,9 @@ export default function CampPublicationCard({ orgSlug, org, camp, pending, empha
           </li>
         ))}
       </ul>
+      {org.site_published && !approved && (
+        <p className="cp-body">Eltern sehen das Camp erst nach der Freigabe durch CampsPilot.</p>
+      )}
       {!org.site_published && (
         <p className="cp-body">
           Eltern sehen das Camp erst, wenn auch die Vereinsseite veröffentlicht ist.{' '}

@@ -76,7 +76,7 @@ export default function OrganizationConfigForm({
 
   return (
     <div className="flex flex-col gap-10">
-      <PublishToggle orgSlug={orgSlug} published={org.site_published} emphasis={publishFirst ? 'primary' : 'secondary'} />
+      <PublishToggle orgSlug={orgSlug} published={org.site_published} approved={!org.review_status || org.review_status === 'approved'} emphasis={publishFirst ? 'primary' : 'secondary'} />
 
       <form action={formAction} aria-describedby={!pending && state.error ? feedbackId : undefined} className="flex flex-col gap-8">
         {Object.values(urlErrors).some(Boolean) && (

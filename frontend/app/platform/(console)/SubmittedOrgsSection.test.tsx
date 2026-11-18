@@ -19,18 +19,18 @@ it('zeigt Kontakt, beide Zeitpunkte, AVV-Version und getrennte Campzahlen', () =
   expect(container.textContent).toContain('AVV 2026-v1')
   expect(container.textContent).toContain('Angenommen: 19.10.2026, 10:30 Uhr (Berlin)')
   expect(container.textContent).toContain('2 gesamt · 1 Entwurf · 1 veröffentlicht')
-  expect(container.textContent).toContain('6/6 Prüfpunkte vollständig')
+  expect(container.textContent).toContain('5/5 Prüfpunkte vollständig')
   expect(container.querySelector('time')?.textContent).toBe('vor 3 Std.')
   expect(container.querySelector('time')?.title).toBe('20.10.2026, 12:00 Uhr (Berlin)')
 })
 
-it('zeigt fehlendes Logo als roten Chip mit Text', () => {
-  const container = renderList([{ ...reviewOrg, logo_url: null }])
+it('zeigt fehlende Teilnahmebedingungen als roten Chip mit Text', () => {
+  const container = renderList([{ ...reviewOrg, terms_text: null }])
   const chip = container.querySelector<HTMLElement>('li')!
-  expect(chip.textContent).toBe('Fehlt: Logo')
+  expect(chip.textContent).toBe('Fehlt: Teilnahmebedingungen')
   expect(chip.style.color).toBe('var(--cp-error)')
   expect(chip.style.background).toBe('var(--cp-error-bg)')
-  expect(container.textContent).toContain('5/6 Prüfpunkte vollständig')
+  expect(container.textContent).toContain('4/5 Prüfpunkte vollständig')
 })
 
 it('rendert die älteste Einreichung zuerst und lässt andere Status weg', () => {

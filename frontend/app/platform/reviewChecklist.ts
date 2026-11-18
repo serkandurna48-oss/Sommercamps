@@ -5,9 +5,11 @@ export type ReviewItem = { id: string; label: string; done: boolean }
 
 const hasText = (value: string | null | undefined) => Boolean(value?.trim())
 
+/** Same required data the club sees in its own setup wizard (step 4). A logo
+ * stays optional: the wizard accepts the club colour instead, so blocking the
+ * review on it surprised clubs (prod check 18.11.2026). */
 export function computeReviewChecklist(org: OrganizationAdmin, camps: readonly ReviewCamp[]): ReviewItem[] {
   return [
-    { id: 'logo', label: 'Logo', done: hasText(org.logo_url) },
     { id: 'color', label: 'Vereinsfarbe', done: hasText(org.primary_color) },
     { id: 'email', label: 'Kontakt-E-Mail', done: hasText(org.contact_email) },
     { id: 'address', label: 'Anschrift', done: hasText(org.legal_address) },

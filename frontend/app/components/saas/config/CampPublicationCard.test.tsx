@@ -70,3 +70,20 @@ it('copies the real public registration page and reports clipboard errors', asyn
   expect(container.querySelector('a[href^="/pilot/review?camp="]')?.textContent).toBe('Elternseite öffnen')
   expect(container.textContent).not.toContain('Anmeldelink kopiert.')
 })
+
+// Prod check 18.11.2026: "Camp ist für Eltern erreichbar" while the club still
+// waited for approval and parents got "Vereinsseite nicht verfügbar".
+it('does not promise reachability before the club is approved', async () => {
+  await act(() => root.render(<CampPublicationCard orgSlug="review" org={{ ...org, site_published: true, review_status: 'draft' }} camp={{ ...camp, status: 'published' }} pending={false} />))
+  expect(container.textContent).toContain('Vereinsseite: Öffentlich, wartet auf Freigabe')
+  expect(container.textContent).toContain('Eltern sehen das Camp erst nach der Freigabe durch CampsPilot.')
+  expect(container.textContent).not.toContain('Camp ist für Eltern erreichbar')
+  expect(container.textContent).not.toContain('Anmeldelink kopieren')
+})
+
+it.each([undefined, null, 'approved'])('treats review status %s as approved', async (reviewStatus) => {
+  await act(() => root.render(<CampPublicationCard orgSlug="review" org={{ ...org, site_published: true, review_status: reviewStatus as never }} camp={{ ...camp, status: 'published' }} pending={false} />))
+  expect(container.textContent).toContain('Vereinsseite: Öffentlich')
+  expect(container.textContent).not.toContain('wartet auf Freigabe')
+  expect(container.textContent).toContain('Camp ist für Eltern erreichbar')
+})

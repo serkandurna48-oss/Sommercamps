@@ -109,7 +109,7 @@ export default async function PlatformOrgDetailPage({ params, searchParams }: {
       </div>
 
       <div className="mb-8">
-        <PublishToggle orgSlug={org.slug} published={org.site_published} />
+        <PublishToggle orgSlug={org.slug} published={org.site_published} approved={!org.review_status || org.review_status === 'approved'} />
       </div>
 
       <ReviewBox org={org} camps={camps} />

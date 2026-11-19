@@ -42,6 +42,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
   if (me === undefined) return <AdminLayoutUnavailable platform />
   if (!me) redirect('/platform/login')
   if (!me.is_platform_owner) {
+    if (me.sales_role) redirect('/vertrieb')
     const firstOrg = me.admin_organization_slugs[0]
     redirect(firstOrg ? `/pilot/${firstOrg}/dashboard` : '/platform/login')
   }
@@ -77,6 +78,9 @@ export default async function PlatformLayout({ children }: { children: React.Rea
             </Link>
             <Link href="/platform/team" prefetch={false} className="cp-focus cp-body inline-flex min-h-11 items-center" style={{ color: 'var(--cp-on-band-2)' }}>
               Team
+            </Link>
+            <Link href="/vertrieb" prefetch={false} className="cp-focus cp-body inline-flex min-h-11 items-center" style={{ color: 'var(--cp-on-band-2)' }}>
+              Vertrieb
             </Link>
           </nav>
         </div>

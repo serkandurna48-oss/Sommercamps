@@ -16,16 +16,27 @@ AUTH_PORT=59999
 # Synthetic platform owner for the self-start journey (local fake auth only).
 OWNER="owner@e2e.example:e2e-owner-password:00000000-0000-4000-8000-00000000e2e0"
 PIDS=()
-cleanup() { for pid in "${PIDS[@]:-}"; do [ -n "$pid" ] && kill "$pid" 2>/dev/null || true; done; }
+# Every background service runs in its own process group (setsid) and the whole
+# group is stopped: `npx next start` spawns next-server as a grandchild, which
+# survived when only the npx wrapper was killed and then served an outdated
+# build on the next run (EADDRINUSE, "Failed to find Server Action").
+cleanup() { for pid in "${PIDS[@]:-}"; do [ -n "$pid" ] && { kill -- "-$pid" 2>/dev/null || kill "$pid" 2>/dev/null; } || true; done; }
 trap cleanup EXIT
+
+for port in "$API_PORT" "$WEB_PORT" "$AUTH_PORT"; do
+  if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
+    echo "Port $port is already in use (leftover server from an earlier run?). Stop it first." >&2
+    exit 1
+  fi
+done
 
 REVIEW_POSTGRES_PORT="$PORT" "$PYTHON" "$ROOT/scripts/e2e/seed_e2e.py"
 
-E2E_DB_PORT="$PORT" PGPASSWORD="${PGPASSWORD:-}" "$PYTHON" "$ROOT/scripts/e2e/fake_gotrue.py" "$AUTH_PORT" "$OWNER" \
+E2E_DB_PORT="$PORT" PGPASSWORD="${PGPASSWORD:-}" setsid "$PYTHON" "$ROOT/scripts/e2e/fake_gotrue.py" "$AUTH_PORT" "$OWNER" \
   > "$ROOT/frontend/playwright-results-auth.log" 2>&1 &
 PIDS+=($!)
 
-(cd "$ROOT/backend_saas" && exec env -i PATH="$PATH" HOME="$HOME" \
+(cd "$ROOT/backend_saas" && exec setsid env -i PATH="$PATH" HOME="$HOME" \
   APP_ENV=test \
   DATABASE_URL="postgresql://postgres@127.0.0.1:${PORT}/e2e_campspilot" \
   PGPASSWORD="${PGPASSWORD:-}" \
@@ -41,7 +52,7 @@ cd "$ROOT/frontend"
 export NEXT_PUBLIC_SAAS_API_URL="http://127.0.0.1:${API_PORT}" NEXT_TELEMETRY_DISABLED=1 \
   NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:${AUTH_PORT}" NEXT_PUBLIC_SUPABASE_ANON_KEY=e2e-anon
 if [ "${SKIP_BUILD:-0}" != 1 ]; then npx next build; fi
-npx next start -H 127.0.0.1 -p "$WEB_PORT" > playwright-results-web.log 2>&1 &
+setsid npx next start -H 127.0.0.1 -p "$WEB_PORT" > playwright-results-web.log 2>&1 &
 PIDS+=($!)
 
 for _ in $(seq 1 60); do

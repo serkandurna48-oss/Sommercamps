@@ -80,6 +80,7 @@ from ..repositories import camps as camps_repo
 from ..repositories import organizations as organizations_repo
 from ..repositories import platform_roles
 from ..repositories import platform_stats as platform_stats_repo
+from ..repositories import sales as sales_repo
 from ..repositories import registrations as registrations_repo
 from ..repositories.camps import CampSlugConflictError, PlanCampLimitError
 from ..repositories.organizations import OrganizationSlugConflictError
@@ -117,6 +118,7 @@ def get_me(auth: AuthContext = Depends(get_auth_context)) -> MeOut:
         is_platform_owner=auth.is_owner,
         admin_organization_slugs=admin_slugs,
         organization_modules=modules,
+        sales_role=None if auth.is_owner else sales_repo.get_active_role_for_login(auth.user_id),
     )
 
 

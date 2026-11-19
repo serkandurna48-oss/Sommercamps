@@ -447,6 +447,41 @@ def send_signup_confirmation_email(
         return False
 
 
+def send_sales_invite_email(*, to_email: str, display_name: str, link: str, new_account: bool) -> bool:
+    """Tells a new sales account about its access to /vertrieb. New accounts
+    get a set-password link (valid 24h), existing ones the login link.
+    Returns True if the provider accepted the message. Never raises."""
+    from html import escape
+
+    from .mail import MailMessage
+
+    e_name = escape(display_name)
+    e_link = escape(link)
+    if new_account:
+        subject = "Einladung: dein Vertriebszugang bei CampsPilot"
+        action = '<p><a href="' + e_link + '">Passwort festlegen und loslegen</a></p>' \
+            "<p>Der Link ist 24 Stunden gültig. Ist er abgelaufen, sag kurz Bescheid; " \
+            "du bekommst dann einen neuen.</p>"
+    else:
+        subject = "Dein Vertriebszugang bei CampsPilot ist aktiv"
+        action = '<p>Login: <a href="' + e_link + '">' + e_link + "</a></p>"
+    body = (
+        "<p>Hallo " + e_name + ",</p>"
+        "<p>du hast jetzt Zugang zum CampsPilot-Vertrieb. Nach dem Login landest du direkt in deiner Lead-Übersicht.</p>"
+        + action
+        + "<p>Wenn du diese Einladung nicht erwartet hast, kannst du diese E-Mail ignorieren.</p>"
+        "<p>Viele Grüße<br>Dein CampsPilot-Team</p>"
+    )
+    msg = MailMessage(to_email=to_email, subject=subject, html_content=body)
+    msg.sender_name = "CampsPilot"
+    try:
+        get_provider().send(msg)
+        return True
+    except Exception as exc:  # noqa: BLE001 - access stands even if the mail fails
+        logger.error("Sales invite mail not sent (error_type=%s)", type(exc).__name__)
+        return False
+
+
 def send_member_invite_email(
     *,
     to_email: str,

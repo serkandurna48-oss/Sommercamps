@@ -12,6 +12,7 @@ from .billing import router as billing_router
 from .invoices_admin import router as invoices_router
 from .internal import router as internal_router
 from .booking import router as booking_router
+from .sales import router as sales_router
 
 __all__ = [
     "admin_router",
@@ -28,4 +29,5 @@ __all__ = [
     "invoices_router",
     "internal_router",
     "booking_router",
+    "sales_router",
 ]

@@ -78,6 +78,96 @@ def add_platform_owner(user_id: str) -> None:
         )
 
 
+class LastPlatformOwnerError(Exception):
+    """Revoking would leave the platform without any platform_owner."""
+
+
+class ActorNotPlatformOwnerError(Exception):
+    """The acting account lost platform_owner between the request's role
+    check and this transaction (e.g. revoked concurrently)."""
+
+
+def list_platform_owners() -> list[dict]:
+    """Every platform_owner plus the organizations they are additionally
+    org_admin for (shown as their club roles in the team view)."""
+    with db.get_read_cursor() as cur:
+        cur.execute(
+            """
+            select po.user_id::text as user_id, po.created_at,
+                   coalesce((
+                       select json_agg(json_build_object('slug', o.slug, 'name', o.name) order by o.name)
+                       from organization_members m
+                       join organizations o on o.id = m.organization_id
+                       where m.user_id = po.user_id and m.role = 'org_admin'
+                   ), '[]'::json) as organizations
+            from platform_owners po
+            order by po.created_at asc, po.user_id asc
+            """
+        )
+        return cur.fetchall()
+
+
+def _insert_owner_audit(cur, *, action, user_id, actor_user_id, actor_email, target_email) -> None:
+    cur.execute(
+        """
+        insert into audit_log (actor_user_id, actor_email, action, organization_id, target_type, target_id, metadata)
+        values (%s, %s, %s, null, 'platform_owner', %s, %s)
+        """,
+        (actor_user_id, actor_email, action, user_id, Json({"email": target_email})),
+    )
+
+
+def grant_platform_owner(
+    *, user_id: str, actor_user_id: str, actor_email: Optional[str], target_email: Optional[str]
+) -> bool:
+    """Makes an existing account platform_owner. True when the role was new,
+    False when the account already had it (no change, no audit entry).
+    Role row and audit entry are written in one transaction: a role change
+    without its log entry cannot happen (unlike write_audit_log's best effort)."""
+    with db.get_cursor() as cur:
+        # Re-check the actor inside the transaction and hold their row: a
+        # concurrent revoke of the actor waits until this grant is done.
+        cur.execute("select 1 from platform_owners where user_id = %s for share", (actor_user_id,))
+        if cur.fetchone() is None:
+            raise ActorNotPlatformOwnerError()
+        cur.execute(
+            "insert into platform_owners (user_id) values (%s) on conflict (user_id) do nothing returning user_id",
+            (user_id,),
+        )
+        if cur.fetchone() is None:
+            return False
+        _insert_owner_audit(
+            cur, action="platform.owner_granted", user_id=user_id,
+            actor_user_id=actor_user_id, actor_email=actor_email, target_email=target_email,
+        )
+        return True
+
+
+def revoke_platform_owner(
+    *, user_id: str, actor_user_id: str, actor_email: Optional[str], target_email: Optional[str]
+) -> bool:
+    """Removes platform_owner from one account; club roles (organization_members)
+    stay untouched. False when the account was no owner. Raises
+    LastPlatformOwnerError instead of removing the last owner — including
+    the caller themself. All owner rows are locked first, so two concurrent
+    revokes can never both pass the "more than one owner" check."""
+    with db.get_cursor() as cur:
+        cur.execute("select user_id::text as user_id from platform_owners order by user_id for update")
+        owners = {row["user_id"] for row in cur.fetchall()}
+        if actor_user_id not in owners:
+            raise ActorNotPlatformOwnerError()
+        if user_id not in owners:
+            return False
+        if len(owners) <= 1:
+            raise LastPlatformOwnerError()
+        cur.execute("delete from platform_owners where user_id = %s", (user_id,))
+        _insert_owner_audit(
+            cur, action="platform.owner_revoked", user_id=user_id,
+            actor_user_id=actor_user_id, actor_email=actor_email, target_email=target_email,
+        )
+        return True
+
+
 def add_organization_member(organization_id: str, user_id: str, role: str = "org_admin") -> dict:
     with db.get_cursor() as cur:
         cur.execute(

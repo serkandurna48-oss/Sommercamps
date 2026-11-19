@@ -12,6 +12,9 @@ const ACTION_LABEL: Record<string, string> = {
   'registration.payment_status_changed': 'Zahlungsstatus geändert',
   'organization.member_assigned': 'Vereinsadmin zugewiesen',
   'organization.member_removed': 'Vereinsadmin entfernt',
+  'organization.member_invited': 'Vereinsadmin eingeladen',
+  'platform.owner_granted': 'Plattform-Zugang vergeben',
+  'platform.owner_revoked': 'Plattform-Zugang entzogen',
 }
 
 /** CEO-Konsole: wer hat wann was geändert (Auftrag Paket B) — mindestens
@@ -59,7 +62,9 @@ export default async function AuditLogPage() {
               </div>
               <p className="cp-chip mt-1" style={{ color: 'var(--cp-muted)' }}>
                 {entry.actor_email ?? 'Unbekannt'}
-                {entry.target_id ? ` · ${entry.target_type ?? 'Ziel'}: ${entry.target_id}` : ''}
+                {typeof entry.metadata?.email === 'string'
+                  ? ` · ${entry.metadata.email}`
+                  : entry.target_id ? ` · ${entry.target_type ?? 'Ziel'}: ${entry.target_id}` : ''}
               </p>
             </div>
           ))}

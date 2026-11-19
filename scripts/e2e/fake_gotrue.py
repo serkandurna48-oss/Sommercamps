@@ -1,7 +1,7 @@
 """Minimal stand-in for Supabase Auth (GoTrue) for local browser E2E only.
 
 Listens on 127.0.0.1 only. Implements just the calls CampsPilot makes:
-admin user create/delete/lookup, generate_link (signup, recovery), verify, password and
+admin user create/delete/lookup (list and by id), generate_link (signup, recovery), verify, password and
 refresh-token grants, /user, logout, recover. Every "mail" Supabase or the API
 would trigger is recorded in an in-memory outbox (GET /__outbox?email=...).
 Not a security boundary - never run outside a test machine.
@@ -108,6 +108,10 @@ class Handler(BaseHTTPRequestHandler):
                 email = (q.get("email") or [""])[0].lower()
                 users = [_user_json(u) for u in USERS.values() if not email or u["email"] == email]
                 self._send(200, {"users": users})
+            elif url.path.startswith("/auth/v1/admin/users/"):
+                uid = url.path.rsplit("/", 1)[1]
+                match = next((u for u in USERS.values() if u["id"] == uid), None)
+                self._send(200, _user_json(match)) if match else self._send(404, {"msg": "User not found"})
             elif url.path == "/auth/v1/verify":
                 token = (q.get("token") or [""])[0]
                 entry = VERIFY.pop(token, None)

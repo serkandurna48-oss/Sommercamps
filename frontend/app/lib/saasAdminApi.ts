@@ -679,6 +679,39 @@ export async function removeOrganizationMemberAdmin(orgSlug: string, memberId: s
   if (!res.ok) throw new AdminActionError(de.adminApi.memberRemove)
 }
 
+/** Plattform-Team (platform_owner) — nur für platform_owner, Prüfung im Backend. */
+export interface PlatformOwner {
+  user_id: string
+  email: string | null
+  role: 'platform_owner'
+  created_at: string
+  organizations: { slug: string; name: string }[]
+  is_self: boolean
+  already_owner?: boolean | null
+}
+
+export async function fetchPlatformOwnersAdmin(token: string): Promise<PlatformOwner[]> {
+  const res = await adminFetch('/admin/platform/owners', token)
+  if (!res.ok) throw new AdminActionError(de.adminApi.platformOwnersLoad)
+  return res.json() as Promise<PlatformOwner[]>
+}
+
+/** Vergibt Plattform-Zugang an ein BESTEHENDES, bereits aktiviertes Konto.
+ * Legt nie ein Konto an und sendet keine Mail. 200 = war schon Owner. */
+export async function addPlatformOwnerAdmin(token: string, email: string): Promise<PlatformOwner> {
+  const res = await adminMutate('/admin/platform/owners', token, 'POST', { email })
+  if (res.status === 404) throw new AdminActionError(de.adminApi.platformOwnerNoAccount)
+  if (res.status === 409) throw new AdminActionError(de.adminApi.platformOwnerNotActivated)
+  if (!res.ok) throw new AdminActionError(de.adminApi.platformOwnerAdd)
+  return res.json() as Promise<PlatformOwner>
+}
+
+export async function removePlatformOwnerAdmin(token: string, userId: string): Promise<void> {
+  const res = await adminMutate(`/admin/platform/owners/${encodeURIComponent(userId)}`, token, 'DELETE')
+  if (res.status === 409) throw new AdminActionError(de.adminApi.platformOwnerLast)
+  if (!res.ok) throw new AdminActionError(de.adminApi.platformOwnerRemove)
+}
+
 /** Alle Vereine mit dem gegebenen Prüfstatus (z. B. 'submitted') — nur platform_owner.
  * Liefert dieselbe Datenform wie fetchOrganizationsAdmin, nur gefiltert. */
 export async function listOrganizationsByReviewStatus(status: string, token: string): Promise<OrganizationAdmin[]> {

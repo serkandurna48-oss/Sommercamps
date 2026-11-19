@@ -613,6 +613,35 @@ class OrganizationMemberOut(BaseModel):
     invite_mail_sent: Optional[bool] = None
 
 
+class AddPlatformOwnerRequest(BaseModel):
+    """Grants platform_owner to an EXISTING account, identified only by its
+    e-mail. No user id, no role field: the server resolves the account and
+    there is exactly one platform role, so a manipulated body cannot pick a
+    different target or a different privilege (extra fields are a 422)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    email: EmailStr
+
+
+class PlatformOwnerOrganization(BaseModel):
+    slug: str
+    name: str
+
+
+class PlatformOwnerOut(BaseModel):
+    """One platform admin in the team view: platform role plus the clubs
+    the same account additionally administers (org_admin)."""
+
+    user_id: str
+    email: Optional[str] = None
+    role: Literal["platform_owner"] = "platform_owner"
+    created_at: datetime
+    organizations: list[PlatformOwnerOrganization] = Field(default_factory=list)
+    is_self: bool = False
+    already_owner: Optional[bool] = None
+
+
 class PlatformStatsOut(BaseModel):
     """CEO-console overview counters — every field a single, cheap
     aggregate query (see repositories/platform_stats.py), not a

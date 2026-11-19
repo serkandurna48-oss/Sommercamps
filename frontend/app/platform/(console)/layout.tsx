@@ -75,6 +75,9 @@ export default async function PlatformLayout({ children }: { children: React.Rea
             <Link href="/platform/audit-log" prefetch={false} className="cp-focus cp-body inline-flex min-h-11 items-center" style={{ color: 'var(--cp-on-band-2)' }}>
               Änderungsverlauf
             </Link>
+            <Link href="/platform/team" prefetch={false} className="cp-focus cp-body inline-flex min-h-11 items-center" style={{ color: 'var(--cp-on-band-2)' }}>
+              Team
+            </Link>
           </nav>
         </div>
       </header>

@@ -11,9 +11,16 @@ running app can create it (see app/auth_deps.py — every route that could
 grant a role already requires an authenticated, role-holding caller).
 Assigning further org_admins later goes through the real API
 (POST /admin/organizations/{slug}/members) instead, once at least one
-owner exists to call it.
+owner exists to call it. Further platform_owners are granted in the
+console at /platform/team (POST /admin/platform/owners); this script is
+only the bootstrap / emergency path.
+
+An existing account is found first (paged lookup) and then neither
+re-created nor asked for a password. --existing-only refuses to create
+anything; --dry-run prints what would change and writes nothing.
 
 Usage:
+    python scripts/create_platform_user.py --email owner@example.com --role owner --existing-only --dry-run
     python scripts/create_platform_user.py --email owner@example.com --role owner
     python scripts/create_platform_user.py --email admin@example.com --role org_admin --org demo-fc
 
@@ -41,7 +48,7 @@ from pathlib import Path
 
 import httpx
 import psycopg2
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import Json, RealDictCursor
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent.parent / ".env")
@@ -60,7 +67,30 @@ def _dsn_with_sslmode(database_url: str) -> str:
     return f"{database_url}{separator}sslmode=require"
 
 
-def _create_or_find_supabase_user(supabase_url: str, service_role_key: str, email: str, password: str) -> str:
+def _find_supabase_user(supabase_url: str, service_role_key: str, email: str) -> str | None:
+    """Pages through GoTrue's admin user list. GoTrue ignores an `email`
+    query parameter, so a single unpaged request only ever saw the first
+    page (50 accounts by default) and could miss an existing account."""
+    headers = {"Authorization": f"Bearer {service_role_key}", "apikey": service_role_key}
+    per_page = 200
+    for page in range(1, 51):
+        lookup = httpx.get(
+            f"{supabase_url}/auth/v1/admin/users",
+            headers=headers,
+            params={"page": page, "per_page": per_page},
+            timeout=10.0,
+        )
+        lookup.raise_for_status()
+        users = lookup.json().get("users", [])
+        for user in users:
+            if (user.get("email") or "").lower() == email.lower():
+                return user["id"]
+        if len(users) < per_page:
+            return None
+    return None
+
+
+def _create_supabase_user(supabase_url: str, service_role_key: str, email: str, password: str) -> str:
     headers = {"Authorization": f"Bearer {service_role_key}", "apikey": service_role_key}
     response = httpx.post(
         f"{supabase_url}/auth/v1/admin/users",
@@ -70,19 +100,6 @@ def _create_or_find_supabase_user(supabase_url: str, service_role_key: str, emai
     )
     if response.status_code in (200, 201):
         return response.json()["id"]
-
-    if response.status_code == 422 or "already been registered" in response.text.lower():
-        print(f"Account for {email} already exists — looking it up instead of creating a new one.")
-        lookup = httpx.get(
-            f"{supabase_url}/auth/v1/admin/users", headers=headers, params={"email": email}, timeout=10.0
-        )
-        lookup.raise_for_status()
-        for user in lookup.json().get("users", []):
-            if user.get("email", "").lower() == email.lower():
-                return user["id"]
-        print(f"Supabase reported {email} already registered but the lookup found no match.", file=sys.stderr)
-        sys.exit(1)
-
     print(f"Failed to create Supabase Auth user: HTTP {response.status_code} — {response.text}", file=sys.stderr)
     sys.exit(1)
 
@@ -92,6 +109,12 @@ def main() -> None:
     parser.add_argument("--email", required=True)
     parser.add_argument("--role", required=True, choices=["owner", "org_admin"])
     parser.add_argument("--org", help="Organization slug — required and only used when --role org_admin")
+    parser.add_argument(
+        "--existing-only",
+        action="store_true",
+        help="Never create an account: fail if the e-mail has no Supabase Auth account yet",
+    )
+    parser.add_argument("--dry-run", action="store_true", help="Show what would change, write nothing")
     args = parser.parse_args()
 
     if args.role == "org_admin" and not args.org:
@@ -114,24 +137,43 @@ def main() -> None:
         print("Set them in backend_saas/.env (see .env.example) before running this script.", file=sys.stderr)
         sys.exit(1)
 
-    password = os.environ.get("CREATE_PLATFORM_USER_PASSWORD") or getpass.getpass(
-        f"Password for {args.email} (min 8 characters, never printed or logged): "
-    )
-    if len(password) < 8:
-        print("Password must be at least 8 characters.", file=sys.stderr)
+    user_id = _find_supabase_user(supabase_url, service_role_key, args.email)
+    if user_id is not None:
+        # Existing account: never asks for or changes its password.
+        print(f"Existing Supabase Auth account found: {args.email} ({user_id})")
+    elif args.existing_only:
+        print(f"No Supabase Auth account for {args.email} — nothing changed (--existing-only).", file=sys.stderr)
         sys.exit(1)
-
-    user_id = _create_or_find_supabase_user(supabase_url, service_role_key, args.email, password)
-    print(f"Supabase Auth user ready: {args.email} ({user_id})")
+    elif args.dry_run:
+        print(f"[dry-run] Would create a Supabase Auth account for {args.email}.")
+        return
+    else:
+        password = os.environ.get("CREATE_PLATFORM_USER_PASSWORD") or getpass.getpass(
+            f"Password for {args.email} (min 8 characters, never printed or logged): "
+        )
+        if len(password) < 8:
+            print("Password must be at least 8 characters.", file=sys.stderr)
+            sys.exit(1)
+        user_id = _create_supabase_user(supabase_url, service_role_key, args.email, password)
+        print(f"Supabase Auth user created: {args.email} ({user_id})")
 
     conn = psycopg2.connect(_dsn_with_sslmode(database_url))
     try:
         with conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 if args.role == "owner":
+                    cur.execute("select 1 from platform_owners where user_id = %s", (user_id,))
+                    if cur.fetchone() is not None:
+                        print(f"{args.email} already is a platform_owner — nothing changed.")
+                        return
+                    if args.dry_run:
+                        print(f"[dry-run] Would make {args.email} a platform_owner.")
+                        return
+                    cur.execute("insert into platform_owners (user_id) values (%s)", (user_id,))
                     cur.execute(
-                        "insert into platform_owners (user_id) values (%s) on conflict (user_id) do nothing",
-                        (user_id,),
+                        "insert into audit_log (actor_email, action, target_type, target_id, metadata) "
+                        "values (%s, 'platform.owner_granted', 'platform_owner', %s, %s)",
+                        ("script:create_platform_user", user_id, Json({"email": args.email})),
                     )
                     print(f"{args.email} is now a platform_owner.")
                 else:
@@ -140,6 +182,9 @@ def main() -> None:
                     if org is None:
                         print(f"No organization with slug '{args.org}' exists.", file=sys.stderr)
                         sys.exit(1)
+                    if args.dry_run:
+                        print(f"[dry-run] Would make {args.email} org_admin for '{args.org}'.")
+                        return
                     cur.execute(
                         """
                         insert into organization_members (organization_id, user_id, role)

@@ -33,9 +33,10 @@ from __future__ import annotations
 
 import logging
 import secrets
+from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 
 from ..admin_resolve import forget_organization, require_camp, require_organization
 from ..auth_deps import AuthContext, get_auth_context, require_org_access, require_platform_owner
@@ -46,6 +47,7 @@ from ..config import get_settings
 from ..admin_schemas import (
     ResendMailResponse,
     AddOrganizationMemberRequest,
+    AddPlatformOwnerRequest,
     AuditLogEntryOut,
     CampAdminOut,
     CampCreate,
@@ -62,6 +64,7 @@ from ..admin_schemas import (
     OrganizationOrgAdminOut,
     OrganizationUpdate,
     PaymentStatusUpdate,
+    PlatformOwnerOut,
     PlatformStatsOut,
     RegistrationAdminOut,
     RegistrationDetailsUpdate,
@@ -1045,3 +1048,90 @@ def remove_organization_member(
         target_type="organization_member",
         target_id=str(member_id),
     )
+
+
+# --- Platform team (who is platform_owner) --------------------------------
+# platform_owner-only, like assigning org_admins. Grants go to EXISTING
+# accounts only (no account creation, no invite mail): platform-wide access
+# is the highest privilege, so the target must already own and use the
+# account. Role row + audit entry are one transaction (see
+# platform_roles.grant/revoke_platform_owner); the last owner can never be
+# removed. Club roles (organization_members) are never touched here.
+
+
+def _platform_owner_out(row: dict, email: str | None, auth: AuthContext, **extra) -> PlatformOwnerOut:
+    return PlatformOwnerOut.model_validate({
+        **row,
+        "user_id": str(row["user_id"]),
+        "email": email,
+        "is_self": str(row["user_id"]) == auth.user_id,
+        **extra,
+    })
+
+
+@router.get("/platform/owners", response_model=list[PlatformOwnerOut])
+def list_platform_owners(auth: AuthContext = Depends(require_platform_owner)) -> list[PlatformOwnerOut]:
+    rows = platform_roles.list_platform_owners()
+    emails = supabase_auth.get_user_emails([str(row["user_id"]) for row in rows])
+    return [_platform_owner_out(row, emails.get(str(row["user_id"])), auth) for row in rows]
+
+
+@router.post(
+    "/platform/owners",
+    response_model=PlatformOwnerOut,
+    status_code=status.HTTP_201_CREATED,
+    responses={200: {"description": "Account already was platform_owner (no change)"}},
+)
+def add_platform_owner(
+    data: AddPlatformOwnerRequest, response: Response, auth: AuthContext = Depends(require_platform_owner)
+) -> PlatformOwnerOut:
+    try:
+        user = supabase_auth.find_user_by_email(data.email)
+    except SupabaseAuthError as exc:
+        logger.warning("Platform owner grant: Supabase Auth unavailable (error_type=%s)", type(exc).__name__)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Konto-Verwaltung gerade nicht erreichbar. Bitte später erneut versuchen.",
+        ) from exc
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Kein Konto mit dieser E-Mail-Adresse. Die Person muss zuerst ein CampsPilot-Konto haben.",
+        )
+    if user.needs_password_setup:
+        # Never confirmed or never signed in: the password may be unknown to
+        # the real owner of the address (e.g. a squatted self-signup).
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Konto noch nicht aktiviert: Die Person muss sich zuerst einmal selbst anmelden.",
+        )
+
+    created = platform_roles.grant_platform_owner(
+        user_id=user.id, actor_user_id=auth.user_id, actor_email=auth.email, target_email=user.email,
+    )
+    logger.info("Platform owner grant (created=%s)", created)
+    if not created:
+        response.status_code = status.HTTP_200_OK
+    owner = next((row for row in platform_roles.list_platform_owners() if str(row["user_id"]) == user.id), None)
+    row = owner or {"user_id": user.id, "created_at": datetime.now(timezone.utc), "organizations": []}
+    return _platform_owner_out(row, user.email, auth, already_owner=not created)
+
+
+@router.delete("/platform/owners/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_platform_owner(user_id: UUID, auth: AuthContext = Depends(require_platform_owner)) -> None:
+    target = str(user_id)
+    try:
+        removed = platform_roles.revoke_platform_owner(
+            user_id=target,
+            actor_user_id=auth.user_id,
+            actor_email=auth.email,
+            target_email=supabase_auth.get_user_email(target),
+        )
+    except platform_roles.LastPlatformOwnerError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Das ist der letzte Plattform-Owner. Erst eine weitere Person hinzufügen.",
+        ) from exc
+    if not removed:
+        raise HTTPException(status_code=404, detail="Kein Plattform-Owner")
+    logger.info("Platform owner revoked")

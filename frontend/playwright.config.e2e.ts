@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test'
 // (see scripts/e2e/run-e2e.sh). Never points at Staging or Production.
 export default defineConfig({
   testDir: './e2e',
-  testMatch: ['**/parent-registration.spec.ts', '**/selfstart-journey.spec.ts'],
+  testMatch: ['**/parent-registration.spec.ts', '**/platform-team.spec.ts', '**/selfstart-journey.spec.ts'],
   outputDir: 'playwright-results/e2e',
   fullyParallel: false,
   workers: 1,

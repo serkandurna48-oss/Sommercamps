@@ -15,6 +15,9 @@ const ACTION_LABEL: Record<string, string> = {
   'organization.member_invited': 'Vereinsadmin eingeladen',
   'platform.owner_granted': 'Plattform-Zugang vergeben',
   'platform.owner_revoked': 'Plattform-Zugang entzogen',
+  'sales.member_added': 'Vertriebskonto angelegt',
+  'sales.member_updated': 'Vertriebskonto geändert',
+  'sales.leads_imported': 'Leads importiert',
 }
 
 /** CEO-Konsole: wer hat wann was geändert (Auftrag Paket B) — mindestens

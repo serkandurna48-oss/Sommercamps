@@ -575,6 +575,8 @@ export interface Me {
   admin_organization_slugs: string[]
   /** Module je verwaltetem Verein (nur org_admin). */
   organization_modules?: Record<string, string[]>
+  /** Aktive Vertriebsrolle (Login-Weiterleitung nach /vertrieb), sonst null. */
+  sales_role?: 'sales_rep' | 'sales_lead' | null
 }
 
 /** Dedupliziert innerhalb eines Server-Requests: Layout und Seite teilen
@@ -1676,4 +1678,184 @@ export async function refundRegistrationAdmin(
     throw new AdminActionError(typeof body?.detail === 'string' ? body.detail : 'Erstattung fehlgeschlagen.')
   }
   return res.json() as Promise<{ status: string; amount_cents: number }>
+}
+
+
+// --- Vertrieb (CRM) -------------------------------------------------------
+// Rechte prüft ausschließlich das Backend (/sales, app/routers/sales.py):
+// Vertriebler sehen nur eigene Leads, Vertriebsleiter alle, Owner zusätzlich
+// Konten und Import. Das Frontend blendet nur aus.
+
+export type LeadStatus = 'neu' | 'kontaktiert' | 'gespraech' | 'demo' | 'angebot' | 'gewonnen' | 'verloren'
+export type LeadKind = 'verein' | 'fussballschule' | 'sonstige'
+export type SalesRole = 'sales_rep' | 'sales_lead'
+
+export interface SalesMe {
+  user_id: string
+  email: string | null
+  role: 'owner' | SalesRole
+  can_manage: boolean
+}
+
+export interface SalesLead {
+  id: string
+  name: string
+  kind: LeadKind
+  city: string | null
+  website: string | null
+  contact_name: string | null
+  phone: string | null
+  email: string | null
+  fit: 'A' | 'B' | 'C' | null
+  source_url: string | null
+  status: LeadStatus
+  owner_user_id: string | null
+  owner_name: string | null
+  next_action_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SalesActivity {
+  id: string
+  kind: 'angelegt' | 'notiz' | 'status' | 'zuweisung'
+  body: string | null
+  actor_name: string | null
+  created_at: string
+}
+
+export interface SalesLeadDetail extends SalesLead {
+  activities: SalesActivity[]
+}
+
+export interface SalesMember {
+  user_id: string
+  email: string | null
+  role: SalesRole
+  display_name: string
+  active: boolean
+  created_at: string
+  invited?: boolean | null
+  invite_mail_sent?: boolean | null
+}
+
+export interface SalesTeamOverview {
+  members: {
+    user_id: string
+    display_name: string
+    role: SalesRole
+    active: boolean
+    total: number
+    open: number
+    won: number
+    overdue: number
+    by_status: Partial<Record<LeadStatus, number>>
+    last_activity_at: string | null
+  }[]
+  funnel: Partial<Record<LeadStatus, number>>
+  unassigned_open: number
+}
+
+export interface LeadImportResult {
+  created: number
+  duplicates: number
+  invalid: number
+  unknown_columns: string[]
+  dry_run: boolean
+}
+
+/** null = Konto hat keinen Vertriebszugang (403). */
+export async function fetchSalesMe(token: string): Promise<SalesMe | null> {
+  const res = await adminFetch('/sales/me', token)
+  if (res.status === 403) return null
+  if (!res.ok) throw new AdminActionError('Vertrieb konnte nicht geladen werden')
+  return res.json() as Promise<SalesMe>
+}
+
+export async function fetchSalesLeads(
+  token: string,
+  opts: { view?: 'mine' | 'all' | 'unassigned'; status?: LeadStatus; ownerUserId?: string; openOnly?: boolean } = {},
+): Promise<SalesLead[]> {
+  const q = new URLSearchParams()
+  if (opts.view) q.set('view', opts.view)
+  if (opts.status) q.set('status_filter', opts.status)
+  if (opts.ownerUserId) q.set('owner_user_id', opts.ownerUserId)
+  if (opts.openOnly) q.set('open_only', 'true')
+  const res = await adminFetch(`/sales/leads${q.size ? `?${q}` : ''}`, token)
+  if (!res.ok) throw new AdminActionError('Leads konnten nicht geladen werden')
+  return res.json() as Promise<SalesLead[]>
+}
+
+export async function fetchSalesLead(token: string, id: string): Promise<SalesLeadDetail | null> {
+  const res = await adminFetch(`/sales/leads/${encodeURIComponent(id)}`, token)
+  if (res.status === 404 || res.status === 422) return null
+  if (!res.ok) throw new AdminActionError('Lead konnte nicht geladen werden')
+  return res.json() as Promise<SalesLeadDetail>
+}
+
+export async function createSalesLead(token: string, body: Record<string, unknown>): Promise<SalesLead> {
+  const res = await adminMutate('/sales/leads', token, 'POST', body)
+  if (res.status === 422) throw new AdminActionError('Bitte Eingaben prüfen (z. B. E-Mail oder Web-Adresse).')
+  if (!res.ok) throw new AdminActionError('Lead konnte nicht angelegt werden')
+  return res.json() as Promise<SalesLead>
+}
+
+export async function updateSalesLead(token: string, id: string, body: Record<string, unknown>): Promise<SalesLead> {
+  const res = await adminMutate(`/sales/leads/${encodeURIComponent(id)}`, token, 'PATCH', body)
+  if (res.status === 404) throw new AdminActionError('Lead nicht gefunden oder nicht mehr dir zugeordnet.')
+  if (res.status === 422) throw new AdminActionError('Bitte Eingaben prüfen (z. B. E-Mail oder Web-Adresse).')
+  if (!res.ok) throw new AdminActionError('Änderung konnte nicht gespeichert werden')
+  return res.json() as Promise<SalesLead>
+}
+
+export async function assignSalesLead(token: string, id: string, ownerUserId: string | null): Promise<SalesLead> {
+  const res = await adminMutate(`/sales/leads/${encodeURIComponent(id)}/assign`, token, 'POST', { owner_user_id: ownerUserId })
+  if (res.status === 422) throw new AdminActionError('Diese Person ist kein aktives Vertriebskonto.')
+  if (!res.ok) throw new AdminActionError('Zuweisung konnte nicht gespeichert werden')
+  return res.json() as Promise<SalesLead>
+}
+
+export async function fetchSalesTeam(token: string): Promise<SalesTeamOverview> {
+  const res = await adminFetch('/sales/team', token)
+  if (!res.ok) throw new AdminActionError('Team-Übersicht konnte nicht geladen werden')
+  return res.json() as Promise<SalesTeamOverview>
+}
+
+export async function fetchSalesAssignees(token: string): Promise<SalesMember[]> {
+  const res = await adminFetch('/sales/assignees', token)
+  if (!res.ok) throw new AdminActionError('Vertriebsteam konnte nicht geladen werden')
+  return res.json() as Promise<SalesMember[]>
+}
+
+export async function fetchSalesMembers(token: string): Promise<SalesMember[]> {
+  const res = await adminFetch('/sales/members', token)
+  if (!res.ok) throw new AdminActionError('Vertriebskonten konnten nicht geladen werden')
+  return res.json() as Promise<SalesMember[]>
+}
+
+export async function addSalesMember(token: string, body: { email: string; display_name: string; role: SalesRole }): Promise<SalesMember> {
+  const res = await adminMutate('/sales/members', token, 'POST', body)
+  if (res.status === 422) throw new AdminActionError('Bitte E-Mail-Adresse und Namen prüfen.')
+  if (!res.ok) throw new AdminActionError('Vertriebskonto konnte nicht angelegt werden')
+  return res.json() as Promise<SalesMember>
+}
+
+export async function updateSalesMember(token: string, userId: string, body: { role?: SalesRole; active?: boolean }): Promise<SalesMember> {
+  const res = await adminMutate(`/sales/members/${encodeURIComponent(userId)}`, token, 'PATCH', body)
+  if (!res.ok) throw new AdminActionError('Vertriebskonto konnte nicht geändert werden')
+  return res.json() as Promise<SalesMember>
+}
+
+export async function importSalesLeads(token: string, csv: string, dryRun: boolean): Promise<LeadImportResult> {
+  const res = await adminMutate('/sales/leads/import', token, 'POST', { csv, dry_run: dryRun })
+  if (res.status === 422) {
+    let detail = 'Datei konnte nicht gelesen werden.'
+    try {
+      const body = (await res.json()) as { detail?: unknown }
+      if (typeof body.detail === 'string') detail = body.detail
+    } catch { /* keep default */ }
+    throw new AdminActionError(detail)
+  }
+  if (!res.ok) throw new AdminActionError('Import fehlgeschlagen')
+  return res.json() as Promise<LeadImportResult>
 }

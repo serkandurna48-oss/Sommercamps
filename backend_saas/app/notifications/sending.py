@@ -460,8 +460,8 @@ def send_sales_invite_email(*, to_email: str, display_name: str, link: str, new_
     if new_account:
         subject = "Einladung: dein Vertriebszugang bei CampsPilot"
         action = '<p><a href="' + e_link + '">Passwort festlegen und loslegen</a></p>' \
-            "<p>Der Link ist 24 Stunden gültig. Danach kannst du über „Passwort vergessen?“ " \
-            "auf der Anmeldeseite einen neuen Link anfordern.</p>"
+            "<p>Der Link ist 24 Stunden gültig. Ist er abgelaufen, sag kurz Bescheid; " \
+            "du bekommst dann einen neuen.</p>"
     else:
         subject = "Dein Vertriebszugang bei CampsPilot ist aktiv"
         action = '<p>Login: <a href="' + e_link + '">' + e_link + "</a></p>"

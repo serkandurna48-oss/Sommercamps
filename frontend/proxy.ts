@@ -18,7 +18,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next()
   }
 
-  // Paths /pilot/* and /platform/* — session token renewal.
+  // Paths /pilot/*, /platform/* and /vertrieb/* — session token renewal.
   const access = request.cookies.get(ACCESS)?.value
   const refresh = request.cookies.get(REFRESH)?.value
 
@@ -93,5 +93,5 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 }
 
 export const config = {
-  matcher: ['/', '/pilot/:path*', '/platform/:path*'],
+  matcher: ['/', '/pilot/:path*', '/platform/:path*', '/vertrieb/:path*'],
 }

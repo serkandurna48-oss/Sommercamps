@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getValidAccessToken } from '../../../lib/supabaseServer'
-import { fetchPlatformOwnersAdmin } from '../../../lib/saasAdminApi'
+import { fetchPlatformOwnersAdmin, fetchSalesMembers } from '../../../lib/saasAdminApi'
 import { PAGE } from '../../../components/saas/ui/pageLayout'
+import SalesSection from './SalesSection'
 import TeamSection from './TeamSection'
 
 /** Plattform-Team: wer hat Plattform-Zugang (platform_owner). Das Layout
@@ -10,7 +11,11 @@ export default async function PlatformTeamPage() {
   const token = await getValidAccessToken()
   if (!token) redirect('/platform/login')
 
-  const owners = await fetchPlatformOwnersAdmin(token)
+  const [owners, salesMembers] = await Promise.all([
+    fetchPlatformOwnersAdmin(token),
+    // Tolerant: before the sales_crm migration the rest of the page must still work.
+    fetchSalesMembers(token).catch(() => null),
+  ])
 
   return (
     <main className={PAGE}>
@@ -22,6 +27,7 @@ export default async function PlatformTeamPage() {
         jeweiligen Vereins.
       </p>
       <TeamSection owners={owners} />
+      <SalesSection members={salesMembers} />
     </main>
   )
 }

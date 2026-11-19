@@ -581,6 +581,9 @@ class MeOut(BaseModel):
     # Enabled modules per administered organization slug (org_admin only;
     # the platform owner reads them from the organization detail).
     organization_modules: dict[str, list[str]] = Field(default_factory=dict)
+    # Active sales role (sales_rep / sales_lead) for login routing to /vertrieb;
+    # None for everyone else. Grants nothing outside the /sales API.
+    sales_role: Optional[str] = None
 
 
 class OrganizationModulesUpdate(BaseModel):

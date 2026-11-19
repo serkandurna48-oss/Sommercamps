@@ -104,6 +104,12 @@ class Settings(BaseSettings):
         """Target of club-admin mails about registrations: the admin registrations list."""
         return self.login_url(org_slug).removesuffix("/login") + "/anmeldungen"
 
+    def sales_url(self, path: str = "") -> str:
+        """Sales CRM area (/vertrieb) — invites and login links for sales accounts."""
+        if not self.frontend_base_is_usable():
+            raise ValueError("FRONTEND_BASE_URL is not configured for this environment")
+        return f"{self.frontend_base_url}/vertrieb{path}"
+
     def password_setup_url(self, org_slug: str) -> str:
         """Target of invite links: the organization's set-new-password page."""
         return self.login_url(org_slug).removesuffix("/login") + "/neues-passwort"

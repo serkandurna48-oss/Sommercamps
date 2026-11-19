@@ -15,6 +15,7 @@ require_org_access ignore sales_members entirely.
 
 from __future__ import annotations
 
+import csv
 import logging
 import secrets
 from datetime import date
@@ -278,6 +279,8 @@ def import_leads(data: LeadImportRequest, auth: AuthContext = Depends(require_pl
         parsed = parse_leads_csv(data.csv, sales_repo.existing_lead_keys())
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except csv.Error as exc:
+        raise HTTPException(status_code=422, detail="Die Datei ist keine lesbare CSV-Datei.") from exc
     if len(parsed.rows) > 2000:
         raise HTTPException(status_code=422, detail="Höchstens 2000 Leads pro Import.")
     created = 0

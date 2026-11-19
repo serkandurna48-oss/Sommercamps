@@ -66,7 +66,8 @@ def _url(value: str | None) -> str | None:
     if not value or any(ch.isspace() for ch in value.strip()):
         return None
     value = value.strip()
-    return value if value.lower().startswith(("http://", "https://")) else f"https://{value}"
+    value = value if value.lower().startswith(("http://", "https://")) else f"https://{value}"
+    return value if len(value) <= 500 else None  # never break the whole import on one long URL
 
 
 def parse_leads_csv(text: str, existing_keys: set[tuple[str, str]]) -> ParsedImport:

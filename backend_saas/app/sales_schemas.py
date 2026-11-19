@@ -24,6 +24,8 @@ def _http_url(value: Optional[str]) -> Optional[str]:
         value = "https://" + value
     if any(ch.isspace() for ch in value):
         raise ValueError("Ungültige Web-Adresse")
+    if len(value) > 500:  # checked after the prefix: the DB limit is 500
+        raise ValueError("Web-Adresse ist zu lang")
     return value
 
 

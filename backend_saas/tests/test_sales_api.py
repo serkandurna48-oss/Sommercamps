@@ -297,3 +297,24 @@ def test_me_keeps_working_when_sales_tables_are_missing(monkeypatch):
     with TestClient(app) as client:
         response = client.get("/admin/me", headers=headers)
     assert response.status_code == 200 and response.json()["sales_role"] is None
+
+
+def test_website_too_long_after_prefix_is_422_not_500(calls, monkeypatch):
+    headers = _as_user(REP_ID, "sales_rep", monkeypatch)
+    with TestClient(app) as client:
+        response = client.post("/sales/leads", headers=headers, json={"name": "X", "website": "w" * 495})
+    assert response.status_code == 422
+    assert "create_lead" not in _names(calls)
+
+
+def test_broken_csv_is_422_not_500(calls, monkeypatch):
+    import app.routers.sales as sales_router
+
+    def broken(text, keys):
+        import csv as _csv
+        raise _csv.Error("field larger than field limit")
+
+    monkeypatch.setattr(sales_router, "parse_leads_csv", broken)
+    with TestClient(app) as client:
+        response = client.post("/sales/leads/import", headers=owner_headers(), json={"csv": "x"})
+    assert response.status_code == 422

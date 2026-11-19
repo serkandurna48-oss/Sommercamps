@@ -56,3 +56,9 @@ def test_overlong_values_are_cut_to_column_limits():
 def test_missing_name_column_is_a_clear_error():
     with pytest.raises(ValueError, match="Namen"):
         parse_leads_csv("Ort;Website\nKassel;x\n", set())
+
+
+def test_url_longer_than_db_limit_after_prefix_is_dropped_not_fatal():
+    text = "Name;Website\nA;" + "w" * 495 + "\n"
+    [row] = parse_leads_csv(text, set()).rows
+    assert row["website"] is None

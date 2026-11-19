@@ -129,15 +129,59 @@ def test_concurrent_revokes_never_leave_zero_owners(team):
             return platform_roles.revoke_platform_owner(
                 user_id=target, actor_user_id=actor, actor_email=None, target_email=None
             )
-        except platform_roles.LastPlatformOwnerError:
-            return "last"
+        except (platform_roles.LastPlatformOwnerError, platform_roles.ActorNotPlatformOwnerError):
+            return "refused"
 
     for _ in range(5):
         with ThreadPoolExecutor(max_workers=2) as pool:
             results = sorted(map(str, pool.map(revoke, (owner_a, owner_b), (owner_b, owner_a))))
-        assert results == ["True", "last"]
+        assert results == ["True", "refused"]
         assert len(_owners(cursor)) == 1
         # restore both owners for the next round
+        with cursor() as cur:
+            cur.execute(
+                "INSERT INTO platform_owners(user_id) VALUES (%s), (%s) ON CONFLICT DO NOTHING", (owner_a, owner_b)
+            )
+
+
+def test_revoked_actor_can_neither_grant_nor_revoke(team):
+    cursor, _, owner_a, owner_b, plain, _ = team
+    third = str(uuid4())
+    with cursor() as cur:
+        cur.execute("INSERT INTO auth.users(id) VALUES (%s)", (third,))
+        cur.execute("INSERT INTO platform_owners(user_id) VALUES (%s)", (third,))
+    platform_roles.revoke_platform_owner(user_id=owner_b, actor_user_id=owner_a, actor_email=None, target_email=None)
+    with pytest.raises(platform_roles.ActorNotPlatformOwnerError):
+        platform_roles.grant_platform_owner(user_id=plain, actor_user_id=owner_b, actor_email=None, target_email=None)
+    with pytest.raises(platform_roles.ActorNotPlatformOwnerError):
+        platform_roles.revoke_platform_owner(user_id=third, actor_user_id=owner_b, actor_email=None, target_email=None)
+    assert _owners(cursor) == {owner_a, third}
+
+
+def test_mutual_revoke_with_three_owners_removes_only_one(team):
+    # Review finding: A revokes B while B revokes A — both passed the request's
+    # role check before either transaction ran. Only one may win.
+    cursor, _, owner_a, owner_b, *_ = team
+    third = str(uuid4())
+    with cursor() as cur:
+        cur.execute("INSERT INTO auth.users(id) VALUES (%s)", (third,))
+        cur.execute("INSERT INTO platform_owners(user_id) VALUES (%s)", (third,))
+    barrier = Barrier(2)
+
+    def revoke(target, actor):
+        barrier.wait()
+        try:
+            return platform_roles.revoke_platform_owner(
+                user_id=target, actor_user_id=actor, actor_email=None, target_email=None
+            )
+        except platform_roles.ActorNotPlatformOwnerError:
+            return "refused"
+
+    for _ in range(5):
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = sorted(map(str, pool.map(revoke, (owner_a, owner_b), (owner_b, owner_a))))
+        assert results == ["True", "refused"]
+        assert len(_owners(cursor)) == 2 and third in _owners(cursor)
         with cursor() as cur:
             cur.execute(
                 "INSERT INTO platform_owners(user_id) VALUES (%s), (%s) ON CONFLICT DO NOTHING", (owner_a, owner_b)

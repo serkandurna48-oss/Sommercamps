@@ -82,6 +82,11 @@ class LastPlatformOwnerError(Exception):
     """Revoking would leave the platform without any platform_owner."""
 
 
+class ActorNotPlatformOwnerError(Exception):
+    """The acting account lost platform_owner between the request's role
+    check and this transaction (e.g. revoked concurrently)."""
+
+
 def list_platform_owners() -> list[dict]:
     """Every platform_owner plus the organizations they are additionally
     org_admin for (shown as their club roles in the team view)."""
@@ -120,6 +125,11 @@ def grant_platform_owner(
     Role row and audit entry are written in one transaction: a role change
     without its log entry cannot happen (unlike write_audit_log's best effort)."""
     with db.get_cursor() as cur:
+        # Re-check the actor inside the transaction and hold their row: a
+        # concurrent revoke of the actor waits until this grant is done.
+        cur.execute("select 1 from platform_owners where user_id = %s for share", (actor_user_id,))
+        if cur.fetchone() is None:
+            raise ActorNotPlatformOwnerError()
         cur.execute(
             "insert into platform_owners (user_id) values (%s) on conflict (user_id) do nothing returning user_id",
             (user_id,),
@@ -144,6 +154,8 @@ def revoke_platform_owner(
     with db.get_cursor() as cur:
         cur.execute("select user_id::text as user_id from platform_owners order by user_id for update")
         owners = {row["user_id"] for row in cur.fetchall()}
+        if actor_user_id not in owners:
+            raise ActorNotPlatformOwnerError()
         if user_id not in owners:
             return False
         if len(owners) <= 1:

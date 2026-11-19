@@ -169,7 +169,14 @@ def main() -> None:
                     if args.dry_run:
                         print(f"[dry-run] Would make {args.email} a platform_owner.")
                         return
-                    cur.execute("insert into platform_owners (user_id) values (%s)", (user_id,))
+                    cur.execute(
+                        "insert into platform_owners (user_id) values (%s) on conflict (user_id) do nothing "
+                        "returning user_id",
+                        (user_id,),
+                    )
+                    if cur.fetchone() is None:  # granted concurrently via the console
+                        print(f"{args.email} already is a platform_owner — nothing changed.")
+                        return
                     cur.execute(
                         "insert into audit_log (actor_email, action, target_type, target_id, metadata) "
                         "values (%s, 'platform.owner_granted', 'platform_owner', %s, %s)",

@@ -1106,9 +1106,12 @@ def add_platform_owner(
             detail="Konto noch nicht aktiviert: Die Person muss sich zuerst einmal selbst anmelden.",
         )
 
-    created = platform_roles.grant_platform_owner(
-        user_id=user.id, actor_user_id=auth.user_id, actor_email=auth.email, target_email=user.email,
-    )
+    try:
+        created = platform_roles.grant_platform_owner(
+            user_id=user.id, actor_user_id=auth.user_id, actor_email=auth.email, target_email=user.email,
+        )
+    except platform_roles.ActorNotPlatformOwnerError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform owner required") from exc
     logger.info("Platform owner grant (created=%s)", created)
     if not created:
         response.status_code = status.HTTP_200_OK
@@ -1127,6 +1130,8 @@ def remove_platform_owner(user_id: UUID, auth: AuthContext = Depends(require_pla
             actor_email=auth.email,
             target_email=supabase_auth.get_user_email(target),
         )
+    except platform_roles.ActorNotPlatformOwnerError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform owner required") from exc
     except platform_roles.LastPlatformOwnerError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

@@ -293,3 +293,24 @@ def test_revoke_rejects_non_uuid_path(monkeypatch):
         response = client.delete("/admin/platform/owners/not-a-uuid", headers=headers)
 
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize("method", ["post", "delete"])
+def test_actor_revoked_concurrently_gets_403(monkeypatch, method):
+    _patch_lookup(monkeypatch, supabase_auth.SupabaseUser(id=OTHER_ID, email="ahmad@example.com"))
+    monkeypatch.setattr(supabase_auth, "get_user_email", lambda uid: None)
+
+    def refuse(**kwargs):
+        raise platform_roles.ActorNotPlatformOwnerError()
+
+    monkeypatch.setattr(platform_roles, "grant_platform_owner", refuse)
+    monkeypatch.setattr(platform_roles, "revoke_platform_owner", refuse)
+    headers = owner_headers(user_id=OWNER_ID)
+
+    with TestClient(app) as client:
+        if method == "post":
+            response = client.post("/admin/platform/owners", json={"email": "ahmad@example.com"}, headers=headers)
+        else:
+            response = client.delete(f"/admin/platform/owners/{OTHER_ID}", headers=headers)
+
+    assert response.status_code == 403

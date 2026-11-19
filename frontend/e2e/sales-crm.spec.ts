@@ -60,14 +60,17 @@ test('Vertrieb: Einladung, Import, Zuweisung, Rechte am Handy', async ({ browser
   const owner = await phone(browser)
   await login(owner, OWNER.email, OWNER.password)
   await expect(owner).toHaveURL(/\/platform$/, T)
-  await owner.goto('/platform/team')
   for (const [person, role] of [[REP, 'Vertrieb'], [LEAD, 'Vertriebsleitung']] as const) {
+    // Fresh page per invite: in CI a click right after the previous action's refresh was swallowed.
+    await owner.goto('/platform/team')
+    await expect(owner.getByRole('button', { name: 'Einladen' })).toBeEnabled(T)
     await owner.getByPlaceholder('Name', { exact: true }).fill(person.name)
     await owner.getByPlaceholder('name@beispiel.de', { exact: true }).fill(person.email)
     await owner.getByLabel('Rolle').selectOption({ label: role })
     await owner.getByRole('button', { name: 'Einladen' }).click()
     await expect(owner.getByText(`Einladung an ${person.email} gesendet`)).toBeVisible(T)
   }
+  await owner.reload()
   await expect(owner.getByText('Vertrieb (2)')).toBeVisible(T)
   await noHorizontalScroll(owner)
 
